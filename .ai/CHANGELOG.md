@@ -17,7 +17,8 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ### Adicionado
 
-- (nada ainda nesta versão)
+- `docs/NEXT-VERSION-NOTES.md` — notas de breaking changes do Next.js 16.3.4, com base na documentação local (`node_modules/next/dist/docs/`).
+- `.ai/BRIEFING-RETOMADA.md` — briefing para retomada entre sessões de IA.
 
 ### Alterado
 
@@ -83,3 +84,5 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 - Commit inicial no GitHub
 
 ---
+
+# FIM

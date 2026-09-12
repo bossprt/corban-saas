@@ -1,11 +1,10 @@
 # CORBAN — CURRENT STATE
 ## Arquivo de estado atual do desenvolvimento
 
-**Versão do estado:** 0.3
-**Data:** 11/09/2026
-**Sessão:** Ciclo 1 concluído — limpeza de estrutura de pastas
-**Compatível com Master:** v1.1
-**Última alteração:** 11/09/2026 — consolidação em `src/app/` + correção do `tsconfig.json`
+**Versão do estado:** 0.4
+**Data:** 12/09/2026
+**Sessão:** Ciclo 2 concluído — documentação da versão do Next.js 16.3.4
+**Última alteração:** 12/09/2026 — criação de `docs/NEXT-VERSION-NOTES.md`
 
 ---
 
@@ -31,6 +30,7 @@
 | Next.js | ✅ Criado (versão 16.3.4 — atenção: breaking changes) |
 | Supabase | ✅ Conectado |
 | Estrutura de pastas | ✅ Consolidada em `src/app/` (Ciclo 1 concluído) |
+| Documentação Next.js 16 | ✅ Criada em `docs/NEXT-VERSION-NOTES.md` (Ciclo 2) |
 | Migrations no repositório | ❌ NÃO existem |
 | RLS aplicada | ❌ NÃO verificável (não versionada) |
 | Multi-tenant | ❌ NÃO implementado |
@@ -222,12 +222,12 @@ corban-saas/
 
 # 8. PRÓXIMO PASSO CONCRETO
 
-**Ciclo 2 — Documentação da versão do Next.js 16.3.4**
+**Ciclo 3 — Alinhamento de contexto de IA**
 
-1. Criar `/docs/NEXT-VERSION-NOTES.md`
-2. Documentar breaking changes da versão 16.3.4
-3. Referenciar `node_modules/next/dist/docs/`
-4. Commit: `docs: adicionar notas de versão do Next.js 16.3.4`
+1. Reescrever `PROJECT_CONTEXT.md` alinhado ao master v1.2
+2. Expandir `AGENTS.md` com contexto do projeto + link para `/.ai/RULES.md`
+3. Verificar se `CLAUDE.md` continua apenas apontando para `AGENTS.md`
+4. Commit: `docs(ai): alinhar contexto de IA ao master v1.2`
 
 **Critério de conclusão:** arquivo criado, commitado e referenciado no `CURRENT-TASK.md`.
 
@@ -262,6 +262,7 @@ Nenhum teste criado. Vitest e Playwright ainda não instalados.
 |---|---|---|---|
 | 1 | 11/09/2026 | Diagnóstico do repositório; identificação de 6 problemas críticos e 4 pendências; decisão de consolidar em `src/app/` | Ciclo 1: limpeza de estrutura |
 | 2 | 11/09/2026 | Ciclo 1 concluído: pasta `app/` da raiz removida, `globals.css` e `favicon.ico` movidos para `src/app/`, `tsconfig.json` corrigido (`@/*` → `./src/*`). Registrada a limitação do Cline (7B) para edições de markdown. | Ciclo 2: documentação Next.js 16.3.4 |
+| 3 | 12/09/2026 | Ciclo 2 concluído: criado `docs/NEXT-VERSION-NOTES.md` documentando as breaking changes do Next.js 16.3.4 (Turbopack por padrão, APIs assíncronas, middleware→proxy, etc.) com base na documentação local. | Ciclo 3: alinhamento de contexto de IA |
 
 ---
 

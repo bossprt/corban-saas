@@ -1,16 +1,16 @@
 # CURRENT TASK — CORBAN ENTERPRISE
 
-**Última atualização:** 11/09/2026
+**Última atualização:** 12/09/2026
 **Fase:** FASE 1 (Fundação técnica)
-**Sessão anterior:** Ciclo 1 concluído — limpeza de estrutura de pastas
+**Sessão anterior:** Ciclo 2 concluído — documentação da versão do Next.js 16.3.4
 
 ---
 
 # 🎯 FOCO ATUAL
 
-**Ciclo 2 — Documentação da versão do Next.js**
+**Ciclo 3 — Alinhamento de contexto de IA**
 
-Criar `/docs/NEXT-VERSION-NOTES.md` documentando breaking changes da versão 16.3.4.
+Reescrever `PROJECT_CONTEXT.md` alinhado ao master v1.2, expandir `AGENTS.md` e verificar `CLAUDE.md`.
 
 ---
 
@@ -40,16 +40,15 @@ Ciclo 1 — Limpeza de estrutura:
 - [x] Rodar `npm run dev` e confirmar que sobe
 - [x] Commit: `refactor: consolidar estrutura em src/app`
 
+Ciclo 2 — Documentação do Next.js 16.3.4:
+- [x] Criar `/docs/NEXT-VERSION-NOTES.md`
+- [x] Documentar breaking changes da versão 16.3.4
+- [x] Referenciar `node_modules/next/dist/docs/`
+- [x] Commit: `docs: adicionar notas de versão do Next.js 16.3.4`
+
 ---
 
 # 🔨 PRÓXIMOS PASSOS (em ordem)
-
-## Ciclo 2 — Documentação de versão do Next.js
-
-- [ ] Criar `/docs/NEXT-VERSION-NOTES.md`
-- [ ] Documentar breaking changes da versão 16.3.4
-- [ ] Referenciar `node_modules/next/dist/docs/`
-- [ ] Commit
 
 ## Ciclo 3 — Alinhamento de contexto de IA
 
@@ -90,10 +89,9 @@ Nenhum bloqueio técnico.
 - P7 (do DECISIONS.md): adicionar Gemini no Continue para modo Agent?
   - Recomendação: sim — Llama 3 local é limitado para tarefas estruturais.
 
-**Nota de aprendizado (Ciclo 1):**
-O Cline com `qwen2.5-coder:7b` **sobrescreveu arquivos inteiros** em vez de editá-los, destruindo `.ai/CHANGELOG.md`, `.ai/CURRENT-TASK.md` e `CORBAN-CURRENT-STATE.md`. Todos foram restaurados via `git checkout HEAD -- <arquivo>`.
-
-**Aprendizado:** para tarefas de edição de markdown, preferir edição manual. Considerar modelo 14B para os próximos ciclos (ver P7 e próximo ciclo).
+**Nota de aprendizado (Ciclos 1 e 2):**
+- Cline com `qwen2.5-coder:7b` sobrescreve arquivos markdown inteiros em vez de editá-los. Preferir edição manual para markdown.
+- Agente via Copilot Chat + OmniRoute funciona, mas o OmniRoute tem bugs de streaming (502) que interrompem o agente em tarefas longas. Editar markdown manualmente é mais confiável no estado atual.
 
 ---
 
@@ -134,7 +132,7 @@ Ver `/.ai/DECISIONS.md` → seção "DECISÕES PENDENTES".
 3. Ler `/.ai/RULES.md`
 4. Ler `/.ai/MASTER-CONTEXT.md`
 5. Ler este arquivo (CURRENT-TASK)
-6. Começar pelo **Ciclo 2 — Documentação da versão do Next.js**
+6. Começar pelo **Ciclo 3 — Alinhamento de contexto de IA**
 7. Confirmar cada ciclo com o usuário antes de avançar
 8. Ao final de cada ciclo, atualizar `CHANGELOG.md` e fazer commit
 
