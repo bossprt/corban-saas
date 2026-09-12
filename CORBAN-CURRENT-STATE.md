@@ -1,11 +1,11 @@
 # CORBAN — CURRENT STATE
 ## Arquivo de estado atual do desenvolvimento
 
-**Versão do estado:** 0.2
+**Versão do estado:** 0.3
 **Data:** 11/09/2026
-**Sessão:** sessão inicial — diagnóstico do repositório concluído
+**Sessão:** Ciclo 1 concluído — limpeza de estrutura de pastas
 **Compatível com Master:** v1.1
-**Última alteração:** 11/09/2026 — diagnóstico da sessão inicial + problemas identificados
+**Última alteração:** 11/09/2026 — consolidação em `src/app/` + correção do `tsconfig.json`
 
 ---
 
@@ -30,50 +30,59 @@
 | Primeiro commit | ✅ Feito em 09/09/2026 |
 | Next.js | ✅ Criado (versão 16.3.4 — atenção: breaking changes) |
 | Supabase | ✅ Conectado |
+| Estrutura de pastas | ✅ Consolidada em `src/app/` (Ciclo 1 concluído) |
 | Migrations no repositório | ❌ NÃO existem |
 | RLS aplicada | ❌ NÃO verificável (não versionada) |
 | Multi-tenant | ❌ NÃO implementado |
-| Master no repositório | ✅ Salvo em disco (não commitado ainda) |
-| Current-state no repositório | ✅ Sendo criado agora |
+| Master no repositório | ✅ Salvo em disco |
+| Current-state no repositório | ✅ Atualizado em 11/09/2026 |
 
-**Resumo:** Next.js e Supabase montados, mas com problemas estruturais graves que impedem avanço seguro.
+**Resumo:** Next.js e Supabase montados, estrutura de pastas consolidada. Faltam migrations versionadas, RLS e multi-tenant (próximos ciclos da FASE 1).
 
 ---
 
 # 2. ESTRUTURA REAL DO REPOSITÓRIO
 
 corban-saas/
-├── app/ ← ⚠️ DUPLICADO — raiz
-│ ├── favicon.ico
-│ ├── globals.css
-│ ├── layout.tsx
-│ └── page.tsx
 ├── src/
-│ ├── app/ ← ⚠️ DUPLICADO — dentro de src
-│ │ ├── layout.tsx
-│ │ ├── page.tsx
-│ │ └── login/page.tsx
-│ ├── lib/
-│ │ └── supabaseClient.ts
-│ └── utils/
-│ └── supabase/
-│ ├── middleware.ts
-│ └── server.ts
+│   ├── app/                    ← ✅ ÚNICA raiz de App Router (Next.js 16)
+│   │   ├── favicon.ico
+│   │   ├── globals.css
+│   │   ├── layout.tsx
+│   │   ├── page.tsx
+│   │   └── login/
+│   │       └── page.tsx
+│   ├── lib/
+│   │   └── supabaseClient.ts
+│   └── utils/
+│       └── supabase/
+│           ├── middleware.ts
+│           └── server.ts
+├── middleware.ts
 ├── public/
+├── docs/
+│   ├── ARCHITECTURE.md
+│   ├── DATABASE.md
+│   └── RBAC.md
+├── .ai/
+│   ├── RULES.md
+│   ├── MASTER-CONTEXT.md
+│   ├── DECISIONS.md
+│   ├── CHANGELOG.md
+│   └── CURRENT-TASK.md
 ├── .gitignore
-├── AGENTS.md ← só tem aviso do Next 16
-├── CLAUDE.md ← só aponta para AGENTS.md
-├── PROJECT_CONTEXT.md ← divergente do master v1.1
-├── README.md ← boilerplate padrão do create-next-app
+├── AGENTS.md
+├── CLAUDE.md
+├── PROJECT_CONTEXT.md
+├── README.md
 ├── eslint.config.mjs
 ├── next.config.ts
 ├── package.json
 ├── package-lock.json
 ├── postcss.config.mjs
 ├── tsconfig.json
-└── CORBAN-ENTERPRISE-MEMORIA-MASTER-v1.1.md ← recém-salvo
-
-text
+├── CORBAN-ENTERPRISE-MEMORIA-MASTER-v1.1.md
+└── CORBAN-CURRENT-STATE.md
 
 ---
 
@@ -104,11 +113,12 @@ text
 
 ## 🔴 CRÍTICOS — resolver antes de qualquer código novo
 
-### 🔴 1. Duplicação de estrutura `app/` vs `src/app/`
-- Existem duas pastas `app/` concorrentes
-- Next.js vai usar uma, mas pode não ser a que você edita
-- IA vai se confundir sobre qual editar
-- **Decisão:** manter `src/app/` e apagar `app/` da raiz
+### ✅ 1. Duplicação de estrutura `app/` vs `src/app/` — RESOLVIDO
+- ~~Existem duas pastas `app/` concorrentes~~ (resolvido no Ciclo 1, 11/09/2026)
+- Estrutura consolidada em `src/app/`
+- `app/` da raiz removida
+- `tsconfig.json` corrigido: `@/*` → `./src/*`
+- Resolve ADR-0009
 
 ### 🔴 2. Next.js 16.3.4 — breaking changes
 - Versão fora do padrão do que IAs conhecem (treinadas em 14/15)
@@ -162,6 +172,7 @@ text
 - Repositório Git criado
 - Estrutura mínima de auth (middleware, server)
 - Master v1.1 salvo em disco
+- Estrutura de pastas consolidada em `src/app/` (Ciclo 1)
 
 ## 🔵 FORA DE ESCOPO AGORA
 
@@ -176,8 +187,11 @@ text
 | # | Data | Decisão | Observação |
 |---|---|---|---|
 | 1 | 11/09/2026 | Seguir o master v1.1 como fonte de verdade conceitual | |
-| 2 | 11/09/2026 | Estrutura oficial: manter `src/app/`, apagar `app/` da raiz | Pendente execução |
-| 3 | 11/09/2026 | Modelo de trabalho: IA arquiteta no chat + IA executora no VS Code | Continue + Ollama Llama 3 local |
+| 2 | 11/09/2026 | Estrutura oficial: manter `src/app/`, apagar `app/` da raiz | ✅ Executado em 11/09/2026 (Ciclo 1) |
+| 3 | 11/09/2026 | Modelo de trabalho: IA arquiteta no chat + IA executora no VS Code | Cline + Ollama qwen2.5-coder:7b |
+| 4 | 11/09/2026 | Corrigir `tsconfig.json`: alias `@/*` → `./src/*` | ✅ Executado em 11/09/2026 (Ciclo 1) |
+| 5 | 11/09/2026 | Não usar Cline (7B) para editar markdown existente | Aprendizado: sobrescreve arquivos inteiros |
+
 ---
 
 # 6. DECISÕES PENDENTES
@@ -186,8 +200,8 @@ text
 |---|---|---|---|
 | P1 | Migrations: Drizzle ou Supabase CLI? | Drizzle | Antes de seguir |
 | P2 | Monorepo ou app único? | App único por ora | Antes do primeiro worker |
-| P3 | Substituir `PROJECT_CONTEXT.md`? | Sim | Junto com limpeza |
-| P4 | Instalar Cline ou usar Continue puro? | Decidir | Antes da limpeza |
+| P3 | Substituir `PROJECT_CONTEXT.md`? | Sim | Ciclo 3 |
+| P4 | Instalar Cline ou usar Continue puro? | Decidido: Cline instalado | ✅ Resolvido |
 
 ---
 
@@ -196,27 +210,26 @@ text
 | Ferramenta | Uso |
 |---|---|
 | VS Code | Editor principal |
-| Continue (extensão) | IA no VS Code |
-| Ollama + Llama 3 | Modelo local para autocomplete e chat |
+| Cline (extensão) | IA executora no VS Code |
+| Continue (extensão) | IA no VS Code (legado) |
+| Ollama + qwen2.5-coder:7b | Modelo local |
 | GitHub | Repositório privado |
 | Supabase | Banco de dados e auth |
 
-**Limitação conhecida:** Llama 3 local tem contexto ~8k tokens — não serve para tarefas estruturais longas. Considerar adicionar Gemini (grátis) no Continue para modo Agent.
+**Limitação conhecida:** Cline com `qwen2.5-coder:7b` **sobrescreve arquivos inteiros** em vez de editá-los. Para edições de markdown, preferir edição manual ou modelo ≥14B. Ver decisão #5 da seção 5.
 
 ---
 
 # 8. PRÓXIMO PASSO CONCRETO
 
-**Ciclo 1 — Limpeza de estrutura de pastas**
+**Ciclo 2 — Documentação da versão do Next.js 16.3.4**
 
-1. Auditoria de `app/` vs `src/app/` (nada apagado ainda)
-2. Comparação de arquivos
-3. Plano de consolidação apresentado
-4. Confirmação do usuário
-5. Execução (apagar `app/`, mover o que for necessário para `src/app/`)
-6. Commit: `refactor: consolidar estrutura em src/app`
+1. Criar `/docs/NEXT-VERSION-NOTES.md`
+2. Documentar breaking changes da versão 16.3.4
+3. Referenciar `node_modules/next/dist/docs/`
+4. Commit: `docs: adicionar notas de versão do Next.js 16.3.4`
 
-**Critério de conclusão:** `git status` limpo + `npm run dev` sobe sem erro + só existe `src/app/`.
+**Critério de conclusão:** arquivo criado, commitado e referenciado no `CURRENT-TASK.md`.
 
 ---
 
@@ -248,6 +261,7 @@ Nenhum teste criado. Vitest e Playwright ainda não instalados.
 | # | Data | O que foi feito | Próximo passo definido |
 |---|---|---|---|
 | 1 | 11/09/2026 | Diagnóstico do repositório; identificação de 6 problemas críticos e 4 pendências; decisão de consolidar em `src/app/` | Ciclo 1: limpeza de estrutura |
+| 2 | 11/09/2026 | Ciclo 1 concluído: pasta `app/` da raiz removida, `globals.css` e `favicon.ico` movidos para `src/app/`, `tsconfig.json` corrigido (`@/*` → `./src/*`). Registrada a limitação do Cline (7B) para edições de markdown. | Ciclo 2: documentação Next.js 16.3.4 |
 
 ---
 
@@ -261,10 +275,8 @@ Ao retomar o projeto:
 4. Se houver divergência: atualizar este arquivo ANTES de codar
 5. ANTES de codar: confirmar o "Próximo Passo" com o usuário
 6. AO TERMINAR: atualizar as seções 1, 2, 3, 4, 5, 6, 8, 12 deste arquivo
+7. **NUNCA** usar o Cline (com modelo 7B) para editar arquivos existentes — ele sobrescreve arquivos inteiros. Preferir edição manual ou modelo ≥14B.
 
 ---
 
 # FIM
-
-
-

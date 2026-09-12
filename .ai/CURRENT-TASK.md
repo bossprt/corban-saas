@@ -2,15 +2,15 @@
 
 **Última atualização:** 11/09/2026
 **Fase:** FASE 1 (Fundação técnica)
-**Sessão anterior:** sessão inicial de diagnóstico
+**Sessão anterior:** Ciclo 1 concluído — limpeza de estrutura de pastas
 
 ---
 
 # 🎯 FOCO ATUAL
 
-**Ciclo 1 — Limpeza de estrutura de pastas**
+**Ciclo 2 — Documentação da versão do Next.js**
 
-Resolver a duplicação `app/` (raiz) vs `src/app/` (dentro de src), conforme ADR-0009.
+Criar `/docs/NEXT-VERSION-NOTES.md` documentando breaking changes da versão 16.3.4.
 
 ---
 
@@ -31,19 +31,18 @@ Infraestrutura Next.js (feita na sessão 0, antes desta):
 - [x] Supabase conectado
 - [x] Repositório GitHub privado
 
+Ciclo 1 — Limpeza de estrutura:
+- [x] Auditar `app/` vs `src/app/`
+- [x] Comparar arquivos duplicados
+- [x] Apresentar plano de consolidação ao usuário
+- [x] Confirmar com usuário antes de apagar nada
+- [x] Executar consolidação (manter `src/app/`, apagar `app/` da raiz)
+- [x] Rodar `npm run dev` e confirmar que sobe
+- [x] Commit: `refactor: consolidar estrutura em src/app`
+
 ---
 
 # 🔨 PRÓXIMOS PASSOS (em ordem)
-
-## Ciclo 1 — Limpeza de estrutura
-
-- [ ] Auditar `app/` vs `src/app/` (listar arquivos de cada)
-- [ ] Comparar arquivos duplicados
-- [ ] Apresentar plano de consolidação ao usuário
-- [ ] Confirmar com usuário antes de apagar nada
-- [ ] Executar consolidação (manter `src/app/`, apagar `app/` da raiz)
-- [ ] Rodar `npm run dev` e confirmar que sobe
-- [ ] Commit: `refactor: consolidar estrutura em src/app`
 
 ## Ciclo 2 — Documentação de versão do Next.js
 
@@ -78,9 +77,6 @@ Infraestrutura Next.js (feita na sessão 0, antes desta):
 
 ## Ciclo 6 — Camada intermediária de docs
 
-- [ ] Criar `/docs/ARCHITECTURE.md`
-- [ ] Criar `/docs/DATABASE.md`
-- [ ] Criar `/docs/RBAC.md`
 - [ ] Criar `/docs/BUSINESS-RULES.md`
 - [ ] Commit
 
@@ -93,6 +89,11 @@ Nenhum bloqueio técnico.
 **Bloqueio de decisão:** antes do Ciclo 4, decidir:
 - P7 (do DECISIONS.md): adicionar Gemini no Continue para modo Agent?
   - Recomendação: sim — Llama 3 local é limitado para tarefas estruturais.
+
+**Nota de aprendizado (Ciclo 1):**
+O Cline com `qwen2.5-coder:7b` **sobrescreveu arquivos inteiros** em vez de editá-los, destruindo `.ai/CHANGELOG.md`, `.ai/CURRENT-TASK.md` e `CORBAN-CURRENT-STATE.md`. Todos foram restaurados via `git checkout HEAD -- <arquivo>`.
+
+**Aprendizado:** para tarefas de edição de markdown, preferir edição manual. Considerar modelo 14B para os próximos ciclos (ver P7 e próximo ciclo).
 
 ---
 
@@ -114,13 +115,13 @@ Ver `/.ai/DECISIONS.md` → seção "DECISÕES PENDENTES".
 
 # 🎓 CRITÉRIO DE CONCLUSÃO DA FASE 1
 
-- [ ] `npm run dev` sobe sem erros
+- [x] `npm run dev` sobe sem erros
 - [ ] `npm test` roda (mesmo sem testes reais)
-- [ ] `npm run lint` passa
+- [x] `npm run lint` passa
 - [ ] CI verde no GitHub Actions
 - [ ] Supabase conectado com pelo menos uma migration aplicada
 - [ ] RLS funcionando e testada
-- [ ] Estrutura de pastas única (`src/app/`)
+- [x] Estrutura de pastas única (`src/app/`)
 - [ ] Drizzle configurado
 - [ ] Zod configurado
 
@@ -133,7 +134,7 @@ Ver `/.ai/DECISIONS.md` → seção "DECISÕES PENDENTES".
 3. Ler `/.ai/RULES.md`
 4. Ler `/.ai/MASTER-CONTEXT.md`
 5. Ler este arquivo (CURRENT-TASK)
-6. Começar pelo **Ciclo 1 — Limpeza de estrutura**
+6. Começar pelo **Ciclo 2 — Documentação da versão do Next.js**
 7. Confirmar cada ciclo com o usuário antes de avançar
 8. Ao final de cada ciclo, atualizar `CHANGELOG.md` e fazer commit
 

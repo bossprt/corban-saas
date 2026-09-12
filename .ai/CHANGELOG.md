@@ -21,11 +21,12 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ### Alterado
 
-- (nada ainda nesta versão)
+- Estrutura de pastas consolidada em `src/app/` — removida pasta `app/` da raiz (boilerplate do `create-next-app`); movidos `globals.css` e `favicon.ico` para `src/app/`. Resolve ADR-0009.
+- `tsconfig.json` corrigido: alias `@/*` agora aponta para `./src/*` (antes apontava para `./*`).
 
 ### Corrigido
 
-- (nada ainda nesta versão)
+- Import quebrado `./globals.css` em `src/app/layout.tsx` — o arquivo CSS estava em `app/` da raiz; agora está em `src/app/`.
 
 ---
 
@@ -82,5 +83,3 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 - Commit inicial no GitHub
 
 ---
-
-# FIM
