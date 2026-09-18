@@ -49,6 +49,7 @@ create table if not exists public.digitization_jobs (
   constraint digitization_jobs_attempt_check check (attempt_count >= 0)
 );
 
+create index if not exists digitization_jobs_assigned_to_idx on public.digitization_jobs (assigned_to);
 create unique index if not exists digitization_jobs_org_id_key on public.digitization_jobs (organization_id, id);
 create unique index if not exists digitization_jobs_active_proposal_key
   on public.digitization_jobs (organization_id, proposal_id)
@@ -87,6 +88,8 @@ create table if not exists public.operational_cases (
   constraint operational_cases_proposal_key unique (organization_id, proposal_id)
 );
 
+create index if not exists operational_cases_digitization_idx on public.operational_cases (organization_id, digitization_job_id);
+create index if not exists operational_cases_owner_idx on public.operational_cases (owner_user_id);
 create unique index if not exists operational_cases_org_id_key on public.operational_cases (organization_id, id);
 create index if not exists operational_cases_org_stage_due_idx on public.operational_cases (organization_id, current_stage_id, due_at);
 create index if not exists operational_cases_org_state_idx on public.operational_cases (organization_id, canonical_state);
@@ -109,6 +112,7 @@ create table if not exists public.operational_events (
     references public.operational_cases (organization_id, id) on delete restrict
 );
 
+create index if not exists operational_events_actor_idx on public.operational_events (actor_user_id);
 create index if not exists operational_events_case_time_idx on public.operational_events (organization_id, operational_case_id, occurred_at desc);
 
 alter table public.operational_stages enable row level security;
