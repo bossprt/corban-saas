@@ -17,7 +17,7 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
 
   if (!proposal) notFound()
 
-  const [{ data: requirements }, { data: job }, { data: operationalCase }, { data: customerDocuments }] = await Promise.all([
+  const [{ data: requirements }, { data: job }, { data: operationalCase }, { data: customerDocuments }, { data: externalIds }, { data: commercialRoute }] = await Promise.all([
     supabase.from('proposal_document_requirements')
       .select('id,document_type_id,label_snapshot,required_snapshot,status,exception_reason')
       .eq('proposal_id', id).order('created_at'),
@@ -30,6 +30,8 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
     supabase.from('customer_documents')
       .select('id,document_type_id,original_file_name,version,status')
       .eq('customer_id', proposal.customer_id).eq('status', 'active').order('created_at', { ascending: false }),
+    supabase.from('proposal_external_identities').select('institution_key,external_proposal_number,source,channel_id,first_seen_at').eq('proposal_id', id).order('first_seen_at'),
+    supabase.from('proposal_commercial_snapshots').select('channel_id,producer_entity_id,payer_entity_id,commission_rule_version_id,split_rule_version_id,snapshot,created_at').eq('proposal_id', id).maybeSingle(),
   ])
 
   const customer = (proposal.customer_snapshot ?? {}) as Record<string, unknown>
@@ -100,6 +102,8 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
         </dl>
       </div>
     </div>
+
+    <div className="mt-6 grid gap-6 xl:grid-cols-2"><div className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><h2 className="font-semibold">Identidades externas</h2>{!externalIds?.length?<p className="mt-3 text-sm text-slate-500">Nenhum número externo reconciliado.</p>:<div className="mt-3 space-y-2">{externalIds.map((x,i)=><div key={`${x.institution_key}-${x.external_proposal_number}-${i}`} className="rounded-lg bg-slate-950 p-3 text-sm"><strong>{x.external_proposal_number}</strong><span className="ml-3 text-slate-400">{x.institution_key}</span>{x.source&&<span className="ml-3 text-slate-500">{x.source}</span>}</div>)}</div>}</div><div className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><h2 className="font-semibold">Rota comercial congelada</h2>{!commercialRoute?<p className="mt-3 text-sm text-slate-500">Ainda sem snapshot de canal/rede.</p>:<dl className="mt-3 grid gap-2 text-sm"><div><dt className="text-xs text-slate-500">Canal</dt><dd>{commercialRoute.channel_id}</dd></div><div><dt className="text-xs text-slate-500">Produtor</dt><dd>{commercialRoute.producer_entity_id??'—'}</dd></div><div><dt className="text-xs text-slate-500">Pagador</dt><dd>{commercialRoute.payer_entity_id??'—'}</dd></div></dl>}</div></div>
 
     <details className="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-5">
       <summary className="cursor-pointer text-sm font-medium">Snapshot comercial</summary>
