@@ -1,45 +1,48 @@
 # CURRENT TASK — CORBAN OS V2
 
-**Atualização:** 18/09/2026  
+**Atualização:** 18/09/2026
 **Branch:** `architecture/corban-os-master-v2`
 
-## Estado atual consolidado
-- Vertical Slice V0 database foundation aplicado live e validado.
-- Domain Primitive `create_customer_with_timeline` aplicado live; Customer Server Action usa RPC atômica.
-- App Shell, Dashboard, Customer 360, Catálogo, Propostas e Operação implementados na branch.
-- Vercel conectado ao GitHub; Production permanece em `main`; branch V2 gera Preview automaticamente.
-- Variáveis públicas do Supabase foram configuradas na Vercel para **All Environments**:
-  - `NEXT_PUBLIC_SUPABASE_URL`
-  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- Deployments Preview anteriores falharam no prerender de `/login` porque o build não recebeu as variáveis públicas naquele momento.
-- Next.js é 16.3.4. Entrada de routing migrada de `middleware.ts` para `proxy.ts` na branch V2.
-- `main` permanece intocada.
+## Último estado comprovado
+- Preview Vercel abre login e autenticação real foi confirmada pelo usuário.
+- Build Vercel confirmado SUCCESS no commit `3718b230`.
+- App autenticado possui Dashboard, Clientes, Catálogo, Simulações, Propostas, Documentos e Operação.
+- Tenant context continua fail-closed; main intocada.
+- Live DB foundation do Vertical Slice permanece saudável; nenhuma DDL nova desta execução foi aplicada.
 
-## Segurança live
-- Gate A/B tenant/auth/membership passou.
-- Legacy RLS migrado para membership.
-- Vertical Slice: RLS ativo nas tabelas verificadas.
-- Security advisor final conhecido: 0 ERROR; WARN operacional de Leaked Password Protection Disabled; INFO intencionais nas platform tables service-role-only.
-- Não expor `SUPABASE_SERVICE_ROLE_KEY` ao browser/Vercel público.
+## Implementado nesta execução
+- UI de simulação usando apenas cliente do tenant + ProductTableVersion publicada.
+- Proposal detail com snapshot/checklist/operação.
+- Document Vault read-only.
+- Mesa operacional com fila de digitação + casos.
+- CPF checksum server-side.
+- Caminho não-atômico de criação de proposta removido.
 
-## Próxima execução
-1. Disparar novo Preview após confirmação de env vars em All Environments.
-2. Inspecionar build; corrigir autonomamente erros de TypeScript/Next/Tailwind/runtime na branch.
-3. Quando Preview ficar Ready, validar `/login`, sessão, `/app` e membership fail-closed.
-4. Continuar state-machine/RBAC/storage hardening sem publicar produção nem alterar main sem Human Gate.
+## Preparado e aguardando Human Gate de DDL
+1. `supabase/migrations/20260918_vertical_slice_domain_workflow_v0.sql`
+   - unique proposal/simulation;
+   - selected simulation immutable;
+   - proposal state transition guard;
+   - atomic `create_proposal_from_simulation(uuid)`;
+   - `prepare_proposal_documents(uuid)`;
+   - transactional `send_proposal_to_digitization(uuid)`.
+2. `supabase/migrations/20260918_document_storage_rls_v0.sql`
+   - private `corban-documents` bucket;
+   - 15 MiB + PDF/JPEG/PNG/WebP;
+   - tenant/customer path isolation;
+   - authenticated SELECT/INSERT; no UPDATE/DELETE.
+3. Post-apply contract: `tests/security/vertical-slice-workflow-contract.sql`.
 
-## Gates
-Não alterar `main`. Não executar migration destrutiva. Não publicar produção. Não inserir secrets. Operação irreversível, gasto, billing/money ou mudança externa relevante exige Human Gate.
+## Live inventory
+Read-only query em 18/09/2026: 0 banks, 0 routes, 0 product tables, 0 published versions, 0 document types, 0 operational stages, 0 clients, 0 simulations, 0 proposals. O tenant de teste autenticado está vazio; nenhum seed foi aplicado.
 
+## Próxima execução após Gate
+- aplicar as duas migrations preparadas em sequência controlada;
+- executar contract + advisors;
+- somente após sucesso, ligar UI aos RPCs atômicos;
+- preparar/configurar dados de catálogo e stages sem inventar dados comerciais;
+- implementar upload documental sobre Storage privado e link/validation workflow;
+- validar ponta a ponta em Preview.
 
-## Vercel Preview bootstrap — 2026-09-18
-- Vercel Git integration ativa para `bossprt/corban-saas`; commits da branch disparam Preview automaticamente.
-- Variáveis públicas Supabase configuradas em All Environments; typo `NNEXT_PUBLIC_SUPABASE_ANON_KEY` identificado no dashboard e corrigido pelo usuário para `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-- Next.js 16 entrypoint migrado de `middleware.ts` para `proxy.ts` na branch.
-- Este commit dispara novo Preview para validar build com configuração corrigida; não declarar sucesso até evidência do deployment.
-
-## Runtime milestone — 2026-09-18
-- Usuário confirmou que o Preview abriu a tela de login.
-- Usuário confirmou autenticação real bem-sucedida com usuário confirmado e membership ativo; fluxo browser -> Supabase Auth -> proxy -> /app -> tenant context está operacional em Preview.
-- Hardening aplicado após runtime: requireAppContext falha fechado se membership/organization não resolverem; logout server-side adicionado; CPF mascarado na listagem de clientes.
-- Próxima execução autônoma: validar build do hardening e avançar o vertical slice funcional sem tocar main/prod DDL sem novo Human Gate.
+## Human Gate atual
+É necessária autorização explícita para aplicar as duas novas migrations DDL no Supabase live. Nenhuma outra ação do usuário é necessária antes disso.
