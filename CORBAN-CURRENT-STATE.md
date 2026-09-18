@@ -117,3 +117,16 @@ A primeira conclui as transições controladas da Mesa sem permitir marcação m
 - Mesa usa transição transacional; PAID manual é proibido.
 - Diagnóstico de prontidão do tenant disponível em `/app/configuracao`.
 - Bloqueio atual não é técnico: faltam dados comerciais/operacionais válidos para configurar o tenant e executar E2E real.
+
+
+## 10. MVP closure wave — 18/09/2026
+- Importação: CSV, XLS HTML e XLSX nativo; SHA-256/idempotência; normalização; matching determinístico automático; revisão humana fail-closed.
+- Fontes financeiras: semântica persistida e congelada após uso; adapters governados para produção/status, comissão reportada, pagamento recebido e pagamento da rede.
+- Financeiro: publicação por evidência exige decisão aprovada+aplicada e match exato; reconciliação é atualizada automaticamente.
+- Comercial: rota de proposta pode ser congelada por RPC; splits são snapshots por componente (à vista/diferido/antecipação/bônus), sem assumir split uniforme.
+- Operação: transição para PAID exige evidência operacional de importação; texto bruto não é convertido automaticamente em PAID.
+- Segurança: RPCs críticos SECURITY INVOKER, anon sem EXECUTE; guards impedem bypass de fatos financeiros, snapshots comerciais e PAID; último Security Advisor executado com 0 ERROR.
+- Performance: índices dos novos FKs de snapshots por componente aplicados.
+- Nenhum fato financeiro/comercial real foi fabricado durante implementação.
+- Preview verde anterior: commit 2466f0c. A onda atual ainda precisa de novo build/typecheck Vercel; status de deployment não está chegando pela integração GitHub usada pelo agente.
+- Configuração externa pendente antes de produção real: habilitar Supabase Auth Leaked Password Protection.
