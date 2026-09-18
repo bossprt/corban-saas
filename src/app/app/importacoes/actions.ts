@@ -60,5 +60,5 @@ export async function ingestImportFile(formData:FormData){
  })
  if(error)throw new Error('Falha na ingestão atômica do lote')
  revalidatePath('/app/importacoes')
- return {batchId}
+ revalidatePath(`/app/importacoes/${batchId}`)
 }
