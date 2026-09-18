@@ -14,3 +14,7 @@ OperationalStage permite visual configurável por tenant, mas cada etapa aponta 
 Um índice parcial impede duas tarefas de digitação ativas para a mesma Proposal. FKs compostas impedem cruzamento de tenant. Eventos autenticados são SELECT/INSERT, sem UPDATE/DELETE.
 
 Antes de produção ainda são necessários guards transacionais de domínio para: documentos obrigatórios validados/waived antes da fila; transições permitidas; coerência stage↔canonical_state; e autorização por papel/RBAC.
+
+
+## Integridade adicional
+OperationalCase precisa manter Stage e canonical_state coerentes por FK composta. A criação de DigitizationJob é bloqueada no banco se Proposal não estiver ready_for_digitization ou se existir requisito obrigatório fora de validated/waived. OperationalEvent permanece append-only.
