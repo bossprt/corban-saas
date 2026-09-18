@@ -38,3 +38,10 @@ select policyname,cmd,qual,with_check
 from pg_policies
 where schemaname='public' and tablename='document_checklist_items'
 order by policyname;
+
+
+select tgname,pg_get_triggerdef(oid) definition
+from pg_trigger
+where tgrelid='public.proposal_document_requirements'::regclass
+  and tgname='proposal_document_requirements_workflow_guard'
+  and not tgisinternal;
