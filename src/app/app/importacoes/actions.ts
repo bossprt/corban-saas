@@ -15,7 +15,7 @@ function requiredText(formData:FormData,key:string,label:string){
 }
 
 export async function createImportSource(formData:FormData){
- const {supabase,organization,membership}=await requireAppContext()
+ const {supabase,organization,membership,user}=await requireAppContext()
  if(!managerRoles.has(membership.role))throw new Error('Ação exige perfil administrador ou gerente')
  const name=requiredText(formData,'name','Nome da fonte')
  const sourceKind=requiredText(formData,'source_kind','Tipo da fonte')
@@ -24,7 +24,7 @@ export async function createImportSource(formData:FormData){
  if(!semantics.has(financialSemantic))throw new Error('Semântica financeira inválida')
  const {error}=await supabase.from('import_sources').insert({
   organization_id:organization.id,name,source_kind:sourceKind,financial_semantic:financialSemantic,
-  financial_semantic_reviewed_by:membership.user_id,financial_semantic_reviewed_at:new Date().toISOString()
+  financial_semantic_reviewed_by:user.id,financial_semantic_reviewed_at:new Date().toISOString()
  })
  if(error)throw new Error('Não foi possível cadastrar a fonte de importação')
  revalidatePath('/app/importacoes')
