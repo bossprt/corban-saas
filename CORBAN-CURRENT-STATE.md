@@ -130,3 +130,10 @@ A primeira conclui as transições controladas da Mesa sem permitir marcação m
 - Nenhum fato financeiro/comercial real foi fabricado durante implementação.
 - Preview verde anterior: commit 2466f0c. A onda atual ainda precisa de novo build/typecheck Vercel; status de deployment não está chegando pela integração GitHub usada pelo agente.
 - Configuração externa pendente antes de produção real: habilitar Supabase Auth Leaked Password Protection.
+
+
+## 11. LONG-RUN integração — 18/09/2026
+- Repositório espelha agora todas as migrations live do contrato de integração (A). Não aplicadas no remoto por esta execução.
+- Implementado no código: adapter 2Tech determinístico para CSV/XLS-HTML/XLSX, contrato canônico e motor de conflitos, tela de lote com linhagem/conflitos, gates de RBAC para dados de comissão. Validação com arquivo real BuscaContrato continua pendente; aliases de colunas de identidade são provisórios.
+- Testado: 31 testes unitários, typecheck, lint (0 erros) e `next build` locais. Contrato SQL de integração passou no banco live (somente leitura).
+- Não implementado/aplicado (Human Gate): reversões governadas, netting de reversões na conciliação, revogação de TRUNCATE/REFERENCES/TRIGGER, vínculo de adapter ao lote. Ver `.ai/CURRENT-TASK.md`.

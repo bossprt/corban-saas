@@ -17,7 +17,7 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
 
   if (!proposal) notFound()
 
-  const [{ data: requirements }, { data: job }, { data: operationalCase }, { data: customerDocuments }, { data: externalIds }, { data: commercialRoute }, { data: financialEvents }] = await Promise.all([
+  const [{ data: requirements }, { data: job }, { data: operationalCase }, { data: customerDocuments }, { data: externalIds }, { data: commercialRoute }, { data: financialEventsRaw }] = await Promise.all([
     supabase.from('proposal_document_requirements')
       .select('id,document_type_id,label_snapshot,required_snapshot,status,exception_reason')
       .eq('proposal_id', id).order('created_at'),
@@ -35,6 +35,8 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
     supabase.from('financial_events').select('id,event_type,component_type,amount,currency,created_at').eq('proposal_id',id).order('created_at',{ascending:false}),
   ])
 
+  // Financial facts expose commission economics: only supervisor+ roles see them (server-side gate on top of RLS).
+  const financialEvents = ['admin','manager','supervisor'].includes(membership.role) ? financialEventsRaw : []
   const customer = (proposal.customer_snapshot ?? {}) as Record<string, unknown>
   const commercial = (proposal.commercial_snapshot ?? {}) as Record<string, unknown>
   const pendingRequired = (requirements ?? []).filter(r => r.required_snapshot && !['validated', 'waived'].includes(r.status))

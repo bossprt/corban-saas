@@ -156,3 +156,16 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 - Manual PAID remains prohibited; financial truth is not inferred from operational clicks.
 - Added tenant readiness diagnostics at `/app/configuracao`.
 - Confirmed live data gate: no banks/tables/checklists/stages/simulations/proposals exist, so no truthful E2E can be fabricated.
+
+### Adicionado — 18/09/2026 (execução LONG-RUN, blocos A–G)
+- Migrations espelho (já live) do contrato de integração: catálogo de adapters, bindings, execution ledger, guards de segredo/contrato, mapeamentos canônicos, imutabilidade de raw rows e `dedupe_financial_evidence_insert_policy`.
+- Adapter `2tech/busca_contrato_file` (`src/lib/imports/twotech.ts`), contrato canônico (`canonical.ts`) e motor de conflitos (`conflicts.ts`).
+- Runner de testes unitários sem novas dependências (`npm run test:unit`, 31 testes) e contratos SQL `integration-contract-v1-contract.sql` e `financial-reversal-paths-contract.sql`.
+- Tela de lote: linhagem (adapter/contrato/schema), conflitos entre lotes/fontes do mesmo tenant e evidência de origem por linha.
+
+### Segurança — 18/09/2026 (execução LONG-RUN)
+- Comissão e financeiro ocultos para papéis abaixo de supervisor no lote, dashboard, proposta e `/app/financeiro` (gate no servidor sobre RLS).
+- PREPARADAS, NÃO APLICADAS: `20260919_financial_reversal_paths_v1`, `20260919_revoke_excess_table_privileges_v1`, `20260919_import_batch_adapter_lineage_v1`.
+
+### Corrigido — 18/09/2026
+- Tipagem de `exceljs` (`Buffer`) em `xlsx.ts`; `package-lock.json` sincronizado com `exceljs` já declarado no `package.json`.

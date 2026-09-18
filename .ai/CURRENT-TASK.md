@@ -310,3 +310,28 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Claude should inspect/use available token-saving/codebase tools when appropriate (Graphify, Caveman, Superpowers, context-mode, Context7/official docs), reuse indexes/caches, and avoid repeated large-file reads.
 - Git + state files are the handoff bus; the user is not a courier between ChatGPT and Claude.
 - ChatGPT may advance live Supabase; Claude reconciles through forward-only migrations and never rewrites applied history.
+
+
+## LONG-RUN handoff — 18/09/2026 (blocos A–G)
+**Concluído (commits em `architecture/corban-os-master-v2`):**
+- A: 7 migrations espelho do estado live em `supabase/migrations/20260918_*` (contrato de integração, guards, execution ledger, mapeamentos, imutabilidade raw, dedupe de policy). Nada re-aplicado.
+- B: `src/lib/imports/twotech.ts` (adapter `2tech/busca_contrato_file`), registrado em `adapters.ts`/`engine.ts` e na tela de importação (`sourceKey=2tech_busca_contrato`, exige fonte `production_report`).
+- C/D: `canonical.ts` e `conflicts.ts`.
+- E: código financeiro existente auditado; defeitos achados e corrigidos em migrations PREPARADAS (abaixo). Dashboard já subtrai reversões quando existirem.
+- F: tela de lote (linhagem, conflitos, evidência por linha), RBAC de comissão/financeiro.
+- G: `npm run test:unit` = 31 passam; `tsc` limpo; `eslint` 0 erros; `next build --webpack` passou (antes das últimas edições de RBAC; typecheck e lint rodados depois).
+
+**Human Gate acumulado (nada disso aplicado no Supabase remoto):**
+1. `20260919_revoke_excess_table_privileges_v1.sql` — ALTA prioridade: `authenticated` tem TRUNCATE/REFERENCES/TRIGGER nas tabelas de tenant (ignora RLS e triggers de imutabilidade). Não é alcançável via PostgREST, mas é defesa em profundidade.
+2. `20260919_financial_reversal_paths_v1.sql` — reconciliação hoje SOMA reversões; corrige netting, cria `publish_financial_reversal`, bloqueia INSERT direto de reversal/adjustment. Compilou em transação com rollback; nada persistido. Ao aplicar, adjustments diretos deixam de ser possíveis (não há uso no app).
+3. `20260919_import_batch_adapter_lineage_v1.sql` — `attach_import_batch_adapter`; a action já chama a RPC de forma best-effort.
+4. Após aplicar: rodar `tests/security/financial-reversal-paths-contract.sql`.
+
+**Não feito / pendências reais:**
+- Arquivo real BuscaContrato não disponível: aliases de colunas de identidade/instituição/produtor são provisórios e `KNOWN_TWOTECH_SCHEMA_FINGERPRINTS` está vazio.
+- Testes A/B de tenant com JWT reais e testes comportamentais SQL (imutabilidade, FKs cross-tenant) exigem identidades de teste (banco live tem 0 usuários); não criei usuários artificiais.
+- Máscara de comissão é a nível de aplicação; RLS não filtra colunas. Avaliar view/RPC segura antes de produção multi-perfil.
+- Bevicred API segue adiada.
+- Vercel: validar Preview do HEAD desta branch.
+
+**Próxima tarefa executável:** com arquivo real BuscaContrato, registrar impressão de schema, confirmar aliases e adicionar teste com fixture anonimizada; após autorização, aplicar gates 1–3.
