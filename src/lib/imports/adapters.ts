@@ -67,8 +67,19 @@ function financialStatementAdapter(key:string,semantic:'commission_statement'|'p
   })}))
  }
 }
+
+export const productionStatusAdapter:ImportAdapter={
+ key:'generic-production-status',version:'1.0.0',financialSemantic:'production_report',
+ canParse:({filename})=>/\.csv$/i.test(filename),
+ parse:({rows})=>rows.map((r,i):ParsedImportRow=>{const rawStatus=text(val(r,'Status','status','Situação','Situacao','situacao'));const canonical=rawStatus&&/^(pago|paid|liberado|creditado)$/i.test(rawStatus)?'paid':null;return {rowNumber:i+1,rawPayload:r,normalized:base(r,{
+  recordKind:'status',bankKey:text(val(r,'Banco','banco','bank','institution')),externalProposalNumber:text(val(r,'Proposta','proposta','proposal','proposal_number','numero_proposta')),
+  producerTaxId:text(val(r,'CNPJ Produtor','cnpj_produtor','producer_tax_id','cnpj')),
+  normalizedPayload:{...r,rawStatus,canonicalStatus:canonical,occurredAt:text(val(r,'Data','data','date','occurred_at'))}
+ })}})
+}
+
 export const commissionStatementAdapter=financialStatementAdapter('generic-commission-statement','commission_statement','commission')
 export const paymentStatementAdapter=financialStatementAdapter('generic-payment-statement','payment_statement','payment')
 export const networkPaymentStatementAdapter=financialStatementAdapter('generic-network-payment-statement','network_payment_statement','payment')
 
-export const importAdapters=[daycovalAdapter,efetivaMaisAdapter,bevicredAdapter,commissionStatementAdapter,paymentStatementAdapter,networkPaymentStatementAdapter]
+export const importAdapters=[daycovalAdapter,efetivaMaisAdapter,bevicredAdapter,productionStatusAdapter,commissionStatementAdapter,paymentStatementAdapter,networkPaymentStatementAdapter]
