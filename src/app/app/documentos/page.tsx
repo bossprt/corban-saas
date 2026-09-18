@@ -1,4 +1,5 @@
 import { requireAppContext } from '@/lib/appContext'
+import { uploadCustomerDocument } from './actions'
 
 export default async function DocumentsPage() {
   const { supabase } = await requireAppContext()
@@ -18,6 +19,20 @@ export default async function DocumentsPage() {
       <h1 className="text-3xl font-semibold">Documentos</h1>
       <p className="mt-2 text-sm text-slate-400">Cofre documental privado e versionado do tenant.</p>
     </div>
+
+    <form action={uploadCustomerDocument} className="mb-6 grid gap-3 rounded-2xl border border-slate-800 bg-slate-900 p-5 md:grid-cols-4">
+      <select required name="customer_id" defaultValue="" className="field">
+        <option value="" disabled>Cliente</option>
+        {customersResult.data?.map(c => <option key={c.id} value={c.id}>{c.full_name}</option>)}
+      </select>
+      <select required name="document_type_id" defaultValue="" className="field">
+        <option value="" disabled>Tipo de documento</option>
+        {typesResult.data?.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+      </select>
+      <input required type="file" name="file" accept=".pdf,image/jpeg,image/png,image/webp" className="field"/>
+      <button className="rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-slate-950">Enviar documento</button>
+      <p className="text-xs text-slate-500 md:col-span-4">Bucket privado · PDF/JPEG/PNG/WebP · máximo 15 MiB · evidência sem sobrescrita.</p>
+    </form>
 
     <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">
       <div className="overflow-x-auto"><table className="w-full text-left text-sm">
