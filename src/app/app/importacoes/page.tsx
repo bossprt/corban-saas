@@ -5,7 +5,7 @@ import { createImportSource } from './actions'
 export default async function ImportsPage(){
  const {supabase,membership}=await requireAppContext()
  const canManage=['admin','manager'].includes(membership.role)
- const {data:sources}=await supabase.from('import_sources').select('id,name,source_kind,financial_semantic,active').order('name')
+ const {data:sources}=await supabase.from('import_sources').select('id,name,source_kind,financial_semantic,is_active').order('name')
  const {data,error}=await supabase.from('import_batches').select('id,original_filename,status,row_count,received_at,parser_key,parser_version,source_id').order('received_at',{ascending:false}).limit(50)
  const batchIds=data?.map(b=>b.id)??[]
  const {data:raw}=batchIds.length?await supabase.from('import_raw_rows').select('id,batch_id').in('batch_id',batchIds):{data:[]}
