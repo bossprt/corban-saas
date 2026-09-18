@@ -53,6 +53,7 @@ create table if not exists public.document_checklist_templates (
   created_at timestamptz not null default now(),
   constraint document_checklist_templates_status_check check (status in ('draft','published','superseded')),
   constraint document_checklist_templates_version_check check (version > 0),
+  constraint document_checklist_templates_publication_check check (status = 'draft' or published_at is not null),
   constraint document_checklist_templates_route_tenant_fk foreign key (organization_id, route_id)
     references public.organization_product_routes (organization_id, id) on delete restrict,
   constraint document_checklist_templates_route_version_key unique (route_id, version)
@@ -151,6 +152,66 @@ create policy customer_documents_update_member on public.customer_documents for 
 create policy document_checklist_templates_select_member on public.document_checklist_templates for select to authenticated using (public.is_active_organization_member(organization_id));
 create policy document_checklist_templates_insert_member on public.document_checklist_templates for insert to authenticated with check (public.is_active_organization_member(organization_id));
 create policy document_checklist_templates_update_draft_member on public.document_checklist_templates for update to authenticated using (public.is_active_organization_member(organization_id) and status='draft') with check (public.is_active_organization_member(organization_id) and status='draft');
+
+-- Defense in depth for privileged paths: published checklist structure is immutable.
+create or replace function public.guard_document_checklist_template_immutable()
+returns trigger
+language plpgsql
+set search_path = ''
+as $function$
+begin
+  if old.status = 'draft' and new.status not in ('draft','published') then
+    raise exception 'invalid_checklist_template_transition';
+  end if;
+  if old.status = 'published' and new.status not in ('published','superseded') then
+    raise exception 'invalid_checklist_template_transition';
+  end if;
+  if old.status = 'superseded' and new.status is distinct from old.status then
+    raise exception 'terminal_checklist_template_status';
+  end if;
+  if old.status <> 'draft' and (
+    new.organization_id is distinct from old.organization_id
+    or new.route_id is distinct from old.route_id
+    or new.version is distinct from old.version
+    or new.name is distinct from old.name
+    or new.created_at is distinct from old.created_at
+  ) then
+    raise exception 'published_checklist_template_is_immutable';
+  end if;
+  return new;
+end;
+$function$;
+
+drop trigger if exists document_checklist_templates_immutable_guard on public.document_checklist_templates;
+create trigger document_checklist_templates_immutable_guard
+before update on public.document_checklist_templates
+for each row execute function public.guard_document_checklist_template_immutable();
+
+create or replace function public.guard_document_checklist_item_draft_parent()
+returns trigger
+language plpgsql
+set search_path = ''
+as $function$
+begin
+  if not exists (
+    select 1 from public.document_checklist_templates t
+    where t.organization_id = new.organization_id
+      and t.id = new.template_id
+      and t.status = 'draft'
+  ) then
+    raise exception 'checklist_items_require_draft_template';
+  end if;
+  return new;
+end;
+$function$;
+
+drop trigger if exists document_checklist_items_draft_parent_guard on public.document_checklist_items;
+create trigger document_checklist_items_draft_parent_guard
+before insert or update on public.document_checklist_items
+for each row execute function public.guard_document_checklist_item_draft_parent();
+
+revoke all on function public.guard_document_checklist_template_immutable() from public, anon, authenticated;
+revoke all on function public.guard_document_checklist_item_draft_parent() from public, anon, authenticated;
 
 create policy document_checklist_items_select_member on public.document_checklist_items for select to authenticated using (public.is_active_organization_member(organization_id));
 create policy document_checklist_items_insert_draft_member on public.document_checklist_items for insert to authenticated
