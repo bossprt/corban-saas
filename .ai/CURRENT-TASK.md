@@ -198,3 +198,15 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Existing source semantics become immutable once batches reference the source.
 - No real source records or financial facts were fabricated by the assistant.
 - Preview for source registry triggered.
+
+
+## Autonomous MVP acceleration — external deployment gate reached
+- User pre-authorized all migrations/changes following triple-review + adversarial pattern until an external configuration is required.
+- Applied `atomic_import_ingestion_v0`: atomic, tenant-scoped, SHA-256-idempotent ingestion of normalized batches; SECURITY INVOKER, authenticated only.
+- Added dependency-free CSV + HTML-XLS parsing and governed upload UI. XLSX deliberately fails closed pending a homologated binary parser.
+- Applied `commercial_rule_management_rpc_v0`: admin/manager atomic publication of immutable commission rules and split versions; UI added in `/app/rede`.
+- Dashboard now includes expected commission, proven receipts, financial divergences and human-review signals.
+- Review 1 (completeness) found/fixed canonical column mismatches: import_sources.is_active and product_tables.status.
+- Review 2 (adversarial) found/fixed reviewer identity bug: source semantic reviewer now uses authenticated user.id, not a non-selected membership field.
+- Review 3 database/runtime: new RPCs confirmed SECURITY INVOKER, authenticated EXECUTE=true, anon=false; Security Advisor 0 ERROR. Known leaked-password WARN remains.
+- Deployment validation is externally blocked: Vercel Hobby build-rate limit returns upgradeToPro=build-rate-limit for current commits. This is not a project build error and cannot be changed from current connected tools.
