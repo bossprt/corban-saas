@@ -67,6 +67,28 @@ begin
     raise exception 'proposal_not_ready_for_digitization';
   end if;
 
+  -- If the proposal route has a published checklist, its requirements must have
+  -- been instantiated. This prevents an empty requirement set from passing open.
+  if exists (
+    select 1
+    from public.proposals_v2 p
+    join public.product_table_versions v
+      on v.organization_id = p.organization_id and v.id = p.product_table_version_id
+    join public.product_tables pt
+      on pt.organization_id = v.organization_id and pt.id = v.product_table_id
+    join public.document_checklist_templates t
+      on t.organization_id = pt.organization_id and t.route_id = pt.route_id
+    where p.organization_id = new.organization_id
+      and p.id = new.proposal_id
+      and t.status = 'published'
+  ) and not exists (
+    select 1 from public.proposal_document_requirements r
+    where r.organization_id = new.organization_id
+      and r.proposal_id = new.proposal_id
+  ) then
+    raise exception 'published_checklist_requirements_not_instantiated';
+  end if;
+
   if exists (
     select 1 from public.proposal_document_requirements r
     where r.organization_id = new.organization_id
