@@ -7,15 +7,16 @@ export async function POST(request: Request) {
   const { data: { user } } = await caller.auth.getUser()
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
-  const { data: callerMemberships } = await caller
-    .from('organization_memberships')
-    .select('role')
-    .eq('status','active')
-    .eq('role','admin')
-    .limit(1)
+  const admin = createAdminClient()
+  const { data: platformAdmin, error: platformAdminError } = await admin
+    .from('platform_administrators')
+    .select('user_id')
+    .eq('user_id', user.id)
+    .eq('status', 'active')
+    .maybeSingle()
 
-  if (!callerMemberships?.length) {
-    return NextResponse.json({ error: 'admin_membership_required' }, { status: 403 })
+  if (platformAdminError || !platformAdmin) {
+    return NextResponse.json({ error: 'platform_admin_required' }, { status: 403 })
   }
 
   const body = await request.json()
@@ -28,7 +29,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'invalid_input' }, { status: 400 })
   }
 
-  const admin = createAdminClient()
   const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
     data: fullName ? { full_name: fullName } : undefined
   })
