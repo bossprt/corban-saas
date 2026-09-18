@@ -1,5 +1,5 @@
 import { createHash } from 'crypto'
-import { importAdapters,bevicredAdapter,daycovalAdapter,efetivaMaisAdapter,commissionStatementAdapter,paymentStatementAdapter,networkPaymentStatementAdapter } from './adapters'
+import { importAdapters,bevicredAdapter,daycovalAdapter,efetivaMaisAdapter,commissionStatementAdapter,paymentStatementAdapter,networkPaymentStatementAdapter,productionStatusAdapter } from './adapters'
 import type { ImportAdapter,ParsedImportRow } from './contract'
 
 export function sha256(content:Buffer|string){return createHash('sha256').update(content).digest('hex')}
@@ -8,6 +8,7 @@ export function selectImportAdapter(input:{filename:string;mimeType?:string|null
  if(input.sourceKey==='daycoval')return daycovalAdapter
  if(input.sourceKey==='efetiva_mais')return efetivaMaisAdapter
  if(input.sourceKey==='bevicred')return bevicredAdapter
+ if(input.sourceKey==='production_report')return productionStatusAdapter
  if(input.sourceKey==='commission_statement')return commissionStatementAdapter
  if(input.sourceKey==='payment_statement')return paymentStatementAdapter
  if(input.sourceKey==='network_payment_statement')return networkPaymentStatementAdapter
