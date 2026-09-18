@@ -28,3 +28,10 @@ from information_schema.role_table_grants
 where table_schema='public' and grantee='service_role'
 and table_name in ('operational_stages','digitization_jobs','operational_cases','operational_events')
 group by table_name order by table_name;
+
+
+select tgname,pg_get_triggerdef(oid) definition
+from pg_trigger
+where tgrelid='public.digitization_jobs'::regclass
+  and tgname='digitization_jobs_documents_ready_guard'
+  and not tgisinternal;
