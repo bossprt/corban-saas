@@ -17,7 +17,14 @@ select conname,pg_get_constraintdef(oid) definition from pg_constraint
 where connamespace='public'::regnamespace and conname in (
 'digitization_jobs_proposal_tenant_fk','operational_cases_proposal_tenant_fk',
 'operational_cases_digitization_tenant_fk','operational_cases_stage_tenant_fk',
-'operational_events_case_tenant_fk') order by conname;
+'operational_cases_stage_state_fk','operational_events_case_tenant_fk') order by conname;
 
 select indexname,indexdef from pg_indexes
 where schemaname='public' and indexname='digitization_jobs_active_proposal_key';
+
+
+select table_name,array_agg(privilege_type order by privilege_type) privileges
+from information_schema.role_table_grants
+where table_schema='public' and grantee='service_role'
+and table_name in ('operational_stages','digitization_jobs','operational_cases','operational_events')
+group by table_name order by table_name;
