@@ -12,8 +12,8 @@ O primeiro bootstrap é uma **cerimônia operacional única**, executada somente
 2. Aplicar a migration `admin_org_bootstrap_v0`, se ainda não aplicada.
 3. Registrar explicitamente esse `user_id` em `platform_administrators` usando contexto service_role. Tenant admin NÃO equivale a platform admin.
 4. Criar/convidar a identidade do primeiro administrador do tenant.
-5. Executar `bootstrap_organization_admin(user_id, organization_name, document, plan)` com contexto service_role.
-6. Confirmar exatamente 1 Organization ativa, 1 Membership admin ativa e 1 Profile compatível para o user_id.
+5. Executar `bootstrap_organization_admin(platform_actor_user_id, user_id, organization_name, document, plan)` com contexto service_role.
+6. Confirmar exatamente 1 Organization ativa, 1 Membership admin ativa, 1 Profile compatível e 1 evento `organization.bootstrap_admin` atribuído ao operador da plataforma.
 7. Fazer login normal pela aplicação e confirmar `/app`.
 8. A partir desse momento, novos tenants usam o endpoint administrativo normal.
 9. Não criar token, flag ou rota de “primeiro acesso” que permaneça habilitada.
