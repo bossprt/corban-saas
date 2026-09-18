@@ -54,6 +54,9 @@ Fechar o gate de isolamento Tenant/Auth/Membership V2 e iniciar Customer 360.
 - [x] Login conectado a Supabase Auth via browser SSR client; middleware/server continuam validando sessão.
 - [x] `/app` agora exige sessão + membership ativo; sem membership cai em `/access-pending` fail-closed.
 - [x] Bootstrap V0 documentado sem signup público, sem organization_id confiado ao cliente e sem service role no browser.
+- [x] Bootstrap administrativo Organization + Membership + profile legado preparado como função transacional service-role-only.
+- [x] Endpoint server-only preparado com invite Auth + compensação deleteUser se o bootstrap SQL falhar.
+- [x] Admin client marcado `server-only`; nenhuma service role foi exposta ou gravada no Git.
 
 ## Próxima execução
 1. Construir harness A/B autenticado para validar isolamento real entre dois tenants sem usar dados de clientes.
@@ -66,8 +69,9 @@ Fechar o gate de isolamento Tenant/Auth/Membership V2 e iniciar Customer 360.
 8. Revisão integrada e manifesto concluídos.
 9. Gate A/B autenticado continua sendo o bloqueio real para aplicar a cadeia.
 10. Auth/Login/UI revisado e caminho fail-closed implementado.
-11. Preparar endpoint/ação administrativa atômica Organization + Membership, sem expor service role e sem executar criação real ainda.
-12. Depois criar duas identidades controladas pelo fluxo suportado, executar gate A/B e só então aplicar a sequência.
+11. Bootstrap administrativo preparado; migration ainda não aplicada e endpoint não deployado.
+12. Criar contrato pós-DDL do bootstrap e revisar bootstrap do primeiro admin (problema chicken-and-egg) sem abrir signup público.
+13. Depois criar duas identidades controladas pelo fluxo suportado, executar gate A/B e só então aplicar a sequência.
 
 ## Gates
 Não alterar `main`. Não executar migration destrutiva. Não publicar produção. Não inserir secrets. Não fabricar dados de clientes. Operação irreversível, gasto, billing/money ou mudança externa relevante exige Human Gate.
