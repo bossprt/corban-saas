@@ -14,10 +14,17 @@ alter table public.clients
 -- constraint name/state and after tenant gate. ADR-0005 requires partial uniqueness:
 -- (organization_id, cpf) where deleted_at is null.
 
+-- Composite uniqueness lets child tables prove customer belongs to the same tenant.
+create unique index if not exists clients_organization_id_id_key
+  on public.clients (organization_id, id);
+
 create table if not exists public.customer_addresses (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations(id) on delete restrict,
-  customer_id uuid not null references public.clients(id) on delete restrict,
+  customer_id uuid not null,
+  constraint customer_addresses_customer_tenant_fk
+    foreign key (organization_id, customer_id)
+    references public.clients (organization_id, id) on delete restrict,
   label text,
   postal_code text,
   street text,
@@ -38,7 +45,10 @@ create index if not exists customer_addresses_org_customer_idx
 create table if not exists public.customer_bank_accounts (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations(id) on delete restrict,
-  customer_id uuid not null references public.clients(id) on delete restrict,
+  customer_id uuid not null,
+  constraint customer_bank_accounts_customer_tenant_fk
+    foreign key (organization_id, customer_id)
+    references public.clients (organization_id, id) on delete restrict,
   bank_code text,
   bank_name text not null,
   branch text,
@@ -54,12 +64,20 @@ create table if not exists public.customer_bank_accounts (
 
 create index if not exists customer_bank_accounts_org_customer_idx
   on public.customer_bank_accounts (organization_id, customer_id);
+create unique index if not exists customer_bank_accounts_org_id_key
+  on public.customer_bank_accounts (organization_id, id);
 
 create table if not exists public.customer_pix_keys (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations(id) on delete restrict,
-  customer_id uuid not null references public.clients(id) on delete restrict,
-  bank_account_id uuid references public.customer_bank_accounts(id) on delete set null,
+  customer_id uuid not null,
+  bank_account_id uuid,
+  constraint customer_pix_keys_customer_tenant_fk
+    foreign key (organization_id, customer_id)
+    references public.clients (organization_id, id) on delete restrict,
+  constraint customer_pix_keys_bank_account_tenant_fk
+    foreign key (organization_id, bank_account_id)
+    references public.customer_bank_accounts (organization_id, id) on delete restrict,
   key_type text not null,
   key_value text not null,
   is_primary boolean not null default false,
@@ -77,7 +95,10 @@ create index if not exists customer_pix_keys_bank_account_idx
 create table if not exists public.customer_timeline_events (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations(id) on delete restrict,
-  customer_id uuid not null references public.clients(id) on delete restrict,
+  customer_id uuid not null,
+  constraint customer_timeline_customer_tenant_fk
+    foreign key (organization_id, customer_id)
+    references public.clients (organization_id, id) on delete restrict,
   event_type text not null,
   source text not null,
   actor_user_id uuid references auth.users(id) on delete set null,
