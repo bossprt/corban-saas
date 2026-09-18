@@ -36,6 +36,8 @@ create table if not exists public.customer_documents (
   constraint customer_documents_customer_hash_key unique (organization_id, customer_id, sha256)
 );
 
+create index if not exists customer_documents_document_type_idx on public.customer_documents (document_type_id);
+create index if not exists customer_documents_uploaded_by_idx on public.customer_documents (uploaded_by);
 create unique index if not exists customer_documents_org_id_key on public.customer_documents (organization_id, id);
 create index if not exists customer_documents_org_customer_idx on public.customer_documents (organization_id, customer_id, created_at desc);
 
@@ -73,6 +75,7 @@ create table if not exists public.document_checklist_items (
   constraint document_checklist_items_type_key unique (template_id, document_type_id)
 );
 
+create index if not exists document_checklist_items_document_type_idx on public.document_checklist_items (document_type_id);
 create unique index if not exists document_checklist_items_org_id_key on public.document_checklist_items (organization_id, id);
 
 -- Proposal V0 owns the composite tenant identity used by child FKs.
@@ -104,6 +107,9 @@ create table if not exists public.proposal_document_requirements (
   )
 );
 
+create index if not exists proposal_document_requirements_item_idx on public.proposal_document_requirements (organization_id, checklist_item_id);
+create index if not exists proposal_document_requirements_document_type_idx on public.proposal_document_requirements (document_type_id);
+create index if not exists proposal_document_requirements_exception_approver_idx on public.proposal_document_requirements (exception_approved_by);
 create unique index if not exists proposal_document_requirements_org_id_key on public.proposal_document_requirements (organization_id, id);
 create index if not exists proposal_document_requirements_proposal_status_idx on public.proposal_document_requirements (organization_id, proposal_id, status);
 
@@ -120,6 +126,9 @@ create table if not exists public.proposal_document_links (
     references public.customer_documents (organization_id, id) on delete restrict,
   constraint proposal_document_links_unique unique (requirement_id, customer_document_id)
 );
+
+create index if not exists proposal_document_links_document_idx on public.proposal_document_links (organization_id, customer_document_id);
+create index if not exists proposal_document_links_linked_by_idx on public.proposal_document_links (linked_by);
 
 -- RLS tenant tables
 alter table public.customer_documents enable row level security;
