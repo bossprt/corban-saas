@@ -77,3 +77,14 @@ export async function validateRequirement(formData: FormData) {
 
   revalidatePath(`/app/propostas/${id}`)
 }
+
+
+export async function publishExpectedCommission(formData: FormData) {
+  const id = proposalId(formData)
+  const { supabase, membership } = await requireAppContext()
+  if (!['admin','manager','supervisor'].includes(membership.role)) throw new Error('Seu perfil não pode publicar comissão esperada.')
+  const { error } = await supabase.rpc('publish_expected_commission', { p_proposal_id: id })
+  if (error) throw new Error('Não foi possível publicar a comissão esperada. Verifique snapshot e regras comerciais publicadas.')
+  revalidatePath(`/app/propostas/${id}`)
+  revalidatePath('/app/financeiro')
+}
