@@ -60,6 +60,9 @@ Fechar o gate de isolamento Tenant/Auth/Membership V2 e iniciar Customer 360.
 - [x] Chicken-and-egg do primeiro admin resolvido por runbook de cerimônia operacional única; nenhum endpoint público/bypass permanente foi criado.
 - [x] Verificação read-only do primeiro bootstrap criada.
 - [x] Estado live reconfirmado: 0 auth.users, 0 organizations, 0 memberships, 0 profiles.
+- [x] Customer 360 corrigido contra schema live: constraint real `unique_cpf_per_organization` e `original_source` sem conflar oportunidade.
+- [x] Product Catalog endurecido: FK composta `(product_id, modality_id)` impede modalidade de produto diferente.
+- [x] Grants `service_role` do catálogo/rotas/tabelas agora são explícitos e cobertos pelo contrato pós-DDL.
 
 ## Próxima execução
 1. Construir harness A/B autenticado para validar isolamento real entre dois tenants sem usar dados de clientes.
@@ -75,7 +78,9 @@ Fechar o gate de isolamento Tenant/Auth/Membership V2 e iniciar Customer 360.
 11. Bootstrap administrativo preparado; migration ainda não aplicada e endpoint não deployado.
 12. Contrato e runbook do primeiro admin concluídos; banco continua vazio.
 13. Próximo gate exige identidades Auth controladas reais (e-mails), que não serão inventadas nem criadas sem dados válidos.
-14. Enquanto esse gate aguarda identidade, revisar e corrigir migrations staged por integridade (CPF legacy constraint, Product↔Modality, grants service_role) antes de qualquer apply.
+14. Revisão CPF/Product↔Modality/service_role concluída.
+15. Revisar coerência Bank↔Agreement e guards de publicação/imutabilidade sem aplicar DDL.
+16. Depois revisar a cadeia staged inteira novamente antes do gate A/B.
 
 ## Gates
 Não alterar `main`. Não executar migration destrutiva. Não publicar produção. Não inserir secrets. Não fabricar dados de clientes. Operação irreversível, gasto, billing/money ou mudança externa relevante exige Human Gate.
