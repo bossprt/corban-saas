@@ -2,9 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
-import { sha256, selectImportAdapter, validateParsedRows } from '@/lib/imports/engine'
-import { parseCsv, parseHtmlTable } from '@/lib/imports/tabular'
-import { parseXlsx } from '@/lib/imports/xlsx'
+import { prepareImport, ImportPipelineError, MAX_IMPORT_BYTES } from '@/lib/imports/pipeline'
 import { TWOTECH_ADAPTER_KEY } from '@/lib/imports/twotech'
 
 const managerRoles=new Set(['admin','manager'])
@@ -39,28 +37,26 @@ export async function ingestImportFile(formData:FormData){
  const sourceKey=requiredText(formData,'source_key','Adapter')
  const file=formData.get('file')
  if(!(file instanceof File)||file.size===0)throw new Error('Arquivo obrigatório')
- if(file.size>10*1024*1024)throw new Error('Arquivo excede 10 MB')
+ if(file.size>MAX_IMPORT_BYTES)throw new Error('Arquivo excede 10 MB')
  const {data:source}=await supabase.from('import_sources').select('id,financial_semantic,is_active').eq('id',sourceId).eq('organization_id',organization.id).maybeSingle()
  if(!source?.is_active)throw new Error('Fonte inválida ou inativa')
- const buffer=Buffer.from(await file.arrayBuffer())
- const filename=file.name
- let rows:Record<string,unknown>[]
- if(/\.csv$/i.test(filename))rows=parseCsv(buffer.toString('utf8'))
- else if(/\.xls$/i.test(filename)){
-  const latin=buffer.toString('latin1')
-  if(!/<table/i.test(latin))throw new Error('XLS binário ainda não suportado; exporte como CSV')
-  rows=parseHtmlTable(latin)
- }else if(/\.xlsx$/i.test(filename))rows=await parseXlsx(buffer)
- else throw new Error('Formato não suportado; use CSV, XLSX ou XLS HTML')
- const adapter=selectImportAdapter({filename,mimeType:file.type,headers:Object.keys(rows[0]??{}),sourceKey})
- if(!adapter)throw new Error('Não foi possível determinar o adapter')
- if(source.financial_semantic!==adapter.financialSemantic)throw new Error('Adapter incompatível com a semântica financeira governada da fonte')
- const parsed=validateParsedRows(adapter.parse({filename,rows}))
+ let prepared
+ try{
+  prepared=await prepareImport({filename:file.name,mimeType:file.type,buffer:Buffer.from(await file.arrayBuffer()),sourceKey,sourceSemantic:source.financial_semantic})
+ }catch(e){
+  if(e instanceof ImportPipelineError)throw new Error(e.message)
+  throw new Error('Não foi possível ler o arquivo')
+ }
+ const {adapter,rows:parsed,contentSha256,filename}=prepared
  const {data:batchId,error}=await supabase.rpc('ingest_normalized_import_batch',{
-  p_source_id:sourceId,p_original_filename:filename,p_content_sha256:sha256(buffer),p_mime_type:file.type||'application/octet-stream',
+  p_source_id:sourceId,p_original_filename:filename,p_content_sha256:contentSha256,p_mime_type:file.type||'application/octet-stream',
   p_parser_key:adapter.key,p_parser_version:adapter.version,p_rows:parsed
  })
  if(error||!batchId)throw new Error('Falha na ingestão atômica do lote')
+ // The RPC dedupes by SHA-256 per tenant. The same bytes under another source must not silently reuse a batch
+ // whose source (and therefore governed financial semantic) differs from what the operator selected.
+ const {data:ingested}=await supabase.from('import_batches').select('source_id').eq('id',batchId).maybeSingle()
+ if(!ingested||ingested.source_id!==sourceId)throw new Error('Arquivo idêntico já importado em outra fonte; revise o lote existente')
  if(adapter.key===TWOTECH_ADAPTER_KEY){
   // Best-effort, write-once catalog lineage. Ingestion is idempotent by SHA-256, so a retry re-attaches safely;
   // until attach_import_batch_adapter is applied (see CURRENT-TASK gates) the RPC is absent and lineage stays null.

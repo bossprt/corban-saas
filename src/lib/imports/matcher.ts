@@ -14,7 +14,7 @@ export type MatchCandidate={
 export function matchNormalizedRow(row:NormalizedImportRow,input:{proposals:ProposalIdentity[];tables:TableIdentity[]}):MatchCandidate{
  if(row.externalProposalNumber){
   const number=row.externalProposalNumber.trim()
-  const scoped=input.proposals.filter(p=>p.externalProposalNumber===number&&(!row.bankKey||p.institutionKey===row.bankKey))
+  const scoped=input.proposals.filter(p=>p.externalProposalNumber===number&&(!row.bankKey||p.institutionKey.toLowerCase()===row.bankKey.toLowerCase()))
   if(scoped.length===1)return{proposalId:scoped[0].id,productTableId:null,channelId:null,strength:'exact',basis:{externalProposalNumber:number,institutionKey:scoped[0].institutionKey},status:'suggested'}
   if(scoped.length>1)return{proposalId:null,productTableId:null,channelId:null,strength:'ambiguous',basis:{externalProposalNumber:number,candidates:scoped.length},status:'human_required'}
  }

@@ -14,7 +14,10 @@ function decodeEntities(s:string){return s.replace(/&nbsp;/gi,' ').replace(/&amp
 export function parseHtmlTable(text:string){
  const rows=[...text.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)].map(m=>[...m[1].matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi)].map(c=>decodeEntities(c[1].replace(/<[^>]+>/g,' '))))
  if(rows.length<2)throw new Error('html_table_without_rows')
- const headerIndex=rows.findIndex(r=>r.length>=3)
+ // Header = first row filled across at least half of the widest row (min 2 cells); title rows are skipped.
+ const widest=Math.max(...rows.map(r=>r.length))
+ const headerIndex=rows.findIndex(r=>r.filter(Boolean).length>=Math.max(2,Math.ceil(widest/2)))
+ if(headerIndex<0)throw new Error("html_table_header_not_found")
  const headers=rows[headerIndex]
  return rows.slice(headerIndex+1).filter(r=>r.length>=headers.length/2).map(r=>Object.fromEntries(headers.map((h,i)=>[h,r[i]??''])))
 }
