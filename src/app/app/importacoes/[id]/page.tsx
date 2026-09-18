@@ -16,7 +16,9 @@ export default async function ImportBatchPage({params}:{params:Promise<{id:strin
  const decisionIds=decisions?.map(d=>d.id)??[]
  const {data:applied}=decisionIds.length?await supabase.from('import_applied_decisions').select('decision_id,applied_at').in('decision_id',decisionIds):{data:[]}
  const byRow=new Map((candidates??[]).map(c=>[c.normalized_row_id,c]))
- const latestDecision=new Map<string,(typeof decisions extends (infer T)[]|null?T:never)>();for(const d of decisions??[])if(!latestDecision.has(d.candidate_id))latestDecision.set(d.candidate_id,d)
+ type ReviewDecision={id:string;candidate_id:string;decision:string;decided_at:string}
+ const latestDecision=new Map<string,ReviewDecision>()
+ for(const d of decisions??[])if(!latestDecision.has(d.candidate_id))latestDecision.set(d.candidate_id,d as ReviewDecision)
  const appliedSet=new Set((applied??[]).map(a=>a.decision_id))
  const canReview=['admin','manager','supervisor'].includes(membership.role)
  return <section>
