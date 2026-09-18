@@ -219,3 +219,13 @@
 - **Decisão 3 (canônico/conflitos):** códigos de provider são aliases (`canonical.ts`), nunca enums. Identidade de proposta = instituição + número, independente do provider. `conflicts.ts` detecta replay, duplicata no lote, múltiplas fontes, status contraditório, correção posterior, identidade ambígua e linhas de tenants distintos (bloqueio); `autoPublishAllowed` é sempre `false`.
 - **Decisão 4 (achados de revisão adversarial no banco live, corrigidos apenas em migrations preparadas):** (a) `refresh_financial_reconciliation` somava reversões (valores são >= 0) em vez de subtrair; (b) eventos `reversal`/`adjustment` podiam ser inseridos diretamente sem validar organização/proposta/componente/valor; (c) `authenticated` tinha TRUNCATE/REFERENCES/TRIGGER em quase todas as tabelas de tenant, o que ignora RLS e triggers de imutabilidade. Correções em `20260919_*`, aguardando Human Gate.
 - **Consequência:** nada de `20260919_*` está aplicado no Supabase remoto.
+
+## ADR-0014 — Ledger append-only com reversões parciais, tenant derivado do recurso e blockers live
+- **Data:** 19/09/2026
+- **Status:** aceita; migrations correspondentes PREPARADAS, não aplicadas (Human Gate).
+- **Decisão 1:** reversão é evento compensatório; várias reversões parciais do mesmo evento são válidas e o total acumulado não pode exceder o original. Não existe UNIQUE por `reverses_event_id`. Concorrência: advisory lock por evento original antes de ler a soma (RPC e trigger); isolamento diferente de READ COMMITTED é rejeitado.
+- **Decisão 2:** todo tipo de evento financeiro só entra por publisher governado; `adjustment` e tipos sem publisher permanecem bloqueados.
+- **Decisão 3:** o tenant de uma operação é derivado do recurso (evento, proposta, lote) e só depois se exige membership ativo naquele tenant; nunca `organization_memberships ... limit 1`. Classificação completa em `docs/audits/AUDIT-2026-09-19-TENANT-RESOLUTION-AND-LIVE-BLOCKERS.md`.
+- **Decisão 4:** `financial_reconciliation_cases` só recebe valores derivados via `refresh_financial_reconciliation`; humanos apenas resolvem casos com nota.
+- **Decisão 5:** `attach_import_batch_adapter` é SECURITY DEFINER estreito (única forma de gravar linhagem de adapter) porque `import_batches` não tem policy de UPDATE.
+- **Achados live (A):** `has_active_organization_role` sem EXECUTE para `authenticated` (todas as escritas com RBAC falham) e `digest()` não qualificado sob `search_path=public` (ingestão e publisher de evidência falham).

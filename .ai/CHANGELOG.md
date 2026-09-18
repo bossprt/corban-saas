@@ -169,3 +169,17 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ### Corrigido — 18/09/2026
 - Tipagem de `exceljs` (`Buffer`) em `xlsx.ts`; `package-lock.json` sincronizado com `exceljs` já declarado no `package.json`.
+
+### Adicionado — 19/09/2026 (LONG-RUN parte 2)
+- Pipeline genérico `prepareImport` (`src/lib/imports/pipeline.ts`) com erros explícitos; a action de ingestão o utiliza e rejeita mesmo arquivo já importado em outra fonte.
+- Calculadora exata de comissão esperada (`src/lib/commission`), validada contra `numeric` do Postgres; política RBAC central `atLeast()` (`src/lib/rbac.ts`).
+- Harnesses SQL rollback-only: `financial-reversal-behavior-rollback.sql` (57 checagens) e `reconciliation-cases-hardening-rollback.sql` (10).
+- Auditoria `docs/audits/AUDIT-2026-09-19-TENANT-RESOLUTION-AND-LIVE-BLOCKERS.md`.
+
+### Corrigido — 19/09/2026
+- `parseHtmlTable` falhava com tabelas de menos de 3 colunas; matcher TS agora compara instituição sem diferenciar caixa (como o SQL).
+- Modelo de reversão (partial reversals) e lock de concorrência reescritos (migration preparada).
+
+### Segurança — 19/09/2026
+- PREPARADAS, NÃO APLICADAS: `20260919_restore_rbac_helper_execute_v1`, `20260919_fix_digest_search_path_v1`, `20260919_reconciliation_cases_write_hardening_v1`, `20260919_financial_reversal_paths_v1` (reescrita), `20260919_import_batch_adapter_lineage_v1` (reescrita).
+- JÁ APLICADA externamente (ChatGPT): revogação de TRUNCATE/REFERENCES/TRIGGER (`20260919_revoke_excess_table_privileges_v1`).

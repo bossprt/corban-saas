@@ -335,3 +335,27 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Vercel: validar Preview do HEAD desta branch.
 
 **Próxima tarefa executável:** com arquivo real BuscaContrato, registrar impressão de schema, confirmar aliases e adicionar teste com fixture anonimizada; após autorização, aplicar gates 1–3.
+
+
+## LONG-RUN parte 2 — handoff 19/09/2026
+**Commits (branch `architecture/corban-os-master-v2`):** `183075b` reversão parcial + attach por batch; `e5e3033` fixes RBAC helper/digest; `1f1c2fe` harness SQL; `8beb718` hardening de reconciliation cases; `4140082` pipeline genérico + fix HTML + matcher; rbac central; comissão exata; docs de auditoria/handoff (último commit desta lista).
+
+**Migrations já aplicadas externamente:** `20260919_revoke_excess_table_privileges_v1` (ChatGPT). NÃO reaplicar.
+
+**Migrations PREPARADAS, NÃO APLICADAS (aplicar nesta ordem, cada uma após autorização):**
+1. `20260919_restore_rbac_helper_execute_v1.sql` — CRÍTICA: sem ela nenhuma escrita com RBAC funciona para usuário real.
+2. `20260919_fix_digest_search_path_v1.sql` — CRÍTICA: ingestão e publisher de evidência.
+3. `20260919_financial_reversal_paths_v1.sql` — reversão parcial, guard, refresh que subtrai, expected publisher governado.
+4. `20260919_reconciliation_cases_write_hardening_v1.sql` — depende da 3.
+5. `20260919_import_batch_adapter_lineage_v1.sql`.
+Depois de aplicar: rodar `tests/security/financial-reversal-paths-contract.sql` (estrutural) e os dois `*-rollback.sql` (comportamentais; terminam em RAISE EXCEPTION por desenho — passa se a mensagem começar com `RESULTS: ALL PASS`).
+
+**Testes:** `npm run test:unit` 48 passam; `tsc` limpo; `eslint` 0 erros; `next build --webpack` compilou; SQL rollback-only: 57/57 (reversão/attach/ingest) e 10/10 (reconciliation), com as migrations preparadas executadas na mesma transação e nada persistido (verificado depois).
+
+**Achados:** ver `docs/audits/AUDIT-2026-09-19-TENANT-RESOLUTION-AND-LIVE-BLOCKERS.md` (classificação A/B/C de todas as funções com `limit 1`; blockers live; ledger).
+
+**HUMAN GATES:** aplicar as 5 migrations acima; decidir modelo multi-org do app (hoje falha fechado com 2+ memberships); `create_customer_with_timeline` sem role check/tenant explícito (B); mascaramento de comissão por coluna exige view/RPC (B); Supabase Leaked Password Protection (externo). Bevicred segue adiada.
+
+**Não feito:** UI de reversão/resolução de casos (depende das migrations aplicadas); tabela persistente de conflitos de importação (exigiria DDL novo); E2E com navegador (sem credenciais/usuário de teste); pipeline operacional/backend API além do que existe.
+
+**Próximo ponto exato de retomada:** após o ChatGPT/usuário aplicar as migrations 1–2, rodar o harness rollback-only completo contra o live; então implementar UI de reversão (`publish_financial_reversal`) e resolução de casos em `/app/financeiro`, e o registro persistente de conflitos (`import_conflicts`) com DDL preparado. Com arquivo real BuscaContrato: registrar impressão de schema e confirmar aliases.

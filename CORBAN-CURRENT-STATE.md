@@ -137,3 +137,9 @@ A primeira conclui as transições controladas da Mesa sem permitir marcação m
 - Implementado no código: adapter 2Tech determinístico para CSV/XLS-HTML/XLSX, contrato canônico e motor de conflitos, tela de lote com linhagem/conflitos, gates de RBAC para dados de comissão. Validação com arquivo real BuscaContrato continua pendente; aliases de colunas de identidade são provisórios.
 - Testado: 31 testes unitários, typecheck, lint (0 erros) e `next build` locais. Contrato SQL de integração passou no banco live (somente leitura).
 - Não implementado/aplicado (Human Gate): reversões governadas, netting de reversões na conciliação, revogação de TRUNCATE/REFERENCES/TRIGGER, vínculo de adapter ao lote. Ver `.ai/CURRENT-TASK.md`.
+
+
+## 12. LONG-RUN parte 2 — 19/09/2026
+- Live: privilégios TRUNCATE/REFERENCES/TRIGGER revogados (aplicado pelo ChatGPT). Todo o resto de `20260919_*` está apenas preparado.
+- Bloqueadores live descobertos em sondagem rollback-only: RBAC helper sem EXECUTE para `authenticated` e `digest()` não qualificado. Enquanto não corrigidos, escritas com RBAC, ingestão de arquivo e publisher de evidência falham para usuários reais.
+- Testado localmente: 48 testes unitários, tsc, eslint (0 erros), `next build --webpack`; harnesses SQL rollback-only passam com as migrations preparadas executadas na mesma transação.
