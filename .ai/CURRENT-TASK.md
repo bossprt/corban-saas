@@ -120,3 +120,11 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Próxima frente preparada sem DDL: `FINANCIAL-TRUTH-LEDGER-V0.md` e workspace `/app/financeiro`.
 - Workspace financeiro é deliberadamente read-only/readiness: não calcula nem publica receita enquanto ledger append-only não estiver autorizado.
 - Preview Vercel do novo workspace disparado.
+
+
+## Financial Truth Ledger prepared — Human Gate
+- Vercel commits `5c70b393` e `0007e6da` confirmados SUCCESS.
+- Preparado `20260918_financial_truth_ledger_v0.sql`: eventos financeiros append-only, evidence lineage e casos de reconciliação expected/reported/settled.
+- Idempotency por tenant, reversão por evento compensatório, valores numeric, nenhum UPDATE/DELETE autenticado sobre histórico financeiro.
+- Contract de segurança preparado.
+- Migration NÃO aplicada: novo DDL financeiro de produção exige autorização explícita.
