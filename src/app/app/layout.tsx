@@ -1,10 +1,11 @@
 import Link from 'next/link'
-import { LayoutDashboard, Users, FileText, Workflow, Landmark } from 'lucide-react'
+import { LayoutDashboard, Users, FileText, Workflow, Landmark, Library } from 'lucide-react'
 import { requireAppContext } from '@/lib/appContext'
 
 const nav = [
   { href: '/app', label: 'Visão geral', icon: LayoutDashboard },
   { href: '/app/clientes', label: 'Clientes', icon: Users },
+  { href: '/app/catalogo', label: 'Catálogo', icon: Library },
   { href: '/app/propostas', label: 'Propostas', icon: FileText },
   { href: '/app/operacao', label: 'Operação', icon: Workflow },
 ]
