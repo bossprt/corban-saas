@@ -1,0 +1,20 @@
+-- Performance hardening for Commercial Network V0.
+create index if not exists commercial_channels_org_bank_idx on public.commercial_channels(organization_id,bank_id);
+create index if not exists commercial_channels_relationship_idx on public.commercial_channels(relationship_id);
+create index if not exists commercial_channels_payer_idx on public.commercial_channels(payer_entity_id);
+create index if not exists commercial_relationships_org_upstream_idx on public.commercial_relationships(organization_id,upstream_entity_id);
+create index if not exists commercial_relationships_org_downstream_idx on public.commercial_relationships(organization_id,downstream_entity_id);
+create index if not exists commercial_relationships_bank_idx on public.commercial_relationships(bank_id);
+create index if not exists channel_commission_rules_channel_table_idx on public.channel_commission_rule_versions(channel_id,product_table_id);
+create index if not exists commission_components_rule_idx on public.commission_rule_components(rule_version_id);
+create index if not exists network_split_relationship_idx on public.network_split_rule_versions(relationship_id);
+create index if not exists network_split_bank_table_idx on public.network_split_rule_versions(bank_id,product_table_id);
+create index if not exists product_table_external_channel_table_idx on public.product_table_external_identities(channel_id,product_table_id);
+create index if not exists proposal_external_proposal_idx on public.proposal_external_identities(proposal_id);
+create index if not exists proposal_external_channel_idx on public.proposal_external_identities(channel_id);
+create index if not exists proposal_snapshot_org_idx on public.proposal_commercial_snapshots(organization_id);
+create index if not exists proposal_snapshot_channel_idx on public.proposal_commercial_snapshots(channel_id);
+create index if not exists proposal_snapshot_rule_idx on public.proposal_commercial_snapshots(commission_rule_version_id);
+create index if not exists proposal_snapshot_producer_idx on public.proposal_commercial_snapshots(producer_entity_id);
+create index if not exists proposal_snapshot_payer_idx on public.proposal_commercial_snapshots(payer_entity_id);
+create index if not exists proposal_snapshot_split_idx on public.proposal_commercial_snapshots(split_rule_version_id);
