@@ -63,6 +63,12 @@ Fechar o gate de isolamento Tenant/Auth/Membership V2 e iniciar Customer 360.
 - [x] Customer 360 corrigido contra schema live: constraint real `unique_cpf_per_organization` e `original_source` sem conflar oportunidade.
 - [x] Product Catalog endurecido: FK composta `(product_id, modality_id)` impede modalidade de produto diferente.
 - [x] Grants `service_role` do catálogo/rotas/tabelas agora são explícitos e cobertos pelo contrato pós-DDL.
+- [x] Agreement agora pertence a Bank; FK composta impede rota usar convênio de banco diferente.
+- [x] ProductTableVersion ganhou trigger de defesa em profundidade: snapshot comercial não muda depois de sair de draft.
+- [x] `proposals_v2_org_id_key` movido para a migration dona da entidade (Simulation/Proposal).
+- [x] Simulation/Proposal ganhou grants explícitos de service_role.
+- [x] Checklist items só podem ser inseridos/alterados por authenticated enquanto o template pai estiver draft.
+- [x] Document Vault ganhou grants explícitos de service_role.
 
 ## Próxima execução
 1. Construir harness A/B autenticado para validar isolamento real entre dois tenants sem usar dados de clientes.
@@ -79,8 +85,9 @@ Fechar o gate de isolamento Tenant/Auth/Membership V2 e iniciar Customer 360.
 12. Contrato e runbook do primeiro admin concluídos; banco continua vazio.
 13. Próximo gate exige identidades Auth controladas reais (e-mails), que não serão inventadas nem criadas sem dados válidos.
 14. Revisão CPF/Product↔Modality/service_role concluída.
-15. Revisar coerência Bank↔Agreement e guards de publicação/imutabilidade sem aplicar DDL.
-16. Depois revisar a cadeia staged inteira novamente antes do gate A/B.
+15. Bank↔Agreement e imutabilidade de ProductTableVersion corrigidos.
+16. Document checklist child immutability e ownership da chave Proposal corrigidos.
+17. Próximo: endurecer ProposalDocumentRequirement snapshots/transições e grants do Pipeline, depois revisar cadeia staged inteira.
 
 ## Gates
 Não alterar `main`. Não executar migration destrutiva. Não publicar produção. Não inserir secrets. Não fabricar dados de clientes. Operação irreversível, gasto, billing/money ou mudança externa relevante exige Human Gate.
