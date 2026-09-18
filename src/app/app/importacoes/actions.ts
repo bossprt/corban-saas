@@ -50,7 +50,7 @@ export async function ingestImportFile(formData:FormData){
   if(!/<table/i.test(latin))throw new Error('XLS binário ainda não suportado; exporte como CSV')
   rows=parseHtmlTable(latin)
  }else if(/\.xlsx$/i.test(filename))rows=await parseXlsx(buffer)
- else throw new Error('Formato não suportado; use CSV ou XLS HTML')
+ else throw new Error('Formato não suportado; use CSV, XLSX ou XLS HTML')
  const adapter=selectImportAdapter({filename,mimeType:file.type,headers:Object.keys(rows[0]??{}),sourceKey})
  if(!adapter)throw new Error('Não foi possível determinar o adapter')
  if(source.financial_semantic!==adapter.financialSemantic)throw new Error('Adapter incompatível com a semântica financeira governada da fonte')
