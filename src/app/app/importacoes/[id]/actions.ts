@@ -6,7 +6,7 @@ import { requireAppContext } from '@/lib/appContext'
 const reviewRoles=new Set(['admin','manager','supervisor'])
 
 export async function decideImportCandidate(formData:FormData){
- const {supabase,membership,organization}=await requireAppContext()
+ const {supabase,membership,organization,user}=await requireAppContext()
  if(!reviewRoles.has(membership.role)) throw new Error('Ação exige perfil de supervisão')
  const batchId=String(formData.get('batch_id')??'')
  const normalizedRowId=String(formData.get('normalized_row_id')??'')
@@ -23,7 +23,7 @@ export async function decideImportCandidate(formData:FormData){
 
  const {error}=await supabase.from('import_decisions').insert({
   organization_id:organization.id,batch_id:batchId,normalized_row_id:normalizedRowId,candidate_id:candidateId,
-  decision,reason,decided_by:membership.user_id??undefined
+  decision,reason,decided_by:user.id
  })
  if(error)throw new Error('Não foi possível registrar a decisão')
  revalidatePath(`/app/importacoes/${batchId}`)
