@@ -75,8 +75,7 @@ create table if not exists public.document_checklist_items (
 
 create unique index if not exists document_checklist_items_org_id_key on public.document_checklist_items (organization_id, id);
 
--- Proposal V0 must expose a composite tenant identity before child FKs are created.
-create unique index if not exists proposals_v2_org_id_key on public.proposals_v2 (organization_id, id);
+-- Proposal V0 owns the composite tenant identity used by child FKs.
 
 -- Proposal requirement is immutable evidence of what was required at that moment.
 create table if not exists public.proposal_document_requirements (
@@ -142,8 +141,35 @@ create policy document_checklist_templates_insert_member on public.document_chec
 create policy document_checklist_templates_update_draft_member on public.document_checklist_templates for update to authenticated using (public.is_active_organization_member(organization_id) and status='draft') with check (public.is_active_organization_member(organization_id) and status='draft');
 
 create policy document_checklist_items_select_member on public.document_checklist_items for select to authenticated using (public.is_active_organization_member(organization_id));
-create policy document_checklist_items_insert_member on public.document_checklist_items for insert to authenticated with check (public.is_active_organization_member(organization_id));
-create policy document_checklist_items_update_member on public.document_checklist_items for update to authenticated using (public.is_active_organization_member(organization_id)) with check (public.is_active_organization_member(organization_id));
+create policy document_checklist_items_insert_draft_member on public.document_checklist_items for insert to authenticated
+  with check (
+    public.is_active_organization_member(organization_id)
+    and exists (
+      select 1 from public.document_checklist_templates t
+      where t.organization_id=document_checklist_items.organization_id
+        and t.id=document_checklist_items.template_id
+        and t.status='draft'
+    )
+  );
+create policy document_checklist_items_update_draft_member on public.document_checklist_items for update to authenticated
+  using (
+    public.is_active_organization_member(organization_id)
+    and exists (
+      select 1 from public.document_checklist_templates t
+      where t.organization_id=document_checklist_items.organization_id
+        and t.id=document_checklist_items.template_id
+        and t.status='draft'
+    )
+  )
+  with check (
+    public.is_active_organization_member(organization_id)
+    and exists (
+      select 1 from public.document_checklist_templates t
+      where t.organization_id=document_checklist_items.organization_id
+        and t.id=document_checklist_items.template_id
+        and t.status='draft'
+    )
+  );
 
 create policy proposal_document_requirements_select_member on public.proposal_document_requirements for select to authenticated using (public.is_active_organization_member(organization_id));
 create policy proposal_document_requirements_insert_member on public.proposal_document_requirements for insert to authenticated with check (public.is_active_organization_member(organization_id));
@@ -152,5 +178,10 @@ create policy proposal_document_requirements_update_member on public.proposal_do
 create policy proposal_document_links_select_member on public.proposal_document_links for select to authenticated using (public.is_active_organization_member(organization_id));
 create policy proposal_document_links_insert_member on public.proposal_document_links for insert to authenticated with check (public.is_active_organization_member(organization_id));
 
--- No authenticated DELETE. Published checklist immutability and storage object policies
--- require dedicated guards before production.
+-- Explicit service maintenance grants.
+grant select, insert, update, delete on table public.document_types, public.customer_documents,
+  public.document_checklist_templates, public.document_checklist_items,
+  public.proposal_document_requirements, public.proposal_document_links to service_role;
+
+-- No authenticated DELETE. Storage object policies and tighter proposal-requirement
+-- transition guards remain required before production.
