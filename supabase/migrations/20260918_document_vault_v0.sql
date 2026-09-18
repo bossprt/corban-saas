@@ -183,7 +183,7 @@ create or replace function public.guard_proposal_document_requirement_snapshot()
 returns trigger
 language plpgsql
 set search_path = ''
-as $
+as $function$
 begin
   if new.organization_id is distinct from old.organization_id
      or new.proposal_id is distinct from old.proposal_id
@@ -196,7 +196,7 @@ begin
   end if;
   return new;
 end;
-$;
+$function$;
 
 drop trigger if exists proposal_document_requirements_snapshot_guard on public.proposal_document_requirements;
 create trigger proposal_document_requirements_snapshot_guard
