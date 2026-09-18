@@ -27,8 +27,8 @@ export default async function DashboardPage() {
     <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <Link href="/app/financeiro" className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><div className="text-sm text-slate-400">Comissão esperada</div><div className="mt-3 text-2xl font-semibold">R$ {expectedTotal.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div></Link>
       <Link href="/app/financeiro" className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><div className="text-sm text-slate-400">Recebido comprovado</div><div className="mt-3 text-2xl font-semibold">R$ {receivedTotal.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div></Link>
-      <Link href="/app/financeiro" className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><div className="text-sm text-slate-400">Divergências financeiras</div><div className="mt-3 text-3xl font-semibold">{divergences.count??0}</div></Link>
-      <Link href="/app/importacoes" className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><div className="text-sm text-slate-400">Revisões humanas</div><div className="mt-3 text-3xl font-semibold">{reviews.count??0}</div></Link>
+      <Link href="/app/financeiro" className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><div className="text-sm text-slate-400">Divergências financeiras</div><div className="mt-3 text-3xl font-semibold">{divergences.count ?? 0}</div></Link>
+      <Link href="/app/importacoes" className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><div className="text-sm text-slate-400">Revisões humanas</div><div className="mt-3 text-3xl font-semibold">{reviews.count ?? 0}</div></Link>
     </div>
     <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6"><h2 className="font-semibold">Fluxo operacional</h2><p className="mt-2 text-sm leading-6 text-slate-400">Cliente → Simulação → Proposta → Documentos → Digitação → Pipeline. Os dados desta tela são consultados diretamente no tenant autenticado e protegidos por RLS.</p></div>
   </section>
