@@ -1,3 +1,15 @@
+-- Platform administrators are distinct from tenant organization admins.
+create table if not exists public.platform_administrators (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  status text not null default 'active',
+  created_at timestamptz not null default now(),
+  constraint platform_administrators_status_check check (status in ('active','inactive','revoked'))
+);
+
+alter table public.platform_administrators enable row level security;
+revoke all on table public.platform_administrators from public, anon, authenticated;
+grant select, insert, update, delete on table public.platform_administrators to service_role;
+
 -- Atomic bootstrap primitive for first tenant membership.
 -- SECURITY DEFINER is intentionally NOT executable by authenticated/anon.
 create or replace function public.bootstrap_organization_admin(
