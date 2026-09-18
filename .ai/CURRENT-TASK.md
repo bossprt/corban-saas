@@ -102,3 +102,11 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - UI agora separa claramente: sugerir match → registrar decisão → aplicar vínculo aprovado.
 - Aplicação é idempotente e cria somente identidade externa de proposta/alias de tabela; não publica comissão, pagamento ou receita.
 - Preview do fluxo atualizado disparado na Vercel.
+
+
+## Adversarial commercial-network hardening prepared
+- Vercel baseline `b9b5cbd` confirmed SUCCESS after prior failed historical commits.
+- Adversarial review confirmed a remaining integrity gap: tenant RLS restricted row visibility but simple UUID FKs could still reference another tenant if an ID became known.
+- Prepared `20260918_commercial_network_integrity_hardening_v0.sql` to enforce same-organization references across commercial relationships/channels/table aliases/proposal identities/snapshots/rules.
+- Same migration freezes already-published commission and network split rule versions against update/delete.
+- Security contract prepared; migration NOT applied because it is new production DDL.
