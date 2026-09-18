@@ -45,6 +45,11 @@ Fechar o gate de isolamento Tenant/Auth/Membership V2 e iniciar Customer 360.
 - [x] Stage visual configurável por tenant mantém canonical_state técnico.
 - [x] Índice parcial impede duas tarefas ativas de digitação para a mesma Proposal.
 - [x] Status externo bruto preservado separadamente; contrato SQL de segurança criado.
+- [x] Revisão integrada da cadeia concluída; manifesto de aplicação e matriz de dependências criados.
+- [x] Ordem controlada definida: legacy RLS → Customer → Catalog → Simulation/Proposal → Documents → Pipeline.
+- [x] Estratégia de recuperação/rollback documentada com preferência por forward-fix após dados reais.
+- [x] Contrato pós-DDL das policies legadas criado.
+- [x] Migration de policies agora revoga EXECUTE authenticated/anon do helper SECURITY DEFINER legado após a troca.
 
 ## Próxima execução
 1. Construir harness A/B autenticado para validar isolamento real entre dois tenants sem usar dados de clientes.
@@ -54,9 +59,10 @@ Fechar o gate de isolamento Tenant/Auth/Membership V2 e iniciar Customer 360.
 5. Catálogo V0 revisado e Simulation/Proposal V0 preparado.
 6. Document Vault/checklist V0 preparado e revisado.
 7. Internal Digitization + Operational Pipeline V0 preparado.
-8. Fazer revisão integrada da ordem das migrations e criar manifesto de aplicação/rollback antes do gate.
-9. Após gate A/B, aplicar a sequência controlada e rodar contratos/advisors.
-10. Fechar primeira fatia vertical executável.
+8. Revisão integrada e manifesto concluídos.
+9. Gate A/B autenticado continua sendo o bloqueio real para aplicar a cadeia.
+10. Enquanto o gate não pode rodar, revisar implementação Auth/UI do repositório e preparar bootstrap seguro de primeira organização/usuário sem criar credenciais artificiais.
+11. Após gate A/B, aplicar sequência controlada e fechar a primeira fatia vertical executável.
 
 ## Gates
 Não alterar `main`. Não executar migration destrutiva. Não publicar produção. Não inserir secrets. Não fabricar dados de clientes. Operação irreversível, gasto, billing/money ou mudança externa relevante exige Human Gate.
