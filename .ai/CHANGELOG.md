@@ -17,11 +17,18 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ### Segurança — 18/09/2026
 
+- Preparada, mas deliberadamente não aplicada, a migration de policies legadas → membership. O gate A/B exige identidades autenticadas reais em ambiente controlado.
+- Confirmado banco vazio: 0 auth users, 0 organizations e 0 memberships; nenhum dado artificial foi inserido no projeto principal.
+
 - Adicionado e aplicado `organization_memberships_v2` como fundação tenant V2 aditiva, preservando o legado.
 - `organization_memberships` usa RLS e leitura autenticada apenas do próprio membership ativo; mutações não são concedidas ao papel `authenticated`.
 - Helper V2 `is_active_organization_member` usa SECURITY INVOKER.
 - Aplicada e versionada `optimize_membership_rls_auth_initplan` após advisor do Supabase apontar reavaliação de `auth.uid()` por linha.
 - Advisor pós-correção mantém apenas alerta do helper legado `get_user_organization_id()`; não foi removido ainda para não quebrar policies legadas.
+
+### Performance — 18/09/2026
+
+- Aplicada e versionada migration aditiva com índices para FKs legadas de contracts/import_jobs/profiles. O advisor deixou de reportar FKs sem índice; avisos de índices ainda não usados são esperados em banco vazio.
 
 ### Documentação — 18/09/2026
 
