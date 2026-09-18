@@ -29,15 +29,21 @@ Fechar o gate de isolamento Tenant/Auth/Membership V2 e iniciar Customer 360.
 - [x] Catálogo global é read-only para authenticated; configuração/tabelas do tenant usam RLS membership.
 - [x] FKs compostas bloqueiam rota/tabela/version cross-tenant.
 - [x] ProductTableVersion usa NUMERIC e UPDATE autenticado somente enquanto draft; publicação completa ainda exige guarda de domínio/DB.
+- [x] Simulation/Proposal V0 preparado no Git, sem aplicação prematura.
+- [x] Proposal V2 preserva snapshots de Customer, condições comerciais e atribuição.
+- [x] FKs compostas impedem Proposal/Simulation de cruzar Customer ou ProductTableVersion entre tenants.
+- [x] Proposal V2 separado de contracts legado; valores usam NUMERIC e não há DELETE authenticated.
+- [x] Contrato SQL de segurança/estrutura criado para Simulation/Proposal.
 
 ## Próxima execução
 1. Construir harness A/B autenticado para validar isolamento real entre dois tenants sem usar dados de clientes.
 2. Preparar migration separada das policies legadas para membership, sem aplicá-la antes do gate A/B.
 3. Corrigir índices de FKs legadas de forma aditiva.
 4. Customer 360 está tecnicamente preparado; manter migration não aplicada até o gate A/B.
-5. Revisar catálogo V0 adversarialmente e preparar Simulation/Proposal contract sem aplicar DDL dependente.
-6. Após gate A/B, aplicar policies legadas + Customer 360 + catálogo em ordem controlada e rodar contratos/advisors.
-7. Seguir Simulation → Proposal → Documents → Digitization → Pipeline.
+5. Catálogo V0 revisado e Simulation/Proposal V0 preparado.
+6. Preparar Document Vault/checklist V0 sem aplicar DDL dependente.
+7. Após gate A/B, aplicar policies legadas + Customer 360 + catálogo + Simulation/Proposal em ordem controlada e rodar contratos/advisors.
+8. Seguir Documents → Digitization → Pipeline.
 
 ## Gates
 Não alterar `main`. Não executar migration destrutiva. Não publicar produção. Não inserir secrets. Não fabricar dados de clientes. Operação irreversível, gasto, billing/money ou mudança externa relevante exige Human Gate.
