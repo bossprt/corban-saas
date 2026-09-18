@@ -19,7 +19,7 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
 
   const [{ data: requirements }, { data: job }, { data: operationalCase }, { data: customerDocuments }] = await Promise.all([
     supabase.from('proposal_document_requirements')
-      .select('id,label_snapshot,required_snapshot,status,exception_reason')
+      .select('id,document_type_id,label_snapshot,required_snapshot,status,exception_reason')
       .eq('proposal_id', id).order('created_at'),
     supabase.from('digitization_jobs')
       .select('id,status,priority,assigned_to,queued_at,submitted_at,last_error')
