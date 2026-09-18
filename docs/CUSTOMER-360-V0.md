@@ -50,3 +50,7 @@ Revisão adversarial do schema para eliminar referências cruzadas de tenant; de
 ## Contrato de verificação
 
 `tests/security/customer-360-schema-contract.sql` registra asserções pós-migration para RLS, grants, índice parcial de CPF e FKs compostas tenant-safe.
+
+
+## Integridade adicional
+PIX vinculado a conta bancária precisa pertencer ao mesmo Customer, não apenas ao mesmo tenant. Conta bancária e PIX possuem no máximo um registro marcado como primário por Customer. Timeline permanece append-only também para service_role no V0.
