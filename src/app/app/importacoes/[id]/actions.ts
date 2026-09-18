@@ -54,3 +54,17 @@ export async function publishApprovedImportFinancialFact(formData:FormData){
  revalidatePath(`/app/importacoes/${batchId}`)
  revalidatePath('/app/financeiro')
 }
+
+
+export async function confirmPaidFromImport(formData:FormData){
+ const {supabase,membership}=await requireAppContext()
+ if(!reviewRoles.has(membership.role))throw new Error('Ação exige perfil de supervisão')
+ const batchId=String(formData.get('batch_id')??'')
+ const decisionId=String(formData.get('decision_id')??'')
+ if(!batchId||!decisionId)throw new Error('Evidência operacional incompleta')
+ const {error}=await supabase.rpc('confirm_proposal_paid_from_import',{p_decision_id:decisionId})
+ if(error)throw new Error('A evidência não atende aos requisitos para confirmar pagamento/liberação da proposta')
+ revalidatePath(`/app/importacoes/${batchId}`)
+ revalidatePath('/app/propostas')
+ revalidatePath('/app/operacao')
+}
