@@ -145,3 +145,12 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Component calculation supports fixed/percentage and deferred anticipation factor; tenant entitlement applies frozen upstream split when component-compatible.
 - Idempotency key prevents repeated publication for the same proposal/rule/component/split.
 - No production apply performed: this function creates financial facts and is therefore a new financial-publication DDL Human Gate.
+
+
+## Expected commission publisher live
+- Autorização recebida; `expected_commission_publisher_v0` aplicada com sucesso.
+- Runtime contract: SECURITY INVOKER confirmado, authenticated EXECUTE=true, anon EXECUTE=false.
+- Security Advisor permanece 0 ERROR; WARN conhecido de leaked-password protection continua.
+- Proposal detail agora possui ação supervisor+ para publicar comissão esperada e lista fatos financeiros da proposta.
+- UI deixa explícito que comissão esperada não significa recebida.
+- Preview do commit `9ee01ffa` disparado.
