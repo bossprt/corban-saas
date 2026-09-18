@@ -181,3 +181,15 @@
 ---
 
 # FIM
+
+---
+
+## ADR-0011 — Membership explícito e contexto tenant fail-closed
+
+- **Data:** 17/09/2026
+- **Status:** aceita; substitui a parte do ADR-0001 que dependia de `organization_id` no JWT como fonte única de tenant.
+- **Contexto:** O banco vivo usa `profiles.organization_id` e `get_user_organization_id()`. Isso suporta apenas um vínculo simples por usuário e não é suficiente para a evolução V2 de RBAC, múltiplas organizações e revogação contextual.
+- **Decisão:** Introduzir `organization_memberships` como vínculo explícito entre usuário e organização. O tenant efetivo deve ser resolvido de forma fail-closed a partir de sessão autenticada + membership ativo/autorizado. Claims/JWT podem otimizar contexto, mas não substituem a validação vigente no backend/banco.
+- **Migração:** aditiva primeiro; preservar `profiles.organization_id` durante transição e migrar memberships existentes de forma idempotente. Nenhuma remoção do legado até testes de isolamento e compatibilidade passarem.
+- **Segurança:** policies V2 serão explícitas por operação; inserts/updates exigirão `WITH CHECK` coerente. Relações tenant-scoped críticas devem impedir referência cruzada entre organizações.
+- **Consequências:** um usuário poderá futuramente participar de mais de uma organização; revogação de membership passa a ser fonte operacional; testes A/B entre tenants tornam-se gate obrigatório; código não pode confiar apenas em tenant enviado pelo cliente.
