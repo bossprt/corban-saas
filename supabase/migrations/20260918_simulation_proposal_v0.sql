@@ -78,6 +78,7 @@ create table if not exists public.proposals_v2 (
     references public.product_table_versions (organization_id, id) on delete restrict
 );
 
+create unique index if not exists proposals_v2_org_id_key on public.proposals_v2 (organization_id, id);
 create index if not exists proposals_v2_org_customer_created_idx on public.proposals_v2 (organization_id, customer_id, created_at desc);
 create index if not exists proposals_v2_org_status_idx on public.proposals_v2 (organization_id, status);
 create index if not exists proposals_v2_org_table_version_idx on public.proposals_v2 (organization_id, product_table_version_id);
@@ -100,5 +101,8 @@ create policy simulations_update_member on public.simulations for update to auth
 create policy proposals_v2_select_member on public.proposals_v2 for select to authenticated using (public.is_active_organization_member(organization_id));
 create policy proposals_v2_insert_member on public.proposals_v2 for insert to authenticated with check (public.is_active_organization_member(organization_id));
 create policy proposals_v2_update_member on public.proposals_v2 for update to authenticated using (public.is_active_organization_member(organization_id)) with check (public.is_active_organization_member(organization_id));
+
+-- Explicit maintenance privileges; do not depend on owner/default privilege behavior.
+grant select, insert, update, delete on table public.simulations, public.proposals_v2 to service_role;
 
 -- No authenticated DELETE. Proposal cancellation is a state transition, not row deletion.
