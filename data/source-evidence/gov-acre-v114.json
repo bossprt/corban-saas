@@ -1,0 +1,48 @@
+{
+  "source": {
+    "file": "GOVERNO DO ACRE (2).xlsx",
+    "title": "GOVERNO DO ACRE",
+    "version": 114,
+    "updated_at": "2026-06-12",
+    "extracted_at": "2026-09-18",
+    "status": "source_evidence_not_imported"
+  },
+  "mapping": {
+    "agreement": {"code": "GOV_ACRE", "name": "Governo do Acre"},
+    "product": {"code": "CONSIGNADO", "name": "Crédito consignado"},
+    "modality": {"code": "MARGEM", "name": "Margem"},
+    "bank": null,
+    "provider": null,
+    "missing_source_fields": ["bank", "provider", "coefficient", "document_checklist"]
+  },
+  "first_vertical_table": {
+    "table_code": "761111",
+    "name": "GOV ACRE 1 DIG - AOL",
+    "transfer_code": "832110",
+    "rate": 0.025,
+    "commercial_rows": [
+      {"term":48,"flat_commission":0.06,"deferred_commission":null},
+      {"term":60,"flat_commission":0.06,"deferred_commission":0.02},
+      {"term":72,"flat_commission":0.06,"deferred_commission":0.03},
+      {"term":84,"flat_commission":0.06,"deferred_commission":0.05},
+      {"term":96,"flat_commission":0.06,"deferred_commission":0.08},
+      {"term":120,"flat_commission":0.06,"deferred_commission":0.15}
+    ]
+  },
+  "other_source_families": {
+    "margin_table_codes": ["761112","761113","831123","831124","831125","831126","761119"],
+    "combined_portability_codes": ["784961","784962","784963","784964","784965","784966","784967","784968","784969"],
+    "combined_refin_codes": ["745031","745032","745033","745034","745035","745036","745037","745038","745039"],
+    "refin_pl_codes": ["763036","763037","763038","763039","763066","763068","763069","763043"],
+    "portability_only_code": "794324"
+  },
+  "source_rules": [
+    "Para as digitações no Tabelão Único, é obrigatório a digitação do Refin de Portabilidade.",
+    "Caso não ocorra, a comissão, RCO e tarifa CIP serão estornados."
+  ],
+  "import_policy": {
+    "do_not_guess_bank_or_provider": true,
+    "do_not_treat_flat_or_deferred_commission_as_coefficient": true,
+    "do_not_publish_table_without_required_mapping": true
+  }
+}
