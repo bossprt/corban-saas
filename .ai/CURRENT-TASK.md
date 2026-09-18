@@ -293,3 +293,11 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Removed duplicate production_report semantic option in source creation.
 - Exposed the existing generic production/status adapter in import adapter selection; source semantic and adapter semantic remain fail-closed in ingestion.
 - Reconfirmed generic production adapter only maps canonical paid when the source explicitly supplies canonical_status=paid; arbitrary raw status is preserved but not promoted.
+
+
+## Operational UX closure
+- Added direct proposal navigation from digitization queue and operational cases.
+- Adversarial review caught an attempted customer-list link before its target route existed; reverted immediately, then implemented the target safely and re-enabled navigation.
+- Added tenant-safe Customer 360 detail at /app/clientes/[id] using RLS-backed client/proposal/document metadata queries; CPF remains masked and private document bytes are never exposed.
+- Confronted live proposals_v2 schema to confirm customer_id exists before accepting the Customer 360 query.
+- No production data mutation performed by this UX wave.
