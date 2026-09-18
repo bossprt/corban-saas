@@ -8,6 +8,9 @@
 3. `optimize_membership_rls_auth_initplan`
 4. `add_legacy_fk_indexes`
 
+## Gate -1 — bootstrap controlado de identidade
+Antes do A/B, aplicar separadamente `20260918_admin_org_bootstrap_v0.sql` sob Human Gate de produção. Registrar um operador em `platform_administrators`; tenant admin não possui autoridade cross-tenant. Criar as duas identidades de teste pelo Auth Admin e bootstrapar duas organizações sem dados de clientes.
+
 ## Gate 0 — obrigatório
 Executar `tests/security/TENANT-ISOLATION-A-B.md` com duas identidades autenticadas controladas. Sem 100% de aprovação, parar.
 
@@ -54,7 +57,7 @@ Pipeline → Document Vault → Simulation/Proposal → Product Catalog → Cust
 ## Pendências que NÃO bloqueiam staging técnico, mas bloqueiam produção
 - RBAC fino por papel;
 - guards transacionais de state machine;
-- imutabilidade DB de versões publicadas;
+- guards completos de state machine/RBAC fino;
 - Storage policies do Document Vault;
-- Human Gate transacional de documentos → digitação;
+- publicação transacional/versionada de tabelas e checklists;
 - observabilidade/retry/idempotência de integrações externas.
