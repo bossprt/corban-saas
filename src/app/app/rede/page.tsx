@@ -17,13 +17,17 @@ export default async function NetworkPage() {
  const bankName=new Map((banks.data??[]).map(b=>[b.id,b.name]))
  const activeSplits=(splits.data??[]).filter(x=>x.status==='published').length
  const ruleCount=rules.data?.length??0
+ const entityCount=entities.data?.length??0
+ const relationshipCount=relationships.data?.length??0
+ const channelCount=channels.data?.length??0
+ const splitCount=splits.data?.length??0
 
  return <section>
   <h1 className="text-3xl font-semibold">Rede comercial</h1>
   <p className="mt-2 text-sm text-slate-400">Masters, Subs e parceiros são papéis de uma relação. A mesma empresa pode participar de vários canais para o mesmo banco.</p>
 
   <div className="mt-6 grid gap-4 md:grid-cols-4">
-   {[['Entidades',entities.data?.length??0],['Relações',relationships.data?.length??0],['Canais',channels.data?.length??0],['Regras de split',splits.data?.length??0]].map(([label,value])=>
+   {[['Entidades',entityCount],['Relações',relationshipCount],['Canais',channelCount],['Regras de split',splitCount]].map(([label,value])=>
     <div key={String(label)} className="rounded-xl border border-slate-800 bg-slate-900 p-5"><div className="text-sm text-slate-400">{label}</div><div className="mt-2 text-3xl font-semibold">{value}</div></div>)}
   </div>
 
