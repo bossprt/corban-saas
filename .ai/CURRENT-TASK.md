@@ -151,3 +151,12 @@ Não alterar `main`. Não executar migration destrutiva. Não publicar produçã
 - Não há CI/status de build disponível no GitHub e a conexão Vercel atual não retorna teams/projetos; portanto não declarar build aprovado nem preview publicado.
 - Revisão adversarial encontrou falta de atomicidade no cadastro Cliente + Timeline. Migration 20260918_domain_primitives_v0.sql foi preparada no Git para resolver em uma transação SECURITY INVOKER.
 - BLOQUEIO/HUMAN GATE: aplicar domain_primitives_v0 no Supabase live é novo DDL de produção. Após autorização, aplicar migration, validar grants/RLS/rollback e migrar server action para RPC atômica. Depois continuar state machines/RBAC/Storage sem publicar produção sem novo gate.
+
+
+## Domain Primitives V0 live — 2026-09-18
+- Human Gate autorizado e migration 20260918_domain_primitives_v0.sql aplicada live com sucesso.
+- create_customer_with_timeline confirmado SECURITY INVOKER; anon EXECUTE=false; authenticated EXECUTE=true.
+- Security advisor permanece sem ERROR: apenas 2 INFO intencionais platform service-role-only e WARN Leaked Password Protection Disabled.
+- Server Action de Customer 360 migrada para RPC atômica (commit 340e024).
+- Tentativa de smoke test transacional com identidade simulada foi bloqueada pela camada de segurança da ferramenta; não declarar esse teste como executado.
+- Próximo bloqueio técnico externo: não há CI/build runner acessível no GitHub e Vercel connector não expõe team/project conectado. Para validar build/preview do app será necessário conectar/importar o projeto Vercel ou executar build em ambiente com checkout do repo.
