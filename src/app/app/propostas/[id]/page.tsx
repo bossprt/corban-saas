@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireAppContext } from '@/lib/appContext'
 import { attachDocument, prepareDocuments, sendToDigitization, validateRequirement, publishExpectedCommission, freezeCommercialRoute } from './actions'
+import { atLeast } from '@/lib/rbac'
 
 function brl(value: number | string | null) {
   return value === null ? '—' : Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -36,7 +37,7 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
   ])
 
   // Financial facts expose commission economics: only supervisor+ roles see them (server-side gate on top of RLS).
-  const financialEvents = ['admin','manager','supervisor'].includes(membership.role) ? financialEventsRaw : []
+  const financialEvents = atLeast(membership.role,'supervisor') ? financialEventsRaw : []
   const customer = (proposal.customer_snapshot ?? {}) as Record<string, unknown>
   const commercial = (proposal.commercial_snapshot ?? {}) as Record<string, unknown>
   const pendingRequired = (requirements ?? []).filter(r => r.required_snapshot && !['validated', 'waived'].includes(r.status))
@@ -86,7 +87,7 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
                 <select name="document_id" className="field min-w-0 flex-1" defaultValue=""><option value="" disabled>Selecionar evidência</option>{compatible.map(d => <option key={d.id} value={d.id}>{d.original_file_name} · v{d.version}</option>)}</select>
                 <button className="rounded-lg bg-slate-800 px-3 text-xs">Vincular</button>
               </form>}
-              {r.status === 'attached' && ['admin','manager','supervisor'].includes(membership.role) && <form action={validateRequirement} className="mt-2">
+              {r.status === 'attached' && atLeast(membership.role,'supervisor') && <form action={validateRequirement} className="mt-2">
                 <input type="hidden" name="proposal_id" value={proposal.id}/><input type="hidden" name="requirement_id" value={r.id}/>
                 <button className="text-xs font-medium text-emerald-400">Validar evidência</button>
               </form>}
@@ -110,7 +111,7 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
 
     <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-5">
       <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold">Verdade financeira</h2><p className="mt-1 text-xs text-slate-500">Comissão esperada não significa comissão recebida.</p></div>
-      {commercialRoute && ['admin','manager','supervisor'].includes(membership.role) && <div className="flex flex-wrap gap-2"><form action={publishExpectedCommission}><input type="hidden" name="proposal_id" value={proposal.id}/><button className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950">Publicar comissão esperada</button></form></div>}</div>
+      {commercialRoute && atLeast(membership.role,'supervisor') && <div className="flex flex-wrap gap-2"><form action={publishExpectedCommission}><input type="hidden" name="proposal_id" value={proposal.id}/><button className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950">Publicar comissão esperada</button></form></div>}</div>
       {!financialEvents?.length?<p className="mt-4 text-sm text-slate-500">Nenhum fato financeiro publicado para esta proposta.</p>:<div className="mt-4 space-y-2">{financialEvents.map(e=><div key={e.id} className="flex justify-between rounded-lg bg-slate-950 p-3 text-sm"><span>{e.event_type} · {e.component_type??'—'}</span><strong>{e.currency} {Number(e.amount).toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong></div>)}</div>}
     </div>
 

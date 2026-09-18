@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import { requireAppContext } from '@/lib/appContext'
+import { atLeast } from '@/lib/rbac'
 
 export default async function DashboardPage() {
   const { supabase, organization, membership } = await requireAppContext()
-  const canSeeFinance = ['admin','manager','supervisor'].includes(membership.role)
+  const canSeeFinance = atLeast(membership.role,'supervisor')
   const [customers, proposals, jobs, cases, divergences, reviews, expected, received, reversals] = await Promise.all([
     supabase.from('clients').select('*', { count: 'exact', head: true }).is('deleted_at', null),
     supabase.from('proposals_v2').select('*', { count: 'exact', head: true }),

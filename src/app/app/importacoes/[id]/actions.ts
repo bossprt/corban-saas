@@ -2,12 +2,12 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
+import { atLeast } from '@/lib/rbac'
 
-const reviewRoles=new Set(['admin','manager','supervisor'])
 
 export async function decideImportCandidate(formData:FormData){
  const {supabase,membership,organization,user}=await requireAppContext()
- if(!reviewRoles.has(membership.role)) throw new Error('Ação exige perfil de supervisão')
+ if(!atLeast(membership.role,'supervisor')) throw new Error('Ação exige perfil de supervisão')
  const batchId=String(formData.get('batch_id')??'')
  const normalizedRowId=String(formData.get('normalized_row_id')??'')
  const candidateId=String(formData.get('candidate_id')??'')
@@ -32,7 +32,7 @@ export async function decideImportCandidate(formData:FormData){
 
 export async function applyApprovedImportMatch(formData:FormData){
  const {supabase,membership}=await requireAppContext()
- if(!reviewRoles.has(membership.role)) throw new Error('Ação exige perfil de supervisão')
+ if(!atLeast(membership.role,'supervisor')) throw new Error('Ação exige perfil de supervisão')
  const batchId=String(formData.get('batch_id')??'')
  const decisionId=String(formData.get('decision_id')??'')
  if(!batchId||!decisionId)throw new Error('Aplicação incompleta')
@@ -45,7 +45,7 @@ export async function applyApprovedImportMatch(formData:FormData){
 
 export async function publishApprovedImportFinancialFact(formData:FormData){
  const {supabase,membership}=await requireAppContext()
- if(!reviewRoles.has(membership.role))throw new Error('Ação exige perfil de supervisão')
+ if(!atLeast(membership.role,'supervisor'))throw new Error('Ação exige perfil de supervisão')
  const batchId=String(formData.get('batch_id')??'')
  const decisionId=String(formData.get('decision_id')??'')
  if(!batchId||!decisionId)throw new Error('Publicação financeira incompleta')
@@ -58,7 +58,7 @@ export async function publishApprovedImportFinancialFact(formData:FormData){
 
 export async function confirmPaidFromImport(formData:FormData){
  const {supabase,membership}=await requireAppContext()
- if(!reviewRoles.has(membership.role))throw new Error('Ação exige perfil de supervisão')
+ if(!atLeast(membership.role,'supervisor'))throw new Error('Ação exige perfil de supervisão')
  const batchId=String(formData.get('batch_id')??'')
  const decisionId=String(formData.get('decision_id')??'')
  if(!batchId||!decisionId)throw new Error('Evidência operacional incompleta')

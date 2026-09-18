@@ -1,10 +1,11 @@
 import Link from 'next/link'
 import { requireAppContext } from '@/lib/appContext'
 import { createImportSource, ingestImportFile } from './actions'
+import { atLeast } from '@/lib/rbac'
 
 export default async function ImportsPage(){
  const {supabase,membership}=await requireAppContext()
- const canManage=['admin','manager'].includes(membership.role)
+ const canManage=atLeast(membership.role,'manager')
  const {data:sources}=await supabase.from('import_sources').select('id,name,source_kind,financial_semantic,is_active').order('name')
  const {data,error}=await supabase.from('import_batches').select('id,original_filename,status,row_count,received_at,parser_key,parser_version,source_id').order('received_at',{ascending:false}).limit(50)
  const batchIds=data?.map(b=>b.id)??[]

@@ -4,6 +4,7 @@ import { requireAppContext } from '@/lib/appContext'
 import { detectConflicts,requiresHumanReview,type ConflictRow } from '@/lib/imports/conflicts'
 import type { NormalizedImportRow } from '@/lib/imports/contract'
 import { applyApprovedImportMatch, decideImportCandidate, publishApprovedImportFinancialFact, confirmPaidFromImport } from './actions'
+import { atLeast } from '@/lib/rbac'
 
 export default async function ImportBatchPage({params}:{params:Promise<{id:string}>}){
  const {id}=await params
@@ -14,7 +15,7 @@ export default async function ImportBatchPage({params}:{params:Promise<{id:strin
  const {data:adapter}=batch.adapter_id?await supabase.from('integration_adapters').select('adapter_key,provider_key,transport,contract_version').eq('id',batch.adapter_id).maybeSingle():{data:null}
  const {data:rows}=await supabase.from('import_normalized_rows').select('id,raw_row_id,normalization_version,normalized_payload,record_kind,bank_key,external_proposal_number,producer_tax_id,external_table_code,external_table_name,operation_type,term,rate,commission_upfront,commission_deferred').in('raw_row_id',(await supabase.from('import_raw_rows').select('id').eq('batch_id',id)).data?.map(r=>r.id)??[]).limit(200)
  const rowIds=rows?.map(r=>r.id)??[]
- const canSeeCommission=['admin','manager','supervisor'].includes(membership.role)
+ const canSeeCommission=atLeast(membership.role,'supervisor')
  // Same-tenant rows (RLS-scoped) sharing an external proposal number, to surface cross-batch/source conflicts.
  const numbers=[...new Set((rows??[]).map(r=>r.external_proposal_number).filter((x):x is string=>!!x))]
  const {data:peers}=numbers.length?await supabase.from('import_normalized_rows').select('id,raw_row_id,record_kind,bank_key,external_proposal_number,producer_tax_id,external_table_code,external_table_name,operation_type,term,rate,commission_upfront,commission_deferred,amount,normalized_payload').in('external_proposal_number',numbers).limit(500):{data:[]}
@@ -42,7 +43,7 @@ export default async function ImportBatchPage({params}:{params:Promise<{id:strin
  const latestDecision=new Map<string,ReviewDecision>()
  for(const d of decisions??[])if(!latestDecision.has(d.candidate_id))latestDecision.set(d.candidate_id,d as ReviewDecision)
  const appliedSet=new Set((applied??[]).map(a=>a.decision_id))
- const canReview=['admin','manager','supervisor'].includes(membership.role)
+ const canReview=atLeast(membership.role,'supervisor')
  const financialSemantic=source?.financial_semantic??'unclassified'
  const {data:financialLinks}=decisionIds.length?await supabase.from('financial_evidence_links').select('import_decision_id').in('import_decision_id',decisionIds):{data:[]}
  const financiallyPublished=new Set((financialLinks??[]).map(x=>x.import_decision_id))

@@ -1,5 +1,6 @@
 import { requireAppContext } from '@/lib/appContext'
 import { createCommercialChannel, createCommercialEntity, createCommercialRelationship, publishCommissionRule, publishSplitRule } from './actions'
+import { atLeast } from '@/lib/rbac'
 
 export default async function NetworkPage() {
  const {supabase,membership}=await requireAppContext()
@@ -12,7 +13,7 @@ export default async function NetworkPage() {
   supabase.from('product_tables').select('id,code,name').eq('status','active').order('name'),
   supabase.from('channel_commission_rule_versions').select('id,status,version,channel_id,product_table_id,effective_from').order('created_at',{ascending:false})
  ])
- const canManage=['admin','manager'].includes(membership.role)
+ const canManage=atLeast(membership.role,'manager')
  const entityName=new Map((entities.data??[]).map(e=>[e.id,e.trade_name||e.legal_name]))
  const bankName=new Map((banks.data??[]).map(b=>[b.id,b.name]))
  const activeSplits=(splits.data??[]).filter(x=>x.status==='published').length

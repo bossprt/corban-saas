@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { requireAppContext } from '@/lib/appContext'
 import { transitionOperationalCase } from './actions'
+import { atLeast } from '@/lib/rbac'
 
 export default async function OperationsPage() {
   const { supabase, membership } = await requireAppContext()
@@ -47,11 +48,11 @@ export default async function OperationsPage() {
               {c.canonical_state === 'digitization_queue' && <button name="to_state" value="digitizing" className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white">Iniciar digitação</button>}
               {c.canonical_state === 'digitizing' && <button name="to_state" value="submitted" className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white">Marcar enviado</button>}
               {c.canonical_state === 'submitted' && <button name="to_state" value="pending_external" className="rounded-lg bg-slate-700 px-3 py-2 text-xs font-semibold">Aguardando banco</button>}
-              {['submitted','pending_external'].includes(c.canonical_state) && ['admin','manager','supervisor'].includes(membership.role) && <>
+              {['submitted','pending_external'].includes(c.canonical_state) && atLeast(membership.role,'supervisor') && <>
                 <button name="to_state" value="approved" className="rounded-lg bg-emerald-500 px-3 py-2 text-xs font-semibold text-slate-950">Aprovado</button>
                 <button name="to_state" value="rejected" className="rounded-lg bg-red-500/20 px-3 py-2 text-xs font-semibold text-red-300">Rejeitado</button>
               </>}
-              {['admin','manager','supervisor'].includes(membership.role) && <button name="to_state" value="cancelled" className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300">Cancelar</button>}
+              {atLeast(membership.role,'supervisor') && <button name="to_state" value="cancelled" className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300">Cancelar</button>}
             </form>}
           </div>)}
           {!casesResult.data?.length && <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8 text-center text-slate-500">Nenhum caso operacional.</div>}

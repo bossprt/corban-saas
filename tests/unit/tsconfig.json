@@ -11,6 +11,6 @@
     "plugins": [],
     "types": ["node"]
   },
-  "include": ["./**/*.ts", "../../src/lib/imports/**/*.ts"],
+  "include": ["./**/*.ts", "../../src/lib/imports/**/*.ts", "../../src/lib/rbac.ts", "../../src/lib/commission/**/*.ts"],
   "exclude": ["../../node_modules"]
 }

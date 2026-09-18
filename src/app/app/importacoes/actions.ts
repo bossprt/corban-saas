@@ -4,8 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
 import { prepareImport, ImportPipelineError, MAX_IMPORT_BYTES } from '@/lib/imports/pipeline'
 import { TWOTECH_ADAPTER_KEY } from '@/lib/imports/twotech'
+import { atLeast } from '@/lib/rbac'
 
-const managerRoles=new Set(['admin','manager'])
 const semantics=new Set(['commercial_offer','production_report','commission_statement','payment_statement','network_payment_statement'])
 
 function requiredText(formData:FormData,key:string,label:string){
@@ -16,7 +16,7 @@ function requiredText(formData:FormData,key:string,label:string){
 
 export async function createImportSource(formData:FormData){
  const {supabase,organization,membership,user}=await requireAppContext()
- if(!managerRoles.has(membership.role))throw new Error('Ação exige perfil administrador ou gerente')
+ if(!atLeast(membership.role,'manager'))throw new Error('Ação exige perfil administrador ou gerente')
  const name=requiredText(formData,'name','Nome da fonte')
  const sourceKind=requiredText(formData,'source_kind','Tipo da fonte')
  const financialSemantic=requiredText(formData,'financial_semantic','Semântica financeira')

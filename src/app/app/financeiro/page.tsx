@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import { requireAppContext } from '@/lib/appContext'
+import { atLeast } from '@/lib/rbac'
 
 export default async function FinancePage(){
  const {supabase,membership}=await requireAppContext()
- if(!['admin','manager','supervisor'].includes(membership.role))return <section><h1 className="text-3xl font-semibold">Financeiro</h1><p className="mt-3 text-sm text-slate-400">Dados de comissão e conciliação são restritos aos perfis administrador, gerente e supervisor.</p></section>
+ if(!atLeast(membership.role,'supervisor'))return <section><h1 className="text-3xl font-semibold">Financeiro</h1><p className="mt-3 text-sm text-slate-400">Dados de comissão e conciliação são restritos aos perfis administrador, gerente e supervisor.</p></section>
  const {count:events}=await supabase.from('financial_events').select('*',{count:'exact',head:true})
  const {count:openCases}=await supabase.from('financial_reconciliation_cases').select('*',{count:'exact',head:true}).eq('status','open')
  const {count:divergent}=await supabase.from('financial_reconciliation_cases').select('*',{count:'exact',head:true}).eq('status','divergent')

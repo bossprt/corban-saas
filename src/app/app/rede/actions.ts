@@ -2,8 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
+import { atLeast } from '@/lib/rbac'
 
-const managerRoles=new Set(['admin','manager'])
 
 function requiredText(formData:FormData,key:string,label:string){
  const value=String(formData.get(key)??'').trim()
@@ -18,7 +18,7 @@ function optionalText(formData:FormData,key:string){
 
 async function requireCommercialManager(){
  const ctx=await requireAppContext()
- if(!managerRoles.has(ctx.membership.role)) throw new Error('Ação exige perfil administrador ou gerente')
+ if(!atLeast(ctx.membership.role,'manager')) throw new Error('Ação exige perfil administrador ou gerente')
  return ctx
 }
 
