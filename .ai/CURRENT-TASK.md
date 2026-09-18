@@ -188,3 +188,13 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Batch review UI surfaces the semantic class and explicitly states commercial_offer does not publish receipt.
 - Prepared `20260918_import_source_financial_semantics_v0.sql` to persist source semantics and freeze semantic reinterpretation after a source has batches.
 - Migration NOT applied: new production DDL requires explicit authorization.
+
+
+## Import source financial semantics live
+- Authorized `import_source_financial_semantics_v0` applied successfully.
+- Runtime verified semantic columns exist with default `commercial_offer`; freeze trigger helper is not executable by authenticated/anon.
+- Security Advisor remains 0 ERROR; known leaked-password WARN persists.
+- Added governed source registry to `/app/importacoes`: admin/manager can create source + explicit financial semantic, with reviewer/timestamp recorded.
+- Existing source semantics become immutable once batches reference the source.
+- No real source records or financial facts were fabricated by the assistant.
+- Preview for source registry triggered.
