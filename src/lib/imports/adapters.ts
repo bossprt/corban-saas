@@ -24,7 +24,7 @@ export const bevicredAdapter:ImportAdapter={
 
 export const daycovalAdapter:ImportAdapter={
  key:'daycoval-table-offer',version:'1.0.0',financialSemantic:'commercial_offer',
- canParse:({filename})=>/\.xlsx$/i.test(filename),
+ canParse:({filename})=>/\.(xlsx|csv)$/i.test(filename),
  parse:({rows})=>rows.map((r,i):ParsedImportRow=>({rowNumber:i+1,rawPayload:r,normalized:base(r,{
    bankKey:'daycoval',
    externalTableCode:text(val(r,'Código','Codigo','codigo','code')),
