@@ -1,8 +1,11 @@
 import Link from 'next/link'
 import { requireAppContext } from '@/lib/appContext'
+import { createImportSource } from './actions'
 
 export default async function ImportsPage(){
- const {supabase}=await requireAppContext()
+ const {supabase,membership}=await requireAppContext()
+ const canManage=['admin','manager'].includes(membership.role)
+ const {data:sources}=await supabase.from('import_sources').select('id,name,source_kind,financial_semantic,active').order('name')
  const {data,error}=await supabase.from('import_batches').select('id,original_filename,status,row_count,received_at,parser_key,parser_version,source_id').order('received_at',{ascending:false}).limit(50)
  const batchIds=data?.map(b=>b.id)??[]
  const {data:raw}=batchIds.length?await supabase.from('import_raw_rows').select('id,batch_id').in('batch_id',batchIds):{data:[]}
@@ -18,6 +21,8 @@ export default async function ImportsPage(){
  for(const m of candidates??[]){const b=normalizedBatch.get(m.normalized_row_id);if(!b)continue;const s=stats.get(b)!;if(['exact','strong'].includes(m.match_strength))s.matched++;if(m.status==='human_required'||m.match_strength==='ambiguous')s.human++}
  return <section><h1 className="text-3xl font-semibold">Importações</h1>
  <p className="mt-2 text-sm text-slate-400">Lineage de arquivos, parsing, normalização, matching e revisão antes de qualquer alteração operacional ou financeira.</p>
+ {canManage&&<details className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-5"><summary className="cursor-pointer font-semibold">Cadastrar fonte de importação</summary><form action={createImportSource} className="mt-4 grid gap-3 md:grid-cols-2"><input name="name" required placeholder="Ex.: Extrato de comissão Daycoval" className="rounded-lg border border-slate-700 bg-slate-950 p-2"/><select name="source_kind" className="rounded-lg border border-slate-700 bg-slate-950 p-2"><option value="bank">Banco</option><option value="correspondent">Correspondente</option><option value="promotora">Promotora</option><option value="partner">Parceiro</option><option value="legacy_system">Sistema legado</option><option value="manual">Manual</option><option value="other">Outro</option></select><select name="financial_semantic" className="rounded-lg border border-slate-700 bg-slate-950 p-2"><option value="commercial_offer">Oferta comercial — não prova comissão/pagamento</option><option value="production_report">Relatório de produção</option><option value="commission_statement">Extrato de comissão reportada</option><option value="payment_statement">Comprovante/extrato de pagamento recebido</option><option value="network_payment_statement">Pagamento da rede</option></select><button className="rounded-lg bg-emerald-500 px-4 py-2 font-semibold text-slate-950">Cadastrar fonte</button></form></details>}
+ <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-5"><h2 className="font-semibold">Fontes governadas</h2><div className="mt-3 flex flex-wrap gap-2">{!sources?.length?<span className="text-sm text-slate-500">Nenhuma fonte cadastrada.</span>:sources.map(s=><span key={s.id} className="rounded-lg border border-slate-700 px-3 py-2 text-xs">{s.name} · {s.financial_semantic}</span>)}</div></div>
  <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-5">
  {error?<p className="text-amber-300">Não foi possível consultar os lotes.</p>:!data?.length?<p className="text-slate-400">Nenhum lote importado.</p>:
  <div className="space-y-2">{data.map(b=>{const s=stats.get(b.id)!;return <div key={b.id} className="rounded-lg border border-slate-800 p-3 text-sm">
