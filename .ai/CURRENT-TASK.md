@@ -59,7 +59,10 @@ Fechar o gate de isolamento Tenant/Auth/Membership V2 e iniciar Customer 360.
 - [x] Admin client marcado `server-only`; nenhuma service role foi exposta ou gravada no Git.
 - [x] Chicken-and-egg do primeiro admin resolvido por runbook de cerimônia operacional única; nenhum endpoint público/bypass permanente foi criado.
 - [x] Verificação read-only do primeiro bootstrap criada.
-- [x] Estado live reconfirmado: 0 auth.users, 0 organizations, 0 memberships, 0 profiles.
+- [x] Estado live reconfirmado antes do bootstrap: 0 auth.users, 0 organizations, 0 memberships, 0 profiles.
+- [x] Human Gate autorizado pelo usuário e `admin_org_bootstrap_v0` aplicado live com sucesso.
+- [x] Pós-DDL verificado: RLS ativo em platform tables; bootstrap SECURITY DEFINER não executável por anon/authenticated e executável por service_role.
+- [x] Security advisor pós-apply: nenhum novo WARN do bootstrap; permanece apenas WARN legado de `get_user_organization_id()`. INFO de RLS sem policy nas platform tables é intencional porque somente service_role tem grants.
 - [x] Customer 360 corrigido contra schema live: constraint real `unique_cpf_per_organization` e `original_source` sem conflar oportunidade.
 - [x] Product Catalog endurecido: FK composta `(product_id, modality_id)` impede modalidade de produto diferente.
 - [x] Grants `service_role` do catálogo/rotas/tabelas agora são explícitos e cobertos pelo contrato pós-DDL.
