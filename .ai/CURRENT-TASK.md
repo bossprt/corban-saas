@@ -154,3 +154,12 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Proposal detail agora possui ação supervisor+ para publicar comissão esperada e lista fatos financeiros da proposta.
 - UI deixa explícito que comissão esperada não significa recebida.
 - Preview do commit `9ee01ffa` disparado.
+
+
+## Evidence-backed financial reconciliation prepared — Human Gate
+- Vercel `9ee01ffa` and `60807908` confirmed SUCCESS.
+- Prepared `20260918_financial_reconciliation_publisher_v0.sql` + contract.
+- Evidence publisher accepts only commission_reported/payment_received/downstream_paid and requires bank/partner/import/payment/manual-review evidence; proposal matching alone cannot create settlement.
+- Idempotency combines event/proposal/component/source/reference.
+- Reconciliation refresh deterministically aggregates expected vs reported vs received and classifies open/matched/divergent/human_required.
+- Migration NOT applied because it introduces new financial publication RPCs.
