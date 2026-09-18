@@ -3,25 +3,43 @@
 **Atualização:** 18/09/2026
 **Branch:** `architecture/corban-os-master-v2`
 
-## Concluído nesta execução
-- Aplicadas live, com autorização explícita:
-  - `operational_state_machine_v0`;
-  - `rbac_hardening_v0`.
-- Ambos os post-apply contracts executaram sem exceção.
-- Advisor detectou exposição RPC do helper SECURITY DEFINER de RBAC; correção adversarial aplicada live como `rbac_helper_exposure_patch`. Novo advisor removeu esse WARN.
-- Security advisor atual: 0 ERROR; 1 WARN de leaked-password protection; 2 INFO intencionais das tabelas platform service-role-only.
-- Mesa conectada à RPC `transition_operational_case` para digitação → enviado → aguardando banco → aprovado/rejeitado/cancelado.
-- `PAID` continua deliberadamente bloqueado para ação manual; futura verdade financeira precisa de fonte confirmada.
-- Página `/app/configuracao` adicionada para mostrar prontidão real do tenant.
+## Concluído
+- Operational State Machine V0 + RBAC Hardening V0 live e contratos aprovados.
+- Mesa operacional conectada à RPC transacional.
+- ADR-0012 registrado: identidade canônica de proposta/tabela, múltiplos canais para o mesmo banco/tabela, rede Master/Sub/Parceiro, pagador independente, split versionado e componentes de comissão.
+- Evidências reais analisadas: Daycoval Governo do Acre, Efetiva Mais/2tech e Bevicred. Confirmam códigos/nomenclaturas de canal distintos e remuneração variável para a mesma origem bancária.
+- Migration `20260918_commercial_network_channels_v0.sql` preparada, NÃO aplicada.
+- Contract `tests/security/commercial-network-channels-contract.sql` preparado.
 
-## Estado do Vertical Slice
-Login/Tenant → Customer 360 → Catálogo → Simulação → Proposta → Documentos → Digitação → Mesa → Pipeline está estruturalmente conectado. O E2E com dados reais ainda não pode ser executado porque o tenant não possui configuração comercial/operacional.
+## Modelo preparado
+- commercial_entities
+- commercial_relationships
+- commercial_channels
+- product_table_external_identities
+- channel_commission_rule_versions
+- commission_rule_components
+- network_split_rule_versions
+- proposal_external_identities
+- proposal_commercial_snapshots
 
-## Fonte comercial recebida
-Recebida e analisada `GOVERNO DO ACRE (2).xlsx`, versão 114, atualização 12/06/2026. Evidência normalizada em `data/source-evidence/gov-acre-v114.json` e documentada em `docs/imports/GOV-ACRE-V114.md`. A fonte comprova Governo do Acre, códigos/taxas/prazos/comissões e regras de Portabilidade+Refin, mas não identifica banco, provider/master, coeficiente nem checklist documental.
+## Invariantes
+- UUID Corban é identidade técnica canônica da proposta.
+- Número externo da proposta é identidade forte, armazenada defensivamente como instituição + número.
+- CNPJ/identidade da rede identifica produtor/Sub; não substitui identidade da proposta.
+- Banco/tabela não são duplicados por canal.
+- Master/Sub/Parceiro são papéis da relação, não classificação permanente da empresa.
+- Split 100/0, 95/5, 90/10 etc. é versionado e pode variar por banco/tabela/componente.
+- Comissão à vista, diferido, antecipação, bônus/campanha são componentes distintos.
+- Produção, direito econômico, pagador, recebido e divergência são fatos distintos.
+- Proposal congela rota e regras vigentes.
 
-## Human Gate atual
-Para importar/publicar a primeira rota real `761111 - GOV ACRE 1 DIG - AOL`, falta somente a identificação autoritativa de **banco** e **provider/master** da planilha. A própria fonte foi varrida e não contém esses campos. Coeficiente pode permanecer null/manual_pending inicialmente; checklist e stages podem ser configurados depois, mas não devem ser inventados como se viessem desta planilha.
+## Human Gate atual — DDL
+A migration comercial preparada cria novas tabelas/RLS no Supabase de produção. Pela regra do projeto, requer autorização explícita antes de aplicar.
 
-## Próximo passo
-Assim que os dados forem fornecidos/importados, criar configuração por fluxo seguro, executar E2E real, validar RLS/RBAC/state machines/documentos e continuar para os próximos módulos.
+## Próximo passo após autorização
+1. Aplicar `20260918_commercial_network_channels_v0.sql`.
+2. Executar contract e advisors.
+3. Fazer revisão adversarial live e corrigir dentro do escopo autorizado.
+4. Construir UI de Rede/Canais/Regras sem inventar dados.
+5. Criar import staging para Daycoval/Efetiva/Bevicred preservando arquivo/hash/lineage.
+6. Só publicar regras comerciais reais após mapping determinístico e validação.
