@@ -22,13 +22,17 @@ Fechar o gate de isolamento Tenant/Auth/Membership V2 e iniciar Customer 360.
 - [x] Customer 360 V0 preparado no Git, ainda não aplicado.
 - [x] Customer 360 usa FKs compostas tenant-safe para impedir customer/bank account de outro tenant mesmo se a aplicação errar.
 - [x] Timeline preparada como append-oriented; tabelas novas não concedem DELETE autenticado.
+- [x] ADR-0005 incorporado à migration Customer 360: CPF único por tenant apenas para registros ativos.
+- [x] Grants Customer 360 reduzidos por operação; anon sem grants e timeline authenticated somente SELECT/INSERT.
+- [x] Contrato SQL pós-DDL criado para verificar RLS, grants, CPF parcial e FKs tenant-safe.
 
 ## Próxima execução
 1. Construir harness A/B autenticado para validar isolamento real entre dois tenants sem usar dados de clientes.
 2. Preparar migration separada das policies legadas para membership, sem aplicá-la antes do gate A/B.
 3. Corrigir índices de FKs legadas de forma aditiva.
-4. Revisar CPF parcial/soft-delete e grants do Customer 360; manter migration preparada até o gate A/B.
-5. Após gate, aplicar Customer 360 e rodar advisors/inspeção pós-DDL.
+4. Customer 360 está tecnicamente preparado; manter migration não aplicada até o gate A/B.
+5. Preparar catálogo mínimo Bank/Product/Table em migration separada e igualmente não aplicada.
+6. Após gate A/B, aplicar policies legadas + Customer 360 em ordem controlada e rodar contratos/advisors.
 5. Seguir Bank/Product/Table → Simulation → Proposal → Documents → Digitization → Pipeline.
 
 ## Gates
