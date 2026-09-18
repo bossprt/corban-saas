@@ -38,6 +38,8 @@ alter table public.simulations
   references public.product_table_versions (organization_id, id) on delete restrict;
 
 create unique index if not exists simulations_org_id_key on public.simulations (organization_id, id);
+create unique index if not exists simulations_org_id_customer_table_key
+  on public.simulations (organization_id, id, customer_id, product_table_version_id);
 create index if not exists simulations_org_customer_created_idx on public.simulations (organization_id, customer_id, created_at desc);
 create index if not exists simulations_org_table_version_idx on public.simulations (organization_id, product_table_version_id);
 create index if not exists simulations_created_by_idx on public.simulations (created_by);
@@ -76,6 +78,9 @@ create table if not exists public.proposals_v2 (
     references public.clients (organization_id, id) on delete restrict,
   constraint proposals_v2_simulation_tenant_fk foreign key (organization_id, simulation_id)
     references public.simulations (organization_id, id) on delete restrict,
+  constraint proposals_v2_simulation_snapshot_fk
+    foreign key (organization_id, simulation_id, customer_id, product_table_version_id)
+    references public.simulations (organization_id, id, customer_id, product_table_version_id) on delete restrict,
   constraint proposals_v2_table_version_tenant_fk foreign key (organization_id, product_table_version_id)
     references public.product_table_versions (organization_id, id) on delete restrict
 );
@@ -89,6 +94,55 @@ create index if not exists proposals_v2_org_table_version_idx on public.proposal
 create unique index if not exists proposals_v2_org_external_id_key
   on public.proposals_v2 (organization_id, external_proposal_id)
   where external_proposal_id is not null;
+
+create or replace function public.guard_proposal_commercial_snapshot()
+returns trigger
+language plpgsql
+set search_path = ''
+as $function$
+begin
+  if not exists (
+    select 1 from public.product_table_versions v
+    where v.organization_id = new.organization_id
+      and v.id = new.product_table_version_id
+      and v.status = 'published'
+  ) then
+    raise exception 'proposal_requires_published_product_table_version';
+  end if;
+
+  if tg_op = 'UPDATE' and old.status <> 'draft' then
+    if new.status = 'draft' then
+      raise exception 'proposal_cannot_return_to_draft';
+    end if;
+    if new.organization_id is distinct from old.organization_id
+       or new.customer_id is distinct from old.customer_id
+       or new.simulation_id is distinct from old.simulation_id
+       or new.product_table_version_id is distinct from old.product_table_version_id
+       or new.requested_amount is distinct from old.requested_amount
+       or new.released_amount is distinct from old.released_amount
+       or new.installment_amount is distinct from old.installment_amount
+       or new.term is distinct from old.term
+       or new.rate is distinct from old.rate
+       or new.coefficient is distinct from old.coefficient
+       or new.expected_commission_amount is distinct from old.expected_commission_amount
+       or new.customer_snapshot is distinct from old.customer_snapshot
+       or new.commercial_snapshot is distinct from old.commercial_snapshot
+       or new.attribution_snapshot is distinct from old.attribution_snapshot
+       or new.created_by is distinct from old.created_by
+       or new.created_at is distinct from old.created_at then
+      raise exception 'proposal_commercial_snapshot_is_immutable_after_draft';
+    end if;
+  end if;
+  return new;
+end;
+$function$;
+
+drop trigger if exists proposals_v2_commercial_snapshot_guard on public.proposals_v2;
+create trigger proposals_v2_commercial_snapshot_guard
+before insert or update on public.proposals_v2
+for each row execute function public.guard_proposal_commercial_snapshot();
+
+revoke all on function public.guard_proposal_commercial_snapshot() from public, anon, authenticated;
 
 alter table public.simulations enable row level security;
 alter table public.proposals_v2 enable row level security;
