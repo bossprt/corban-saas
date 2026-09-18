@@ -180,3 +180,11 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Added `IMPORT-FINANCIAL-SEMANTICS-V0.md` defining source classes and fail-closed publication rules.
 - Known Daycoval Gov Acre, Efetiva Mais table evidence and Bevicred table evidence remain commercial_offer evidence only; they cannot publish payment_received.
 - No real financial rows inserted.
+
+
+## Import financial semantics enforced in code — next DDL gate
+- Known adapters now carry explicit `financialSemantic`; Daycoval/Efetiva/Bevicred table adapters are `commercial_offer`.
+- Engine fail-closes financial publication unless source semantics are commission_statement/payment_statement/network_payment_statement.
+- Batch review UI surfaces the semantic class and explicitly states commercial_offer does not publish receipt.
+- Prepared `20260918_import_source_financial_semantics_v0.sql` to persist source semantics and freeze semantic reinterpretation after a source has batches.
+- Migration NOT applied: new production DDL requires explicit authorization.
