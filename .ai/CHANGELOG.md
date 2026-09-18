@@ -106,3 +106,14 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 ---
 
 # FIM
+
+## 18/09/2026 — Vertical Slice V0 adversarial hardening
+- Fixed invalid PL/pgSQL delimiters discovered during integrated review.
+- Added FK-path indexes across Catalog, Proposal, Document Vault and Pipeline.
+- Enforced same-customer PIX/account integrity and one primary account/PIX per customer.
+- Made customer timeline and operational events append-oriented for privileged maintenance paths.
+- Bound Proposal to Simulation customer/table snapshot; Proposal requires published table version and freezes commercial evidence after draft.
+- Made customer document evidence immutable by version.
+- Added linked-evidence validation, privileged waiver guard and transactional documents-ready digitization gate.
+- Separated platform administrator authority from tenant admin; tenant provisioning is audited and platform-only.
+- No staged vertical-slice migration was applied to the live database.
