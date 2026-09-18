@@ -23,6 +23,9 @@ create table if not exists public.operational_stages (
   constraint operational_stages_org_id_key unique (organization_id, id)
 );
 
+-- Proposal V0 must expose tenant composite identity before operational FKs.
+create unique index if not exists proposals_v2_org_id_key on public.proposals_v2 (organization_id, id);
+
 create table if not exists public.digitization_jobs (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations(id) on delete restrict,
