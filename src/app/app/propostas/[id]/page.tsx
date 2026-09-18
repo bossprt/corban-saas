@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireAppContext } from '@/lib/appContext'
-import { prepareDocuments, sendToDigitization } from './actions'
+import { attachDocument, prepareDocuments, sendToDigitization, validateRequirement } from './actions'
 
 function brl(value: number | string | null) {
   return value === null ? '—' : Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -9,7 +9,7 @@ function brl(value: number | string | null) {
 
 export default async function ProposalDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const { supabase } = await requireAppContext()
+  const { supabase, membership } = await requireAppContext()
 
   const { data: proposal } = await supabase.from('proposals_v2')
     .select('id,status,customer_id,simulation_id,requested_amount,released_amount,installment_amount,term,rate,expected_commission_amount,customer_snapshot,commercial_snapshot,created_at')
@@ -17,7 +17,7 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
 
   if (!proposal) notFound()
 
-  const [{ data: requirements }, { data: job }, { data: operationalCase }] = await Promise.all([
+  const [{ data: requirements }, { data: job }, { data: operationalCase }, { data: customerDocuments }] = await Promise.all([
     supabase.from('proposal_document_requirements')
       .select('id,label_snapshot,required_snapshot,status,exception_reason')
       .eq('proposal_id', id).order('created_at'),
@@ -27,6 +27,9 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
     supabase.from('operational_cases')
       .select('id,canonical_state,external_status_raw,entered_stage_at,due_at')
       .eq('proposal_id', id).maybeSingle(),
+    supabase.from('customer_documents')
+      .select('id,document_type_id,original_file_name,version,status')
+      .eq('customer_id', proposal.customer_id).eq('status', 'active').order('created_at', { ascending: false }),
   ])
 
   const customer = (proposal.customer_snapshot ?? {}) as Record<string, unknown>
@@ -69,7 +72,21 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
         <h2 className="font-semibold">Checklist documental</h2>
         <p className="mt-1 text-xs text-slate-500">{pendingRequired.length} obrigatório(s) pendente(s)</p>
         <div className="mt-4 grid gap-2">
-          {requirements?.map(r => <div key={r.id} className="flex items-center justify-between rounded-lg bg-slate-950 p-3 text-sm"><span>{r.label_snapshot}{r.required_snapshot ? ' *' : ''}</span><span className="text-xs text-slate-400">{r.status}</span></div>)}
+          {requirements?.map(r => {
+            const compatible = (customerDocuments ?? []).filter(d => d.document_type_id === r.document_type_id)
+            return <div key={r.id} className="rounded-lg bg-slate-950 p-3 text-sm">
+              <div className="flex items-center justify-between gap-3"><span>{r.label_snapshot}{r.required_snapshot ? ' *' : ''}</span><span className="text-xs text-slate-400">{r.status}</span></div>
+              {!['validated','waived'].includes(r.status) && compatible.length > 0 && <form action={attachDocument} className="mt-3 flex gap-2">
+                <input type="hidden" name="proposal_id" value={proposal.id}/><input type="hidden" name="requirement_id" value={r.id}/>
+                <select name="document_id" className="field min-w-0 flex-1" defaultValue=""><option value="" disabled>Selecionar evidência</option>{compatible.map(d => <option key={d.id} value={d.id}>{d.original_file_name} · v{d.version}</option>)}</select>
+                <button className="rounded-lg bg-slate-800 px-3 text-xs">Vincular</button>
+              </form>}
+              {r.status === 'attached' && ['admin','manager','supervisor'].includes(membership.role) && <form action={validateRequirement} className="mt-2">
+                <input type="hidden" name="proposal_id" value={proposal.id}/><input type="hidden" name="requirement_id" value={r.id}/>
+                <button className="text-xs font-medium text-emerald-400">Validar evidência</button>
+              </form>}
+            </div>
+          })}
           {!requirements?.length && <p className="text-sm text-slate-500">Checklist ainda não instanciado para esta proposta.</p>}
         </div>
       </div>
