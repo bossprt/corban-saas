@@ -19,12 +19,16 @@ Fechar o gate de isolamento Tenant/Auth/Membership V2 e iniciar Customer 360.
 - [x] Migration aditiva `add_legacy_fk_indexes` aplicada; advisor não reporta mais FKs sem índice.
 - [x] Migration de troca das policies legadas para membership preparada no Git, mas NÃO aplicada: gate A/B autenticado ainda pendente.
 - [x] Banco está vazio (0 auth.users, 0 organizations, 0 memberships), portanto não foram fabricados usuários/dados no projeto principal para forçar o teste.
+- [x] Customer 360 V0 preparado no Git, ainda não aplicado.
+- [x] Customer 360 usa FKs compostas tenant-safe para impedir customer/bank account de outro tenant mesmo se a aplicação errar.
+- [x] Timeline preparada como append-oriented; tabelas novas não concedem DELETE autenticado.
 
 ## Próxima execução
 1. Construir harness A/B autenticado para validar isolamento real entre dois tenants sem usar dados de clientes.
 2. Preparar migration separada das policies legadas para membership, sem aplicá-la antes do gate A/B.
 3. Corrigir índices de FKs legadas de forma aditiva.
-4. Iniciar schema Customer 360 após o gate de tenant.
+4. Revisar CPF parcial/soft-delete e grants do Customer 360; manter migration preparada até o gate A/B.
+5. Após gate, aplicar Customer 360 e rodar advisors/inspeção pós-DDL.
 5. Seguir Bank/Product/Table → Simulation → Proposal → Documents → Digitization → Pipeline.
 
 ## Gates
