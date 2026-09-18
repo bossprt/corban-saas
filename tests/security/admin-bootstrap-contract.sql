@@ -17,3 +17,9 @@ from pg_proc p join pg_namespace n on n.oid=p.pronamespace
 where n.nspname='public' and p.proname='bootstrap_organization_admin';
 
 -- Expected: prosecdef=true, anon=false, authenticated=false, service_role=true.
+
+
+select grantee,privilege_type
+from information_schema.role_table_grants
+where table_schema='public' and table_name='platform_admin_audit_events'
+order by grantee,privilege_type;
