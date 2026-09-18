@@ -31,10 +31,7 @@ create table if not exists public.simulations (
     references public.clients (organization_id, id) on delete restrict
 );
 
--- ProductTableVersion needs a tenant composite identity for fail-closed references.
-create unique index if not exists product_table_versions_org_id_key
-  on public.product_table_versions (organization_id, id);
-
+-- Product Catalog V0 provides product_table_versions_org_id_key.
 alter table public.simulations
   add constraint simulations_table_version_tenant_fk
   foreign key (organization_id, product_table_version_id)
