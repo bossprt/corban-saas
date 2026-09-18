@@ -10,7 +10,7 @@ begin
  if exists(select 1 from public.import_decisions newer where newer.candidate_id=v_candidate and newer.organization_id=v_org and newer.decided_at>(select decided_at from public.import_decisions where id=p_decision_id)) then raise exception 'superseded_decision'; end if;
  if not exists(select 1 from public.import_applied_decisions a where a.decision_id=p_decision_id and a.organization_id=v_org) then raise exception 'identity_match_must_be_applied_first'; end if;
 
- select c.proposal_id,n.amount,n.normalized_payload,n.raw_row_id into v_proposal,v_amount,v_component,v_raw
+ select c.proposal_id,n.amount,n.raw_row_id into v_proposal,v_amount,v_raw
  from public.import_match_candidates c
  join public.import_normalized_rows n on n.id=c.normalized_row_id and n.organization_id=c.organization_id
  where c.id=v_candidate and c.organization_id=v_org and c.match_strength='exact' and c.proposal_id is not null;
