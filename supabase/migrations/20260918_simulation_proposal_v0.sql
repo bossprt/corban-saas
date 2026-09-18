@@ -39,6 +39,8 @@ alter table public.simulations
 
 create unique index if not exists simulations_org_id_key on public.simulations (organization_id, id);
 create index if not exists simulations_org_customer_created_idx on public.simulations (organization_id, customer_id, created_at desc);
+create index if not exists simulations_org_table_version_idx on public.simulations (organization_id, product_table_version_id);
+create index if not exists simulations_created_by_idx on public.simulations (created_by);
 create index if not exists simulations_org_status_idx on public.simulations (organization_id, status);
 
 create table if not exists public.proposals_v2 (
@@ -81,6 +83,8 @@ create table if not exists public.proposals_v2 (
 create unique index if not exists proposals_v2_org_id_key on public.proposals_v2 (organization_id, id);
 create index if not exists proposals_v2_org_customer_created_idx on public.proposals_v2 (organization_id, customer_id, created_at desc);
 create index if not exists proposals_v2_org_status_idx on public.proposals_v2 (organization_id, status);
+create index if not exists proposals_v2_org_simulation_idx on public.proposals_v2 (organization_id, simulation_id);
+create index if not exists proposals_v2_created_by_idx on public.proposals_v2 (created_by);
 create index if not exists proposals_v2_org_table_version_idx on public.proposals_v2 (organization_id, product_table_version_id);
 create unique index if not exists proposals_v2_org_external_id_key
   on public.proposals_v2 (organization_id, external_proposal_id)
