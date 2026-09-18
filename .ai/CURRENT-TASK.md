@@ -136,3 +136,12 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Authenticated retains RPC EXECUTE; anon does not.
 - Performance advisor initially found 10 uncovered FKs + 1 RLS init-plan warning. Corrective patch applied; recheck now has no unindexed-FK or auth-RLS warnings, only unused-index INFO (expected on a new/empty system) and Auth connection-strategy INFO.
 - Vercel `f876e730` SUCCESS.
+
+
+## Expected commission publisher prepared — Human Gate
+- Prepared `20260918_expected_commission_publisher_v0.sql` and contract.
+- Publisher is deterministic and SECURITY INVOKER: requires supervisor+ role, frozen proposal commercial snapshot, published commission rule, published split when present, and explicit `calculation_base_amount` frozen in snapshot.
+- Publishes only `commission_expected`, never `payment_received`.
+- Component calculation supports fixed/percentage and deferred anticipation factor; tenant entitlement applies frozen upstream split when component-compatible.
+- Idempotency key prevents repeated publication for the same proposal/rule/component/split.
+- No production apply performed: this function creates financial facts and is therefore a new financial-publication DDL Human Gate.
