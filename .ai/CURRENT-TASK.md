@@ -57,6 +57,9 @@ Fechar o gate de isolamento Tenant/Auth/Membership V2 e iniciar Customer 360.
 - [x] Bootstrap administrativo Organization + Membership + profile legado preparado como função transacional service-role-only.
 - [x] Endpoint server-only preparado com invite Auth + compensação deleteUser se o bootstrap SQL falhar.
 - [x] Admin client marcado `server-only`; nenhuma service role foi exposta ou gravada no Git.
+- [x] Chicken-and-egg do primeiro admin resolvido por runbook de cerimônia operacional única; nenhum endpoint público/bypass permanente foi criado.
+- [x] Verificação read-only do primeiro bootstrap criada.
+- [x] Estado live reconfirmado: 0 auth.users, 0 organizations, 0 memberships, 0 profiles.
 
 ## Próxima execução
 1. Construir harness A/B autenticado para validar isolamento real entre dois tenants sem usar dados de clientes.
@@ -70,8 +73,9 @@ Fechar o gate de isolamento Tenant/Auth/Membership V2 e iniciar Customer 360.
 9. Gate A/B autenticado continua sendo o bloqueio real para aplicar a cadeia.
 10. Auth/Login/UI revisado e caminho fail-closed implementado.
 11. Bootstrap administrativo preparado; migration ainda não aplicada e endpoint não deployado.
-12. Criar contrato pós-DDL do bootstrap e revisar bootstrap do primeiro admin (problema chicken-and-egg) sem abrir signup público.
-13. Depois criar duas identidades controladas pelo fluxo suportado, executar gate A/B e só então aplicar a sequência.
+12. Contrato e runbook do primeiro admin concluídos; banco continua vazio.
+13. Próximo gate exige identidades Auth controladas reais (e-mails), que não serão inventadas nem criadas sem dados válidos.
+14. Enquanto esse gate aguarda identidade, revisar e corrigir migrations staged por integridade (CPF legacy constraint, Product↔Modality, grants service_role) antes de qualquer apply.
 
 ## Gates
 Não alterar `main`. Não executar migration destrutiva. Não publicar produção. Não inserir secrets. Não fabricar dados de clientes. Operação irreversível, gasto, billing/money ou mudança externa relevante exige Human Gate.
