@@ -136,6 +136,7 @@ create table if not exists public.product_table_versions (
   constraint product_table_versions_term_check check (term_min is null or term_max is null or term_min <= term_max),
   constraint product_table_versions_rate_check check (rate is null or rate >= 0),
   constraint product_table_versions_coefficient_check check (coefficient is null or coefficient >= 0),
+  constraint product_table_versions_publication_check check (status = 'draft' or published_at is not null),
   constraint product_table_versions_table_tenant_fk
     foreign key (organization_id, product_table_id)
     references public.product_tables (organization_id, id) on delete restrict,
@@ -188,6 +189,16 @@ language plpgsql
 set search_path = ''
 as $function$
 begin
+  if old.status = 'draft' and new.status not in ('draft','published') then
+    raise exception 'invalid_product_table_version_transition';
+  end if;
+  if old.status = 'published' and new.status not in ('published','superseded','expired') then
+    raise exception 'invalid_product_table_version_transition';
+  end if;
+  if old.status in ('superseded','expired') and new.status is distinct from old.status then
+    raise exception 'terminal_product_table_version_status';
+  end if;
+
   if old.status <> 'draft' then
     if new.organization_id is distinct from old.organization_id
        or new.product_table_id is distinct from old.product_table_id
