@@ -271,3 +271,10 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Proposal status evidence is append-only/idempotent and tenant-scoped.
 - Runtime: confirm_proposal_paid_from_import SECURITY INVOKER; authenticated=true; anon=false. Security Advisor 0 ERROR; only known leaked-password WARN + intentional platform INFO remain.
 - Remaining validation boundary is Vercel typecheck/build for this full wave plus external Supabase leaked-password setting before real production.
+
+
+## Continuous closure after auth hardening
+- Revalidated live critical closure RPCs: generate_import_match_candidates, freeze_proposal_commercial_route, confirm_proposal_paid_from_import, and publish_financial_fact_from_import_decision are SECURITY INVOKER; authenticated=true; anon=false.
+- Live closure tables remain empty for component snapshots/status evidence, so no production facts were fabricated during validation.
+- Review found stale import error copy after native XLSX support; corrected to advertise CSV/XLSX/XLS-HTML accurately.
+- Continue from commit 49c1249b; Vercel preview validation required for this HEAD, but no new external configuration is currently needed.
