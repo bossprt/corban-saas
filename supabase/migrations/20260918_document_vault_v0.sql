@@ -38,6 +38,39 @@ create table if not exists public.customer_documents (
 
 create index if not exists customer_documents_document_type_idx on public.customer_documents (document_type_id);
 create index if not exists customer_documents_uploaded_by_idx on public.customer_documents (uploaded_by);
+create or replace function public.guard_customer_document_evidence_immutable()
+returns trigger
+language plpgsql
+set search_path = ''
+as $function$
+begin
+  if new.organization_id is distinct from old.organization_id
+     or new.customer_id is distinct from old.customer_id
+     or new.document_type_id is distinct from old.document_type_id
+     or new.version is distinct from old.version
+     or new.storage_bucket is distinct from old.storage_bucket
+     or new.storage_path is distinct from old.storage_path
+     or new.original_file_name is distinct from old.original_file_name
+     or new.mime_type is distinct from old.mime_type
+     or new.file_size_bytes is distinct from old.file_size_bytes
+     or new.sha256 is distinct from old.sha256
+     or new.issued_at is distinct from old.issued_at
+     or new.expires_at is distinct from old.expires_at
+     or new.uploaded_by is distinct from old.uploaded_by
+     or new.created_at is distinct from old.created_at then
+    raise exception 'customer_document_evidence_is_immutable_create_new_version';
+  end if;
+  return new;
+end;
+$function$;
+
+drop trigger if exists customer_documents_evidence_immutable_guard on public.customer_documents;
+create trigger customer_documents_evidence_immutable_guard
+before update on public.customer_documents
+for each row execute function public.guard_customer_document_evidence_immutable();
+
+revoke all on function public.guard_customer_document_evidence_immutable() from public, anon, authenticated;
+
 create unique index if not exists customer_documents_org_id_key on public.customer_documents (organization_id, id);
 create index if not exists customer_documents_org_customer_idx on public.customer_documents (organization_id, customer_id, created_at desc);
 
