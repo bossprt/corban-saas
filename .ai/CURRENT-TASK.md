@@ -128,3 +128,11 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Idempotency por tenant, reversão por evento compensatório, valores numeric, nenhum UPDATE/DELETE autenticado sobre histórico financeiro.
 - Contract de segurança preparado.
 - Migration NÃO aplicada: novo DDL financeiro de produção exige autorização explícita.
+
+
+## Financial ledger live + import hardening
+- Financial Truth Ledger V0 confirmed live; finance dashboard now reads live event/reconciliation counts.
+- Corrective hardening applied to `apply_approved_import_match`: superseded approvals cannot be applied; candidate/decision/normalized-row lineage must agree; proposal/table/channel tenant consistency is checked; an existing external identity pointing to a different canonical target now fails closed.
+- Authenticated retains RPC EXECUTE; anon does not.
+- Performance advisor initially found 10 uncovered FKs + 1 RLS init-plan warning. Corrective patch applied; recheck now has no unindexed-FK or auth-RLS warnings, only unused-index INFO (expected on a new/empty system) and Auth connection-strategy INFO.
+- Vercel `f876e730` SUCCESS.
