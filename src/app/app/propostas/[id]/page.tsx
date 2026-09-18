@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireAppContext } from '@/lib/appContext'
+import { prepareDocuments, sendToDigitization } from './actions'
 
 function brl(value: number | string | null) {
   return value === null ? '—' : Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -41,6 +42,17 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
         <p className="mt-2 text-sm text-slate-400">Criada em {new Date(proposal.created_at).toLocaleString('pt-BR')}</p>
       </div>
       <span className="rounded-full bg-slate-800 px-3 py-1.5 text-sm">{proposal.status}</span>
+    </div>
+
+    <div className="mt-6 flex flex-wrap gap-3">
+      {['draft','documents_pending'].includes(proposal.status) && <form action={prepareDocuments}>
+        <input type="hidden" name="proposal_id" value={proposal.id}/>
+        <button className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-950">Preparar checklist</button>
+      </form>}
+      {proposal.status === 'ready_for_digitization' && <form action={sendToDigitization}>
+        <input type="hidden" name="proposal_id" value={proposal.id}/>
+        <button className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950">Enviar para digitação</button>
+      </form>}
     </div>
 
     <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
