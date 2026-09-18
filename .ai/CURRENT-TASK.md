@@ -286,3 +286,10 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Corrected the contract to inspect the actual guard implementation and added confirm_proposal_paid_from_import to RPC exposure checks.
 - Re-ran corrected contract against live DB: [] (zero failures).
 - This is a test correction, not a weakening of the paid evidence invariant.
+
+
+## MVP UX closure wave
+- Added Rede comercial, Importações, Financeiro and Configuração to primary authenticated navigation; previously implemented modules are now reachable without manual URLs.
+- Removed duplicate production_report semantic option in source creation.
+- Exposed the existing generic production/status adapter in import adapter selection; source semantic and adapter semantic remain fail-closed in ingestion.
+- Reconfirmed generic production adapter only maps canonical paid when the source explicitly supplies canonical_status=paid; arbitrary raw status is preserved but not promoted.
