@@ -17,11 +17,11 @@
 ## Estado do Vertical Slice
 Login/Tenant → Customer 360 → Catálogo → Simulação → Proposta → Documentos → Digitação → Mesa → Pipeline está estruturalmente conectado. O E2E com dados reais ainda não pode ser executado porque o tenant não possui configuração comercial/operacional.
 
-## Bloqueio comprovado de dados
-Live DB: 0 bancos, 0 tabelas, 0 checklists, 0 stages, 0 simulations, 0 proposals. O sistema não deve inventar banco, convênio, taxa, coeficiente, comissão, tabela ou checklist comercial.
+## Fonte comercial recebida
+Recebida e analisada `GOVERNO DO ACRE (2).xlsx`, versão 114, atualização 12/06/2026. Evidência normalizada em `data/source-evidence/gov-acre-v114.json` e documentada em `docs/imports/GOV-ACRE-V114.md`. A fonte comprova Governo do Acre, códigos/taxas/prazos/comissões e regras de Portabilidade+Refin, mas não identifica banco, provider/master, coeficiente nem checklist documental.
 
 ## Human Gate atual
-Para validar o Vertical Slice ponta a ponta com dados reais é necessária uma fonte de configuração comercial válida do usuário/empresa: ao menos banco, provedor/master, convênio, produto/modalidade, tabela/versão com taxa/coefficient/termos, checklist documental e definição de SLA/stages desejados. Sem isso, qualquer seed seria dado comercial inventado.
+Para importar/publicar a primeira rota real `761111 - GOV ACRE 1 DIG - AOL`, falta somente a identificação autoritativa de **banco** e **provider/master** da planilha. A própria fonte foi varrida e não contém esses campos. Coeficiente pode permanecer null/manual_pending inicialmente; checklist e stages podem ser configurados depois, mas não devem ser inventados como se viessem desta planilha.
 
 ## Próximo passo
 Assim que os dados forem fornecidos/importados, criar configuração por fluxo seguro, executar E2E real, validar RLS/RBAC/state machines/documentos e continuar para os próximos módulos.
