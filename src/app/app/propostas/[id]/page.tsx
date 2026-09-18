@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireAppContext } from '@/lib/appContext'
-import { attachDocument, prepareDocuments, sendToDigitization, validateRequirement, publishExpectedCommission, refreshFinancialReconciliation } from './actions'
+import { attachDocument, prepareDocuments, sendToDigitization, validateRequirement, publishExpectedCommission } from './actions'
 
 function brl(value: number | string | null) {
   return value === null ? '—' : Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -108,7 +108,7 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
 
     <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-5">
       <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold">Verdade financeira</h2><p className="mt-1 text-xs text-slate-500">Comissão esperada não significa comissão recebida.</p></div>
-      {commercialRoute && ['admin','manager','supervisor'].includes(membership.role) && <div className="flex flex-wrap gap-2"><form action={publishExpectedCommission}><input type="hidden" name="proposal_id" value={proposal.id}/><button className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950">Publicar comissão esperada</button></form><form action={refreshFinancialReconciliation}><input type="hidden" name="proposal_id" value={proposal.id}/><input type="hidden" name="component_type" value="upfront"/><button className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-semibold">Reconciliar à vista</button></form></div>}</div>
+      {commercialRoute && ['admin','manager','supervisor'].includes(membership.role) && <div className="flex flex-wrap gap-2"><form action={publishExpectedCommission}><input type="hidden" name="proposal_id" value={proposal.id}/><button className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950">Publicar comissão esperada</button></form></div>}</div>
       {!financialEvents?.length?<p className="mt-4 text-sm text-slate-500">Nenhum fato financeiro publicado para esta proposta.</p>:<div className="mt-4 space-y-2">{financialEvents.map(e=><div key={e.id} className="flex justify-between rounded-lg bg-slate-950 p-3 text-sm"><span>{e.event_type} · {e.component_type??'—'}</span><strong>{e.currency} {Number(e.amount).toLocaleString('pt-BR',{minimumFractionDigits:2})}</strong></div>)}</div>}
     </div>
 
