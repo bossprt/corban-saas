@@ -73,7 +73,8 @@ Dashboard consulta contagens reais sob RLS.
 
 ## 6. Lacunas reais
 
-- UI/Server Actions ponta a ponta ainda não cobrem Simulação → Proposta → Documentos → Digitação.
+- Simulação possui UI segura; criação de Proposal a partir de Simulation está deliberadamente bloqueada na UI até a RPC atômica preparada ser aplicada live.
+- Proposal detail, Document Vault read-only e fila operacional estão implementados no Preview.
 - state machines de Proposal/Operational ainda precisam de primitives transacionais e RBAC mais estrito.
 - Storage bucket/object policies do Document Vault ainda não estão implementadas.
 - waiver via service_role ainda precisa de primitive auditada antes de uso real.
@@ -94,4 +95,4 @@ Completar a primeira fatia demonstrável em ordem:
 6. testes/contratos adicionais;
 7. validação Preview.
 
-Novas migrations podem ser preparadas/commitadas, mas não aplicadas live sem Human Gate específico.
+Novas migrations podem ser preparadas/commitadas, mas não aplicadas live sem Human Gate específico. Nesta execução foram preparadas `20260918_vertical_slice_domain_workflow_v0.sql` e `20260918_document_storage_rls_v0.sql`; ambas permanecem NÃO APLICADAS.
