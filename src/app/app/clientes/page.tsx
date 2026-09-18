@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { createCustomer } from './actions'
 import { requireAppContext } from '@/lib/appContext'
 
@@ -29,7 +30,7 @@ export default async function CustomersPage() {
     <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">
       <div className="overflow-x-auto"><table className="w-full text-left text-sm">
         <thead className="border-b border-slate-800 text-slate-400"><tr><th className="p-4">Cliente</th><th className="p-4">CPF</th><th className="p-4">Telefone</th><th className="p-4">E-mail</th></tr></thead>
-        <tbody>{customers?.map(c => <tr key={c.id} className="border-b border-slate-800/60 last:border-0"><td className="p-4 font-medium">{c.full_name}</td><td className="p-4 text-slate-400">{maskCpf(c.cpf)}</td><td className="p-4 text-slate-400">{c.phone ?? '—'}</td><td className="p-4 text-slate-400">{c.email ?? '—'}</td></tr>)}{!customers?.length && <tr><td colSpan={4} className="p-8 text-center text-slate-500">Nenhum cliente cadastrado.</td></tr>}</tbody>
+        <tbody>{customers?.map(c => <tr key={c.id} className="border-b border-slate-800/60 last:border-0"><td className="p-4 font-medium"><Link href={`/app/clientes/${c.id}`} className="hover:text-emerald-400">{c.full_name}</Link></td><td className="p-4 text-slate-400">{maskCpf(c.cpf)}</td><td className="p-4 text-slate-400">{c.phone ?? '—'}</td><td className="p-4 text-slate-400">{c.email ?? '—'}</td></tr>)}{!customers?.length && <tr><td colSpan={4} className="p-8 text-center text-slate-500">Nenhum cliente cadastrado.</td></tr>}</tbody>
       </table></div>
     </div>
   </section>
