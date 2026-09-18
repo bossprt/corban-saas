@@ -19,6 +19,8 @@ A rota explicita que o mesmo banco/produto pode ser operado via fornecedores/Mas
 
 - catálogo global não recebe escrita direta de authenticated;
 - tenant escolhe/habilita rotas próprias;
+- `modality_id` é validado junto com `product_id`; uma rota não pode combinar modalidade de outro produto;
+- privilégios de manutenção de `service_role` são explícitos e não dependem de defaults do owner;
 - ProductTable é identidade lógica;
 - ProductTableVersion é versão histórica;
 - proposta futura deverá referenciar exatamente `product_table_version_id`;
