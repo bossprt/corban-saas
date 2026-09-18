@@ -176,7 +176,7 @@ create or replace function public.guard_product_table_version_immutable()
 returns trigger
 language plpgsql
 set search_path = ''
-as $
+as $function$
 begin
   if old.status <> 'draft' then
     if new.organization_id is distinct from old.organization_id
@@ -195,7 +195,7 @@ begin
   end if;
   return new;
 end;
-$;
+$function$;
 
 drop trigger if exists product_table_versions_immutable_guard on public.product_table_versions;
 create trigger product_table_versions_immutable_guard
