@@ -214,6 +214,48 @@ for each row execute function public.guard_proposal_document_requirement_snapsho
 
 revoke all on function public.guard_proposal_document_requirement_snapshot() from public, anon, authenticated;
 
+-- A validated requirement must have evidence linked. Waivers are privileged and self-attributed.
+create or replace function public.guard_proposal_document_requirement_workflow()
+returns trigger
+language plpgsql
+set search_path = ''
+as $function$
+begin
+  if new.status = 'validated' and old.status is distinct from 'validated' then
+    if not exists (
+      select 1 from public.proposal_document_links l
+      where l.organization_id = new.organization_id
+        and l.requirement_id = new.id
+    ) then
+      raise exception 'validated_requirement_requires_linked_document';
+    end if;
+  end if;
+
+  if new.status = 'waived' and old.status is distinct from 'waived' and auth.uid() is not null then
+    if new.exception_approved_by is distinct from auth.uid() then
+      raise exception 'waiver_approver_must_be_current_user';
+    end if;
+    if not exists (
+      select 1 from public.organization_memberships m
+      where m.organization_id = new.organization_id
+        and m.user_id = auth.uid()
+        and m.status = 'active'
+        and m.role in ('admin','manager','supervisor')
+    ) then
+      raise exception 'waiver_requires_privileged_role';
+    end if;
+  end if;
+  return new;
+end;
+$function$;
+
+drop trigger if exists proposal_document_requirements_workflow_guard on public.proposal_document_requirements;
+create trigger proposal_document_requirements_workflow_guard
+before update on public.proposal_document_requirements
+for each row execute function public.guard_proposal_document_requirement_workflow();
+
+revoke all on function public.guard_proposal_document_requirement_workflow() from public, anon, authenticated;
+
 create policy proposal_document_links_select_member on public.proposal_document_links for select to authenticated using (public.is_active_organization_member(organization_id));
 create policy proposal_document_links_insert_member on public.proposal_document_links for insert to authenticated with check (public.is_active_organization_member(organization_id));
 
