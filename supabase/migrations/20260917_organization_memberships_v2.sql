@@ -38,9 +38,9 @@ create or replace function public.is_active_organization_member(target_organizat
 returns boolean
 language sql
 stable
-security definer
+security invoker
 set search_path = ''
-as $$
+as $
   select exists (
     select 1
     from public.organization_memberships m
@@ -48,7 +48,7 @@ as $$
       and m.user_id = auth.uid()
       and m.status = 'active'
   )
-$$;
+$;
 
 revoke all on function public.is_active_organization_member(uuid) from public;
 revoke all on function public.is_active_organization_member(uuid) from anon;
