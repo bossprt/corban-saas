@@ -110,3 +110,13 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Prepared `20260918_commercial_network_integrity_hardening_v0.sql` to enforce same-organization references across commercial relationships/channels/table aliases/proposal identities/snapshots/rules.
 - Same migration freezes already-published commission and network split rule versions against update/delete.
 - Security contract prepared; migration NOT applied because it is new production DDL.
+
+
+## Commercial integrity hardening live
+- Autorização recebida e `commercial_network_integrity_hardening_v0` aplicada com sucesso.
+- Contract pós-apply passou sem exceções.
+- Security advisor: 0 ERROR; permanecem apenas 2 INFO intencionais de Platform Admin e WARN de leaked-password protection.
+- Same-organization guards agora protegem referências da rede comercial; regras de comissão/split publicadas ficam imutáveis.
+- Próxima frente preparada sem DDL: `FINANCIAL-TRUTH-LEDGER-V0.md` e workspace `/app/financeiro`.
+- Workspace financeiro é deliberadamente read-only/readiness: não calcula nem publica receita enquanto ledger append-only não estiver autorizado.
+- Preview Vercel do novo workspace disparado.
