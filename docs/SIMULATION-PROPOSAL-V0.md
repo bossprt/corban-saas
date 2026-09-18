@@ -32,3 +32,7 @@ A máquina completa de transição será guardada por serviço/domínio e DB ant
 
 ## Segurança
 RLS por membership ativo, sem DELETE autenticado. Índice parcial impede duplicidade de external_proposal_id dentro do tenant quando informado.
+
+
+## Integridade adicional
+Quando Proposal referencia Simulation, Customer e ProductTableVersion precisam coincidir com a simulação selecionada. Proposal exige ProductTableVersion publicada. Depois que a Proposal sai de draft, identidade, valores, snapshots comercial/customer/atribuição e referência de tabela não podem ser reescritos; correções posteriores devem ser modeladas explicitamente.
