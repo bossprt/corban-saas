@@ -126,3 +126,15 @@ Não alterar `main`. Não executar migration destrutiva. Não publicar produçã
 - Security advisor: warning legado SECURITY DEFINER removido; novo warning operacional: leaked password protection disabled. Platform tables sem policies aparecem como INFO e permanecem service-role-only por design.
 - Proposal staged corrigida para não bloquear atualização histórica quando ProductTableVersion publicada depois vira superseded/expired.
 - Próximo Human Gate: aplicação live das migrations do vertical slice permanece ação DDL de produção separada; não inferir autorização do gate anterior.
+
+
+## Vertical Slice V0 live — 2026-09-18
+- Human Gate autorizado pelo usuário.
+- Aplicadas live, em ordem: Customer 360, Product Catalog V0, Simulation/Proposal V0, Document Vault V0, Digitization/Operational Pipeline V0.
+- Contracts SQL de cada domínio executados após a respectiva migration; DDL aplicado sem erro.
+- Antes do Pipeline, gate de documentos foi endurecido: checklist publicado sem requirements instanciados agora falha fechado (commit ce919970).
+- Advisor pós-apply detectou ERROR de RLS desativado nas 6 tabelas globais de catálogo/document types; corrigido imediatamente com migration post-apply (commit 9d925654).
+- Também adicionados os 6 índices de FKs apontados pelo advisor.
+- Advisor final: 0 ERROR de segurança; 1 WARN operacional (Leaked Password Protection Disabled); 2 INFO intencionais nas tabelas platform service-role-only. Performance: 0 unindexed_foreign_keys; unused indexes esperados em banco recém-criado + Auth connection strategy INFO.
+- Verificação final: todas as 24 tabelas do vertical slice consultadas estão com RLS=true e policies presentes.
+- Vertical Slice V0 database foundation concluído. Próxima frente: application/domain services + UI + storage policies + state-machine/RBAC hardening antes de produção real.
