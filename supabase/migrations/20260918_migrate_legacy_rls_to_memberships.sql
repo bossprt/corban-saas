@@ -61,5 +61,9 @@ for update to authenticated
 using (public.is_active_organization_member(organization_id))
 with check (public.is_active_organization_member(organization_id));
 
--- The legacy helper can only be retired in a later migration after verifying
--- that no policy/function/application path depends on it.
+-- All legacy policies above now use explicit membership. Retire execute access to
+-- the SECURITY DEFINER helper so authenticated traffic cannot call it directly.
+revoke all on function public.get_user_organization_id() from authenticated;
+revoke all on function public.get_user_organization_id() from anon;
+-- Keep function temporarily for provenance/compatibility inspection; drop in a later
+-- cleanup only after repository search proves no application path references it.
