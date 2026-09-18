@@ -78,6 +78,11 @@ create index if not exists customer_bank_accounts_org_customer_idx
   on public.customer_bank_accounts (organization_id, customer_id);
 create unique index if not exists customer_bank_accounts_org_id_key
   on public.customer_bank_accounts (organization_id, id);
+create unique index if not exists customer_bank_accounts_org_customer_id_key
+  on public.customer_bank_accounts (organization_id, customer_id, id);
+create unique index if not exists customer_bank_accounts_one_primary_per_customer
+  on public.customer_bank_accounts (organization_id, customer_id)
+  where is_primary = true;
 
 create table if not exists public.customer_pix_keys (
   id uuid primary key default gen_random_uuid(),
@@ -87,9 +92,9 @@ create table if not exists public.customer_pix_keys (
   constraint customer_pix_keys_customer_tenant_fk
     foreign key (organization_id, customer_id)
     references public.clients (organization_id, id) on delete restrict,
-  constraint customer_pix_keys_bank_account_tenant_fk
-    foreign key (organization_id, bank_account_id)
-    references public.customer_bank_accounts (organization_id, id) on delete restrict,
+  constraint customer_pix_keys_bank_account_customer_fk
+    foreign key (organization_id, customer_id, bank_account_id)
+    references public.customer_bank_accounts (organization_id, customer_id, id) on delete restrict,
   key_type text not null,
   key_value text not null,
   is_primary boolean not null default false,
@@ -102,7 +107,10 @@ create table if not exists public.customer_pix_keys (
 create index if not exists customer_pix_keys_org_customer_idx
   on public.customer_pix_keys (organization_id, customer_id);
 create index if not exists customer_pix_keys_bank_account_idx
-  on public.customer_pix_keys (bank_account_id);
+  on public.customer_pix_keys (organization_id, customer_id, bank_account_id);
+create unique index if not exists customer_pix_keys_one_primary_per_customer
+  on public.customer_pix_keys (organization_id, customer_id)
+  where is_primary = true;
 
 create table if not exists public.customer_timeline_events (
   id uuid primary key default gen_random_uuid(),
