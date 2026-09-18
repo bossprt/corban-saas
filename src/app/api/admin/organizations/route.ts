@@ -19,13 +19,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'platform_admin_required' }, { status: 403 })
   }
 
-  const body = await request.json()
+  let body: Record<string, unknown>
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'invalid_json' }, { status: 400 })
+  }
   const email = String(body.email ?? '').trim().toLowerCase()
   const organizationName = String(body.organizationName ?? '').trim()
   const organizationDocument = String(body.organizationDocument ?? '').trim()
   const fullName = String(body.fullName ?? '').trim()
 
-  if (!email || !organizationName || !organizationDocument) {
+  if (
+    !email || !email.includes('@') || email.length > 254 ||
+    !organizationName || organizationName.length > 200 ||
+    !organizationDocument || organizationDocument.length > 64 ||
+    fullName.length > 200
+  ) {
     return NextResponse.json({ error: 'invalid_input' }, { status: 400 })
   }
 
@@ -37,6 +47,7 @@ export async function POST(request: Request) {
   }
 
   const { data: organizationId, error: bootstrapError } = await admin.rpc('bootstrap_organization_admin', {
+    p_platform_actor_user_id: user.id,
     p_user_id: invited.user.id,
     p_organization_name: organizationName,
     p_organization_document: organizationDocument,
