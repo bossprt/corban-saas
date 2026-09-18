@@ -11,3 +11,14 @@ from public.profiles p where p.id = :user_id;
 
 -- Expected invariant after bootstrap:
 -- one active admin membership and one compatible profile for the same organization.
+
+
+select pa.user_id,pa.status
+from public.platform_administrators pa where pa.user_id = :platform_actor_user_id;
+
+select e.actor_user_id,e.action,e.target_user_id,e.organization_id,e.occurred_at
+from public.platform_admin_audit_events e
+where e.actor_user_id=:platform_actor_user_id
+  and e.target_user_id=:user_id
+  and e.action='organization.bootstrap_admin'
+order by e.occurred_at desc limit 1;
