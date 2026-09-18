@@ -1,7 +1,8 @@
 import { requireAppContext } from '@/lib/appContext'
+import { transitionOperationalCase } from './actions'
 
 export default async function OperationsPage() {
-  const { supabase } = await requireAppContext()
+  const { supabase, membership } = await requireAppContext()
   const [casesResult, jobsResult] = await Promise.all([
     supabase.from('operational_cases')
       .select('id,canonical_state,external_status_raw,entered_stage_at,due_at,proposal_id')
@@ -40,6 +41,17 @@ export default async function OperationsPage() {
               <div className="text-sm text-slate-400">{c.external_status_raw ?? 'Sem status externo'}</div>
             </div>
             {c.due_at && <div className="mt-3 text-xs text-slate-500">SLA: {new Date(c.due_at).toLocaleString('pt-BR')}</div>}
+            {!['approved','paid','rejected','cancelled'].includes(c.canonical_state) && <form action={transitionOperationalCase} className="mt-4 flex flex-wrap gap-2">
+              <input type="hidden" name="case_id" value={c.id}/>
+              {c.canonical_state === 'digitization_queue' && <button name="to_state" value="digitizing" className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white">Iniciar digitação</button>}
+              {c.canonical_state === 'digitizing' && <button name="to_state" value="submitted" className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white">Marcar enviado</button>}
+              {c.canonical_state === 'submitted' && <button name="to_state" value="pending_external" className="rounded-lg bg-slate-700 px-3 py-2 text-xs font-semibold">Aguardando banco</button>}
+              {['submitted','pending_external'].includes(c.canonical_state) && ['admin','manager','supervisor'].includes(membership.role) && <>
+                <button name="to_state" value="approved" className="rounded-lg bg-emerald-500 px-3 py-2 text-xs font-semibold text-slate-950">Aprovado</button>
+                <button name="to_state" value="rejected" className="rounded-lg bg-red-500/20 px-3 py-2 text-xs font-semibold text-red-300">Rejeitado</button>
+              </>}
+              {['admin','manager','supervisor'].includes(membership.role) && <button name="to_state" value="cancelled" className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300">Cancelar</button>}
+            </form>}
           </div>)}
           {!casesResult.data?.length && <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8 text-center text-slate-500">Nenhum caso operacional.</div>}
         </div>
