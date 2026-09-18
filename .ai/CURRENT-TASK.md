@@ -33,13 +33,15 @@
 - Produção, direito econômico, pagador, recebido e divergência são fatos distintos.
 - Proposal congela rota e regras vigentes.
 
-## Human Gate atual — DDL
-A migration comercial preparada cria novas tabelas/RLS no Supabase de produção. Pela regra do projeto, requer autorização explícita antes de aplicar.
+## Estado live após autorização
+- `commercial_network_channels_v0` aplicado com sucesso.
+- Contract executado sem exceções.
+- Security advisor: 0 ERROR; permanece somente WARN de leaked-password protection e 2 INFO intencionais de platform tables.
+- Performance advisor apontou FKs sem índice; patch `commercial_network_indexes_v0` aplicado dentro do hardening do escopo autorizado.
+- Workspace `/app/rede` criado e navegação adicionada; nenhum dado comercial foi inventado.
 
-## Próximo passo após autorização
-1. Aplicar `20260918_commercial_network_channels_v0.sql`.
-2. Executar contract e advisors.
-3. Fazer revisão adversarial live e corrigir dentro do escopo autorizado.
-4. Construir UI de Rede/Canais/Regras sem inventar dados.
-5. Criar import staging para Daycoval/Efetiva/Bevicred preservando arquivo/hash/lineage.
-6. Só publicar regras comerciais reais após mapping determinístico e validação.
+## Próximo passo
+1. Validar Preview Vercel do workspace de Rede.
+2. Preparar Import Staging/Lineage para Daycoval, Efetiva Mais e Bevicred.
+3. Construir configuração de entidades/relações/canais e regras em modo draft.
+4. Publicação de regra financeira real continuará exigindo evidência determinística da fonte e validação apropriada.
