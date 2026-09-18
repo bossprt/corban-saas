@@ -45,3 +45,14 @@
 2. Preparar Import Staging/Lineage para Daycoval, Efetiva Mais e Bevicred.
 3. Construir configuração de entidades/relações/canais e regras em modo draft.
 4. Publicação de regra financeira real continuará exigindo evidência determinística da fonte e validação apropriada.
+
+
+## Execução autônoma seguinte
+- Preview anterior da Rede validado com Vercel SUCCESS.
+- Preparado `20260918_import_staging_lineage_v0.sql`: fonte → lote/hash → raw imutável → normalização versionada → candidatos de matching → decisão humana.
+- Contract de segurança preparado.
+- Workspace `/app/importacoes` e navegação adicionados; funciona fail-closed enquanto o schema não estiver live.
+- Nenhum arquivo comercial foi importado/publicado e nenhum dado financeiro foi inferido.
+
+## Human Gate atual — novo DDL
+A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql` no Supabase de produção. É novo DDL e não está coberto pelas autorizações anteriores.
