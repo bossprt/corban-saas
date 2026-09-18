@@ -212,3 +212,15 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Deployment validation is externally blocked: Vercel Hobby build-rate limit returns upgradeToPro=build-rate-limit for current commits. This is not a project build error and cannot be changed from current connected tools.
 
 - Vercel plan was upgraded by the owner on 2026-09-18; trigger a fresh preview commit because prior commit status remains the historical Hobby rate-limit failure.
+
+
+## Post-upgrade continuous execution
+- Vercel plan upgrade removed Hobby build-rate-limit; fresh previews now start normally.
+- Continued adversarial finance hardening: `financial_truth_write_path_hardening_v0`, `financial_rpc_advisor_hardening_v0`, and `financial_truth_guard_trigger_v0` applied live.
+- Financial reported/received/downstream-paid facts now require governed evidence RPC; direct INSERT path is blocked by trigger defense-in-depth.
+- Import evidence semantics enforced live: commercial_offer cannot prove commission/payment; import raw-row/decision lineage must match batch.
+- Reconciliation identity is unique per proposal/component; zero-evidence expected commissions remain open rather than false divergent.
+- Financial RPCs verified SECURITY INVOKER, authenticated only; trigger helper not executable; Security Advisor 0 ERROR. Known leaked-password protection WARN remains external configuration.
+- Finance UI links reconciliation to proposal and formats BRL.
+- Daycoval CSV fallback enabled while XLSX remains fail-closed until binary parser homologation.
+- Current Vercel build failures are now actual project builds (not rate limit); simplified JSX expressions and triggered preview at HEAD for diagnosis.
