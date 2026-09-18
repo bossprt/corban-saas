@@ -54,11 +54,13 @@ export async function ingestImportFile(formData:FormData){
  if(!adapter)throw new Error('Não foi possível determinar o adapter')
  if(source.financial_semantic!==adapter.financialSemantic&&adapter.financialSemantic==='commercial_offer')throw new Error('Fonte financeira não pode usar adapter de oferta comercial')
  const parsed=validateParsedRows(adapter.parse({filename,rows}))
- const {error}=await supabase.rpc('ingest_normalized_import_batch',{
+ const {data:batchId,error}=await supabase.rpc('ingest_normalized_import_batch',{
   p_source_id:sourceId,p_original_filename:filename,p_content_sha256:sha256(buffer),p_mime_type:file.type||'application/octet-stream',
   p_parser_key:adapter.key,p_parser_version:adapter.version,p_rows:parsed
  })
- if(error)throw new Error('Falha na ingestão atômica do lote')
+ if(error||!batchId)throw new Error('Falha na ingestão atômica do lote')
+ const {error:matchError}=await supabase.rpc('generate_import_match_candidates',{p_batch_id:batchId})
+ if(matchError)throw new Error('Lote ingerido, mas o matching determinístico falhou')
  // Server Actions bound directly to <form action> intentionally return void.
  revalidatePath('/app/importacoes')
 }
