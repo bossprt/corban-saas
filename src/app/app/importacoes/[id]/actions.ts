@@ -28,3 +28,16 @@ export async function decideImportCandidate(formData:FormData){
  if(error)throw new Error('Não foi possível registrar a decisão')
  revalidatePath(`/app/importacoes/${batchId}`)
 }
+
+
+export async function applyApprovedImportMatch(formData:FormData){
+ const {supabase,membership}=await requireAppContext()
+ if(!reviewRoles.has(membership.role)) throw new Error('Ação exige perfil de supervisão')
+ const batchId=String(formData.get('batch_id')??'')
+ const decisionId=String(formData.get('decision_id')??'')
+ if(!batchId||!decisionId)throw new Error('Aplicação incompleta')
+ const {error}=await supabase.rpc('apply_approved_import_match',{p_decision_id:decisionId})
+ if(error)throw new Error('Não foi possível aplicar o vínculo aprovado')
+ revalidatePath(`/app/importacoes/${batchId}`)
+ revalidatePath('/app/propostas')
+}
