@@ -52,7 +52,7 @@ export async function ingestImportFile(formData:FormData){
  else throw new Error('Formato não suportado; use CSV ou XLS HTML')
  const adapter=selectImportAdapter({filename,mimeType:file.type,headers:Object.keys(rows[0]??{}),sourceKey})
  if(!adapter)throw new Error('Não foi possível determinar o adapter')
- if(source.financial_semantic!==adapter.financialSemantic&&adapter.financialSemantic==='commercial_offer')throw new Error('Fonte financeira não pode usar adapter de oferta comercial')
+ if(source.financial_semantic!==adapter.financialSemantic)throw new Error('Adapter incompatível com a semântica financeira governada da fonte')
  const parsed=validateParsedRows(adapter.parse({filename,rows}))
  const {data:batchId,error}=await supabase.rpc('ingest_normalized_import_batch',{
   p_source_id:sourceId,p_original_filename:filename,p_content_sha256:sha256(buffer),p_mime_type:file.type||'application/octet-stream',
