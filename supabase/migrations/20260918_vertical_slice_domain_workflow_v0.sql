@@ -88,6 +88,73 @@ for each row execute function public.guard_proposal_status_transition();
 
 revoke all on function public.guard_proposal_status_transition() from public, anon, authenticated;
 
+-- Atomically turn a calculated simulation into a proposal and freeze both snapshots.
+create or replace function public.create_proposal_from_simulation(p_simulation_id uuid)
+returns uuid
+language plpgsql
+security invoker
+set search_path = ''
+as $function$
+declare
+  v_org uuid;
+  v_sim public.simulations%rowtype;
+  v_customer public.clients%rowtype;
+  v_version public.product_table_versions%rowtype;
+  v_table public.product_tables%rowtype;
+  v_proposal_id uuid;
+begin
+  select s.* into v_sim
+  from public.simulations s
+  where s.id=p_simulation_id and public.is_active_organization_member(s.organization_id)
+  for update;
+
+  if v_sim.id is null then raise exception 'simulation_not_found_or_forbidden'; end if;
+  if v_sim.status <> 'calculated' then raise exception 'simulation_not_available_for_proposal'; end if;
+  v_org := v_sim.organization_id;
+
+  select c.* into v_customer from public.clients c
+  where c.organization_id=v_org and c.id=v_sim.customer_id and c.deleted_at is null;
+  if v_customer.id is null then raise exception 'customer_not_available'; end if;
+
+  select v.* into v_version from public.product_table_versions v
+  where v.organization_id=v_org and v.id=v_sim.product_table_version_id and v.status='published';
+  if v_version.id is null then raise exception 'published_table_version_not_available'; end if;
+
+  select pt.* into v_table from public.product_tables pt
+  where pt.organization_id=v_org and pt.id=v_version.product_table_id;
+  if v_table.id is null then raise exception 'product_table_not_available'; end if;
+
+  insert into public.proposals_v2 (
+    organization_id, customer_id, simulation_id, product_table_version_id, status,
+    requested_amount, released_amount, installment_amount, term, rate, coefficient,
+    expected_commission_amount, customer_snapshot, commercial_snapshot,
+    attribution_snapshot, created_by
+  ) values (
+    v_org, v_customer.id, v_sim.id, v_version.id, 'draft',
+    v_sim.requested_amount, v_sim.released_amount, v_sim.installment_amount,
+    v_sim.term, v_sim.rate, v_sim.coefficient, v_sim.expected_commission_amount,
+    jsonb_build_object(
+      'full_name', v_customer.full_name, 'cpf', v_customer.cpf,
+      'phone', v_customer.phone, 'email', v_customer.email
+    ),
+    jsonb_build_object(
+      'product_table', jsonb_build_object('id',v_table.id,'code',v_table.code,'name',v_table.name),
+      'table_version', jsonb_build_object('id',v_version.id,'version',v_version.version,'rate',v_version.rate,'coefficient',v_version.coefficient)
+    ),
+    jsonb_build_object('original_source', v_customer.original_source),
+    auth.uid()
+  ) returning id into v_proposal_id;
+
+  update public.simulations set status='selected', updated_at=now()
+  where organization_id=v_org and id=v_sim.id;
+
+  return v_proposal_id;
+end;
+$function$;
+
+revoke all on function public.create_proposal_from_simulation(uuid) from public, anon;
+grant execute on function public.create_proposal_from_simulation(uuid) to authenticated;
+
 -- Snapshot the latest published checklist for the proposal's exact tenant route.
 create or replace function public.prepare_proposal_documents(p_proposal_id uuid)
 returns integer
