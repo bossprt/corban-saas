@@ -98,6 +98,9 @@ create table if not exists public.proposal_document_requirements (
   constraint proposal_document_requirements_status_check check (status in ('missing','attached','validated','rejected','waived')),
   constraint proposal_document_requirements_exception_check check (
     (status <> 'waived') or (exception_reason is not null and exception_approved_by is not null and exception_approved_at is not null)
+  ),
+  constraint proposal_document_requirements_exception_scope_check check (
+    status = 'waived' or (exception_reason is null and exception_approved_by is null and exception_approved_at is null)
   )
 );
 
@@ -174,6 +177,33 @@ create policy document_checklist_items_update_draft_member on public.document_ch
 create policy proposal_document_requirements_select_member on public.proposal_document_requirements for select to authenticated using (public.is_active_organization_member(organization_id));
 create policy proposal_document_requirements_insert_member on public.proposal_document_requirements for insert to authenticated with check (public.is_active_organization_member(organization_id));
 create policy proposal_document_requirements_update_member on public.proposal_document_requirements for update to authenticated using (public.is_active_organization_member(organization_id)) with check (public.is_active_organization_member(organization_id));
+
+-- Snapshot identity/evidence cannot be rewritten after creation; only workflow fields may change.
+create or replace function public.guard_proposal_document_requirement_snapshot()
+returns trigger
+language plpgsql
+set search_path = ''
+as $
+begin
+  if new.organization_id is distinct from old.organization_id
+     or new.proposal_id is distinct from old.proposal_id
+     or new.checklist_item_id is distinct from old.checklist_item_id
+     or new.document_type_id is distinct from old.document_type_id
+     or new.label_snapshot is distinct from old.label_snapshot
+     or new.required_snapshot is distinct from old.required_snapshot
+     or new.created_at is distinct from old.created_at then
+    raise exception 'proposal_document_requirement_snapshot_is_immutable';
+  end if;
+  return new;
+end;
+$;
+
+drop trigger if exists proposal_document_requirements_snapshot_guard on public.proposal_document_requirements;
+create trigger proposal_document_requirements_snapshot_guard
+before update on public.proposal_document_requirements
+for each row execute function public.guard_proposal_document_requirement_snapshot();
+
+revoke all on function public.guard_proposal_document_requirement_snapshot() from public, anon, authenticated;
 
 create policy proposal_document_links_select_member on public.proposal_document_links for select to authenticated using (public.is_active_organization_member(organization_id));
 create policy proposal_document_links_insert_member on public.proposal_document_links for insert to authenticated with check (public.is_active_organization_member(organization_id));
