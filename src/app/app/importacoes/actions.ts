@@ -59,5 +59,6 @@ export async function ingestImportFile(formData:FormData){
   p_parser_key:adapter.key,p_parser_version:adapter.version,p_rows:parsed
  })
  if(error)throw new Error('Falha na ingestão atômica do lote')
+ // Server Actions bound directly to <form action> intentionally return void.
  revalidatePath('/app/importacoes')
 }
