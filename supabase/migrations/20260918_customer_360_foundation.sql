@@ -143,7 +143,7 @@ grant select, insert on table public.customer_timeline_events to authenticated;
 grant select, insert, update, delete on table public.customer_addresses to service_role;
 grant select, insert, update, delete on table public.customer_bank_accounts to service_role;
 grant select, insert, update, delete on table public.customer_pix_keys to service_role;
-grant select, insert, update, delete on table public.customer_timeline_events to service_role;
+grant select, insert on table public.customer_timeline_events to service_role;
 
 -- Explicit operation policies using active membership.
 create policy customer_addresses_select_member on public.customer_addresses for select to authenticated using (public.is_active_organization_member(organization_id));
