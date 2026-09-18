@@ -69,6 +69,11 @@ Fechar o gate de isolamento Tenant/Auth/Membership V2 e iniciar Customer 360.
 - [x] Simulation/Proposal ganhou grants explícitos de service_role.
 - [x] Checklist items só podem ser inseridos/alterados por authenticated enquanto o template pai estiver draft.
 - [x] Document Vault ganhou grants explícitos de service_role.
+- [x] ProposalDocumentRequirement agora preserva snapshot estrutural via trigger; UPDATE não pode reescrever proposta/tipo/label/required original.
+- [x] Campos de waiver agora só podem existir quando status=`waived`.
+- [x] Pipeline não recria mais a chave composta de Proposal; ownership permanece na migration Proposal.
+- [x] OperationalCase ganhou FK composta Stage+canonical_state, impedindo estado técnico divergente do stage escolhido.
+- [x] Pipeline ganhou grants service_role explícitos; operational_events permanece sem UPDATE/DELETE até para service_role neste V0.
 
 ## Próxima execução
 1. Construir harness A/B autenticado para validar isolamento real entre dois tenants sem usar dados de clientes.
@@ -87,7 +92,8 @@ Fechar o gate de isolamento Tenant/Auth/Membership V2 e iniciar Customer 360.
 14. Revisão CPF/Product↔Modality/service_role concluída.
 15. Bank↔Agreement e imutabilidade de ProductTableVersion corrigidos.
 16. Document checklist child immutability e ownership da chave Proposal corrigidos.
-17. Próximo: endurecer ProposalDocumentRequirement snapshots/transições e grants do Pipeline, depois revisar cadeia staged inteira.
+17. Requirement snapshots e Pipeline grants/coerência Stage↔State corrigidos.
+18. Próximo: revisão estática integral das seis migrations staged, procurando dependências duplicadas, FKs sem índice, grants/policies inconsistentes e DDL que falharia em sequência.
 
 ## Gates
 Não alterar `main`. Não executar migration destrutiva. Não publicar produção. Não inserir secrets. Não fabricar dados de clientes. Operação irreversível, gasto, billing/money ou mudança externa relevante exige Human Gate.
