@@ -129,6 +129,8 @@ create index if not exists product_table_versions_org_status_idx
   on public.product_table_versions (organization_id, status);
 create index if not exists product_table_versions_table_effective_idx
   on public.product_table_versions (product_table_id, effective_from desc);
+create unique index if not exists product_table_versions_org_id_key
+  on public.product_table_versions (organization_id, id);
 
 alter table public.organization_product_routes enable row level security;
 alter table public.product_tables enable row level security;
