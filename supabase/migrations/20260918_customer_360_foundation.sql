@@ -10,9 +10,21 @@ alter table public.clients
   add column if not exists updated_at timestamptz not null default now(),
   add column if not exists deleted_at timestamptz;
 
--- Replace legacy hard UNIQUE only in a dedicated migration after checking its exact
--- constraint name/state and after tenant gate. ADR-0005 requires partial uniqueness:
--- (organization_id, cpf) where deleted_at is null.
+-- ADR-0005: replace the known legacy hard UNIQUE with partial uniqueness so
+-- a soft-deleted customer does not block a later legitimate re-registration.
+alter table public.clients
+  drop constraint if exists clients_organization_id_cpf_key;
+
+create unique index if not exists clients_org_cpf_active_uniq
+  on public.clients (organization_id, cpf)
+  where deleted_at is null;
+
+create index if not exists clients_org_created_at_idx
+  on public.clients (organization_id, created_at desc);
+
+create index if not exists clients_org_active_name_idx
+  on public.clients (organization_id, full_name)
+  where deleted_at is null;
 
 -- Composite uniqueness lets child tables prove customer belongs to the same tenant.
 create unique index if not exists clients_organization_id_id_key
@@ -116,6 +128,22 @@ alter table public.customer_addresses enable row level security;
 alter table public.customer_bank_accounts enable row level security;
 alter table public.customer_pix_keys enable row level security;
 alter table public.customer_timeline_events enable row level security;
+
+-- Least privilege grants. RLS is the row boundary; grants are the operation boundary.
+revoke all on table public.customer_addresses from anon;
+revoke all on table public.customer_bank_accounts from anon;
+revoke all on table public.customer_pix_keys from anon;
+revoke all on table public.customer_timeline_events from anon;
+
+grant select, insert, update on table public.customer_addresses to authenticated;
+grant select, insert, update on table public.customer_bank_accounts to authenticated;
+grant select, insert, update on table public.customer_pix_keys to authenticated;
+grant select, insert on table public.customer_timeline_events to authenticated;
+
+grant select, insert, update, delete on table public.customer_addresses to service_role;
+grant select, insert, update, delete on table public.customer_bank_accounts to service_role;
+grant select, insert, update, delete on table public.customer_pix_keys to service_role;
+grant select, insert, update, delete on table public.customer_timeline_events to service_role;
 
 -- Explicit operation policies using active membership.
 create policy customer_addresses_select_member on public.customer_addresses for select to authenticated using (public.is_active_organization_member(organization_id));
