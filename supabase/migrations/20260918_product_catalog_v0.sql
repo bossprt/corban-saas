@@ -52,7 +52,8 @@ create table if not exists public.modalities (
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint modalities_product_code_key unique (product_id, code)
+  constraint modalities_product_code_key unique (product_id, code),
+  constraint modalities_product_id_id_key unique (product_id, id)
 );
 
 -- Tenant-scoped route/configuration. This is the bridge between global catalog and a Corban.
@@ -63,12 +64,15 @@ create table if not exists public.organization_product_routes (
   provider_id uuid not null references public.providers(id) on delete restrict,
   agreement_id uuid not null references public.agreements(id) on delete restrict,
   product_id uuid not null references public.products(id) on delete restrict,
-  modality_id uuid not null references public.modalities(id) on delete restrict,
+  modality_id uuid not null,
   status text not null default 'active',
   external_code text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint organization_product_routes_status_check check (status in ('active','inactive')),
+  constraint organization_product_routes_modality_product_fk
+    foreign key (product_id, modality_id)
+    references public.modalities (product_id, id) on delete restrict,
   constraint organization_product_routes_unique
     unique (organization_id, bank_id, provider_id, agreement_id, product_id, modality_id)
 );
@@ -165,3 +169,7 @@ revoke all on table public.agreements from anon, authenticated;
 revoke all on table public.products from anon, authenticated;
 revoke all on table public.modalities from anon, authenticated;
 grant select on table public.banks, public.providers, public.agreements, public.products, public.modalities to authenticated;
+
+-- Explicit maintenance privileges; do not depend on owner/default privilege behavior.
+grant select, insert, update, delete on table public.banks, public.providers, public.agreements, public.products, public.modalities to service_role;
+grant select, insert, update, delete on table public.organization_product_routes, public.product_tables, public.product_table_versions to service_role;
