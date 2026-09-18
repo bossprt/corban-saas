@@ -278,3 +278,11 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Live closure tables remain empty for component snapshots/status evidence, so no production facts were fabricated during validation.
 - Review found stale import error copy after native XLSX support; corrected to advertise CSV/XLSX/XLS-HTML accurately.
 - Continue from commit 49c1249b; Vercel preview validation required for this HEAD, but no new external configuration is currently needed.
+
+
+## E2E/adversarial closure contract correction
+- Re-ran the MVP closure SQL against live Supabase and initially got a false failure because the test expected a non-existent dedicated paid trigger name.
+- Confronted live trigger/function definitions: paid evidence enforcement is correctly embedded in guard_proposal_status_transition via corban.paid_evidence_rpc and paid_requires_confirmed_operational_evidence.
+- Corrected the contract to inspect the actual guard implementation and added confirm_proposal_paid_from_import to RPC exposure checks.
+- Re-ran corrected contract against live DB: [] (zero failures).
+- This is a test correction, not a weakening of the paid evidence invariant.
