@@ -224,3 +224,11 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Finance UI links reconciliation to proposal and formats BRL.
 - Daycoval CSV fallback enabled while XLSX remains fail-closed until binary parser homologation.
 - Current Vercel build failures are now actual project builds (not rate limit); simplified JSX expressions and triggered preview at HEAD for diagnosis.
+
+
+## Triple-review continuation
+- Review pass 1: removed remaining nullish-coalescing expressions embedded in JSX array literals in Network/Finance summaries to isolate parser/build regressions.
+- Review pass 2: verified governed finance actions and live DB guards; financial evidence trigger remains live and Security Advisor remains 0 ERROR.
+- Review pass 3: attempted proposal reconciliation UI; preview failed, so the UI delta was rolled back while keeping the already-existing server action and live reconciliation RPC intact. No broken preview change was accepted as complete.
+- Vercel continues to return project-build failures, but connected Vercel identity exposes no team/project logs. GitHub status provides only failure URL, not compiler output.
+- Current external blocker: exact Vercel compiler/build log is inaccessible to available tools; further blind changes would violate the adversarial/review rule.
