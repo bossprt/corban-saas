@@ -30,3 +30,10 @@
 
 ## Gates
 Não alterar `main`. Não executar migration destrutiva. Não publicar produção. Não inserir secrets. Operação irreversível, gasto, billing/money ou mudança externa relevante exige Human Gate.
+
+
+## Vercel Preview bootstrap — 2026-09-18
+- Vercel Git integration ativa para `bossprt/corban-saas`; commits da branch disparam Preview automaticamente.
+- Variáveis públicas Supabase configuradas em All Environments; typo `NNEXT_PUBLIC_SUPABASE_ANON_KEY` identificado no dashboard e corrigido pelo usuário para `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+- Next.js 16 entrypoint migrado de `middleware.ts` para `proxy.ts` na branch.
+- Este commit dispara novo Preview para validar build com configuração corrigida; não declarar sucesso até evidência do deployment.
