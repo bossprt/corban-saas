@@ -210,3 +210,5 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Review 2 (adversarial) found/fixed reviewer identity bug: source semantic reviewer now uses authenticated user.id, not a non-selected membership field.
 - Review 3 database/runtime: new RPCs confirmed SECURITY INVOKER, authenticated EXECUTE=true, anon=false; Security Advisor 0 ERROR. Known leaked-password WARN remains.
 - Deployment validation is externally blocked: Vercel Hobby build-rate limit returns upgradeToPro=build-rate-limit for current commits. This is not a project build error and cannot be changed from current connected tools.
+
+- Vercel plan was upgraded by the owner on 2026-09-18; trigger a fresh preview commit because prior commit status remains the historical Hobby rate-limit failure.
