@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
 import { sha256, selectImportAdapter, validateParsedRows } from '@/lib/imports/engine'
 import { parseCsv, parseHtmlTable } from '@/lib/imports/tabular'
+import { parseXlsx } from '@/lib/imports/xlsx'
 
 const managerRoles=new Set(['admin','manager'])
 const semantics=new Set(['commercial_offer','production_report','commission_statement','payment_statement','network_payment_statement'])
@@ -48,7 +49,7 @@ export async function ingestImportFile(formData:FormData){
   const latin=buffer.toString('latin1')
   if(!/<table/i.test(latin))throw new Error('XLS binário ainda não suportado; exporte como CSV')
   rows=parseHtmlTable(latin)
- }else if(/\.xlsx$/i.test(filename))throw new Error('XLSX ainda não suportado neste parser; exporte como CSV')
+ }else if(/\.xlsx$/i.test(filename))rows=await parseXlsx(buffer)
  else throw new Error('Formato não suportado; use CSV ou XLS HTML')
  const adapter=selectImportAdapter({filename,mimeType:file.type,headers:Object.keys(rows[0]??{}),sourceKey})
  if(!adapter)throw new Error('Não foi possível determinar o adapter')
