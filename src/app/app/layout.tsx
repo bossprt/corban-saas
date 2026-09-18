@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { LayoutDashboard, Users, FileText, Workflow, Landmark, Library, LogOut, Calculator } from 'lucide-react'
+import { LayoutDashboard, Users, FileText, Workflow, Landmark, Library, LogOut, Calculator, FolderLock } from 'lucide-react'
 import { requireAppContext } from '@/lib/appContext'
 import { signOut } from './actions'
 
@@ -9,6 +9,7 @@ const nav = [
   { href: '/app/catalogo', label: 'Catálogo', icon: Library },
   { href: '/app/simulacoes', label: 'Simulações', icon: Calculator },
   { href: '/app/propostas', label: 'Propostas', icon: FileText },
+  { href: '/app/documentos', label: 'Documentos', icon: FolderLock },
   { href: '/app/operacao', label: 'Operação', icon: Workflow },
 ]
 
