@@ -49,4 +49,26 @@ export const efetivaMaisAdapter:ImportAdapter={
    commissionUpfront:decimalString(val(r,'Comissão','Comissao','comissao','commission'))
  })}))}
 
-export const importAdapters=[daycovalAdapter,efetivaMaisAdapter,bevicredAdapter]
+
+
+function financialStatementAdapter(key:string,semantic:'commission_statement'|'payment_statement'|'network_payment_statement',recordKind:'commission'|'payment'):ImportAdapter{
+ return {
+  key,version:'1.0.0',financialSemantic:semantic,
+  canParse:({filename})=>/\.csv$/i.test(filename),
+  parse:({rows})=>rows.map((r,i):ParsedImportRow=>({rowNumber:i+1,rawPayload:r,normalized:base(r,{
+   recordKind,
+   bankKey:text(val(r,'Banco','banco','bank','institution')),
+   externalProposalNumber:text(val(r,'Proposta','proposta','proposal','proposal_number','numero_proposta')),
+   producerTaxId:text(val(r,'CNPJ Produtor','cnpj_produtor','producer_tax_id','cnpj')),
+   externalTableCode:text(val(r,'Código Tabela','Codigo Tabela','codigo_tabela','table_code')),
+   operationType:text(val(r,'Operação','Operacao','operacao','operation')),
+   amount:decimalString(val(r,'Valor','valor','amount','commission_amount','payment_amount')),
+   normalizedPayload:{...r,componentType:text(val(r,'Componente','componente','component_type'))??'upfront',occurredAt:text(val(r,'Data','data','date','occurred_at')),currency:text(val(r,'Moeda','moeda','currency'))??'BRL'}
+  })}))
+ }
+}
+export const commissionStatementAdapter=financialStatementAdapter('generic-commission-statement','commission_statement','commission')
+export const paymentStatementAdapter=financialStatementAdapter('generic-payment-statement','payment_statement','payment')
+export const networkPaymentStatementAdapter=financialStatementAdapter('generic-network-payment-statement','network_payment_statement','payment')
+
+export const importAdapters=[daycovalAdapter,efetivaMaisAdapter,bevicredAdapter,commissionStatementAdapter,paymentStatementAdapter,networkPaymentStatementAdapter]
