@@ -1,0 +1,80 @@
+import Link from 'next/link'
+import { notFound } from 'next/navigation'
+import { requireAppContext } from '@/lib/appContext'
+
+function brl(value: number | string | null) {
+  return value === null ? '—' : Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+export default async function ProposalDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const { supabase } = await requireAppContext()
+
+  const { data: proposal } = await supabase.from('proposals_v2')
+    .select('id,status,customer_id,simulation_id,requested_amount,released_amount,installment_amount,term,rate,expected_commission_amount,customer_snapshot,commercial_snapshot,created_at')
+    .eq('id', id).maybeSingle()
+
+  if (!proposal) notFound()
+
+  const [{ data: requirements }, { data: job }, { data: operationalCase }] = await Promise.all([
+    supabase.from('proposal_document_requirements')
+      .select('id,label_snapshot,required_snapshot,status,exception_reason')
+      .eq('proposal_id', id).order('created_at'),
+    supabase.from('digitization_jobs')
+      .select('id,status,priority,assigned_to,queued_at,submitted_at,last_error')
+      .eq('proposal_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('operational_cases')
+      .select('id,canonical_state,external_status_raw,entered_stage_at,due_at')
+      .eq('proposal_id', id).maybeSingle(),
+  ])
+
+  const customer = (proposal.customer_snapshot ?? {}) as Record<string, unknown>
+  const commercial = (proposal.commercial_snapshot ?? {}) as Record<string, unknown>
+  const pendingRequired = (requirements ?? []).filter(r => r.required_snapshot && !['validated', 'waived'].includes(r.status))
+
+  return <section>
+    <Link href="/app/propostas" className="text-sm text-slate-400 hover:text-white">← Propostas</Link>
+    <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
+      <div>
+        <div className="text-sm text-emerald-400">Proposta {proposal.id.slice(0, 8)}</div>
+        <h1 className="mt-1 text-3xl font-semibold">{String(customer.full_name ?? 'Cliente')}</h1>
+        <p className="mt-2 text-sm text-slate-400">Criada em {new Date(proposal.created_at).toLocaleString('pt-BR')}</p>
+      </div>
+      <span className="rounded-full bg-slate-800 px-3 py-1.5 text-sm">{proposal.status}</span>
+    </div>
+
+    <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {[
+        ['Solicitado', brl(proposal.requested_amount)],
+        ['Liberado', brl(proposal.released_amount)],
+        ['Parcela', brl(proposal.installment_amount)],
+        ['Prazo', proposal.term ? String(proposal.term) : '—'],
+      ].map(([label, value]) => <div key={label} className="rounded-2xl border border-slate-800 bg-slate-900 p-5"><div className="text-xs text-slate-500">{label}</div><div className="mt-2 text-lg font-semibold">{value}</div></div>)}
+    </div>
+
+    <div className="mt-6 grid gap-6 xl:grid-cols-2">
+      <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+        <h2 className="font-semibold">Checklist documental</h2>
+        <p className="mt-1 text-xs text-slate-500">{pendingRequired.length} obrigatório(s) pendente(s)</p>
+        <div className="mt-4 grid gap-2">
+          {requirements?.map(r => <div key={r.id} className="flex items-center justify-between rounded-lg bg-slate-950 p-3 text-sm"><span>{r.label_snapshot}{r.required_snapshot ? ' *' : ''}</span><span className="text-xs text-slate-400">{r.status}</span></div>)}
+          {!requirements?.length && <p className="text-sm text-slate-500">Checklist ainda não instanciado para esta proposta.</p>}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+        <h2 className="font-semibold">Operação</h2>
+        <dl className="mt-4 grid gap-3 text-sm">
+          <div><dt className="text-xs text-slate-500">Fila de digitação</dt><dd>{job?.status ?? 'Ainda não enviada'}</dd></div>
+          <div><dt className="text-xs text-slate-500">Estado canônico</dt><dd>{operationalCase?.canonical_state ?? '—'}</dd></div>
+          <div><dt className="text-xs text-slate-500">Status externo bruto</dt><dd>{operationalCase?.external_status_raw ?? '—'}</dd></div>
+        </dl>
+      </div>
+    </div>
+
+    <details className="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-5">
+      <summary className="cursor-pointer text-sm font-medium">Snapshot comercial</summary>
+      <pre className="mt-4 overflow-auto text-xs text-slate-400">{JSON.stringify(commercial, null, 2)}</pre>
+    </details>
+  </section>
+}
