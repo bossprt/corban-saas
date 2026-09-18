@@ -116,3 +116,13 @@ Fechar o gate de isolamento Tenant/Auth/Membership V2 e iniciar Customer 360.
 
 ## Gates
 Não alterar `main`. Não executar migration destrutiva. Não publicar produção. Não inserir secrets. Não fabricar dados de clientes. Operação irreversível, gasto, billing/money ou mudança externa relevante exige Human Gate.
+
+
+## Live gate 2026-09-18
+- Platform Admin autorizado e ativado: josicleuton.braga@gmail.com.
+- Tenant A e Tenant B provisionados atomicamente via bootstrap_organization_admin; audit events gravados.
+- Gate A/B membership: A vê somente A e helper(A)=true/helper(B)=false; B vê somente B e helper(B)=true/helper(A)=false; anon sem SELECT; nenhuma policy INSERT/UPDATE/DELETE de membership, tentativa cross-tenant INSERT bloqueada por RLS.
+- Legacy RLS membership migration aplicada live após gate A/B.
+- Security advisor: warning legado SECURITY DEFINER removido; novo warning operacional: leaked password protection disabled. Platform tables sem policies aparecem como INFO e permanecem service-role-only por design.
+- Proposal staged corrigida para não bloquear atualização histórica quando ProductTableVersion publicada depois vira superseded/expired.
+- Próximo Human Gate: aplicação live das migrations do vertical slice permanece ação DDL de produção separada; não inferir autorização do gate anterior.
