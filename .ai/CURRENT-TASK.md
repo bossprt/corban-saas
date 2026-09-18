@@ -301,3 +301,12 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Added tenant-safe Customer 360 detail at /app/clientes/[id] using RLS-backed client/proposal/document metadata queries; CPF remains masked and private document bytes are never exposed.
 - Confronted live proposals_v2 schema to confirm customer_id exists before accepting the Customer 360 query.
 - No production data mutation performed by this UX wave.
+
+
+## Joint ChatGPT + Claude Code execution protocol — 18/09/2026
+- Coordination contract added at `/.ai/CLAUDE-LONG-RUN.md` (commit `f15d0d7`).
+- Claude Code long queue: reconcile live integration schema with repo; finish deterministic 2Tech BuscaContrato adapter; canonical normalization; conflict/matching hardening; operational/financial linkage; Import/Proposal/Finance UX; adversarial tests/build.
+- Bevicred live authentication/API key is deferred and must not block this queue.
+- Claude should inspect/use available token-saving/codebase tools when appropriate (Graphify, Caveman, Superpowers, context-mode, Context7/official docs), reuse indexes/caches, and avoid repeated large-file reads.
+- Git + state files are the handoff bus; the user is not a courier between ChatGPT and Claude.
+- ChatGPT may advance live Supabase; Claude reconciles through forward-only migrations and never rewrites applied history.
