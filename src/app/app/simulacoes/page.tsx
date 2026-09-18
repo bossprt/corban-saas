@@ -1,5 +1,5 @@
 import { requireAppContext } from '@/lib/appContext'
-import { createSimulation } from './actions'
+import { createProposalFromSimulation, createSimulation } from './actions'
 
 function brl(value: number | string | null) {
   return value === null ? '—' : Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -57,7 +57,10 @@ export default async function SimulationsPage() {
             </div>
             {proposalId
               ? <span className="rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-400">Proposta criada</span>
-              : <span className="rounded-full bg-slate-800 px-3 py-1.5 text-xs text-slate-400">Criação atômica aguardando workflow DB</span>}
+              : <form action={createProposalFromSimulation}>
+                  <input type="hidden" name="simulation_id" value={s.id}/>
+                  <button className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-500">Criar proposta</button>
+                </form>}
           </div>
         </article>
       })}
