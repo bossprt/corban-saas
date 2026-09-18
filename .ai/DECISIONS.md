@@ -193,3 +193,20 @@
 - **Migração:** aditiva primeiro; preservar `profiles.organization_id` durante transição e migrar memberships existentes de forma idempotente. Nenhuma remoção do legado até testes de isolamento e compatibilidade passarem.
 - **Segurança:** policies V2 serão explícitas por operação; inserts/updates exigirão `WITH CHECK` coerente. Relações tenant-scoped críticas devem impedir referência cruzada entre organizações.
 - **Consequências:** um usuário poderá futuramente participar de mais de uma organização; revogação de membership passa a ser fonte operacional; testes A/B entre tenants tornam-se gate obrigatório; código não pode confiar apenas em tenant enviado pelo cliente.
+
+
+---
+
+## ADR-0012 — Identidade canônica, canais comerciais e rede de distribuição
+
+- **Data:** 18/09/2026
+- **Status:** aceita conceitualmente; substitui a linearidade `Bank → Provider/Master → ...` da seção 6 do Master V2.
+- **Evidência operacional:** Smart pode operar o mesmo banco/tabela simultaneamente como Sub e via Correspondentes parceiros (ex.: Efetiva Mais/Bevicred), com comissões diferentes. A Smart também pode ser Master e possuir Subs abaixo dela.
+- **Decisão:** Banco/tabela são identidades canônicas independentes do canal. Master, Subestabelecido e Parceiro são papéis da relação comercial, não tipos permanentes da empresa. Uma organização pode ocupar papéis diferentes simultaneamente, inclusive para o mesmo banco.
+- **Identidade:** Proposal possui UUID interno imutável. Identidades externas são vinculadas separadamente; número de proposta bancária é match forte, preservando instituição+numero como chave externa defensiva. Tabelas também possuem identidade canônica e aliases/códigos por canal.
+- **Canal:** cada canal registra contraparte, papel, códigos/nomenclaturas externas, vigência e condições comerciais. A mesma tabela pode ter múltiplos canais concorrentes.
+- **Rede:** tenant pode vender para organizações acima e receber produção de organizações abaixo. CNPJ/identificadores da rede determinam o produtor econômico quando relatórios externos consolidam Subs.
+- **Financeiro:** separar produção, comissão gerada, direito econômico, pagador, recebido e divergência. Split de Sub pode ser 100/0, 95/5, 90/10 etc. por regra/versionamento, inclusive por componente.
+- **Componentes:** à vista, diferido, antecipação do diferido, bônus/campanha e outros componentes são separados. Antecipação converte o diferido conforme fator vigente; não soma o percentual nominal do diferido como receita imediata.
+- **Histórico:** proposta congela rota, identidades externas e regras financeiras vigentes. Alterações futuras não recalculam proposta histórica.
+- **Conciliação:** matching determinístico por identidade externa forte; ambiguidades exigem Human Gate. Pagamento direto do banco ao Sub não transforma comissão do Sub em receita da Master; somente a participação econômica da Master e bônus elegíveis entram como receita esperada da Master.
