@@ -232,3 +232,10 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Review pass 3: attempted proposal reconciliation UI; preview failed, so the UI delta was rolled back while keeping the already-existing server action and live reconciliation RPC intact. No broken preview change was accepted as complete.
 - Vercel continues to return project-build failures, but connected Vercel identity exposes no team/project logs. GitHub status provides only failure URL, not compiler output.
 - Current external blocker: exact Vercel compiler/build log is inaccessible to available tools; further blind changes would violate the adversarial/review rule.
+
+
+## Build typecheck correction
+- Vercel compiler log supplied by owner identified TS2322 in `/app/importacoes`: form server action returned `{batchId}`.
+- Corrected `ingestImportFile` to return `Promise<void>`; second review removed now-unused RPC return binding.
+- Previous compiler phase had already confirmed webpack compilation success; failure was TypeScript-only.
+- Triggering a clean preview from documented HEAD because GitHub had not attached a Vercel status to the correction commits.
