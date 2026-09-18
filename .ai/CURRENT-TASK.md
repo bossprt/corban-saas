@@ -138,3 +138,16 @@ Não alterar `main`. Não executar migration destrutiva. Não publicar produçã
 - Advisor final: 0 ERROR de segurança; 1 WARN operacional (Leaked Password Protection Disabled); 2 INFO intencionais nas tabelas platform service-role-only. Performance: 0 unindexed_foreign_keys; unused indexes esperados em banco recém-criado + Auth connection strategy INFO.
 - Verificação final: todas as 24 tabelas do vertical slice consultadas estão com RLS=true e policies presentes.
 - Vertical Slice V0 database foundation concluído. Próxima frente: application/domain services + UI + storage policies + state-machine/RBAC hardening antes de produção real.
+
+
+## Application slice autonomous pass — 2026-09-18
+- Implementado App Shell autenticado com contexto tenant fail-closed e navegação.
+- Dashboard consulta contagens reais de clientes, propostas, fila de digitação e casos operacionais sob RLS.
+- Customer 360: listagem + cadastro básico server action + timeline; validação de nome/CPF/e-mail.
+- Propostas: listagem real de snapshots/status/valores.
+- Operação: listagem real de casos e estado canônico.
+- Catálogo: visibilidade de bancos/providers/rotas/tabelas.
+- UI continua na branch architecture/corban-os-master-v2; main intocada; branch 142 commits ahead / 0 behind.
+- Não há CI/status de build disponível no GitHub e a conexão Vercel atual não retorna teams/projetos; portanto não declarar build aprovado nem preview publicado.
+- Revisão adversarial encontrou falta de atomicidade no cadastro Cliente + Timeline. Migration 20260918_domain_primitives_v0.sql foi preparada no Git para resolver em uma transação SECURITY INVOKER.
+- BLOQUEIO/HUMAN GATE: aplicar domain_primitives_v0 no Supabase live é novo DDL de produção. Após autorização, aplicar migration, validar grants/RLS/rollback e migrar server action para RPC atômica. Depois continuar state machines/RBAC/Storage sem publicar produção sem novo gate.
