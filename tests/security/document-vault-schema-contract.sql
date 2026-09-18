@@ -20,3 +20,21 @@ where connamespace='public'::regnamespace and conname like '%tenant_fk' and conn
 'document_checklist_items_template_tenant_fk','proposal_document_requirements_proposal_tenant_fk',
 'proposal_document_requirements_item_tenant_fk','proposal_document_links_requirement_tenant_fk',
 'proposal_document_links_document_tenant_fk') order by conname;
+
+
+select tgname,pg_get_triggerdef(oid) definition
+from pg_trigger
+where tgrelid='public.proposal_document_requirements'::regclass
+  and tgname='proposal_document_requirements_snapshot_guard'
+  and not tgisinternal;
+
+select conname,pg_get_constraintdef(oid) definition
+from pg_constraint
+where conrelid='public.proposal_document_requirements'::regclass
+  and conname in ('proposal_document_requirements_exception_check','proposal_document_requirements_exception_scope_check')
+order by conname;
+
+select policyname,cmd,qual,with_check
+from pg_policies
+where schemaname='public' and tablename='document_checklist_items'
+order by policyname;
