@@ -70,3 +70,30 @@ export async function createCommercialChannel(formData:FormData){
  if(error) throw new Error('Não foi possível cadastrar o canal comercial')
  revalidatePath('/app/rede')
 }
+
+
+export async function publishCommissionRule(formData:FormData){
+ const {supabase}=await requireCommercialManager()
+ const percentage=optionalText(formData,'percentage'),fixed=optionalText(formData,'fixed_amount'),factor=optionalText(formData,'anticipation_factor')
+ const {error}=await supabase.rpc('create_and_publish_commission_rule',{
+  p_channel_id:requiredText(formData,'channel_id','Canal'),p_product_table_id:requiredText(formData,'product_table_id','Tabela'),
+  p_component_type:requiredText(formData,'component_type','Componente'),p_percentage:percentage?Number(percentage):null,p_fixed_amount:fixed?Number(fixed):null,
+  p_anticipation_factor:factor?Number(factor):null,p_calculation_base:optionalText(formData,'calculation_base')??'proposal_amount',
+  p_effective_from:new Date(requiredText(formData,'effective_from','Vigência')).toISOString(),p_operation_type:optionalText(formData,'operation_type')
+ })
+ if(error)throw new Error('Não foi possível publicar a regra de comissão')
+ revalidatePath('/app/rede')
+}
+
+export async function publishSplitRule(formData:FormData){
+ const {supabase}=await requireCommercialManager()
+ const downstream=Number(requiredText(formData,'downstream_percentage','Repasse downstream'))/100
+ const {error}=await supabase.rpc('create_and_publish_split_rule',{
+  p_relationship_id:requiredText(formData,'relationship_id','Relação'),p_bank_id:optionalText(formData,'bank_id'),
+  p_product_table_id:optionalText(formData,'product_table_id'),p_component_type:optionalText(formData,'component_type'),
+  p_downstream_share:downstream,p_payment_flow:requiredText(formData,'payment_flow','Fluxo de pagamento'),
+  p_effective_from:new Date(requiredText(formData,'effective_from','Vigência')).toISOString()
+ })
+ if(error)throw new Error('Não foi possível publicar a regra de split')
+ revalidatePath('/app/rede')
+}
