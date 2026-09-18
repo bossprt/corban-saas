@@ -41,3 +41,16 @@ export async function applyApprovedImportMatch(formData:FormData){
  revalidatePath(`/app/importacoes/${batchId}`)
  revalidatePath('/app/propostas')
 }
+
+
+export async function publishApprovedImportFinancialFact(formData:FormData){
+ const {supabase,membership}=await requireAppContext()
+ if(!reviewRoles.has(membership.role))throw new Error('Ação exige perfil de supervisão')
+ const batchId=String(formData.get('batch_id')??'')
+ const decisionId=String(formData.get('decision_id')??'')
+ if(!batchId||!decisionId)throw new Error('Publicação financeira incompleta')
+ const {error}=await supabase.rpc('publish_financial_fact_from_import_decision',{p_decision_id:decisionId})
+ if(error)throw new Error('Evidência não atende aos requisitos para publicação financeira')
+ revalidatePath(`/app/importacoes/${batchId}`)
+ revalidatePath('/app/financeiro')
+}
