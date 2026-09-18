@@ -31,11 +31,9 @@ Coleções:
 7. CPF continua tenant-scoped. A conversão do UNIQUE legado para índice parcial do ADR-0005 será migration separada, após inspeção/gate.
 8. Não criar Opportunity neste incremento; Customer 360 deve estabilizar antes da próxima camada comercial.
 
-## Risco identificado antes da aplicação
+## Proteção tenant-safe
 
-FK simples `customer_id → clients.id` não prova sozinha que `customer_id` e `organization_id` pertencem ao mesmo tenant. Antes de aplicar, a revisão final deve escolher uma proteção tenant-safe (FK composta/constraint/trigger determinístico) sem depender apenas de RLS.
-
-O mesmo vale para PIX → bank account.
+A revisão adversarial eliminou a FK simples: as tabelas filhas usam FKs compostas `(organization_id, customer_id) → clients(organization_id, id)`. Contas bancárias também recebem identidade composta por tenant e PIX referencia `(organization_id, bank_account_id)`. Assim, referência cruzada entre tenants é bloqueada no próprio banco, independentemente da aplicação.
 
 ## Próximo passo
 
