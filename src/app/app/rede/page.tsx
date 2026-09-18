@@ -9,7 +9,7 @@ export default async function NetworkPage() {
   supabase.from('commercial_channels').select('id,name,external_partner_code,is_active,bank_id,relationship_id,payer_entity_id').order('name'),
   supabase.from('network_split_rule_versions').select('id,relationship_id,component_type,downstream_share,upstream_share,payment_flow,status,effective_from,effective_until').order('created_at',{ascending:false}),
   supabase.from('banks').select('id,name,code').eq('is_active',true).order('name'),
-  supabase.from('product_tables').select('id,code,name').eq('is_active',true).order('name'),
+  supabase.from('product_tables').select('id,code,name').eq('status','active').order('name'),
   supabase.from('channel_commission_rule_versions').select('id,status,version,channel_id,product_table_id,effective_from').order('created_at',{ascending:false})
  ])
  const canManage=['admin','manager'].includes(membership.role)
