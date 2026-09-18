@@ -164,7 +164,7 @@ declare t text;
 begin
  foreach t in array array['commercial_entities','commercial_relationships','commercial_channels','product_table_external_identities','channel_commission_rule_versions','commission_rule_components','network_split_rule_versions','proposal_external_identities','proposal_commercial_snapshots']
  loop
-   execute format('create policy %I on public.%I for select to authenticated using (public.has_active_organization_membership(organization_id))', t || '_select_member', t);
+   execute format('create policy %I on public.%I for select to authenticated using (public.is_active_organization_member(organization_id))', t || '_select_member', t);
  end loop;
 end $$;
 
@@ -181,6 +181,6 @@ end $$;
 
 -- Proposal identities/snapshots are append-oriented. No authenticated UPDATE/DELETE.
 create policy proposal_external_identities_insert_member on public.proposal_external_identities
-for insert to authenticated with check (public.has_active_organization_membership(organization_id));
+for insert to authenticated with check (public.is_active_organization_member(organization_id));
 create policy proposal_commercial_snapshots_insert_member on public.proposal_commercial_snapshots
-for insert to authenticated with check (public.has_active_organization_membership(organization_id));
+for insert to authenticated with check (public.is_active_organization_member(organization_id));
