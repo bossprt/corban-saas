@@ -101,13 +101,19 @@ language plpgsql
 set search_path = ''
 as $function$
 begin
-  if not exists (
-    select 1 from public.product_table_versions v
-    where v.organization_id = new.organization_id
-      and v.id = new.product_table_version_id
-      and v.status = 'published'
-  ) then
-    raise exception 'proposal_requires_published_product_table_version';
+  -- A table version must be published when first selected. Historical proposals
+  -- remain operable after that version is superseded/expired.
+  if tg_op = 'INSERT'
+     or (tg_op = 'UPDATE' and old.status = 'draft'
+         and new.product_table_version_id is distinct from old.product_table_version_id) then
+    if not exists (
+      select 1 from public.product_table_versions v
+      where v.organization_id = new.organization_id
+        and v.id = new.product_table_version_id
+        and v.status = 'published'
+    ) then
+      raise exception 'proposal_requires_published_product_table_version';
+    end if;
   end if;
 
   if tg_op = 'UPDATE' and old.status <> 'draft' then
