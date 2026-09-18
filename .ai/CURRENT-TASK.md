@@ -25,15 +25,19 @@ Fechar o gate de isolamento Tenant/Auth/Membership V2 e iniciar Customer 360.
 - [x] ADR-0005 incorporado à migration Customer 360: CPF único por tenant apenas para registros ativos.
 - [x] Grants Customer 360 reduzidos por operação; anon sem grants e timeline authenticated somente SELECT/INSERT.
 - [x] Contrato SQL pós-DDL criado para verificar RLS, grants, CPF parcial e FKs tenant-safe.
+- [x] Catálogo Bank/Provider/Agreement/Product/Modality + OrganizationProductRoute + ProductTable/Version preparado no Git.
+- [x] Catálogo global é read-only para authenticated; configuração/tabelas do tenant usam RLS membership.
+- [x] FKs compostas bloqueiam rota/tabela/version cross-tenant.
+- [x] ProductTableVersion usa NUMERIC e UPDATE autenticado somente enquanto draft; publicação completa ainda exige guarda de domínio/DB.
 
 ## Próxima execução
 1. Construir harness A/B autenticado para validar isolamento real entre dois tenants sem usar dados de clientes.
 2. Preparar migration separada das policies legadas para membership, sem aplicá-la antes do gate A/B.
 3. Corrigir índices de FKs legadas de forma aditiva.
 4. Customer 360 está tecnicamente preparado; manter migration não aplicada até o gate A/B.
-5. Preparar catálogo mínimo Bank/Product/Table em migration separada e igualmente não aplicada.
-6. Após gate A/B, aplicar policies legadas + Customer 360 em ordem controlada e rodar contratos/advisors.
-5. Seguir Bank/Product/Table → Simulation → Proposal → Documents → Digitization → Pipeline.
+5. Revisar catálogo V0 adversarialmente e preparar Simulation/Proposal contract sem aplicar DDL dependente.
+6. Após gate A/B, aplicar policies legadas + Customer 360 + catálogo em ordem controlada e rodar contratos/advisors.
+7. Seguir Simulation → Proposal → Documents → Digitization → Pipeline.
 
 ## Gates
 Não alterar `main`. Não executar migration destrutiva. Não publicar produção. Não inserir secrets. Não fabricar dados de clientes. Operação irreversível, gasto, billing/money ou mudança externa relevante exige Human Gate.
