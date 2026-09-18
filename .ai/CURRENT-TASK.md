@@ -56,3 +56,14 @@
 
 ## Human Gate atual — novo DDL
 A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql` no Supabase de produção. É novo DDL e não está coberto pelas autorizações anteriores.
+
+
+## Import Staging live
+- Autorização recebida e `import_staging_lineage_v0` aplicada live com sucesso.
+- Contract pós-apply passou sem exceções.
+- Security advisor: 0 ERROR; apenas leaked-password WARN e 2 INFO intencionais de platform admin.
+- Performance hardening de FKs do módulo de importação aplicado como `import_staging_indexes_v0`.
+- Contrato documental de adapters criado em `docs/imports/IMPORT-ADAPTER-CONTRACT-V0.md`.
+- Contrato TypeScript determinístico criado em `src/lib/imports/contract.ts`.
+- Adapters iniciais Daycoval, Efetiva Mais e Bevicred criados em `src/lib/imports/adapters.ts`.
+- Nenhuma publicação/importação de dados comerciais reais executada automaticamente.
