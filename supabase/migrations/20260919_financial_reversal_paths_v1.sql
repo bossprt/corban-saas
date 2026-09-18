@@ -99,10 +99,12 @@ begin
   when v_settled=v_expected and v_expected>0 then 'matched'
   when v_reported=0 and v_settled=0 then 'open'
   when v_reported<>v_expected or v_settled<>v_expected then 'divergent' else 'open' end;
+ perform set_config('corban.reconciliation_rpc','on',true);
  insert into public.financial_reconciliation_cases(organization_id,proposal_id,channel_id,component_type,expected_amount,reported_amount,settled_amount,status)
  values(v_org,p_proposal_id,v_channel,p_component_type,v_expected,v_reported,v_settled,v_status)
  on conflict(organization_id,proposal_id,(coalesce(component_type,'__none__'))) do update set expected_amount=excluded.expected_amount,reported_amount=excluded.reported_amount,settled_amount=excluded.settled_amount,status=excluded.status,updated_at=now()
  returning id into v_case;
+ perform set_config('corban.reconciliation_rpc','off',true);
  return v_case;
 end $$;
 

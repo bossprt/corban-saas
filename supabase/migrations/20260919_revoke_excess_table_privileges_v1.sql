@@ -1,3 +1,4 @@
+-- APPLIED LIVE by the independent ChatGPT audit on 2026-09-19 (authenticated/anon TRUNCATE, REFERENCES, TRIGGER = 0 tables). DO NOT RE-APPLY. Kept as repository history.
 -- PREPARED, NOT APPLIED (Human Gate: remote privilege change; non-destructive and reversible with GRANT).
 -- Adversarial review found that `authenticated` holds TRUNCATE/REFERENCES/TRIGGER on nearly every tenant table,
 -- including financial_events, financial_evidence_links, import_raw_rows and organization_memberships.
