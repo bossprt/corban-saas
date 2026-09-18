@@ -163,3 +163,12 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Idempotency combines event/proposal/component/source/reference.
 - Reconciliation refresh deterministically aggregates expected vs reported vs received and classifies open/matched/divergent/human_required.
 - Migration NOT applied because it introduces new financial publication RPCs.
+
+
+## Evidence-backed reconciliation live
+- Authorized `financial_reconciliation_publisher_v0` applied successfully.
+- Runtime verified both RPCs SECURITY INVOKER, authenticated EXECUTE=true, anon=false.
+- Finance workspace now exposes expected / reported / received / divergence cases.
+- Proposal server action can refresh deterministic reconciliation for a component.
+- No bank/partner report has been ingested and no received revenue has been fabricated.
+- Next integration boundary: turn approved import evidence into reported/settled financial events only when the source semantics explicitly prove the corresponding financial fact.
