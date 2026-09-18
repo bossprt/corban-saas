@@ -64,3 +64,22 @@ export async function createSimulation(formData: FormData) {
   revalidatePath('/app')
 }
 
+
+export async function createProposalFromSimulation(formData: FormData) {
+  const { supabase } = await requireAppContext()
+  const simulationId = String(formData.get('simulation_id') ?? '')
+  if (!simulationId) throw new Error('Simulação inválida.')
+
+  const { error } = await supabase.rpc('create_proposal_from_simulation', {
+    p_simulation_id: simulationId,
+  })
+
+  if (error) {
+    if (error.code === '23505') throw new Error('Esta simulação já possui proposta.')
+    throw new Error('Não foi possível criar a proposta de forma atômica.')
+  }
+
+  revalidatePath('/app/simulacoes')
+  revalidatePath('/app/propostas')
+  revalidatePath('/app')
+}
