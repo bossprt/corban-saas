@@ -133,3 +133,16 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 - Vercel build confirmed success through commit `3718b230`.
 - Live read-only inventory confirmed catalog/domain data is empty (0 banks/routes/tables/published versions/document types/stages/clients/simulations/proposals); no seed/data mutation was performed.
 - Supabase advisors rechecked: 0 security ERROR; existing leaked-password WARN; platform service-role-only INFO; performance unused-index INFO expected on fresh/empty database.
+
+
+## 18/09/2026 — Workflow/Storage live + document flow
+- Applied authorized live migrations `vertical_slice_domain_workflow_v0` and `document_storage_rls_v0`.
+- Executed `vertical-slice-workflow-contract.sql` successfully.
+- Adversarial review caught checklist fail-open; committed/applied `vertical_slice_workflow_fail_closed_patch` so no published template or zero checklist items can mark a proposal ready.
+- Connected Simulation→Proposal to atomic live RPC.
+- Connected Proposal→prepare checklist and Proposal→digitization to live transactional RPCs.
+- Implemented private document upload with tenant/customer path, MIME/size validation, SHA-256 duplicate detection and version metadata.
+- Implemented proposal evidence linking and supervisor+ validation in application.
+- Added app error boundary.
+- Prepared (not applied) Operational State Machine and RBAC hardening migrations + post-apply contracts.
+- Vercel build SUCCESS confirmed through `c9136e5f`.
