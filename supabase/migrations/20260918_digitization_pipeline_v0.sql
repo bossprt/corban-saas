@@ -50,6 +50,43 @@ create table if not exists public.digitization_jobs (
 );
 
 create index if not exists digitization_jobs_assigned_to_idx on public.digitization_jobs (assigned_to);
+-- Queueing is a transactional domain gate: proposal must be ready and every required
+-- document requirement must already be validated or explicitly waived.
+create or replace function public.guard_digitization_job_documents_ready()
+returns trigger
+language plpgsql
+set search_path = ''
+as $function$
+begin
+  if not exists (
+    select 1 from public.proposals_v2 p
+    where p.organization_id = new.organization_id
+      and p.id = new.proposal_id
+      and p.status = 'ready_for_digitization'
+  ) then
+    raise exception 'proposal_not_ready_for_digitization';
+  end if;
+
+  if exists (
+    select 1 from public.proposal_document_requirements r
+    where r.organization_id = new.organization_id
+      and r.proposal_id = new.proposal_id
+      and r.required_snapshot = true
+      and r.status not in ('validated','waived')
+  ) then
+    raise exception 'required_documents_not_ready';
+  end if;
+  return new;
+end;
+$function$;
+
+drop trigger if exists digitization_jobs_documents_ready_guard on public.digitization_jobs;
+create trigger digitization_jobs_documents_ready_guard
+before insert on public.digitization_jobs
+for each row execute function public.guard_digitization_job_documents_ready();
+
+revoke all on function public.guard_digitization_job_documents_ready() from public, anon, authenticated;
+
 create unique index if not exists digitization_jobs_org_id_key on public.digitization_jobs (organization_id, id);
 create unique index if not exists digitization_jobs_active_proposal_key
   on public.digitization_jobs (organization_id, proposal_id)
