@@ -117,3 +117,19 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 - Added linked-evidence validation, privileged waiver guard and transactional documents-ready digitization gate.
 - Separated platform administrator authority from tenant admin; tenant provisioning is audited and platform-only.
 - No staged vertical-slice migration was applied to the live database.
+
+
+## 18/09/2026 — Autonomous Vertical Slice execution
+- Reconciled `CORBAN-CURRENT-STATE.md` with V2 code/live evidence.
+- Added `/app/simulacoes` with tenant-scoped customer + published-table simulation creation.
+- Added proposal detail page with commercial snapshot, checklist readiness and operational state.
+- Added `/app/documentos` read-only private-vault view; upload intentionally remains blocked until Storage RLS is live.
+- Expanded `/app/operacao` to show digitization queue and operational cases.
+- Added server-side CPF checksum validation and retained masked CPF list display.
+- Prepared, but DID NOT APPLY live, `20260918_vertical_slice_domain_workflow_v0.sql`: one proposal per simulation, selected simulation immutability, proposal state graph, atomic simulation→proposal, checklist snapshot preparation, transactional send-to-digitization.
+- Prepared, but DID NOT APPLY live, `20260918_document_storage_rls_v0.sql`: private 15 MiB document bucket, tenant/customer path isolation, authenticated SELECT/INSERT only, no evidence overwrite/delete.
+- Added post-apply SQL contract `tests/security/vertical-slice-workflow-contract.sql`.
+- Removed the earlier non-atomic UI path for simulation→proposal; current Preview fails closed until the transactional RPC is deployed.
+- Vercel build confirmed success through commit `3718b230`.
+- Live read-only inventory confirmed catalog/domain data is empty (0 banks/routes/tables/published versions/document types/stages/clients/simulations/proposals); no seed/data mutation was performed.
+- Supabase advisors rechecked: 0 security ERROR; existing leaked-password WARN; platform service-role-only INFO; performance unused-index INFO expected on fresh/empty database.
