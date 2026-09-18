@@ -13,3 +13,7 @@ Checklist é versionado por rota comercial do tenant. Ao criar a proposta, os re
 Exceção documental só pode ficar `waived` com motivo, aprovador e timestamp. Isso prepara o Human Gate para envio à digitação.
 
 Todas as referências críticas tenant-scoped usam FKs compostas. Usuário autenticado não recebe DELETE. Template publicado só pode ser alterado por fluxo privilegiado/versionamento; policy normal de UPDATE aceita apenas draft.
+
+
+## Integridade adicional
+Estrutura de checklist publicada é imutável inclusive por caminhos privilegiados comuns. CustomerDocument preserva evidência física por versão. Requirement preserva snapshot de tipo/label/obrigatoriedade; status validated exige documento vinculado e waiver exige aprovador atual com papel admin/manager/supervisor.
