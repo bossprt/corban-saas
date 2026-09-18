@@ -18,10 +18,18 @@ order by table_name,privilege_type;
 select conname,pg_get_constraintdef(oid) definition
 from pg_constraint
 where connamespace='public'::regnamespace
-and conname in ('product_tables_route_tenant_fk','product_table_versions_table_tenant_fk')
+and conname in ('organization_product_routes_modality_product_fk','product_tables_route_tenant_fk','product_table_versions_table_tenant_fk')
 order by conname;
 
 select policyname,cmd,qual,with_check
 from pg_policies
 where schemaname='public' and tablename in ('organization_product_routes','product_tables','product_table_versions')
 order by tablename,policyname;
+
+
+-- Service role maintenance is explicit, not inherited accidentally.
+select table_name, array_agg(privilege_type order by privilege_type) privileges
+from information_schema.role_table_grants
+where table_schema='public' and grantee='service_role'
+  and table_name in ('banks','providers','agreements','products','modalities','organization_product_routes','product_tables','product_table_versions')
+group by table_name order by table_name;
