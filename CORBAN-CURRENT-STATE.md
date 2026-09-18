@@ -42,6 +42,9 @@ Aplicadas e verificadas nesta linha V2:
 - `20260918_digitization_pipeline_v0.sql`
 - `20260918_vertical_slice_v0_post_apply_hardening.sql`
 - `20260918_domain_primitives_v0.sql`
+- `20260918_vertical_slice_domain_workflow_v0.sql`
+- `20260918_document_storage_rls_v0.sql`
+- `20260918_vertical_slice_workflow_fail_closed_patch.sql`
 
 `create_customer_with_timeline(...)` está live e a Server Action de Customer usa a RPC atômica.
 
@@ -73,7 +76,9 @@ Dashboard consulta contagens reais sob RLS.
 
 ## 6. Lacunas reais
 
-- Simulação possui UI segura; criação de Proposal a partir de Simulation está deliberadamente bloqueada na UI até a RPC atômica preparada ser aplicada live.
+- Simulação possui UI segura e criação de Proposal usa RPC atômica live.
+- Checklist e envio para digitação usam RPCs live; checklist falha fechado sem template publicado/itens.
+- Document Vault possui bucket privado live, upload versionado/hash e vínculo/validação de evidência.
 - Proposal detail, Document Vault read-only e fila operacional estão implementados no Preview.
 - state machines de Proposal/Operational ainda precisam de primitives transacionais e RBAC mais estrito.
 - Storage bucket/object policies do Document Vault ainda não estão implementadas.
@@ -96,3 +101,11 @@ Completar a primeira fatia demonstrável em ordem:
 7. validação Preview.
 
 Novas migrations podem ser preparadas/commitadas, mas não aplicadas live sem Human Gate específico. Nesta execução foram preparadas `20260918_vertical_slice_domain_workflow_v0.sql` e `20260918_document_storage_rls_v0.sql`; ambas permanecem NÃO APLICADAS.
+
+
+## 8. Próximo Human Gate (18/09/2026)
+Preparadas, mas NÃO APLICADAS:
+- `20260918_operational_state_machine_v0.sql`
+- `20260918_rbac_hardening_v0.sql`
+
+A primeira conclui as transições controladas da Mesa sem permitir marcação manual de PAID. A segunda move enforcement de RBAC crítico para o banco.
