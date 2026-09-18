@@ -77,3 +77,11 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Import Engine ganhou seleção explícita de adapter, SHA-256, validação determinística de linhas e chave de identidade de proposta.
 - Preview dos últimos commits foi disparado; aguarda status.
 - Próxima implementação sem DDL: tela de detalhe/revisão dos lotes e matching. Upload/ingestão real exige arquivo acessível ao runtime e fonte escolhida; publicação de mapping/regra financeira permanece separada.
+
+
+## Matching review
+- Preview da tela de lote anterior validado com Vercel SUCCESS.
+- Revisão de candidatos agora registra decisão append-only em `import_decisions`, auditada pelo usuário autenticado.
+- Perfis admin/manager/supervisor podem aprovar/rejeitar/marcar revisão; candidato ambíguo é bloqueado para aprovação direta.
+- Matcher canônico fail-closed criado: número externo + instituição resolve proposta quando único; código externo de tabela resolve alias quando único; colisão ou ausência vira Human Gate.
+- Nenhuma decisão altera proposta, catálogo ou financeiro automaticamente.
