@@ -75,6 +75,9 @@ create table if not exists public.document_checklist_items (
 
 create unique index if not exists document_checklist_items_org_id_key on public.document_checklist_items (organization_id, id);
 
+-- Proposal V0 must expose a composite tenant identity before child FKs are created.
+create unique index if not exists proposals_v2_org_id_key on public.proposals_v2 (organization_id, id);
+
 -- Proposal requirement is immutable evidence of what was required at that moment.
 create table if not exists public.proposal_document_requirements (
   id uuid primary key default gen_random_uuid(),
@@ -99,7 +102,6 @@ create table if not exists public.proposal_document_requirements (
   )
 );
 
-create unique index if not exists proposals_v2_org_id_key on public.proposals_v2 (organization_id, id);
 create unique index if not exists proposal_document_requirements_org_id_key on public.proposal_document_requirements (organization_id, id);
 create index if not exists proposal_document_requirements_proposal_status_idx on public.proposal_document_requirements (organization_id, proposal_id, status);
 
