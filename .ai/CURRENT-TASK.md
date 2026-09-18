@@ -261,3 +261,13 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Review 3 runtime: new RPCs are SECURITY INVOKER, authenticated-only; Security Advisor remains 0 ERROR. Performance Advisor found 3 new uncovered FKs; covering indexes applied.
 - No financial or commercial production facts were fabricated; new snapshot table currently has zero rows.
 - Trigger fresh Vercel preview to typecheck the full closure wave.
+
+
+## Operational evidence + native XLSX closure
+- Added native XLSX server parser via ExcelJS 4.4.0; Daycoval/Efetiva adapters can consume XLSX after parsing.
+- Added evidence-backed proposal PAID path: direct approved→paid updates now fail unless transaction-local evidence gate is set by `confirm_proposal_paid_from_import`.
+- PAID evidence requires supervisor+, latest approved+applied exact proposal match, source semantic `production_report`, explicit canonicalStatus=paid, raw status and occurredAt.
+- Adversarial correction: raw strings such as “pago/liberado” are NOT auto-mapped to paid; generic production adapter requires an explicit canonical-status column.
+- Proposal status evidence is append-only/idempotent and tenant-scoped.
+- Runtime: confirm_proposal_paid_from_import SECURITY INVOKER; authenticated=true; anon=false. Security Advisor 0 ERROR; only known leaked-password WARN + intentional platform INFO remain.
+- Remaining validation boundary is Vercel typecheck/build for this full wave plus external Supabase leaked-password setting before real production.
