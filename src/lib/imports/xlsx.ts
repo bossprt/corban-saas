@@ -13,7 +13,7 @@ function cellValue(value:ExcelJS.CellValue):unknown{
 
 export async function parseXlsx(buffer:Buffer):Promise<Record<string,unknown>[]>{
  const workbook=new ExcelJS.Workbook()
- await workbook.xlsx.load(buffer)
+ await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer)
  const sheet=workbook.worksheets[0]
  if(!sheet)throw new Error('xlsx_without_worksheet')
  let headerRow=0

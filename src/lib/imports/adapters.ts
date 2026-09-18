@@ -1,4 +1,5 @@
 import {decimalString,ImportAdapter,NormalizedImportRow,ParsedImportRow} from './contract'
+import {twoTechBuscaContratoAdapter} from './twotech'
 
 const val=(r:Record<string,unknown>,...keys:string[])=>{for(const k of keys)if(r[k]!==undefined&&r[k]!==null&&r[k]!=='')return r[k];return null}
 const text=(v:unknown)=>v==null?null:String(v).trim()||null
@@ -82,4 +83,5 @@ export const commissionStatementAdapter=financialStatementAdapter('generic-commi
 export const paymentStatementAdapter=financialStatementAdapter('generic-payment-statement','payment_statement','payment')
 export const networkPaymentStatementAdapter=financialStatementAdapter('generic-network-payment-statement','network_payment_statement','payment')
 
-export const importAdapters=[daycovalAdapter,efetivaMaisAdapter,bevicredAdapter,productionStatusAdapter,commissionStatementAdapter,paymentStatementAdapter,networkPaymentStatementAdapter]
+export {twoTechBuscaContratoAdapter}
+export const importAdapters=[twoTechBuscaContratoAdapter,daycovalAdapter,efetivaMaisAdapter,bevicredAdapter,productionStatusAdapter,commissionStatementAdapter,paymentStatementAdapter,networkPaymentStatementAdapter]
