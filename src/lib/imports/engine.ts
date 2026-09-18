@@ -28,3 +28,17 @@ export function proposalIdentityKey(bankKey:string|null,externalProposalNumber:s
  if(!externalProposalNumber)return null
  return `${bankKey??'unknown'}::${externalProposalNumber.trim()}`
 }
+
+
+export function financialEventTypeForAdapter(adapter:ImportAdapter):'commission_reported'|'payment_received'|'downstream_paid'|null{
+ if(adapter.financialSemantic==='commission_statement')return 'commission_reported'
+ if(adapter.financialSemantic==='payment_statement')return 'payment_received'
+ if(adapter.financialSemantic==='network_payment_statement')return 'downstream_paid'
+ return null
+}
+
+export function assertFinancialPublicationAllowed(adapter:ImportAdapter){
+ const eventType=financialEventTypeForAdapter(adapter)
+ if(!eventType)throw new Error('source_does_not_prove_financial_fact')
+ return eventType
+}
