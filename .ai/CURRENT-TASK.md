@@ -239,3 +239,10 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Corrected `ingestImportFile` to return `Promise<void>`; second review removed now-unused RPC return binding.
 - Previous compiler phase had already confirmed webpack compilation success; failure was TypeScript-only.
 - Triggering a clean preview from documented HEAD because GitHub had not attached a Vercel status to the correction commits.
+
+
+## Preview restored after TypeScript correction
+- Owner-provided Vercel screen confirms deployment FqTD5cVf7 for commit 2466f0c is Ready/Latest on Preview after 36s.
+- Login surface rendered in deployment preview; server-action TS2322 is resolved.
+- GitHub status lagged as pending at verification time, but Vercel UI is authoritative for this deployment and shows Ready.
+- Resume remaining MVP implementation from green preview baseline; do not modify main.
