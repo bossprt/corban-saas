@@ -34,6 +34,11 @@ Fechar o gate de isolamento Tenant/Auth/Membership V2 e iniciar Customer 360.
 - [x] FKs compostas impedem Proposal/Simulation de cruzar Customer ou ProductTableVersion entre tenants.
 - [x] Proposal V2 separado de contracts legado; valores usam NUMERIC e não há DELETE authenticated.
 - [x] Contrato SQL de segurança/estrutura criado para Simulation/Proposal.
+- [x] Document Vault/Checklist V0 preparado no Git, sem aplicação prematura.
+- [x] CustomerDocument preserva hash SHA-256 e metadados; Proposal reutiliza evidência por link em vez de duplicar arquivo.
+- [x] Checklist versionado por rota; requisitos da Proposal preservam snapshots.
+- [x] Exceção documental `waived` exige motivo + aprovador + timestamp.
+- [x] FKs compostas e ausência de DELETE authenticated mantidas; contrato SQL de segurança criado.
 
 ## Próxima execução
 1. Construir harness A/B autenticado para validar isolamento real entre dois tenants sem usar dados de clientes.
@@ -41,9 +46,10 @@ Fechar o gate de isolamento Tenant/Auth/Membership V2 e iniciar Customer 360.
 3. Corrigir índices de FKs legadas de forma aditiva.
 4. Customer 360 está tecnicamente preparado; manter migration não aplicada até o gate A/B.
 5. Catálogo V0 revisado e Simulation/Proposal V0 preparado.
-6. Preparar Document Vault/checklist V0 sem aplicar DDL dependente.
-7. Após gate A/B, aplicar policies legadas + Customer 360 + catálogo + Simulation/Proposal em ordem controlada e rodar contratos/advisors.
-8. Seguir Documents → Digitization → Pipeline.
+6. Document Vault/checklist V0 preparado e revisado.
+7. Preparar Internal Digitization + Operational Pipeline V0 sem aplicar DDL dependente.
+8. Após gate A/B, aplicar a sequência controlada de migrations e rodar contratos/advisors.
+9. Fechar primeira fatia vertical executável.
 
 ## Gates
 Não alterar `main`. Não executar migration destrutiva. Não publicar produção. Não inserir secrets. Não fabricar dados de clientes. Operação irreversível, gasto, billing/money ou mudança externa relevante exige Human Gate.
