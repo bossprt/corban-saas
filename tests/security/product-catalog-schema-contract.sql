@@ -18,7 +18,7 @@ order by table_name,privilege_type;
 select conname,pg_get_constraintdef(oid) definition
 from pg_constraint
 where connamespace='public'::regnamespace
-and conname in ('organization_product_routes_modality_product_fk','product_tables_route_tenant_fk','product_table_versions_table_tenant_fk')
+and conname in ('organization_product_routes_agreement_bank_fk','organization_product_routes_modality_product_fk','product_tables_route_tenant_fk','product_table_versions_table_tenant_fk')
 order by conname;
 
 select policyname,cmd,qual,with_check
@@ -33,3 +33,18 @@ from information_schema.role_table_grants
 where table_schema='public' and grantee='service_role'
   and table_name in ('banks','providers','agreements','products','modalities','organization_product_routes','product_tables','product_table_versions')
 group by table_name order by table_name;
+
+
+-- Published commercial snapshot immutability guard must exist.
+select tgname, pg_get_triggerdef(oid) definition
+from pg_trigger
+where tgrelid='public.product_table_versions'::regclass
+  and tgname='product_table_versions_immutable_guard'
+  and not tgisinternal;
+
+-- Agreement must belong to the Bank selected by the route.
+select conname,pg_get_constraintdef(oid) definition
+from pg_constraint
+where connamespace='public'::regnamespace
+  and conname in ('agreements_bank_id_id_key','organization_product_routes_agreement_bank_fk')
+order by conname;
