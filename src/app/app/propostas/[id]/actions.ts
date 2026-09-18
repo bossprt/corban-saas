@@ -100,3 +100,17 @@ export async function refreshFinancialReconciliation(formData: FormData) {
   revalidatePath(`/app/propostas/${id}`)
   revalidatePath('/app/financeiro')
 }
+
+
+export async function freezeCommercialRoute(formData:FormData){
+ const id=proposalId(formData)
+ const channelId=String(formData.get('channel_id')??'')
+ const ruleId=String(formData.get('commission_rule_version_id')??'')
+ const producerId=String(formData.get('producer_entity_id')??'')||null
+ const {supabase,membership}=await requireAppContext()
+ if(!['admin','manager','supervisor'].includes(membership.role))throw new Error('Seu perfil não pode congelar a rota comercial.')
+ if(!channelId||!ruleId)throw new Error('Canal e regra de comissão são obrigatórios.')
+ const {error}=await supabase.rpc('freeze_proposal_commercial_route',{p_proposal_id:id,p_channel_id:channelId,p_commission_rule_version_id:ruleId,p_producer_entity_id:producerId})
+ if(error)throw new Error('Não foi possível congelar a rota. Verifique canal, tabela, vigência e regra publicada.')
+ revalidatePath(`/app/propostas/${id}`)
+}
