@@ -8,7 +8,7 @@ function base(r:Record<string,unknown>,overrides:Partial<NormalizedImportRow>):N
 }
 
 export const bevicredAdapter:ImportAdapter={
- key:'bevicred-table-offer',version:'1.0.0',
+ key:'bevicred-table-offer',version:'1.0.0',financialSemantic:'commercial_offer',
  canParse:({filename})=>/\.xls$/i.test(filename),
  parse:({rows})=>rows.map((r,i):ParsedImportRow=>({rowNumber:i+1,rawPayload:r,normalized:base(r,{
    bankKey:'daycoval',
@@ -23,7 +23,7 @@ export const bevicredAdapter:ImportAdapter={
  })}))}
 
 export const daycovalAdapter:ImportAdapter={
- key:'daycoval-table-offer',version:'1.0.0',
+ key:'daycoval-table-offer',version:'1.0.0',financialSemantic:'commercial_offer',
  canParse:({filename})=>/\.xlsx$/i.test(filename),
  parse:({rows})=>rows.map((r,i):ParsedImportRow=>({rowNumber:i+1,rawPayload:r,normalized:base(r,{
    bankKey:'daycoval',
@@ -37,7 +37,7 @@ export const daycovalAdapter:ImportAdapter={
  })}))}
 
 export const efetivaMaisAdapter:ImportAdapter={
- key:'efetiva-mais-table-offer',version:'1.0.0',
+ key:'efetiva-mais-table-offer',version:'1.0.0',financialSemantic:'commercial_offer',
  canParse:({filename})=>/\.(xlsx|xls|csv)$/i.test(filename),
  parse:({rows})=>rows.map((r,i):ParsedImportRow=>({rowNumber:i+1,rawPayload:r,normalized:base(r,{
    bankKey:text(val(r,'Banco','banco','bank')),
