@@ -48,7 +48,15 @@ where connamespace='public'::regnamespace
     'customer_addresses_customer_tenant_fk',
     'customer_bank_accounts_customer_tenant_fk',
     'customer_pix_keys_customer_tenant_fk',
-    'customer_pix_keys_bank_account_tenant_fk',
+    'customer_pix_keys_bank_account_customer_fk',
     'customer_timeline_customer_tenant_fk'
   )
 order by conname;
+
+
+select indexname,indexdef from pg_indexes
+where schemaname='public' and indexname in (
+ 'customer_bank_accounts_one_primary_per_customer',
+ 'customer_pix_keys_one_primary_per_customer',
+ 'customer_bank_accounts_org_customer_id_key'
+) order by indexname;
