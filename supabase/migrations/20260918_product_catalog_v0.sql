@@ -84,6 +84,13 @@ create table if not exists public.organization_product_routes (
 
 create index if not exists agreements_bank_id_idx on public.agreements (bank_id);
 
+create index if not exists organization_product_routes_bank_agreement_idx
+  on public.organization_product_routes (bank_id, agreement_id);
+create index if not exists organization_product_routes_provider_idx
+  on public.organization_product_routes (provider_id);
+create index if not exists organization_product_routes_product_modality_idx
+  on public.organization_product_routes (product_id, modality_id);
+
 create index if not exists organization_product_routes_org_status_idx
   on public.organization_product_routes (organization_id, status);
 
@@ -140,6 +147,9 @@ create index if not exists product_table_versions_org_status_idx
   on public.product_table_versions (organization_id, status);
 create index if not exists product_table_versions_table_effective_idx
   on public.product_table_versions (product_table_id, effective_from desc);
+create index if not exists product_tables_org_route_idx
+  on public.product_tables (organization_id, route_id);
+
 create unique index if not exists product_table_versions_org_id_key
   on public.product_table_versions (organization_id, id);
 
