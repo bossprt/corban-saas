@@ -67,3 +67,13 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Contrato TypeScript determinístico criado em `src/lib/imports/contract.ts`.
 - Adapters iniciais Daycoval, Efetiva Mais e Bevicred criados em `src/lib/imports/adapters.ts`.
 - Nenhuma publicação/importação de dados comerciais reais executada automaticamente.
+
+
+## Continuação autônoma — UI e Import Engine
+- Preview anterior validado com Vercel SUCCESS.
+- Rede Comercial agora possui ações server-side com dupla proteção: papel admin/manager no app + RLS no banco.
+- UI permite cadastrar entidade, relação e canal sem assumir que Master/Sub/Parceiro é tipo fixo da empresa.
+- Nenhum seed comercial foi criado: banco/entidade/canal real continua vindo de evidência ou cadastro autorizado.
+- Import Engine ganhou seleção explícita de adapter, SHA-256, validação determinística de linhas e chave de identidade de proposta.
+- Preview dos últimos commits foi disparado; aguarda status.
+- Próxima implementação sem DDL: tela de detalhe/revisão dos lotes e matching. Upload/ingestão real exige arquivo acessível ao runtime e fonte escolhida; publicação de mapping/regra financeira permanece separada.
