@@ -85,3 +85,11 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Perfis admin/manager/supervisor podem aprovar/rejeitar/marcar revisão; candidato ambíguo é bloqueado para aprovação direta.
 - Matcher canônico fail-closed criado: número externo + instituição resolve proposta quando único; código externo de tabela resolve alias quando único; colisão ou ausência vira Human Gate.
 - Nenhuma decisão altera proposta, catálogo ou financeiro automaticamente.
+
+
+## Reconciliation visibility
+- Matching-review Preview validado com Vercel SUCCESS.
+- Lista de importações agora mostra prontidão: linhas normalizadas, matches fortes e revisões humanas por lote.
+- Detalhe da proposta agora expõe identidades externas reconciliadas e snapshot de rota comercial quando existirem.
+- Documento `RECONCILIATION-ENGINE-V0.md` fixa prioridade de identidade e separa decisão de matching de mutação de catálogo/proposta/financeiro.
+- Próxima fronteira de domínio: aplicar decisão aprovada de forma transacional e idempotente. Isso exigirá RPC/DDL novo para garantir atomicidade e lineage, portanto deve ser preparado antes do próximo Human Gate.
