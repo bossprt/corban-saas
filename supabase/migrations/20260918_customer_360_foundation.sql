@@ -5,7 +5,7 @@
 alter table public.clients
   add column if not exists preferred_name text,
   add column if not exists secondary_phone text,
-  add column if not exists source text,
+  add column if not exists original_source text,
   add column if not exists notes text,
   add column if not exists updated_at timestamptz not null default now(),
   add column if not exists deleted_at timestamptz;
@@ -13,7 +13,7 @@ alter table public.clients
 -- ADR-0005: replace the known legacy hard UNIQUE with partial uniqueness so
 -- a soft-deleted customer does not block a later legitimate re-registration.
 alter table public.clients
-  drop constraint if exists clients_organization_id_cpf_key;
+  drop constraint if exists unique_cpf_per_organization;
 
 create unique index if not exists clients_org_cpf_active_uniq
   on public.clients (organization_id, cpf)
