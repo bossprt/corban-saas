@@ -93,3 +93,12 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Detalhe da proposta agora expõe identidades externas reconciliadas e snapshot de rota comercial quando existirem.
 - Documento `RECONCILIATION-ENGINE-V0.md` fixa prioridade de identidade e separa decisão de matching de mutação de catálogo/proposta/financeiro.
 - Próxima fronteira de domínio: aplicar decisão aprovada de forma transacional e idempotente. Isso exigirá RPC/DDL novo para garantir atomicidade e lineage, portanto deve ser preparado antes do próximo Human Gate.
+
+
+## Approved match application live
+- `apply_approved_import_match_v0` aplicado no Supabase com sucesso após autorização explícita.
+- Contract live passou: RPC existe, anon sem EXECUTE, authenticated com EXECUTE e lineage protegido por RLS.
+- Security advisor permanece 0 ERROR; WARN conhecido apenas para leaked-password protection.
+- UI agora separa claramente: sugerir match → registrar decisão → aplicar vínculo aprovado.
+- Aplicação é idempotente e cria somente identidade externa de proposta/alias de tabela; não publica comissão, pagamento ou receita.
+- Preview do fluxo atualizado disparado na Vercel.
