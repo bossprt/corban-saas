@@ -20,11 +20,11 @@ create table if not exists public.operational_stages (
   constraint operational_stages_sort_check check (sort_order >= 0),
   constraint operational_stages_sla_check check (sla_minutes is null or sla_minutes >= 0),
   constraint operational_stages_org_code_key unique (organization_id, code),
-  constraint operational_stages_org_id_key unique (organization_id, id)
+  constraint operational_stages_org_id_key unique (organization_id, id),
+  constraint operational_stages_org_id_state_key unique (organization_id, id, canonical_state)
 );
 
--- Proposal V0 must expose tenant composite identity before operational FKs.
-create unique index if not exists proposals_v2_org_id_key on public.proposals_v2 (organization_id, id);
+-- Proposal V0 owns the tenant composite identity used by operational FKs.
 
 create table if not exists public.digitization_jobs (
   id uuid primary key default gen_random_uuid(),
@@ -81,6 +81,9 @@ create table if not exists public.operational_cases (
     'digitization_queue','digitizing','submitted','pending_external',
     'approved','paid','cancelled','rejected'
   )),
+  constraint operational_cases_stage_state_fk
+    foreign key (organization_id, current_stage_id, canonical_state)
+    references public.operational_stages (organization_id, id, canonical_state) on delete restrict,
   constraint operational_cases_proposal_key unique (organization_id, proposal_id)
 );
 
@@ -132,5 +135,9 @@ create policy operational_cases_update_member on public.operational_cases for up
 create policy operational_events_select_member on public.operational_events for select to authenticated using (public.is_active_organization_member(organization_id));
 create policy operational_events_insert_member on public.operational_events for insert to authenticated with check (public.is_active_organization_member(organization_id));
 
+-- Explicit service maintenance grants; event rows remain append-oriented for normal app users.
+grant select, insert, update, delete on table public.operational_stages, public.digitization_jobs, public.operational_cases to service_role;
+grant select, insert on table public.operational_events to service_role;
+
 -- No authenticated DELETE. Event history is append-only by grant/policy.
--- State transition guards and "documents ready before queue" domain guard are required before production.
+-- State transition guards and "documents ready before queue" transactional domain guard remain required before production.
