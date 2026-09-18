@@ -6,6 +6,14 @@ do $$
 begin
   if not exists (
     select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='public' and p.proname='create_proposal_from_simulation' and p.prosecdef=false
+  ) then raise exception 'create_proposal_from_simulation must exist as SECURITY INVOKER'; end if;
+
+  if has_function_privilege('anon', 'public.create_proposal_from_simulation(uuid)', 'EXECUTE') then
+    raise exception 'anon must not execute create_proposal_from_simulation';
+  end if;
+  if not exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
     where n.nspname='public' and p.proname='prepare_proposal_documents' and p.prosecdef=false
   ) then raise exception 'prepare_proposal_documents must exist as SECURITY INVOKER'; end if;
 
