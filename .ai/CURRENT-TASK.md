@@ -74,6 +74,19 @@ Fechar o gate de isolamento Tenant/Auth/Membership V2 e iniciar Customer 360.
 - [x] Pipeline não recria mais a chave composta de Proposal; ownership permanece na migration Proposal.
 - [x] OperationalCase ganhou FK composta Stage+canonical_state, impedindo estado técnico divergente do stage escolhido.
 - [x] Pipeline ganhou grants service_role explícitos; operational_events permanece sem UPDATE/DELETE até para service_role neste V0.
+- [x] Revisão adversarial integral encontrou e corrigiu delimitadores PL/pgSQL inválidos antes de apply.
+- [x] FKs staged receberam índices adicionais para evitar regressão de unindexed foreign keys.
+- [x] PIX→BankAccount agora prova mesmo tenant E mesmo Customer; primários de conta/PIX limitados a um por Customer.
+- [x] Customer timeline permanece append-only também para service_role.
+- [x] Proposal ligada a Simulation agora exige mesmo Customer + ProductTableVersion.
+- [x] Proposal exige ProductTableVersion publicada e snapshot comercial fica imutável após sair de draft.
+- [x] CustomerDocument virou evidência imutável por versão; correção estrutural exige nova versão.
+- [x] Requirement validated exige documento vinculado; waiver exige aprovador atual com role admin/manager/supervisor.
+- [x] DigitizationJob ganhou gate transacional: Proposal ready_for_digitization + todos documentos obrigatórios validated/waived.
+- [x] Tenant admin deixou de poder provisionar tenants: endpoint agora exige platform_administrator ativo.
+- [x] Bootstrap de tenant agora exige platform actor e grava audit event append-only na mesma transação DB.
+- [x] Advisors live reconfirmados sem mudança persistente: 1 WARN legado SECURITY DEFINER; infos de índices não usados em DB vazio; migrations live continuam somente as 4 previamente aplicadas.
+- [x] Branch está 116 commits à frente de main e 0 atrás no último compare; nenhum CI status disponível para o HEAD consultado.
 
 ## Próxima execução
 1. Construir harness A/B autenticado para validar isolamento real entre dois tenants sem usar dados de clientes.
@@ -93,7 +106,10 @@ Fechar o gate de isolamento Tenant/Auth/Membership V2 e iniciar Customer 360.
 15. Bank↔Agreement e imutabilidade de ProductTableVersion corrigidos.
 16. Document checklist child immutability e ownership da chave Proposal corrigidos.
 17. Requirement snapshots e Pipeline grants/coerência Stage↔State corrigidos.
-18. Próximo: revisão estática integral das seis migrations staged, procurando dependências duplicadas, FKs sem índice, grants/policies inconsistentes e DDL que falharia em sequência.
+18. Revisão estática/adversarial integral concluída e achados corrigidos.
+19. BLOQUEIO REAL: para validar SQL contra Postgres sem tocar produção é necessário ambiente/branch de banco de teste; criar Supabase Branch tem custo potencial e exige confirmação.
+20. BLOQUEIO REAL: Gate A/B exige identidades Auth controladas reais e registro inicial de platform_administrator; banco live continua sem usuários.
+21. Após Human Gate: aplicar somente bootstrap admin, provisionar operador + dois tenants de teste, executar A/B; só com 100% passar para cadeia staged.
 
 ## Gates
 Não alterar `main`. Não executar migration destrutiva. Não publicar produção. Não inserir secrets. Não fabricar dados de clientes. Operação irreversível, gasto, billing/money ou mudança externa relevante exige Human Gate.
