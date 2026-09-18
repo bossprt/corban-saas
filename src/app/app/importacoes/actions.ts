@@ -5,6 +5,7 @@ import { requireAppContext } from '@/lib/appContext'
 import { sha256, selectImportAdapter, validateParsedRows } from '@/lib/imports/engine'
 import { parseCsv, parseHtmlTable } from '@/lib/imports/tabular'
 import { parseXlsx } from '@/lib/imports/xlsx'
+import { TWOTECH_ADAPTER_KEY } from '@/lib/imports/twotech'
 
 const managerRoles=new Set(['admin','manager'])
 const semantics=new Set(['commercial_offer','production_report','commission_statement','payment_statement','network_payment_statement'])
@@ -60,6 +61,11 @@ export async function ingestImportFile(formData:FormData){
   p_parser_key:adapter.key,p_parser_version:adapter.version,p_rows:parsed
  })
  if(error||!batchId)throw new Error('Falha na ingestão atômica do lote')
+ if(adapter.key===TWOTECH_ADAPTER_KEY){
+  // Best-effort, write-once catalog lineage. Ingestion is idempotent by SHA-256, so a retry re-attaches safely;
+  // until attach_import_batch_adapter is applied (see CURRENT-TASK gates) the RPC is absent and lineage stays null.
+  await supabase.rpc('attach_import_batch_adapter',{p_batch_id:batchId,p_adapter_key:TWOTECH_ADAPTER_KEY})
+ }
  const {error:matchError}=await supabase.rpc('generate_import_match_candidates',{p_batch_id:batchId})
  if(matchError)throw new Error('Lote ingerido, mas o matching determinístico falhou')
  // Server Actions bound directly to <form action> intentionally return void.
