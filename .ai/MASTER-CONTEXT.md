@@ -1,167 +1,46 @@
-# MASTER CONTEXT — CORBAN ENTERPRISE
+# MASTER CONTEXT — CORBAN OS V2
 
-**Propósito:** contexto mínimo que toda IA/sessão deve ler antes de agir.
-**Versão:** 1.0
-**Data:** 11/09/2026
-**Compatível com Master:** v1.1
+**Propósito:** contexto mínimo de retomada para qualquer IA/agente.
+**Atualizado:** 17/09/2026
+**Estado:** transição V1 → V2 em execução.
 
----
+## Ordem de leitura
+1. `/CORBAN-OS-PROJECT-CONTEXT-V2.md`
+2. `/CORBAN-OS-MASTER-V2.md`
+3. `/.ai/RULES.md`
+4. `/.ai/DECISIONS.md`
+5. `/.ai/CURRENT-TASK.md`
+6. `/CORBAN-CURRENT-STATE.md` apenas como documento histórico a reconciliar com Git, código, migrations e banco vivo.
 
-# 1. O QUE É ESTE PROJETO
+## Fronteiras
+- Corban OS: fonte de verdade da operação bancária.
+- Growth OS: aquisição, campanhas, tracking e atribuição.
+- SmartMatch: conversão, atendimento, follow-up e recuperação.
+- Cérebro/Control Tower: orquestração de projetos/agentes.
 
-SaaS Enterprise para Correspondentes Bancários (Corban).
+Projetos permanecem separados e integram por contratos/APIs/eventos versionados. Não criar acoplamento direto de banco entre eles.
 
-Não é só CRM. É um **Sistema Operacional para Corbans**.
+## Stack observada
+Next.js 16.3.4, React 19, TypeScript, Tailwind CSS 4 e Supabase/PostgreSQL/RLS. No branch V2, Drizzle, Zod, Vitest e Playwright ainda não devem ser tratados como implementados.
 
-Multi-tenant, seguro, escalável, com IA supervisionada.
+## Estado factual do Supabase Corban
+Projeto `corban-saas`: `nhjfrcttzxnphhizlnmc`.
 
----
+Verificado em 17/09/2026:
+- migration registrada: `20260917192754_harden_legacy_rls_foundation`;
+- tabelas públicas: `organizations`, `profiles`, `clients`, `contracts`, `import_jobs`;
+- RLS habilitado nas cinco;
+- políticas legadas usam `get_user_organization_id()`;
+- função SECURITY DEFINER/STABLE com `search_path=''`; execução para authenticated/service_role, não PUBLIC/anon;
+- isto é fundação legada endurecida, não certificação de isolamento multi-tenant de produção.
 
-# 2. FONTES DE VERDADE
+A migration existe no banco, mas ainda precisa ser reconciliada/versionada no Git a partir de SQL autoritativo. Não reconstruir seu conteúdo por suposição.
 
-| Arquivo | Papel |
-|---|---|
-| `/CORBAN-ENTERPRISE-MEMORIA-MASTER-v1.1.md` | Conceito (como DEVE ser) |
-| `/CORBAN-CURRENT-STATE.md` | Realidade (o que EXISTE) |
-| `/.ai/RULES.md` | Como operar |
-| `/.ai/DECISIONS.md` | Por que |
-| `/.ai/CURRENT-TASK.md` | Foco atual |
-| `/.ai/CHANGELOG.md` | O que mudou |
+## Primeira entrega vertical
+`Login/Tenant → Customer 360 → Bank/Product/Table → Simulation → Proposal → Documents → Send to Digitization → Operational Desk → Pipeline`
 
-**Ordem de leitura:** master → current-state → rules → current-task.
+## Invariantes imediatos
+Tenant isolation fail-closed; backend soberano em autorização; RLS não substitui autorização de domínio; dinheiro nunca Float; propostas preservam snapshots/versionamento; eventos externos idempotentes/auditáveis; histórico financeiro não é apagado ou reescrito silenciosamente; segredos fora de Git/frontend/logs/tabelas de negócio; IA não altera verdade financeira silenciosamente; nunca confundir planejado com implementado.
 
----
-
-# 3. STACK
-
-- Next.js 16.3.4 (App Router) — atenção: breaking changes
-- TypeScript
-- Tailwind CSS 4
-- Supabase (PostgreSQL + RLS + Storage)
-- Drizzle ORM (a instalar)
-- BullMQ + Redis (fase futura)
-- Vitest + Playwright (a instalar)
-- Zod (a instalar)
-
----
-
-# 4. ESTRUTURA OFICIAL
-
-src/app/ → Next.js App Router
-src/lib/ → bibliotecas internas
-src/utils/ → utilitários
-src/server/ → Domain Services (a criar)
-migrations/ → migrations SQL (a criar)
-tests/ → testes (a criar)
-docs/ → documentação (a criar)
-.ai/ → arquivos operacionais de IA
-
-text
-
-
-**Decisão:** `app/` na raiz deve ser apagado (duplicação com `src/app/`).
-
----
-
-# 5. REGRAS INVIOLÁVEIS
-
-1. Toda tabela de negócio tem `organization_id`
-2. RLS ativado em tudo
-3. Backend é soberano em autorização
-4. Comissões pagas e audit_logs são imutáveis
-5. Toda ação crítica gera evento + auditoria
-6. Toda operação financeira é idempotente
-7. IA nunca tem acesso irrestrito
-8. Nunca confundir "planejado" com "implementado"
-9. Nenhuma migration sem teste de rollback
-10. Nenhuma lógica de negócio em componente React
-
----
-
-# 6. ESTADO ATUAL
-
-Ver `/CORBAN-CURRENT-STATE.md`.
-
-**Resumo:**
-- Fase: FASE 1 (Fundação técnica) — em andamento
-- Repositório: https://github.com/bossprt/corban-saas (privado)
-- Next.js + Supabase: montados
-- Problemas críticos identificados (6) — resolver antes de avançar
-- Drizzle, Zod, Vitest: NÃO instalados
-- Migrations: NÃO existem
-- RLS: NÃO verificável
-
----
-
-# 7. O QUE NÃO FAZER
-
-- ❌ Não inventar arquitetura nova sem registrar em `DECISIONS.md`
-- ❌ Não criar feature sem responder à Regra de Ouro (12 perguntas)
-- ❌ Não alterar o master sem motivo arquitetural registrado
-- ❌ Não introduzir dependência que amarre a uma IA específica
-- ❌ Não usar `DELETE` em `audit_logs` nem em comissões pagas
-- ❌ Não criar tabela de negócio sem `organization_id`
-- ❌ Não confiar em validação de frontend para segurança
-
----
-
-# 8. AO FINAL DE CADA SESSÃO
-
-1. Atualizar `/CORBAN-CURRENT-STATE.md`
-2. Registrar decisões em `/.ai/DECISIONS.md`
-3. Registrar mudanças em `/.ai/CHANGELOG.md`
-4. Atualizar `/.ai/CURRENT-TASK.md`
-5. Fazer commit + push
-6. Informar próximo passo claramente
-
----
-
-# 9. MÚLTIPLAS IAs — COMO CONVIVER
-
-Este projeto é trabalhado por várias IAs:
-
-- DeepSeek (chat) — arquiteto
-- ChatGPT (chat) — arquiteto
-- Claude (chat + Code) — arquiteto + executor
-- Gemini (chat + VS Code) — arquiteto + executor
-- Llama 3 (local via Continue) — autocomplete e tarefas pequenas
-
-Regras:
-
-- Ninguém sobrescreve decisão de outro sem registrar em `DECISIONS.md`
-- Toda IA registra em `CHANGELOG.md`
-- Toda IA atualiza `CURRENT-STATE.md` ao terminar
-- Se houver conflito, o master vence
-- Se o master for omisso, quem decidiu por último documenta
-
----
-
-# 10. MODELO DE TRABALHO
-
-IA arquiteta (chat) → decide, documenta, gera prompt
-↓
-IA executora (VS Code) → executa, edita, commita
-↓
-Usuário → ponte entre os dois
-↓
-IA arquiteta → analisa resultado, corrige rumo
-
-text
-
-**Regra:** IA arquiteta não executa. IA executora não decide arquitetura.
-
----
-
-# 11. PRÓXIMO PASSO
-
-Ver `/.ai/CURRENT-TASK.md`.
-
-Atualmente: **Ciclo 1 — limpeza de estrutura de pastas** (`app/` vs `src/app/`).
-
----
-
-# FIM
-
-
-
-
+## Execução
+Trabalhar em branch isolada e não alterar `main` diretamente. DDL destrutivo, publicação, gasto, segredo, billing/money ou ação externa irreversível exigem Human Gate. O próximo passo executável vem de `/.ai/CURRENT-TASK.md`.
