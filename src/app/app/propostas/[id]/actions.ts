@@ -88,3 +88,15 @@ export async function publishExpectedCommission(formData: FormData) {
   revalidatePath(`/app/propostas/${id}`)
   revalidatePath('/app/financeiro')
 }
+
+
+export async function refreshFinancialReconciliation(formData: FormData) {
+  const id = proposalId(formData)
+  const component = String(formData.get('component_type') ?? '') || null
+  const { supabase, membership } = await requireAppContext()
+  if (!['admin','manager','supervisor'].includes(membership.role)) throw new Error('Seu perfil não pode reconciliar fatos financeiros.')
+  const { error } = await supabase.rpc('refresh_financial_reconciliation', { p_proposal_id: id, p_component_type: component })
+  if (error) throw new Error('Não foi possível atualizar a reconciliação financeira.')
+  revalidatePath(`/app/propostas/${id}`)
+  revalidatePath('/app/financeiro')
+}
