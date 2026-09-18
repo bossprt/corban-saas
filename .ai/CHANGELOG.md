@@ -146,3 +146,13 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 - Added app error boundary.
 - Prepared (not applied) Operational State Machine and RBAC hardening migrations + post-apply contracts.
 - Vercel build SUCCESS confirmed through `c9136e5f`.
+
+
+## 18/09/2026 — Operational state machine + RBAC live
+- Applied authorized `operational_state_machine_v0` and `rbac_hardening_v0`.
+- Both post-apply SQL contracts passed.
+- Supabase advisor identified callable SECURITY DEFINER role helper; applied corrective `rbac_helper_exposure_patch`, removing direct authenticated/anon EXECUTE while preserving RLS use.
+- Connected Mesa UI to transactional operational transitions.
+- Manual PAID remains prohibited; financial truth is not inferred from operational clicks.
+- Added tenant readiness diagnostics at `/app/configuracao`.
+- Confirmed live data gate: no banks/tables/checklists/stages/simulations/proposals exist, so no truthful E2E can be fabricated.
