@@ -1,5 +1,6 @@
 export type ImportRecordKind='table_offer'|'proposal'|'commission'|'payment'|'status'|'network_production'|'other'
 export type ImportSourceKey='daycoval'|'efetiva_mais'|'bevicred'|string
+export type FinancialEvidenceSemantic='commercial_offer'|'production_report'|'commission_statement'|'payment_statement'|'network_payment_statement'
 
 export type NormalizedImportRow={
  recordKind:ImportRecordKind
@@ -26,6 +27,7 @@ export type ParsedImportRow={
 export interface ImportAdapter{
  readonly key:string
  readonly version:string
+ readonly financialSemantic:FinancialEvidenceSemantic
  canParse(input:{filename:string;mimeType?:string|null;headers?:string[]}):boolean
  parse(input:{filename:string;rows:Record<string,unknown>[]}):ParsedImportRow[]
 }
