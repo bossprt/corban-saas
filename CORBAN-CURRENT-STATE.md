@@ -109,3 +109,11 @@ Preparadas, mas NÃO APLICADAS:
 - `20260918_rbac_hardening_v0.sql`
 
 A primeira conclui as transições controladas da Mesa sem permitir marcação manual de PAID. A segunda move enforcement de RBAC crítico para o banco.
+
+## 9. Pipeline/RBAC live (18/09/2026)
+- Operational State Machine V0 aplicada e contract validado.
+- RBAC hardening V0 aplicado e contract validado.
+- Helper SECURITY DEFINER teve EXECUTE direto removido após advisor.
+- Mesa usa transição transacional; PAID manual é proibido.
+- Diagnóstico de prontidão do tenant disponível em `/app/configuracao`.
+- Bloqueio atual não é técnico: faltam dados comerciais/operacionais válidos para configurar o tenant e executar E2E real.
