@@ -172,3 +172,11 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Proposal server action can refresh deterministic reconciliation for a component.
 - No bank/partner report has been ingested and no received revenue has been fabricated.
 - Next integration boundary: turn approved import evidence into reported/settled financial events only when the source semantics explicitly prove the corresponding financial fact.
+
+
+## Reconciliation preview repaired + financial import semantics
+- Detected Vercel failure on `d2444db`; root cause in repository was malformed JSX in `/app/financeiro`.
+- Fixed in `db9ffb60`; Vercel confirmed SUCCESS.
+- Added `IMPORT-FINANCIAL-SEMANTICS-V0.md` defining source classes and fail-closed publication rules.
+- Known Daycoval Gov Acre, Efetiva Mais table evidence and Bevicred table evidence remain commercial_offer evidence only; they cannot publish payment_received.
+- No real financial rows inserted.
