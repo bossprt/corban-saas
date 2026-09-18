@@ -1,29 +1,28 @@
 # CURRENT TASK — CORBAN OS V2
 
-**Atualização:** 17/09/2026  
+**Atualização:** 18/09/2026  
 **Branch:** `architecture/corban-os-master-v2`
 
 ## Foco
-Validar e aplicar de forma controlada a fundação Tenant/Auth/Membership V2; depois iniciar Customer 360.
+Fechar o gate de isolamento Tenant/Auth/Membership V2 e iniciar Customer 360.
 
 ## Concluído
-- [x] Contexto V2, MASTER V2 e bootstrap dos agentes consolidados.
-- [x] Supabase correto reconciliado: `corban-saas` / `nhjfrcttzxnphhizlnmc`.
-- [x] Baseline vivo documentado em `docs/LIVE-SCHEMA-BASELINE-V2.md`.
-- [x] ADR-0011: membership explícito + tenant fail-closed.
-- [x] Migration aditiva versionada em `supabase/migrations/20260917_organization_memberships_v2.sql`.
-- [x] Plano/forward-fix documentado em `docs/TENANT-AUTH-MEMBERSHIP-V2.md`.
-- [x] Contrato de teste criado em `tests/security/tenant-membership-isolation.sql`.
-- [x] Preflight do banco: tabela membership ausente, 0 profiles legados, pgcrypto disponível e DDL possível.
-- [x] Nenhuma DDL V2 aplicada ainda.
+- [x] Baseline do Supabase e ADR-0011 documentados.
+- [x] Migration `organization_memberships_v2` versionada e aplicada no Supabase.
+- [x] Tabela `organization_memberships`, índices, RLS e helper de membership criados.
+- [x] Helper novo usa SECURITY INVOKER; não introduziu novo alerta SECURITY DEFINER.
+- [x] Advisor identificou RLS initplan; migration `optimize_membership_rls_auth_initplan` aplicada e versionada.
+- [x] Advisor pós-correção não reporta mais o initplan do membership.
+- [x] Histórico Supabase agora contém: harden_legacy_rls_foundation, organization_memberships_v2, optimize_membership_rls_auth_initplan.
+- [x] O alerta de segurança restante pertence ao helper legado `get_user_organization_id()`; será removido/neutralizado somente quando as policies legadas migrarem.
+- [x] Nenhuma estrutura legada foi removida.
 
 ## Próxima execução
-1. Revisão adversarial final do SQL versionado.
-2. Aplicar migration aditiva via mecanismo de migration do Supabase.
-3. Inspecionar schema/policies/grants pós-migration.
-4. Executar testes de segurança possíveis sem criar usuários artificiais de produção; preparar harness A/B controlado para autenticação.
-5. Só depois migrar policies legadas em migration separada.
-6. Iniciar Customer 360.
+1. Construir harness A/B autenticado para validar isolamento real entre dois tenants sem usar dados de clientes.
+2. Preparar migration separada das policies legadas para membership, sem aplicá-la antes do gate A/B.
+3. Corrigir índices de FKs legadas de forma aditiva.
+4. Iniciar schema Customer 360 após o gate de tenant.
+5. Seguir Bank/Product/Table → Simulation → Proposal → Documents → Digitization → Pipeline.
 
 ## Gates
-Não alterar `main`. Não executar migration destrutiva. Não publicar produção. Não inserir secrets. Não fabricar usuários/dados reais sem necessidade. Operação irreversível, gasto, billing/money ou mudança externa relevante exige Human Gate.
+Não alterar `main`. Não executar migration destrutiva. Não publicar produção. Não inserir secrets. Não fabricar dados de clientes. Operação irreversível, gasto, billing/money ou mudança externa relevante exige Human Gate.
