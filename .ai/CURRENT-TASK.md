@@ -37,3 +37,9 @@ Não alterar `main`. Não executar migration destrutiva. Não publicar produçã
 - Variáveis públicas Supabase configuradas em All Environments; typo `NNEXT_PUBLIC_SUPABASE_ANON_KEY` identificado no dashboard e corrigido pelo usuário para `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 - Next.js 16 entrypoint migrado de `middleware.ts` para `proxy.ts` na branch.
 - Este commit dispara novo Preview para validar build com configuração corrigida; não declarar sucesso até evidência do deployment.
+
+## Runtime milestone — 2026-09-18
+- Usuário confirmou que o Preview abriu a tela de login.
+- Usuário confirmou autenticação real bem-sucedida com usuário confirmado e membership ativo; fluxo browser -> Supabase Auth -> proxy -> /app -> tenant context está operacional em Preview.
+- Hardening aplicado após runtime: requireAppContext falha fechado se membership/organization não resolverem; logout server-side adicionado; CPF mascarado na listagem de clientes.
+- Próxima execução autônoma: validar build do hardening e avançar o vertical slice funcional sem tocar main/prod DDL sem novo Human Gate.
