@@ -246,3 +246,18 @@ A próxima ação necessária é aplicar `20260918_import_staging_lineage_v0.sql
 - Login surface rendered in deployment preview; server-action TS2322 is resolved.
 - GitHub status lagged as pending at verification time, but Vercel UI is authoritative for this deployment and shows Ready.
 - Resume remaining MVP implementation from green preview baseline; do not modify main.
+
+
+## MVP closure wave — pre-authorized autonomous execution
+- Deterministic import matching RPC live: exact proposal identity > strong table alias > ambiguous/none human review; suggestions never mutate canonical truth.
+- Ingestion now runs matching automatically after atomic batch creation.
+- Added governed generic CSV adapters for commission statements, received-payment statements and network-payment statements; adapter semantic must exactly match immutable source semantic.
+- Approved+applied exact import decisions can publish financial facts through a guarded RPC; publication auto-refreshes reconciliation. Commercial-offer evidence remains blocked.
+- Added per-component proposal commercial snapshots so upfront/deferred/anticipated/bonus splits can differ. Route freeze selects published split by relationship/bank/table/component specificity and freezes it.
+- Hardened commercial snapshot writes with trigger defense-in-depth: authenticated clients cannot bypass the freeze RPC.
+- Added native XLSX parsing with ExcelJS 4.4.0; CSV and legacy HTML-XLS remain supported.
+- Review 1 completeness: fixed missing automatic matching and source semantic equality.
+- Review 2 adversarial: identified and closed direct commercial snapshot insert bypass; financial facts still require approved+applied exact identity plus evidence semantics/date/amount.
+- Review 3 runtime: new RPCs are SECURITY INVOKER, authenticated-only; Security Advisor remains 0 ERROR. Performance Advisor found 3 new uncovered FKs; covering indexes applied.
+- No financial or commercial production facts were fabricated; new snapshot table currently has zero rows.
+- Trigger fresh Vercel preview to typecheck the full closure wave.
