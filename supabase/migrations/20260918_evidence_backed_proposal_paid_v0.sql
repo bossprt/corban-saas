@@ -50,7 +50,8 @@ begin
  if v_raw_status is null or v_at is null then raise exception 'status_evidence_details_required'; end if;
  if not exists(select 1 from public.proposals_v2 where id=v_proposal and organization_id=v_org and status='approved') then raise exception 'proposal_must_be_approved'; end if;
  insert into public.proposal_status_evidence(organization_id,proposal_id,import_decision_id,canonical_status,raw_status,evidenced_at,created_by)
- values(v_org,v_proposal,p_decision_id,'paid',v_raw_status,v_at,auth.uid()) on conflict(organization_id,import_decision_id,canonical_status) do update set raw_status=excluded.raw_status returning id into v_id;
+ values(v_org,v_proposal,p_decision_id,'paid',v_raw_status,v_at,auth.uid()) on conflict(organization_id,import_decision_id,canonical_status) do nothing returning id into v_id;
+ if v_id is null then select id into v_id from public.proposal_status_evidence where organization_id=v_org and import_decision_id=p_decision_id and canonical_status='paid'; end if;
  perform set_config('corban.paid_evidence_rpc','on',true);
  update public.proposals_v2 set status='paid',updated_at=now() where id=v_proposal and organization_id=v_org;
  perform set_config('corban.paid_evidence_rpc','off',true);
