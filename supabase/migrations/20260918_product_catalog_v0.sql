@@ -76,6 +76,9 @@ create table if not exists public.organization_product_routes (
 create index if not exists organization_product_routes_org_status_idx
   on public.organization_product_routes (organization_id, status);
 
+create unique index if not exists organization_product_routes_org_id_key
+  on public.organization_product_routes (organization_id, id);
+
 -- Logical table identity belongs to a tenant route. Versions are immutable snapshots.
 create table if not exists public.product_tables (
   id uuid primary key default gen_random_uuid(),
@@ -94,8 +97,69 @@ create table if not exists public.product_tables (
     references public.organization_product_routes (organization_id, id) on delete restrict
 );
 
-create unique index if not exists organization_product_routes_org_id_key
-  on public.organization_product_routes (organization_id, id);
 
--- Note: FK above requires the composite unique index. PostgreSQL validates referenced
--- uniqueness at table creation time, so the route composite unique index must exist first.
+create table if not exists public.product_table_versions (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete restrict,
+  product_table_id uuid not null,
+  version integer not null,
+  status text not null default 'draft',
+  effective_from timestamptz,
+  effective_until timestamptz,
+  term_min integer,
+  term_max integer,
+  rate numeric(12,8),
+  coefficient numeric(18,10),
+  metadata jsonb not null default '{}'::jsonb,
+  published_at timestamptz,
+  created_at timestamptz not null default now(),
+  constraint product_table_versions_status_check check (status in ('draft','published','superseded','expired')),
+  constraint product_table_versions_version_check check (version > 0),
+  constraint product_table_versions_term_check check (term_min is null or term_max is null or term_min <= term_max),
+  constraint product_table_versions_rate_check check (rate is null or rate >= 0),
+  constraint product_table_versions_coefficient_check check (coefficient is null or coefficient >= 0),
+  constraint product_table_versions_table_tenant_fk
+    foreign key (organization_id, product_table_id)
+    references public.product_tables (organization_id, id) on delete restrict,
+  constraint product_table_versions_table_version_key
+    unique (product_table_id, version)
+);
+
+create index if not exists product_table_versions_org_status_idx
+  on public.product_table_versions (organization_id, status);
+create index if not exists product_table_versions_table_effective_idx
+  on public.product_table_versions (product_table_id, effective_from desc);
+
+alter table public.organization_product_routes enable row level security;
+alter table public.product_tables enable row level security;
+alter table public.product_table_versions enable row level security;
+
+revoke all on table public.organization_product_routes from anon;
+revoke all on table public.product_tables from anon;
+revoke all on table public.product_table_versions from anon;
+
+grant select, insert, update on table public.organization_product_routes to authenticated;
+grant select, insert, update on table public.product_tables to authenticated;
+grant select, insert, update on table public.product_table_versions to authenticated;
+
+create policy organization_product_routes_select_member on public.organization_product_routes for select to authenticated using (public.is_active_organization_member(organization_id));
+create policy organization_product_routes_insert_member on public.organization_product_routes for insert to authenticated with check (public.is_active_organization_member(organization_id));
+create policy organization_product_routes_update_member on public.organization_product_routes for update to authenticated using (public.is_active_organization_member(organization_id)) with check (public.is_active_organization_member(organization_id));
+
+create policy product_tables_select_member on public.product_tables for select to authenticated using (public.is_active_organization_member(organization_id));
+create policy product_tables_insert_member on public.product_tables for insert to authenticated with check (public.is_active_organization_member(organization_id));
+create policy product_tables_update_member on public.product_tables for update to authenticated using (public.is_active_organization_member(organization_id)) with check (public.is_active_organization_member(organization_id));
+
+create policy product_table_versions_select_member on public.product_table_versions for select to authenticated using (public.is_active_organization_member(organization_id));
+create policy product_table_versions_insert_member on public.product_table_versions for insert to authenticated with check (public.is_active_organization_member(organization_id));
+create policy product_table_versions_update_draft_member on public.product_table_versions for update to authenticated
+  using (public.is_active_organization_member(organization_id) and status = 'draft')
+  with check (public.is_active_organization_member(organization_id) and status = 'draft');
+
+-- Global catalog tables are deliberately not exposed directly to authenticated writes in V0.
+revoke all on table public.banks from anon, authenticated;
+revoke all on table public.providers from anon, authenticated;
+revoke all on table public.agreements from anon, authenticated;
+revoke all on table public.products from anon, authenticated;
+revoke all on table public.modalities from anon, authenticated;
+grant select on table public.banks, public.providers, public.agreements, public.products, public.modalities to authenticated;
