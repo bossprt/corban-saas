@@ -598,3 +598,30 @@ O P0 de starvation por ator revogado está fechado no LIVE. Próximo alvo é imp
 **Pendencia P2:** revogar INSERT/UPDATE/DELETE de `authenticated` em `organizations` (RLS ja recusa).
 **Owner:** ver `docs/deployment/SMART-DEPLOYMENT-RUNBOOK.md` (passos 1-10), `SUPABASE-AUTH-CONFIG.md`, `ENVIRONMENT-VARIABLES.md`, `docs/pilot/SMART-HUMAN-ACCEPTANCE-TEST.md`.
 **Testes locais:** unit 229/229, tsc 0, eslint 0, build ok, preflight funcional (BLOCKED localmente por falta de SERVICE_ROLE no `.env.local`, esperado).
+
+
+## Catalog publication LIVE + policy merge prepared — 19/09/2026 (ChatGPT)
+Reviewed and applied successfully:
+- `20260919231013 catalog_publish_v1`
+DO NOT REAPPLY.
+
+Independent validation:
+- full catalog publication harness before apply: 40/40 PASS (rollback-only);
+- full catalog publication harness against LIVE after apply: 40/40 PASS;
+- publish RPCs exist; authenticated can execute, anon cannot;
+- SECURITY DEFINER remains 8; anon DEFINER execute = 0;
+- Security Advisor remains 0 WARN / 0 ERROR;
+- zero synthetic residue in product_table_versions, document_checklist_templates, financial_events and reconciliation_cases.
+
+Post-apply Performance Advisor found 2 new WARNs: multiple permissive UPDATE policies on `product_table_versions` and `document_checklist_templates`, introduced by the split draft/published policies in catalog_publish_v1.
+
+Prepared, NOT LIVE:
+- `20260930_catalog_update_policy_merge_v1.sql`
+- harness `catalog-update-policy-merge-rollback.sql`
+
+Evidence:
+- policy merge harness: 4/4 PASS in rollback transaction;
+- full catalog regression with the merge applied transactionally: 40/40 PASS.
+The migration only merges equivalent permissive UPDATE policies; no grants, functions, triggers or data change.
+
+HUMAN GATE: explicit authorization required before applying `20260930_catalog_update_policy_merge_v1` LIVE.
