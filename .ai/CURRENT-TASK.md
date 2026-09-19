@@ -426,3 +426,16 @@ Depois de aplicar: `tests/security/security-definer-inventory-contract.sql`, adv
 **Dependências externas:** nenhuma credencial usada; nada enviado a provider real.
 **Não feito:** UI de conflitos além do lote; intake de leads por webhook (WhatsApp/Meta) — o schema já suporta external_ref; persistência do executor em `integration_runs` (interface pronta, adapter Supabase não escrito); E2E de navegador.
 **Retomada exata:** após aplicar 1–4 rodar os harnesses; então escrever o repositório Supabase do executor (`RunRepository` -> `integration_runs`/`integration_run_artifacts`) e o primeiro provider real (não Bevicred) com allowExternal controlado.
+
+
+## LIVE closure-wave application — 19/09/2026 (ChatGPT)
+User authorized the live Human Gate with "continue". Applied successfully, in order, and verified after each step:
+- `20260919024443 import_conflicts_v1`
+- `20260919024457 column_security_and_tenant_derivation_v1`
+- `20260919024513 reconciliation_resolution_immutability_v1`
+- `20260919024526 leads_v1`
+Post-apply checks: conflict tables/functions exist; authenticated lost direct table SELECT on mixed economic tables and must use governed RPCs; anon cannot execute private economic readers; reconciliation guard contains immutable-resolution enforcement and refresh preserves resolved status; leads/lead_events exist, authenticated has no direct INSERT/UPDATE/DELETE, lead RPC is executable, anon cannot execute private.lead_write; lead/event counts remain zero.
+Security Advisor after application: no WARN/ERROR; only the same 2 intentional INFO for closed platform admin tables.
+Performance Advisor found one new actionable INFO: composite FK `leads(organization_id,customer_id)` lacked a covering index. Added repo migration commit `0ebb7f7` and applied live as `20260919024604 leads_customer_fk_index_v1`. Re-run removed the unindexed-FK finding. Remaining performance findings are unused-index INFO expected on the near-empty database plus Auth fixed connection-count INFO.
+No synthetic business/test rows were persisted.
+Next execution target: implement Supabase `RunRepository` for outbound executor against existing `integration_runs` / `integration_run_artifacts`, with tests and no real provider/network calls.
