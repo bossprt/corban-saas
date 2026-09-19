@@ -573,3 +573,20 @@ Next external/pilot gates: configure Supabase Auth Site URL + redirect URL + SMT
 **Gates externos:** Auth (Site URL, Redirect URL, SMTP, politica de senha), publicar o app, catalogo comercial da Smart (tabela publicada, checklist, etapas), decisao de comissao do operador, worker (segredo + agendador), teste humano de convite.
 **Testes locais:** unit 211/211, tsc 0, eslint 0, build ok.
 **Retomada exata:** aplicar 20260928; Owner cumpre o OWNER-SETUP; um humano faz o passo 7 (aceitacao) e o checklist ANTES; so entao o operador real.
+
+
+## Revoked-actor dispatch LIVE — 19/09/2026 (ChatGPT)
+Revisada contra o schema LIVE e aplicada com sucesso:
+- `20260919194224 revoked_actor_dispatch_v1`
+DO NOT REAPPLY.
+
+Validação independente:
+- harness completo com a migration em transação rollback-only: `RESULTS: ALL PASS (22 checks)`;
+- harness novamente contra o schema já LIVE, somente bloco DO com `fixed=true`: `RESULTS: ALL PASS (22 checks)`;
+- `sweep_orphaned_integration_runs(integer,timestamptz)` existe e é EXECUTE somente por `service_role`; authenticated/anon negados;
+- inventário SECURITY DEFINER permanece 8; anon EXECUTE = 0;
+- Security Advisor: 0 WARN / 0 ERROR; apenas 2 INFO intencionais das tabelas administrativas fechadas;
+- Performance Advisor: sem WARN novo; apenas INFO de índices ainda não usados no banco praticamente vazio + Auth fixed connection allocation;
+- zero resíduo sintético: integration_runs=0, integration_run_artifacts=0, financial_events=0, reconciliation_cases=0.
+
+O P0 de starvation por ator revogado está fechado no LIVE. Próximo alvo é implantação do piloto Smart: organização Smart, deploy/origin, Auth/SMTP, catálogo comercial e teste humano no navegador. Worker secret+scheduler continuam desativados até gate externo.
