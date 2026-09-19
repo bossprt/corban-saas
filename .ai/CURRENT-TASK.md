@@ -506,3 +506,23 @@ Next target: regression verification against the now-migrated live schema (integ
 **Testes locais:** unit 152 (novos 27 em worker-hardening), tsc 0, eslint 0 warnings, build ok.
 **HUMAN GATES:** aplicar as 2 migrations; definir `INTEGRATION_WORKER_SECRET` e o agendador; arquivo 2Tech; regra de comissão do agent; convites/gestão de usuários da organização (ver `docs/PILOT-GAP-ANALYSIS.md`).
 **Retomada exata:** após aplicar as migrations, rodar `worker-dispatch-hardening-rollback.sql` de novo já sem prelúdio (modo LIVE), e então testar o worker real com `CORBAN_ALLOW_LOCAL_PROVIDERS=1` em ambiente NÃO produtivo contra um binding de teste.
+
+
+## LIVE closure migrations — 19/09/2026 (ChatGPT)
+User explicitly authorized both reviewed migrations. Applied successfully, in order:
+- `20260919140756 worker_dispatch_hardening_v1`
+- `20260919140800 confirm_paid_replay_v1`
+DO NOT REAPPLY.
+
+Post-apply verification:
+- new 3-argument `list_dispatchable_integration_runs(integer,timestamptz,text[])` exists; old 2-argument overload is gone;
+- dispatch remains service_role-only; authenticated/anon denied;
+- immutable diagnostic history is present in fail/takeover paths;
+- secret-looking failure redaction is active;
+- PAID confirmation replay path is present and idempotent;
+- `integration_runs=0`, `integration_run_artifacts=0` immediately after verification;
+- SECURITY DEFINER inventory remains exactly 8 reviewed functions, all with pinned empty search_path; no anon EXECUTE;
+- Security Advisor: 0 WARN / 0 ERROR; only 2 intentional INFO for closed platform-admin tables;
+- Performance Advisor: only INFO (unused indexes on near-empty DB + Auth fixed connection allocation); no new actionable warning.
+
+Next P0 work is product/deployment rather than these migrations: organization user invitation/access lifecycle, worker secret+scheduler activation, and commercial decision on agent commission visibility. Real 2Tech remains blocked on a real file; Bevicred remains deferred.
