@@ -68,3 +68,18 @@ export async function confirmPaidFromImport(formData:FormData){
  revalidatePath('/app/propostas')
  revalidatePath('/app/operacao')
 }
+
+
+export async function resolveImportConflict(formData:FormData){
+ const {supabase,membership}=await requireAppContext()
+ if(!atLeast(membership.role,'supervisor'))throw new Error('Ação exige perfil de supervisão')
+ const batchId=String(formData.get('batch_id')??'')
+ const conflictId=String(formData.get('conflict_id')??'')
+ const status=String(formData.get('status')??'')
+ const note=String(formData.get('resolution_note')??'').trim()
+ if(!batchId||!conflictId||!note)throw new Error('Resolução de conflito incompleta')
+ if(!['resolved','dismissed'].includes(status))throw new Error('Status de resolução inválido')
+ const {error}=await supabase.rpc('resolve_import_conflict',{p_conflict_id:conflictId,p_status:status,p_note:note})
+ if(error)throw new Error('Não foi possível resolver o conflito')
+ revalidatePath(`/app/importacoes/${batchId}`)
+}
