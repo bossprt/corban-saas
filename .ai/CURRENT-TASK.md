@@ -478,3 +478,19 @@ Sem SECURITY DEFINER novo; inventário inalterado.
 **Requests devem conter referências, não PII** (o payload persistido é redigido; CPF/tokens viram máscara).
 **HUMAN GATES:** aplicar a migration; definir o segredo do worker e o agendador; arquivo real 2Tech; Leaked Password Protection; regra de comissão visível ao agent em `simulations`.
 **Não feito:** agendador/cron; provider real; catálogo com linha `local/fake` (só em teste); UI de linhagem completa (mostra o pai da nova execução).
+
+
+## LIVE worker governance application — 19/09/2026 (ChatGPT)
+User explicitly authorized the Human Gate ("pode aplicar"). Applied successfully:
+- `20260919044054 worker_governance_v1`
+DO NOT REAPPLY.
+Verified live after application:
+- `transition_operational_case` now sets both `corban.operational_rpc` and `corban.proposal_rpc`; the regression introduced by the prior operational hardening is closed.
+- `send_proposal_to_digitization` sets the proposal token.
+- `integration_runs.parent_run_id` and `reexecution_reason` exist.
+- dispatch RPC is executable by `service_role` and denied to `authenticated` / `anon`.
+- no integration run/artifact fixture persisted (0/0 at verification).
+- SECURITY DEFINER inventory is unchanged: 8 reviewed functions; all pin empty search_path; no anon EXECUTE; no new definer.
+- Security Advisor: 0 WARN / 0 ERROR, only the same 2 intentional INFO on closed platform-admin tables.
+- Performance Advisor: no new actionable warning; unused-index INFO reflects the near-empty database, plus Auth fixed connection-count INFO.
+Next target: regression verification against the now-migrated live schema (integration-runs + operational E2E patterns), then configure a worker secret/scheduler only with an explicit deployment/configuration gate. No provider real/network call.
