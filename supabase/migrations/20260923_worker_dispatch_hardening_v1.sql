@@ -75,7 +75,7 @@ begin
   -- the previous worker never reported: keep a trace of that attempt before the row is reused
   insert into public.integration_run_artifacts(organization_id,run_id,artifact_kind,payload,content_sha256)
   values(p_org,v_id,'diagnostic',jsonb_build_object('attempt',v_run.attempt_count,'outcome','lease_expired','at',p_now),md5(v_id::text||':lease:'||v_run.attempt_count::text))
-  on conflict(run_id,artifact_kind,content_sha256) where content_sha256 is not null do nothing;
+  on conflict do nothing; -- (no conflict target: the OUT column run_id of this function would make one ambiguous)
  end if;
  if v_run.status='running' and v_run.attempt_count>=v_run.max_attempts then
   update public.integration_runs set status='failed',terminal=true,error_code='terminal:lease_expired_attempts_exhausted',error_message='worker lease expired on the last attempt',next_attempt_at=null where id=v_id;
