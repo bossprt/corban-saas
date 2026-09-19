@@ -14,7 +14,7 @@ Branch `architecture/corban-os-master-v2`. Entry: `20260925`, `20260926`, `20260
 |---|---|---|---|
 | 1 | Server actions threw `Error`; in production Next.js hides the message, so the operator would see only a generic failure with no explanation of what to correct | P0 | Actions redirect with a whitelisted code (`?f=ok:...`/`erro:...`); `FlashBanner` in the shell renders the fixed Portuguese text; the code is removed from the address bar. Applied to leads, clientes, simulações, documentos and the proposal document/send actions. Financial supervisor-only actions still throw (boundary shows a sanitized text) |
 | 2 | Error boundary printed `error.message` | P0 | shows a neutral message and the reference digest only |
-| 3 | Upload trusted the browser-declared MIME type | P0/P1 | real type decided from the first bytes (PDF/JPEG/PNG/WebP); declared and real must agree; empty and >15 MB refused; HTML/SVG/executable renamed to .pdf refused; stored name sanitized; stored `mime_type` is the real one |
+| 3 | Upload trusted the browser-declared MIME type | P0/P1 | real type decided from the first bytes (PDF/JPEG/PNG/WebP); declared and real must agree; empty and >4 MB refused (Vercel body limit); HTML/SVG/executable renamed to .pdf refused; stored name sanitized; stored `mime_type` is the real one |
 | 4 | No search in Leads/Clientes | P1 | name/phone search (filter-language characters stripped; CPF is never a search key nor placed in a URL) |
 | 5 | Lead list hid the phone and the linked customer | P1 | phone and "Ver cliente" shown |
 | 6 | Simulation table dropdown showed a table UUID prefix; unknown installment could look like a value | P1 | table names; "Não calculado" for unknown; guidance when no customers/tables |

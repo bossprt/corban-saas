@@ -7,7 +7,8 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "test:unit": "node scripts/run-unit-tests.mjs"
+    "test:unit": "node scripts/run-unit-tests.mjs",
+    "preflight": "node scripts/pilot-preflight.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

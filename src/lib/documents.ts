@@ -1,5 +1,7 @@
 // Upload safety helpers (pure). The browser-declared MIME type is only a hint; the accepted type is decided from the file's own first bytes.
-export const MAX_DOCUMENT_BYTES = 15 * 1024 * 1024
+// 4 MB: Vercel serverless functions reject request bodies above 4.5 MB, and an upload goes through a server action. Larger files need a direct-to-Storage
+// signed upload (P1, see docs/deployment/SMART-DEPLOYMENT-RUNBOOK.md); until then the limit is stated honestly instead of failing with an opaque platform error.
+export const MAX_DOCUMENT_BYTES = 4 * 1024 * 1024
 export const ALLOWED_DOCUMENT_MIME = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'] as const
 export type DocumentMime = (typeof ALLOWED_DOCUMENT_MIME)[number]
 

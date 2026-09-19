@@ -70,7 +70,7 @@ test('upload sniffing: accepts real PDF/JPEG/PNG/WebP, refuses everything else',
 test('upload check: empty, oversize, disguised and mismatching files are refused with a code', () => {
   assert.deepEqual(checkUpload(PDF.length, 'application/pdf', PDF), { ok: true, mime: 'application/pdf' })
   assert.deepEqual(checkUpload(0, 'application/pdf', new Uint8Array(0)), { ok: false, code: 'erro:doc_vazio' })
-  assert.deepEqual(checkUpload(16 * 1024 * 1024, 'application/pdf', PDF), { ok: false, code: 'erro:doc_grande' })
+  assert.deepEqual(checkUpload(5 * 1024 * 1024, 'application/pdf', PDF), { ok: false, code: 'erro:doc_grande' })
   const html = new TextEncoder().encode('<html><body>fake</body></html>')
   assert.deepEqual(checkUpload(html.length, 'application/pdf', html), { ok: false, code: 'erro:doc_formato' }) // HTML renamed .pdf
   assert.deepEqual(checkUpload(PNG.length, 'application/pdf', PNG), { ok: false, code: 'erro:doc_formato' })      // declared != real

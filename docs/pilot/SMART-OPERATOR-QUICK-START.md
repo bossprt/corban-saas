@@ -23,7 +23,7 @@ Na simulação, clique em "Criar proposta". Só uma proposta por simulação; cl
 Você será levado à lista de propostas. Abra a proposta para ver situação e **próximo passo** (escrito ao lado da situação).
 
 ## 6. Documentos
-1. Menu **Documentos**: escolha o cliente e o tipo, anexe o arquivo (PDF, JPG, PNG ou WebP, até 15 MB) e envie. Arquivo fora desses formatos é recusado mesmo com outra extensão.
+1. Menu **Documentos**: escolha o cliente e o tipo, anexe o arquivo (PDF, JPG, PNG ou WebP, até 4 MB) e envie. Arquivo fora desses formatos é recusado mesmo com outra extensão.
 2. Na **proposta**: "Preparar checklist" e depois anexe cada documento ao item exigido. O supervisor valida.
 3. Quando estiver "Pronta para a operação", clique em "Enviar para a operação".
 

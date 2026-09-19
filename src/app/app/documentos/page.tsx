@@ -34,7 +34,7 @@ export default async function DocumentsPage() {
       </select>
       <input required type="file" name="file" accept=".pdf,image/jpeg,image/png,image/webp" className="field"/>
       <SubmitButton className="rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-slate-950" pendingText="Enviando...">Enviar documento</SubmitButton>
-      <p className="text-xs text-slate-500 md:col-span-4">Arquivo privado · PDF, JPG, PNG ou WebP · máximo 15 MB · o tipo é conferido pelo conteúdo do arquivo · nada é sobrescrito (um novo envio vira uma nova versão).</p>
+      <p className="text-xs text-slate-500 md:col-span-4">Arquivo privado · PDF, JPG, PNG ou WebP · máximo 4 MB · o tipo é conferido pelo conteúdo do arquivo · nada é sobrescrito (um novo envio vira uma nova versão).</p>
     </form>
 
     <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">

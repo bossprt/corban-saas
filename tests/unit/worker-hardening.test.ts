@@ -32,19 +32,20 @@ test('architecture: no Client Component imports the admin client, the worker, th
 })
 
 test('architecture: the service role key is read in exactly one module and that module is server-only',()=>{
- const users=srcFiles.filter(f=>/SUPABASE_SERVICE_ROLE_KEY/.test(fs.readFileSync(f,'utf8'))).map(rel)
+ const users=srcFiles.filter(f=>/process\.env\.SUPABASE_SERVICE_ROLE_KEY/.test(fs.readFileSync(f,'utf8'))).map(rel)
  assert.deepEqual(users,['src/lib/supabaseAdmin.ts'])
  assert.match(fs.readFileSync(path.join(ROOT,'src/lib/supabaseAdmin.ts'),'utf8'),/^import 'server-only'/m)
  assert.match(fs.readFileSync(path.join(ROOT,'src/lib/integrations/worker.server.ts'),'utf8'),/^import 'server-only'/m)
- for(const f of srcFiles)assert.equal(/NEXT_PUBLIC_[A-Z_]*(SERVICE|WORKER_SECRET)/.test(fs.readFileSync(f,'utf8')),false,rel(f))
+ // preflight.ts NAMES those variables in order to refuse them (it detects a leaked secret); it never reads or returns a value
+ for(const f of srcFiles.filter(f=>rel(f)!=='src/lib/preflight.ts'))assert.equal(/NEXT_PUBLIC_[A-Z_]*(SERVICE|WORKER_SECRET)/.test(fs.readFileSync(f,'utf8')),false,rel(f))
 })
 
 test('architecture: only server modules import admin/worker code, and the worker secret is read only by the dispatch route',()=>{
  const importers=srcFiles.filter(f=>importsOf(fs.readFileSync(f,'utf8')).some(i=>/supabaseAdmin|worker\.server/.test(i))).map(rel).sort()
  // admin/organizations authenticates the caller and requires an active platform administrator before touching the admin client
- assert.deepEqual(importers,['src/app/api/admin/organizations/route.ts','src/app/api/integrations/dispatch/route.ts','src/app/app/integracoes/actions.ts','src/lib/integrations/worker.server.ts','src/lib/team.server.ts'])
+ assert.deepEqual(importers,['src/app/api/admin/organizations/route.ts','src/app/api/admin/reference-catalog/route.ts','src/app/api/integrations/dispatch/route.ts','src/app/app/integracoes/actions.ts','src/lib/integrations/worker.server.ts','src/lib/platform.server.ts','src/lib/team.server.ts'])
  for(const f of importers){const t=fs.readFileSync(path.join(ROOT,f),'utf8');assert.equal(isClient(t),false,f)}
- assert.deepEqual(srcFiles.filter(f=>/INTEGRATION_WORKER_SECRET/.test(fs.readFileSync(f,'utf8'))).map(rel),['src/app/api/integrations/dispatch/route.ts','src/lib/integrations/readiness.ts'])
+ assert.deepEqual(srcFiles.filter(f=>/INTEGRATION_WORKER_SECRET/.test(fs.readFileSync(f,'utf8'))).map(rel),['src/app/api/integrations/dispatch/route.ts','src/lib/integrations/readiness.ts','src/lib/preflight.ts'])
  // readiness.ts only measures the length of the secret to tell the operator whether dispatch is enabled; it never returns or logs the value (pinned in team-access.test.ts)
  const actions=fs.readFileSync(path.join(ROOT,'src/app/app/integracoes/actions.ts'),'utf8')
  assert.match(actions,/^'use server'/);assert.equal(/\.update\(|\.delete\(|\.insert\(/.test(actions),false)

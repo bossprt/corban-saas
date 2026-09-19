@@ -14,6 +14,14 @@ export const FEEDBACK = {
   'ok:doc_vinculado': 'Documento vinculado à proposta.',
   'ok:requisito_validado': 'Documento validado.',
   'ok:enviado_digitacao': 'Proposta enviada para a operação.',
+  'ok:rota_criada': 'Rota comercial criada.',
+  'ok:tabela_criada': 'Tabela criada. Agora crie uma versão com taxa/coeficiente e publique.',
+  'ok:versao_criada': 'Versão criada como rascunho. Publique para liberar simulações.',
+  'ok:versao_publicada': 'Versão publicada. Já pode ser usada em simulações.',
+  'ok:checklist_criado': 'Checklist criado como rascunho. Adicione os documentos e publique.',
+  'ok:item_adicionado': 'Documento adicionado ao checklist.',
+  'ok:checklist_publicado': 'Checklist publicado.',
+  'ok:etapas_criadas': 'Etapas padrão da operação criadas.',
   // errors
   'erro:nome_invalido': 'Informe um nome válido.',
   'erro:canal_invalido': 'Canal inválido.',
@@ -29,7 +37,7 @@ export const FEEDBACK = {
   'erro:simulacao_indisponivel': 'Esta simulação não está mais disponível para proposta.',
   'erro:doc_invalido': 'Escolha o cliente, o tipo de documento e o arquivo.',
   'erro:doc_vazio': 'O arquivo está vazio.',
-  'erro:doc_grande': 'O arquivo passa de 15 MB.',
+  'erro:doc_grande': 'O arquivo passa de 4 MB. Reduza ou comprima o arquivo (foto menor / PDF menor) e envie de novo.',
   'erro:doc_formato': 'Formato não permitido. Envie PDF, JPG, PNG ou WebP.',
   'erro:doc_duplicado': 'Este mesmo arquivo já foi enviado para este cliente.',
   'erro:doc_indisponivel': 'Cliente ou tipo de documento indisponível.',
@@ -45,6 +53,13 @@ export const FEEDBACK = {
   'erro:sim_term_above_table_maximum': 'Prazo acima do máximo da tabela.',
   'erro:sim_invalid_amount': 'Informe um valor solicitado válido.',
   'erro:sim_invalid_term': 'Informe um prazo válido.',
+  'erro:duplicado': 'Já existe um registro com este código ou combinação.',
+  'erro:catalogo_invalido': 'Confira os campos: valores numéricos, prazos e seleções.',
+  'erro:cat_rate_or_coefficient_required': 'Informe pelo menos a taxa ou o coeficiente antes de publicar.',
+  'erro:cat_version_not_draft': 'Esta versão já foi publicada e não pode mais mudar.',
+  'erro:cat_template_has_no_items': 'Adicione pelo menos um documento ao checklist antes de publicar.',
+  'erro:cat_template_not_draft': 'Este checklist já foi publicado e não pode mais mudar.',
+  'erro:cat_sem_referencia': 'O catálogo de referência (bancos, produtos, tipos de documento) ainda não foi carregado pelo administrador da plataforma.',
 } as const
 export type FeedbackCode = keyof typeof FEEDBACK
 export const isFeedbackCode = (v: unknown): v is FeedbackCode => typeof v === 'string' && Object.prototype.hasOwnProperty.call(FEEDBACK, v)
