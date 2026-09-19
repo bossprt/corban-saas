@@ -54,7 +54,7 @@ test('architecture: only server modules import admin/worker code, and the worker
 
 // ============ B. dispatch endpoint ============
 const SECRET='S3cr3t-'.repeat(5)
-const okRun=async():Promise<CycleSummary>=>({examined:2,succeeded:1,replayed:0,retryScheduled:1,failed:0,inProgress:0,leaseLost:0,refused:0,errors:0,deferred:0,runs:[{runId:'r1',state:'succeeded'},{runId:'r2',state:'retry_scheduled'}]})
+const okRun=async():Promise<CycleSummary>=>({examined:2,succeeded:1,replayed:0,retryScheduled:1,failed:0,inProgress:0,leaseLost:0,refused:0,errors:0,deferred:0,swept:0,runs:[{runId:'r1',state:'succeeded'},{runId:'r2',state:'retry_scheduled'}]})
 const call=(authorization:string|null|undefined,secret:string|undefined|'default'='default',run=okRun)=>handleDispatchRequest({authorization,secret:secret==='default'?SECRET:secret,run})
 
 test('dispatch: disabled without a secret or with a weak one (503), never runs',async()=>{
@@ -360,4 +360,34 @@ test('compat: with the legacy 2-argument dispatch function (migration not applie
  assert.deepEqual(items.map(i=>i.runId),['r1']);assert.equal(calls.length,2);assert.equal('p_adapter_keys' in calls[1],false)
  const broken=new SupabaseRunRepository({rpc:async()=>({data:null,error:{message:'boom',code:'XX000'}})} as never)
  await assert.rejects(()=>broken.listDispatchable(1,new Date(T0),['local/fake']),(e:RepositoryError)=>e.code==='boom'||e.code==='rpc_failed')
+})
+
+// ============ revoked-actor starvation: the sweep runs before listing, is best effort, and a missing RPC never stops dispatch ============
+test('cycle sweeps orphaned runs first, reports the count, and dispatch proceeds when the sweep is unavailable or fails',async()=>{
+ const calls:string[]=[]
+ const base=new InMemoryRunRepository()
+ const mk=(sweep:(now:Date)=>Promise<number>)=>{const repo=Object.create(base) as InMemoryRunRepository&{sweepOrphans?:(n:Date)=>Promise<number>};repo.sweepOrphans=async n=>{calls.push('sweep');return sweep(n)};const orig=repo.listDispatchable.bind(repo);repo.listDispatchable=async(...a)=>{calls.push('list');return orig(...a)};return repo}
+ const p=new ScriptedProvider([{kind:'success'}])
+ const ok=await runDispatchCycle({repo:mk(async()=>3),factories:{[FAKE_MANIFEST.adapterKey]:()=>p},env:ENV,credentials:creds,now:at(0)})
+ assert.equal(ok.swept,3);assert.deepEqual(calls.slice(0,2),['sweep','list'])
+ for(const failure of [async()=>{throw new RepositoryError('rpc_function_missing')},async()=>{throw new Error('boom')}]){
+  const s=await runDispatchCycle({repo:mk(failure),factories:{[FAKE_MANIFEST.adapterKey]:()=>p},env:ENV,credentials:creds,now:at(0)})
+  assert.equal(s.swept,0);assert.equal(s.errors,0)
+ }
+ const plain=await runDispatchCycle({repo:new InMemoryRunRepository(),factories:{[FAKE_MANIFEST.adapterKey]:()=>p},env:ENV,credentials:creds,now:at(0)})
+ assert.equal(plain.swept,0)
+})
+test('SupabaseRunRepository.sweepOrphans calls the service-role RPC with a bounded batch and tolerates a missing function upstream',async()=>{
+ const seen:{fn:string;args:Record<string,unknown>}[]=[]
+ const repo=new SupabaseRunRepository({rpc:(fn,args)=>{seen.push({fn,args});return Promise.resolve({data:7,error:null})}})
+ assert.equal(await repo.sweepOrphans(new Date(T0)),7)
+ assert.deepEqual(seen[0],{fn:'sweep_orphaned_integration_runs',args:{p_limit:50,p_now:new Date(T0).toISOString()}})
+ const missing=new SupabaseRunRepository({rpc:()=>Promise.resolve({data:null,error:{message:'x',code:'PGRST202'}})})
+ await assert.rejects(()=>missing.sweepOrphans(new Date(T0)),(e:unknown)=>e instanceof RepositoryError&&e.code==='rpc_function_missing')
+})
+test('the revoked-actor migration keeps claim authoritative and adds no DEFINER',()=>{
+ const m=fs.readFileSync(path.join(ROOT,'supabase/migrations/20260928_revoked_actor_dispatch_v1.sql'),'utf8').split('\n').filter(l=>!l.trim().startsWith('--')).join('\n')
+ assert.doesNotMatch(m,/security definer/i);assert.doesNotMatch(m,/drop table|truncate|delete from/i)
+ assert.match(m,/grant execute on function public\.sweep_orphaned_integration_runs\(integer,timestamptz\) to service_role/)
+ assert.match(m,/m\.role in \('admin','manager','supervisor'\)/)
 })

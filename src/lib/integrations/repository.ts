@@ -44,6 +44,8 @@ export interface RunRepository{
  complete(input:CompleteInput):Promise<CompleteOutcome>
  fail(input:FailInput):Promise<FailOutcome>
  cancel(input:{organizationId:string;runId:string;actorUserId:string}):Promise<'cancelled'>
+ // Moves runs whose creator lost access to a governed end state so they can never occupy dispatch slots. Optional: the in-memory twin has no actors to sweep.
+ sweepOrphans?(now:Date):Promise<number>
 }
 
 export class RepositoryError extends Error{constructor(readonly code:string,message?:string){super(message??code)}}
@@ -112,6 +114,10 @@ export class SupabaseRunRepository implements RunRepository{
   const data=await this.call('fail_integration_run',{p_org:i.organizationId,p_run:i.runId,p_token:i.claimToken,p_code:i.code,p_message:i.message,p_retryable:i.retryable,p_backoff_seconds:i.backoffSeconds,p_now:iso(i.now)})
   if(data!=='retry_scheduled'&&data!=='failed_terminal'&&data!=='lease_lost')throw new RepositoryError('fail_response_invalid')
   return data
+ }
+ async sweepOrphans(now:Date):Promise<number>{
+  const n=await this.call('sweep_orphaned_integration_runs',{p_limit:50,p_now:iso(now)})
+  return typeof n==='number'?n:0
  }
  async cancel(i:{organizationId:string;runId:string;actorUserId:string}):Promise<'cancelled'>{
   const data=await this.call('cancel_integration_run',{p_org:i.organizationId,p_run:i.runId,p_actor:i.actorUserId})

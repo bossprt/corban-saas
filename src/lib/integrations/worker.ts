@@ -33,7 +33,7 @@ export function resolveProvider(adapterKey:string,factories:ProviderFactories,en
 }
 
 export type CycleSummary={
- examined:number;succeeded:number;replayed:number;retryScheduled:number;failed:number;inProgress:number;leaseLost:number;refused:number;errors:number;deferred:number
+ examined:number;succeeded:number;replayed:number;retryScheduled:number;failed:number;inProgress:number;leaseLost:number;refused:number;errors:number;deferred:number;swept:number
  runs:{runId:string;state:string}[]
 }
 
@@ -56,7 +56,7 @@ export type WorkerDeps={
  clockMs?:()=>number
 }
 
-const empty=():CycleSummary=>({examined:0,succeeded:0,replayed:0,retryScheduled:0,failed:0,inProgress:0,leaseLost:0,refused:0,errors:0,deferred:0,runs:[]})
+const empty=():CycleSummary=>({examined:0,succeeded:0,replayed:0,retryScheduled:0,failed:0,inProgress:0,leaseLost:0,refused:0,errors:0,deferred:0,swept:0,runs:[]})
 
 export async function runDispatchCycle(deps:WorkerDeps):Promise<CycleSummary>{
  const now=deps.now??(()=>new Date())
@@ -68,6 +68,8 @@ export async function runDispatchCycle(deps:WorkerDeps):Promise<CycleSummary>{
  // production) must never occupy dispatch slots and starve runnable work.
  const runnable=Object.keys(deps.factories).filter(k=>resolveProvider(k,deps.factories,deps.env)!==null)
  if(!runnable.length)return sum
+ // Runs of members who lost access are ended first so they cannot fill the pass. Best effort: a database without the sweep (older schema) just skips it.
+ try{sum.swept=(await deps.repo.sweepOrphans?.(now()))??0}catch{/* sweep unavailable or failed: dispatch still proceeds */}
  let items:DispatchItem[]=await deps.repo.listDispatchable(deps.onlyRunId?50:limit,now(),runnable)
  if(deps.onlyRunId)items=items.filter(i=>i.runId===deps.onlyRunId)
  items=items.slice(0,limit)
