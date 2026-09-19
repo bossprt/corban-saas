@@ -292,3 +292,10 @@
 - **Decisao 3:** a acao do app mantem um fallback TEMPORARIO (insert calculado no servidor) apenas quando o PostgREST informa que a RPC nao existe; depois da migration o banco recusa esse insert. Remover apos aplicar.
 - **Decisao 4:** duas policies permissivas de SELECT em `organization_memberships` viram uma so (mesma logica OR), para limpar o warning do advisor de performance sem mudar visibilidade.
 - **Decisao 5:** recuperacao de senha usa Supabase Auth com resposta identica para qualquer e-mail; a politica de senha final e do Auth (runbook).
+
+## ADR-0022 - Operator feedback through whitelisted redirect codes; revoked-actor runs leave the dispatch list
+- **Data:** 25/09/2026 - **Status:** aceita; `20260928_revoked_actor_dispatch_v1` PREPARADA, nao aplicada.
+- **Decisao 1:** em producao o Next.js esconde a mensagem de `Error` lancado por server action; por isso as acoes do fluxo do operador redirecionam com um codigo (`?f=ok:...|erro:...`) e o shell mostra texto fixo de uma lista branca. Texto arbitrario na URL nunca e renderizado. Erros do banco viram codigo, nunca texto.
+- **Decisao 2:** uploads: o tipo aceito e o dos primeiros bytes (PDF/JPEG/PNG/WebP) e precisa coincidir com o declarado; tamanho, vazio e nome sao verificados antes de tocar banco/Storage.
+- **Decisao 3:** run cujo criador perdeu acesso sai da lista de dispatch (mesma regra do `claim`) e e encerrado por `sweep_orphaned_integration_runs` (service_role): queued/retry -> cancelled, running vencido -> failed terminal, codigo fixo sanitizado. O worker chama o sweep antes de listar, best effort.
+- **Decisao 4:** menu por perfil e dashboard do operador limitado aos proprios registros sao conveniencia de UX; a autorizacao continua no banco.

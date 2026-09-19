@@ -190,3 +190,11 @@ A primeira conclui as transições controladas da Mesa sem permitir marcação m
 - NOT LIVE (preparadas, harness rollback-only verde): `20260926_simulation_governance_v1` (create_simulation RPC, guard, grants por coluna) e `20260927_membership_select_policy_merge_v1` (uma policy SELECT).
 - IMPLEMENTED: recuperacao de senha, historico de tentativas, painel de atencao, rotulos da esteira, cache do health.
 - EXTERNAL GATES: Auth (Site URL, Redirect URLs, SMTP, politica de senha), segredo+agendador do worker. PRODUCT DECISION: comissao visivel ao agente. BLOCKED: 2Tech. DEFERRED: Bevicred.
+
+
+## 20. Pilot closure wave 3 - 25/09/2026
+- LIVE: tudo ate `20260927_membership_select_policy_merge_v1` (20260919183522) e simulation governance (20260919183518); `legacyInsert` removido. Verificado: DEFINER 8 (anon 0), advisors de seguranca 0 WARN/0 ERROR, zero residuo, organizacao Smart Promotora NAO existe (2 orgs de teste, 1 administrador de plataforma ativo).
+- NOT LIVE (harness verde): `20260928_revoked_actor_dispatch_v1` (starvation por ator revogado CONFIRMADA no LIVE; correcao 22/22).
+- IMPLEMENTED: feedback por codigos, sniffing de upload, busca, menu por perfil, dashboard do operador, labels, sweep no worker (tolera banco sem a funcao).
+- Regressao LIVE desta onda: chain E2E 35/35. Nao rerodadas: leads, operacional, integration runs, worker governance, financeiro, conflicts, reconciliation, paid evidence, team (nenhum objeto LIVE delas mudou).
+- NAO FEITO: E2E de navegador, QA visual, teste humano de convite. GATES: Auth (URLs, SMTP, senha), deploy, criar organizacao Smart, catalogo comercial, decisao de comissao, worker (segredo + agendador).

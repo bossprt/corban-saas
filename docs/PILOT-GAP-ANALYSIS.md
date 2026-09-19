@@ -33,6 +33,17 @@ To change the policy: edit `canViewCommission` (one line) and, if agents must NO
 | U-1 | Raw esteira states | RESOLVED: pt-BR labels + next step |
 | PERF-1 | Advisor WARN `multiple_permissive_policies` on `organization_memberships` (introduced by the team migration) | RESOLVED in `20260927_membership_select_policy_merge_v1` (NOT LIVE); 12/12 identical-visibility checks |
 
+## Closure wave 3 (2026-09-25) - 1 real operator
+| # | Item | State |
+|---|---|---|
+| W-1 | Revoked-actor dispatch starvation | CONFIRMED on LIVE; fixed in `20260928_revoked_actor_dispatch_v1` (NOT LIVE, 22/22); needed before the worker is enabled, does not block an operator working in the browser |
+| W-2 | Action errors invisible in production (Next hides thrown messages) | RESOLVED: whitelisted feedback codes + banner; error boundary sanitized |
+| W-3 | Upload trusted browser MIME | RESOLVED: byte sniffing, size, names |
+| W-4 | Search, phone/customer on leads, labels, "Não calculado", role-aware menu, agent dashboard, submit-once buttons | RESOLVED |
+| W-5 | Smart Promotora organization | NOT FOUND in the database; creation procedure in `docs/pilot/SMART-OWNER-SETUP.md` (Owner action) |
+| W-6 | Browser E2E / visual QA / mobile check by a human | NOT DONE (no Playwright, no credentials); required by the pilot checklist |
+Human-pilot documents: `docs/pilot/SMART-PROMOTORA-PILOT-CHECKLIST.md`, `SMART-OWNER-SETUP.md`, `SMART-OPERATOR-QUICK-START.md`, `SMART-SUPERVISOR-QUICK-START.md`.
+
 ## P1 - right after the pilot starts
 - Simulation cancel/expire has no governed path yet (no UI needs it); `expected_commission_amount` on simulations has no governed source and stays NULL.
 - First real provider (2Tech waits for a real file; Bevicred deferred).

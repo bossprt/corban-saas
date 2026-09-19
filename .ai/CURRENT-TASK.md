@@ -564,3 +564,12 @@ Next external/pilot gates: configure Supabase Auth Site URL + redirect URL + SMT
 **Gates externos (Owner):** `docs/runbooks/AUTH-AND-INVITE-RUNBOOK.md` (Site URL, Redirect URLs, SMTP, politica de senha, teste humano de convite); segredo e agendador do worker (`docs/integrations/WORKER-DEPLOYMENT.md`, com cadencia recomendada).
 **Decisao humana pendente:** o agente pode ver comissao esperada? (centralizado em `canViewCommission`; colunas do banco ainda legiveis por membros).
 **Testes locais:** unit 189/189, tsc 0, eslint 0 warnings, build ok.
+
+
+## Pilot closure wave 3 - handoff 25/09/2026 (para o ChatGPT)
+**LIVE (nao reaplicar):** ate 20260927; simulation governance ativa; fallback do app removido.
+**NOT LIVE - revisar e aplicar:** `supabase/migrations/20260928_revoked_actor_dispatch_v1.sql` (substitui `list_dispatchable_integration_runs` mantendo a assinatura; cria `sweep_orphaned_integration_runs`, service_role, INVOKER). Harness: `tests/security/revoked-actor-dispatch-rollback.sql` (`__FIXED__` = false no schema atual prova o bug, 6/6; `true` com o texto da migration, 22/22). Depois de aplicar: rodar com `__FIXED__=true` so o bloco DO. O codigo do worker ja chama o sweep e tolera a ausencia da funcao.
+**Produto:** `docs/pilot/*` (checklist, setup do Owner, guias). A organizacao Smart Promotora NAO existe; procedimento de criacao no OWNER-SETUP (POST /api/admin/organizations como administrador de plataforma; nao repetir).
+**Gates externos:** Auth (Site URL, Redirect URL, SMTP, politica de senha), publicar o app, catalogo comercial da Smart (tabela publicada, checklist, etapas), decisao de comissao do operador, worker (segredo + agendador), teste humano de convite.
+**Testes locais:** unit 211/211, tsc 0, eslint 0, build ok.
+**Retomada exata:** aplicar 20260928; Owner cumpre o OWNER-SETUP; um humano faz o passo 7 (aceitacao) e o checklist ANTES; so entao o operador real.

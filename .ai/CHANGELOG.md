@@ -246,3 +246,11 @@ Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`)
 
 ### Seguranca - 24/09/2026 (PREPARADAS, NAO APLICADAS)
 `20260926_simulation_governance_v1` (simulacoes forjaveis com comissao arbitraria) e `20260927_membership_select_policy_merge_v1` (advisor WARN de performance).
+
+### Adicionado - 25/09/2026 (fechamento do piloto, onda 3: 1 operador real)
+- Feedback humano por codigos, upload com verificacao de bytes, busca, menu por perfil, dashboard do operador, rotulos de proposta/simulacao, botoes anti duplo clique, validacao de CPF.
+- Worker: sweep de runs orfaos antes de listar. Documentos: `docs/pilot/*` (checklist, setup do Owner, guias do operador e do supervisor), auditoria da onda 3.
+- Testes: unit 211; `revoked-actor-dispatch-rollback.sql` (6 bug / 22 corrigido); chain E2E LIVE 35.
+
+### Seguranca - 25/09/2026 (PREPARADA, NAO APLICADA)
+`20260928_revoked_actor_dispatch_v1`: starvation do dispatch por runs de ator revogado CONFIRMADA.
