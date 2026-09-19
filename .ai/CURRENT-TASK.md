@@ -642,3 +642,17 @@ Post-apply verification:
 - synthetic/business residue remains zero in product versions, checklists, financial events and reconciliation cases.
 
 No known P0 technical blocker remains before Smart deployment preparation. Next gates are external/Owner actions: deploy/origin, env vars, Supabase Auth/SMTP, real reference catalog, Smart organization bootstrap, tenant catalog/checklist/stages, invitations, and human browser acceptance.
+
+
+## Vercel reconnection and deployment discovery — 19/09/2026 (ChatGPT)
+Vercel connector is now connected and the real account/project were discovered:
+- team: `bossprt's projects` (`team_kBTHINjH2aw7k1uMZQwAh1SS`)
+- project: `corban-saas` (`prj_X63Eyy85aWFU1DvPV0XtnM0F1BG5`)
+- latest deployment discovered: `dpl_Bgtw1VJwWCqypgyQtF1Cyg3Cbp95`, state READY, source Git, branch `architecture/corban-os-master-v2`, commit `01011c74...`
+- latest deployment target is null (preview, not production).
+- no runtime logs found for the latest deployment in the last 24h.
+- historical runtime error group (older deployment only): missing Supabase URL/key in middleware; last seen 18/09/2026. No evidence it affects the latest deployment.
+- Preview deployment is protected by Vercel Authentication; connector could enumerate it but could not fetch app routes through protection.
+- Current Vercel connector surface in this session does not expose environment-variable mutation, production promotion, or a working deploy action; deploy_to_vercel/build-log actions advertised by metadata were unavailable at runtime.
+
+HUMAN GATE remains for Vercel project production configuration: production target/branch or promotion plus production environment variables. After that, ChatGPT can inspect deployment state/logs/runtime errors and continue acceptance checks.
