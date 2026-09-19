@@ -223,3 +223,13 @@ A primeira conclui as transições controladas da Mesa sem permitir marcação m
 - Post-apply Performance Advisor exposed 2 WARNs for multiple permissive UPDATE policies created by the catalog publication design.
 - PREPARED, NOT LIVE: `20260930_catalog_update_policy_merge_v1.sql`, which merges those policies without changing grants/functions/triggers/data. Merge harness 4/4 PASS; full catalog regression with merge 40/40 PASS.
 - HUMAN GATE: authorize LIVE apply of 20260930 before continuing deployment closure.
+
+
+## 23. Catalog policy merge LIVE — 19/09/2026
+- LIVE: `20260930_catalog_update_policy_merge_v1`, registered by Supabase as `20260919231650 catalog_update_policy_merge_v1`. Do not reapply.
+- Purpose: merged the duplicate permissive UPDATE policies introduced by catalog publication, without changing grants/functions/triggers/data.
+- Harness against LIVE: 4/4 PASS.
+- Performance Advisor: duplicate-policy WARNs removed; INFO only remains.
+- Security Advisor: 0 WARN/0 ERROR; SECURITY DEFINER 8; anon DEFINER execute 0.
+- Zero synthetic residue in catalog/financial reconciliation surfaces.
+- Current pilot blockers are now deployment and real Smart configuration rather than an independent technical P0.
