@@ -37,9 +37,9 @@ function fakeClient(){
  const builder=(table:string)=>{
   const b:Record<string,unknown>={
    select:(...a:unknown[])=>{calls.push(`${table}.select(${a.join(',')})`);return b},
-   update:(v:unknown)=>{calls.push(`${table}.update`);return b},
+   update:(_v:unknown)=>{calls.push(`${table}.update`);return b},
    delete:()=>{calls.push(`${table}.delete`);return b},
-   insert:(v:unknown)=>{calls.push(`${table}.insert`);return b},
+   insert:(_v:unknown)=>{calls.push(`${table}.insert`);return b},
    eq:(c:string,v:unknown)=>{calls.push(`${table}.eq(${c},${v})`);return b},
    order:()=>{calls.push(`${table}.order`);return b}
   }
