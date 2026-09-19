@@ -299,3 +299,11 @@
 - **Decisao 2:** uploads: o tipo aceito e o dos primeiros bytes (PDF/JPEG/PNG/WebP) e precisa coincidir com o declarado; tamanho, vazio e nome sao verificados antes de tocar banco/Storage.
 - **Decisao 3:** run cujo criador perdeu acesso sai da lista de dispatch (mesma regra do `claim`) e e encerrado por `sweep_orphaned_integration_runs` (service_role): queued/retry -> cancelled, running vencido -> failed terminal, codigo fixo sanitizado. O worker chama o sweep antes de listar, best effort.
 - **Decisao 4:** menu por perfil e dashboard do operador limitado aos proprios registros sao conveniencia de UX; a autorizacao continua no banco.
+
+## ADR-0023 - Catalog publication through governed RPCs; platform-owned reference catalog; Vercel-safe uploads
+- **Data:** 25/09/2026 - **Status:** aceita; `20260929_catalog_publish_v1` PREPARADA, nao aplicada.
+- **Decisao 1:** publicar versao de tabela e checklist so pelas RPCs `publish_product_table_version` (admin/gerente) e `publish_document_checklist_template` (supervisor+), INVOKER, com guard trigger (GUC `corban.catalog_rpc`). INSERT de authenticated e sempre rascunho; publicar substitui a versao anterior na mesma transacao; publicada continua imutavel.
+- **Decisao 2:** o catalogo de referencia global e da PLATAFORMA: escrito apenas pela rota `/api/admin/reference-catalog` (administrador de plataforma, upsert idempotente por codigo, auditado, sem dado inventado). Tenants montam rotas/tabelas/checklists sobre ele.
+- **Decisao 3:** etapas padrao da esteira (7 estados, sem `paid`, sem SLA) sao dominio, nao dado comercial; criadas sob demanda por gerente/admin.
+- **Decisao 4:** bootstrap de organizacao exige CNPJ valido (guardado so com digitos), recusa duplicata e pede confirmacao explicita para nome parecido; id do tenant vem do banco.
+- **Decisao 5:** upload de documento limitado a 4 MB (limite de corpo da Vercel); upload direto ao Storage fica como P1. Origem publica: `NEXT_PUBLIC_SITE_URL` obrigatoria em producao; fallback so para mesma origem.

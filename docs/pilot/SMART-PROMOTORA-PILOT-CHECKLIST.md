@@ -4,14 +4,16 @@ Marque cada item. Um item não marcado em "ANTES" bloqueia o dia 1.
 
 ## ANTES DO PILOTO
 Owner (detalhes em `SMART-OWNER-SETUP.md`):
-- [ ] Migration `20260928_revoked_actor_dispatch_v1` revisada e aplicada (necessária antes de ativar o worker; não bloqueia o operador).
+- [ ] Migration `20260929_catalog_publish_v1` revisada e aplicada (sem ela não se publica tabela nem checklist pelo navegador). (`revoked_actor_dispatch_v1` já está LIVE.)
+- [ ] Runbook `docs/deployment/SMART-DEPLOYMENT-RUNBOOK.md` executado até o passo 9; `npm run preflight -- --production` sem BLOCKED.
+- [ ] Catálogo de referência carregado pelo administrador de plataforma (bancos, produtos, documentos reais).
 - [ ] `<APP_ORIGIN>` definido e sistema publicado (hoje NÃO há deploy de produção).
 - [ ] Supabase Auth: Site URL, Redirect URL, SMTP, confirmação de e-mail, cadastro público desligado, política de senha.
 - [ ] `NEXT_PUBLIC_SITE_URL` na hospedagem.
 - [ ] Organização Smart Promotora criada (uma vez) e administrador com primeiro login feito.
 - [ ] Catálogo comercial publicado (tabela + versão publicada + checklist de documentos + etapas da operação). Configuração deve mostrar tudo OK.
 - [ ] Supervisor e operador convidados, com senha criada, aparecendo "Ativo" em Equipe.
-- [ ] Teste de aceitação com dados fictícios feito (passo 7 do OWNER-SETUP), incluindo desativar/reativar o operador.
+- [ ] `SMART-HUMAN-ACCEPTANCE-TEST.md` executado por um humano, todos os itens OK.
 - [ ] Decisão comercial: o operador pode ver comissão esperada? (hoje: NÃO; nenhuma tela mostra comissão ao operador.)
 - [ ] `docs/runbooks/AUTH-AND-INVITE-RUNBOOK.md` seção 3 (teste humano de convite) executada e registrada.
 Fora do piloto (NÃO ativar): segredo do worker, agendador, integrações com bancos, Bevicred, 2Tech.

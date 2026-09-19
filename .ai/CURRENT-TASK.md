@@ -590,3 +590,11 @@ Validação independente:
 - zero resíduo sintético: integration_runs=0, integration_run_artifacts=0, financial_events=0, reconciliation_cases=0.
 
 O P0 de starvation por ator revogado está fechado no LIVE. Próximo alvo é implantação do piloto Smart: organização Smart, deploy/origin, Auth/SMTP, catálogo comercial e teste humano no navegador. Worker secret+scheduler continuam desativados até gate externo.
+
+
+## Deployment & tenant wave 4 - handoff 25/09/2026 (para o ChatGPT)
+**LIVE (nao reaplicar):** ate `revoked_actor_dispatch_v1`.
+**NOT LIVE - revisar e aplicar:** `supabase/migrations/20260929_catalog_publish_v1.sql` (INVOKER; guard trigger `guard_catalog_publication`; policies de UPDATE com transicao draft->published e supersede; RPCs `publish_product_table_version` e `publish_document_checklist_template`). Harness `tests/security/catalog-publish-rollback.sql` (texto da migration antes; 40/40). Depois de aplicada, rodar so o bloco DO. Sem ela o botao Publicar responde "recurso ainda nao disponivel".
+**Pendencia P2:** revogar INSERT/UPDATE/DELETE de `authenticated` em `organizations` (RLS ja recusa).
+**Owner:** ver `docs/deployment/SMART-DEPLOYMENT-RUNBOOK.md` (passos 1-10), `SUPABASE-AUTH-CONFIG.md`, `ENVIRONMENT-VARIABLES.md`, `docs/pilot/SMART-HUMAN-ACCEPTANCE-TEST.md`.
+**Testes locais:** unit 229/229, tsc 0, eslint 0, build ok, preflight funcional (BLOCKED localmente por falta de SERVICE_ROLE no `.env.local`, esperado).

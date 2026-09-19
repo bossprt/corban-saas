@@ -19,13 +19,10 @@ Nada aqui foi feito pelo agente. São ações suas, fora do repositório. Valore
 4. Política de senha: mínimo 10 caracteres; proteção contra senhas vazadas ligada se o plano permitir.
 5. Na hospedagem, variável de servidor `NEXT_PUBLIC_SITE_URL=<APP_ORIGIN>`.
 
-## 3. Criar a organização Smart Promotora (uma única vez)
-Só o administrador de plataforma pode. Faça logado como ele, no navegador:
-1. Abra o sistema e entre. Abra o console do navegador (F12).
-2. Execute (troque os valores):
-   `fetch('/api/admin/organizations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:'<email-do-admin-smart>',organizationName:'Smart Promotora',organizationDocument:'<CNPJ>',fullName:'<nome>'})}).then(r=>r.json()).then(console.log)`
-3. Resposta esperada: `{ "organizationId": "..." }` com status 201. O e-mail do administrador recebe o convite (depende do SMTP do item 2).
-4. NÃO repita o comando: cria outra organização. Se falhar, veja o item "Se algo der errado".
+## 3. Carregar o catálogo de referência e criar a organização (administrador de plataforma, uma vez)
+Passos exatos, com os dois comandos e as respostas possíveis: `docs/deployment/SMART-DEPLOYMENT-RUNBOOK.md`, seções 7 e 8.
+- O catálogo de referência (bancos, provedores, convênios, produtos, modalidades, tipos de documento) está VAZIO e precisa dos seus dados reais (modelo: `docs/deployment/reference-catalog.template.json`). O sistema não inventa nada.
+- A organização exige CNPJ válido, recusa CNPJ repetido e avisa se já existe nome parecido. NÃO repita o comando depois de um 201.
 
 ## 4. Primeiro login do administrador da Smart
 1. Abra o convite, crie a senha (10+ caracteres), entre.
@@ -37,10 +34,12 @@ Só o administrador de plataforma pode. Faça logado como ele, no navegador:
 2. Cada um recebe o e-mail, cria a senha e entra. Confira em Equipe: situação "Ativo".
 3. O operador NÃO deve ver os menus Equipe, Integrações, Financeiro, Importações, Catálogo, Rede, Configuração.
 
-## 6. Preparar o catálogo antes do operador entrar
-O operador só consegue simular com uma tabela comercial **publicada**. Se "Simulações" mostrar "Nenhuma tabela comercial publicada", o cadastro comercial (banco, convênio, tabela, versão publicada, checklist de documentos e etapas da operação) ainda precisa ser feito por quem administra o catálogo. Confira em Configuração ("Prontidão do tenant"): todos os itens devem estar OK.
+## 6. Preparar o catálogo antes do operador entrar (pelo navegador, sem SQL)
+Menu **Catálogo** (administrador/gerente; checklist também o supervisor) e **Configuração** (mostra o que falta):
+1. "Criar etapas padrão" (esteira). 2. Criar a rota comercial. 3. Criar a tabela, uma versão com taxa/coeficiente e prazos REAIS e **Publicar**. 4. Criar o checklist, adicionar os documentos e publicar.
+Publicar exige a migration `20260929_catalog_publish_v1` aplicada (revisão do ChatGPT). O catálogo comercial NÃO liga nenhum banco; é só o cadastro usado nas simulações.
 
-## 7. Teste de aceitação (sem cliente real)
+## 7. Teste de aceitação (sem cliente real): roteiro completo em `SMART-HUMAN-ACCEPTANCE-TEST.md`
 Use dados fictícios e apague nada: o sistema não apaga. Prefira fazer isto ANTES do operador real.
 1. Como operador: novo lead (nome fictício) -> converter (CPF de teste válido) -> simular -> criar proposta.
 2. Como supervisor: preparar checklist, anexar/validar documentos, enviar para a operação.

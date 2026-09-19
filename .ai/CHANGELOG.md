@@ -254,3 +254,11 @@ Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`)
 
 ### Seguranca - 25/09/2026 (PREPARADA, NAO APLICADA)
 `20260928_revoked_actor_dispatch_v1`: starvation do dispatch por runs de ator revogado CONFIRMADA.
+
+### Adicionado - 25/09/2026 (onda 4: implantacao e tenant)
+- `/app/catalogo` (rotas, tabelas, versoes, checklists, etapas padrao) e `/app/configuracao` (status da configuracao); rota de plataforma para o catalogo de referencia; bootstrap de organizacao com CNPJ e guarda de nome parecido; env fail-closed; `npm run preflight`; limite de upload 4 MB.
+- Docs: `docs/deployment/*` (variaveis, auth/SMTP, runbook de implantacao, rollback, drift), `docs/pilot/SMART-HUMAN-ACCEPTANCE-TEST.md`, `SMART-PILOT-INCIDENTS.md`.
+- Testes: unit 229; `catalog-publish-rollback.sql` 40/40.
+
+### Seguranca - 25/09/2026 (PREPARADA, NAO APLICADA)
+`20260929_catalog_publish_v1`: publicar tabela/checklist era impossivel sem SQL; INSERT permitia versao ja publicada.

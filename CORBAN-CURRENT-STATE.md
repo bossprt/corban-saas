@@ -207,3 +207,10 @@ A primeira conclui as transições controladas da Mesa sem permitir marcação m
 - Advisors pós-apply: segurança 0 WARN/0 ERROR; performance sem WARN novo, somente INFO já conhecidos.
 - Zero resíduo sintético em runs, artifacts, financial_events e reconciliation.
 - P0 técnico independente conhecido para o worker: nenhum. Gates atuais para piloto Smart: criar organização Smart, publicar app/origin, configurar Auth+SMTP, publicar catálogo comercial e executar teste humano pelo navegador. Segredo+agendador do worker permanecem desativados.
+
+
+## 21. Deployment & tenant wave 4 - 25/09/2026
+- LIVE: ate `revoked_actor_dispatch_v1` (20260919194224). Verificado: DEFINER 8 (anon 0), advisor de seguranca 0 WARN/0 ERROR, zero residuo, catalogo de referencia VAZIO, 0 catalogo de tenant, organizacao Smart NAO existe, 1 administrador de plataforma ativo. Drift: nenhum alem de `catalog_publish_v1` (NOT LIVE) e do baseline `harden_legacy_rls_foundation` sem arquivo (`docs/deployment/MIGRATION-DRIFT.md`).
+- NOT LIVE (harness 40/40): `20260929_catalog_publish_v1`.
+- IMPLEMENTED: catalogo administravel pelo navegador, status de configuracao, rota de referencia da plataforma, bootstrap seguro de organizacao, env fail-closed, preflight.
+- OWNER: dominio, Vercel + env, Auth (URLs, SMTP, senha), dados do catalogo de referencia, criar a Smart, dados comerciais da Smart, decisao de comissao, revisar `20260929`.
