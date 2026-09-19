@@ -395,3 +395,17 @@ Após aplicar: rodar os harnesses rollback-only (todos terminam em RAISE EXCEPTI
 **Testes:** unit 65 ok; tsc limpo; eslint 0 erros; build ok; `tests/security/import-conflicts-rollback.sql` 30/30 (rollback-only, com a migration executada na mesma transação).
 **LIVE (não reaplicar):** revoke_excess_table_privileges_v1, restore_rbac_helper_execute_v1, fix_digest_search_path_v1, financial_reversal_paths_v1, reconciliation_cases_write_hardening_v1. **NOT LIVE:** import_conflicts_v1 e as demais da lista anterior.
 **Próximo ponto:** aplicar migrations 1–3 (matching/apply) e depois import_conflicts_v1; views por coluna para comissão; seletor multi-org.
+
+
+## Live reconciliation correction — 19/09/2026 (ChatGPT)
+Supabase `list_migrations` is authoritative for applied state. Confirmed LIVE; DO NOT REAPPLY:
+- `20260919001901 fix_import_matching_uuid_aggregate_v1`
+- `20260919001905 import_apply_rls_v1`
+- `20260919001910 import_identity_case_normalization_v1`
+- `20260919002119 rbac_helper_security_invoker_v1`
+- `20260919002127 financial_read_rbac_v1`
+- `20260919002148 import_batch_adapter_lineage_v1`
+Also live from prior wave: revoke_excess_table_privileges_v1, restore_rbac_helper_execute_v1, fix_digest_search_path_v1, financial_reversal_paths_v1, reconciliation_cases_write_hardening_v1.
+`import_conflicts_v1` remains NOT LIVE. Do not infer migration state from older handoff sections; query live migration history first.
+Security Advisor at reconciliation: only 2 intentional INFO for closed platform-admin tables; no WARN/ERROR.
+Column-level debt confirmed live: authenticated still has table-level SELECT on `import_normalized_rows` and `proposal_commercial_snapshots`; sensitive commission values coexist with operational fields. Do not revoke blindly because current import/proposal UI depends on operational columns. Next safe design is explicit role-scoped views/RPCs plus app cutover, then privilege reduction.
