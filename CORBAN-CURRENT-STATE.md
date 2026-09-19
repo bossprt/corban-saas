@@ -183,3 +183,10 @@ A primeira conclui as transições controladas da Mesa sem permitir marcação m
 - IMPLEMENTED (codigo, dorme ate a migration): `/app/equipe`, aceite de convite, `/auth/definir-senha`, `/auth/confirm`.
 - IMPLEMENTED (ativo): menu por perfil, dashboard piloto, `canViewCommission`, rotulo LOCAL/TESTE, painel de prontidao, `/api/health`.
 - EXTERNAL GATES: Auth Site URL/Redirect URLs + SMTP; segredo e agendador do worker. PRODUCT DECISION: comissao visivel ao agente. BLOCKED: 2Tech (arquivo real). DEFERRED: Bevicred.
+
+
+## 19. Pilot closure wave 2 - 24/09/2026
+- LIVE: tudo ate `20260925_team_access_lifecycle_v1` (aplicada como 20260919160840). Regressao LIVE nesta onda: equipe 83/83, paid replay 15/15, pilot E2E v2 39/39 (com prelude da simulacao); DEFINER = 8; advisors de seguranca 0 WARN/0 ERROR; performance: 1 WARN novo (`multiple_permissive_policies` em organization_memberships, causado pela migration de equipe) + INFO de indices nao usados (banco vazio).
+- NOT LIVE (preparadas, harness rollback-only verde): `20260926_simulation_governance_v1` (create_simulation RPC, guard, grants por coluna) e `20260927_membership_select_policy_merge_v1` (uma policy SELECT).
+- IMPLEMENTED: recuperacao de senha, historico de tentativas, painel de atencao, rotulos da esteira, cache do health.
+- EXTERNAL GATES: Auth (Site URL, Redirect URLs, SMTP, politica de senha), segredo+agendador do worker. PRODUCT DECISION: comissao visivel ao agente. BLOCKED: 2Tech. DEFERRED: Bevicred.

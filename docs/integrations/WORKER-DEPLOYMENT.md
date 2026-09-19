@@ -62,3 +62,11 @@ Uptime monitors use `GET /api/health` (application + database reachability only)
 | Database briefly unavailable | The pass answers 500 `dispatch_failed` (no details); the next pass continues from the persisted state. |
 | Wrong secret / malformed header / empty | 403. Missing or short secret on the server: 503. No value is ever logged. |
 | Backlog larger than one pass | At most 10 runs per call (hard cap 25), oldest eligible first; the rest drains over the next passes. Runs of adapters the worker cannot execute never occupy a slot. |
+
+## Recommended cadence (technical estimate, NOT a guarantee and NOT configured)
+Facts from the code: one pass handles at most 10 runs from the route (hard cap 25), strictly one after another; provider timeout 20 s; lease 60 s; pass budget 45 s (no new run starts unless a provider timeout still fits); route `maxDuration` 60 s; retry backoff is database-governed (30 s, 60 s, 120 s...).
+- **Every 1 minute** is the recommended start. Worst case (every provider call takes the full 20 s) a pass completes only about 2 runs before the budget stops it, so throughput is roughly 2 runs/minute; with fast providers a pass can drain up to 10 runs/minute. The 25-run ceiling is a safety cap, not a throughput target.
+- **Every 5 minutes** is enough for a low-volume pilot (few runs a day) and costs less; the price is up to 5 minutes of added latency for a retry that just became due.
+- **Faster than 1 minute** gains little: retries back off by at least 30 s and overlapping callers are safe but only add empty passes.
+- Two callers at once are safe (lease + fencing token) but wasteful. If a backlog persists, shorten the interval before touching batch size or timeouts, and measure `computeRunMetrics` output first.
+- Provider latency is the dominant factor. No real provider is homologated, so these numbers are unmeasured against real traffic; re-derive them at the first real integration.

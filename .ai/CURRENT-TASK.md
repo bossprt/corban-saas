@@ -553,3 +553,14 @@ Post-apply verification:
 - Security Advisor remains 0 WARN / 0 ERROR, with only the two intentional INFO findings for closed platform-admin tables.
 
 Next external/pilot gates: configure Supabase Auth Site URL + redirect URL + SMTP, then execute a real Owner invitation test. Worker secret/scheduler activation and commission-visibility business decision remain separate Human Gates.
+
+
+## Pilot closure wave 2 - handoff 24/09/2026 (para o ChatGPT)
+**LIVE (nao reaplicar):** tudo ate 20260925 (team access, aplicada como 20260919160840).
+**NOT LIVE - revisar e aplicar, nesta ordem (independentes, ambas so forward, sem DEFINER):**
+1. `supabase/migrations/20260926_simulation_governance_v1.sql` - `create_simulation` (INVOKER), guard trigger `simulations_00_governed_write`, revoga INSERT/UPDATE/DELETE de authenticated e concede INSERT nas colunas derivadas e UPDATE(status,updated_at); re-declara `create_proposal_from_simulation` com UMA mudanca (o flip para `selected` roda dentro do token). Harness: `tests/security/simulation-governance-rollback.sql` (rodar o texto da migration antes; 54/55 na primeira execucao, a unica falha era expectativa do harness sobre UPDATE de 0 linhas, ja reescrita) + `tests/security/pilot-e2e-v2-rollback.sql` (39/39). Depois de aplicada, rodar ambos so com o bloco DO e remover o fallback `legacyInsert` em `src/app/app/simulacoes/actions.ts`.
+2. `supabase/migrations/20260927_membership_select_policy_merge_v1.sql` - junta `select_self` e `select_team` numa policy (advisor WARN). Harness: `tests/security/membership-policy-merge-rollback.sql` (12/12).
+**Depois de aplicadas:** rode o advisor de performance (o WARN de `organization_memberships` deve sumir).
+**Gates externos (Owner):** `docs/runbooks/AUTH-AND-INVITE-RUNBOOK.md` (Site URL, Redirect URLs, SMTP, politica de senha, teste humano de convite); segredo e agendador do worker (`docs/integrations/WORKER-DEPLOYMENT.md`, com cadencia recomendada).
+**Decisao humana pendente:** o agente pode ver comissao esperada? (centralizado em `canViewCommission`; colunas do banco ainda legiveis por membros).
+**Testes locais:** unit 189/189, tsc 0, eslint 0 warnings, build ok.

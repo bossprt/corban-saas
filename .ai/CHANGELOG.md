@@ -238,3 +238,11 @@ Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`)
 
 ### Seguranca - 24/09/2026 (PREPARADA, NAO APLICADA)
 `20260925_team_access_lifecycle_v1`. Achado: nao havia caminho governado para gerir equipe e o e-mail de convite nao tinha handler no app.
+
+### Adicionado - 24/09/2026 (fechamento do piloto, onda 2)
+- Recuperacao de senha (`/login/recuperar`), historico de tentativas por execucao, painel "Precisa da sua atencao", rotulos da esteira, cache do health, dashboard sem consultas fora do perfil, simulacao via RPC (com fallback temporario).
+- Runbooks: `docs/runbooks/AUTH-AND-INVITE-RUNBOOK.md`; cadencia do worker em `docs/integrations/WORKER-DEPLOYMENT.md`.
+- Testes: unit 189, `simulation-governance-rollback.sql`, `pilot-e2e-v2-rollback.sql` (39), `membership-policy-merge-rollback.sql` (12); regressao LIVE: equipe 83, paid replay 15.
+
+### Seguranca - 24/09/2026 (PREPARADAS, NAO APLICADAS)
+`20260926_simulation_governance_v1` (simulacoes forjaveis com comissao arbitraria) e `20260927_membership_select_policy_merge_v1` (advisor WARN de performance).

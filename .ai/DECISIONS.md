@@ -284,3 +284,11 @@
 - **Decisao 5:** auditoria append-only (`organization_admin_events`), sem token/senha/segredo. Limite de 20 convites/hora/ator no banco.
 - **Decisao 6:** visibilidade de comissao continua fail-closed (supervisor+) e centralizada em `canViewCommission`; a decisao comercial sobre o agente segue PENDENTE do Owner (ver gap analysis).
 - **Decisao 7:** `/api/health` publico so devolve app+banco; prontidao de worker/provedor e visivel apenas a supervisores logados. Providers locais sempre rotulados `LOCAL / TESTE`.
+
+## ADR-0021 - Governed simulation writes and merged membership SELECT policy
+- **Data:** 24/09/2026 - **Status:** aceita; `20260926_simulation_governance_v1` e `20260927_membership_select_policy_merge_v1` PREPARADAS, nao aplicadas.
+- **Decisao 1:** simulacoes so nascem por `create_simulation` (INVOKER): tenant derivado do cliente, tabela publicada do MESMO tenant, taxa/coeficiente da versao, parcela calculada no banco, ator = auth.uid(). Escrita direta (INSERT/UPDATE/DELETE) fica recusada por guard trigger + grants por coluna.
+- **Decisao 2:** `expected_commission_amount` e `released_amount` de simulacoes ficam NULL: nao existe fonte governada, portanto nada pode forja-los. Metadata da tabela nao e copiada para snapshots.
+- **Decisao 3:** a acao do app mantem um fallback TEMPORARIO (insert calculado no servidor) apenas quando o PostgREST informa que a RPC nao existe; depois da migration o banco recusa esse insert. Remover apos aplicar.
+- **Decisao 4:** duas policies permissivas de SELECT em `organization_memberships` viram uma so (mesma logica OR), para limpar o warning do advisor de performance sem mudar visibilidade.
+- **Decisao 5:** recuperacao de senha usa Supabase Auth com resposta identica para qualquer e-mail; a politica de senha final e do Auth (runbook).
