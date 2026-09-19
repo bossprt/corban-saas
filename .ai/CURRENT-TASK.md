@@ -535,3 +535,21 @@ Next P0 work is product/deployment rather than these migrations: organization us
 **Decisao humana pendente:** o agente pode ver comissao esperada? App: fail-closed centralizado em `canViewCommission`. Banco: colunas `expected_commission_amount` legiveis por qualquer membro (RLS por linha); fechar exige nova migration depois da decisao.
 **Testes locais:** unit 171/171, tsc 0, eslint 0 warnings, build ok.
 **Retomada exata:** aplicar a migration, rodar os dois harnesses em modo LIVE, testar convite real com um e-mail do Owner em ambiente com SMTP configurado, e so entao ativar segredo+agendador do worker.
+
+
+## Team access lifecycle LIVE — 19/09/2026 (ChatGPT)
+Owner explicitly authorized the reviewed team-access migration. Applied successfully:
+- `20260919160840 team_access_lifecycle_v1`
+DO NOT REAPPLY.
+
+Post-apply verification:
+- `organization_invitations` and `organization_admin_events` exist with RLS policies;
+- `authenticated` no longer has direct INSERT/DELETE on `organization_memberships`; governed column UPDATE remains behind trigger/RPC;
+- invitation acceptance RPC is service_role-only; authenticated/anon denied;
+- invitation creation RPC remains authenticated with internal RBAC;
+- invitation/admin-event tables contain 0 rows immediately after apply;
+- integration runs/artifacts/financial events/reconciliation all remain 0;
+- SECURITY DEFINER inventory remains exactly 8; anon EXECUTE count 0;
+- Security Advisor remains 0 WARN / 0 ERROR, with only the two intentional INFO findings for closed platform-admin tables.
+
+Next external/pilot gates: configure Supabase Auth Site URL + redirect URL + SMTP, then execute a real Owner invitation test. Worker secret/scheduler activation and commission-visibility business decision remain separate Human Gates.
