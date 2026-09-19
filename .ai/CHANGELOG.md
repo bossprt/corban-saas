@@ -196,3 +196,11 @@ LIVE (aplicadas pelo ChatGPT): `revoke_excess_table_privileges_v1`, `restore_rba
 
 ### Corrigido — 19/09/2026
 - Ingestão rejeita mesmo arquivo já importado em outra fonte; extensão do arquivo não decide mais o parser (conteúdo decide).
+
+### Adicionado — 20/09/2026 (closure wave)
+- `/organizacao` (seleção explícita de organização), `resolveActiveMembership`/`scopeToOrganization`, `/app/leads`, executor de integrações outbound com adapter fake, harnesses SQL rollback-only (E2E financeiro agora com colunas/multi-org, leads 29, resolução 17).
+- Auditoria `docs/audits/AUDIT-2026-09-20-CLOSURE-WAVE.md`.
+
+### Segurança — 20/09/2026 (PREPARADAS, NÃO APLICADAS)
+`20260920_column_security_and_tenant_derivation_v1`, `20260920_reconciliation_resolution_immutability_v1`, `20260920_leads_v1` (+ `20260919_import_conflicts_v1` ainda pendente).
+Achados: leitura por agent de colunas econômicas; role NULL contornando `not in` nos readers privados (corrigido antes de aplicar); nota/autor/data de resolução reescritos com status inalterado; refresh órfão de caso resolvido; 9 funções com `limit 1` de membership.

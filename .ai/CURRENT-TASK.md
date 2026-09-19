@@ -409,3 +409,20 @@ Also live from prior wave: revoke_excess_table_privileges_v1, restore_rbac_helpe
 `import_conflicts_v1` remains NOT LIVE. Do not infer migration state from older handoff sections; query live migration history first.
 Security Advisor at reconciliation: only 2 intentional INFO for closed platform-admin tables; no WARN/ERROR.
 Column-level debt confirmed live: authenticated still has table-level SELECT on `import_normalized_rows` and `proposal_commercial_snapshots`; sensitive commission values coexist with operational fields. Do not revoke blindly because current import/proposal UI depends on operational columns. Next safe design is explicit role-scoped views/RPCs plus app cutover, then privilege reduction.
+
+
+## Closure wave — handoff 20/09/2026 (para o ChatGPT)
+**LIVE (confirmado; NÃO reaplicar):** revoke_excess_table_privileges_v1, restore_rbac_helper_execute_v1, fix_digest_search_path_v1, financial_reversal_paths_v1, reconciliation_cases_write_hardening_v1, fix_import_matching_uuid_aggregate_v1, import_apply_rls_v1, import_identity_case_normalization_v1, rbac_helper_security_invoker_v1, financial_read_rbac_v1, import_batch_adapter_lineage_v1.
+**NOT LIVE — aplicar nesta ordem após autorização (cada uma tem harness rollback-only):**
+1. `20260919_import_conflicts_v1.sql` — `tests/security/import-conflicts-rollback.sql` (30).
+2. `20260920_column_security_and_tenant_derivation_v1.sql` — `tests/security/e2e-financial-flow-rollback.sql` (executar a migration antes, na mesma transação; ~70 checagens incl. colunas, multi-org, tenant B). ATENÇÃO: depois dela o app já usa `list_import_rows`/`get_commercial_route`; antes dela o app usa fallback operacional.
+3. `20260920_reconciliation_resolution_immutability_v1.sql` — `tests/security/reconciliation-cases-hardening-rollback.sql` (17).
+4. `20260920_leads_v1.sql` — `tests/security/leads-rollback.sql` (29).
+Depois de aplicar: `tests/security/security-definer-inventory-contract.sql`, advisors de segurança/performance.
+**Commits:** ver `git log 7d0385b..HEAD` (coluna+tenant, regressão NULL-role, app multi-org, resolução imutável, executor outbound, leads, docs).
+**Testes:** unit 82; tsc; eslint 0 erros (4 warnings antigos/triviais); build; SQL rollback-only conforme acima, nada persistido.
+**Bugs/vulnerabilidades:** ver `docs/audits/AUDIT-2026-09-20-CLOSURE-WAVE.md`.
+**HUMAN GATES:** aplicar as 4 migrations; decidir se `agent` pode ver comissão da PRÓPRIA simulação/proposta (`proposals_v2`, `simulations`); identidade de teste para E2E de navegador; Leaked Password Protection; arquivo real BuscaContrato (aliases/fingerprint seguem provisórios); Bevicred adiada.
+**Dependências externas:** nenhuma credencial usada; nada enviado a provider real.
+**Não feito:** UI de conflitos além do lote; intake de leads por webhook (WhatsApp/Meta) — o schema já suporta external_ref; persistência do executor em `integration_runs` (interface pronta, adapter Supabase não escrito); E2E de navegador.
+**Retomada exata:** após aplicar 1–4 rodar os harnesses; então escrever o repositório Supabase do executor (`RunRepository` -> `integration_runs`/`integration_run_artifacts`) e o primeiro provider real (não Bevicred) com allowExternal controlado.

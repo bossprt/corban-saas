@@ -149,3 +149,9 @@ A primeira conclui as transições controladas da Mesa sem permitir marcação m
 - LIVE: revoke_excess_table_privileges_v1, restore_rbac_helper_execute_v1, fix_digest_search_path_v1, financial_reversal_paths_v1, reconciliation_cases_write_hardening_v1.
 - NOT LIVE: import_batch_adapter_lineage_v1 (reescrita) e as migrations novas (ver CHANGELOG). Sem elas, matching de importação e aplicação de vínculo aprovado NÃO funcionam para usuário real (min(uuid), policy ausente, identidade duplicada por caixa) e a leitura financeira ainda é aberta a `agent` via API.
 - App: `/app/financeiro` (lista + ledger + reversão + resolução) implementado; depende de `publish_financial_reversal` e do guard de reconciliation cases, já LIVE.
+
+
+## 14. Closure wave — 20/09/2026
+- LIVE (confirmado por `list_migrations`): revoke_excess_table_privileges_v1, restore_rbac_helper_execute_v1, fix_digest_search_path_v1, financial_reversal_paths_v1, reconciliation_cases_write_hardening_v1, fix_import_matching_uuid_aggregate_v1, import_apply_rls_v1, import_identity_case_normalization_v1, rbac_helper_security_invoker_v1, financial_read_rbac_v1, import_batch_adapter_lineage_v1.
+- NOT LIVE: import_conflicts_v1, column_security_and_tenant_derivation_v1, reconciliation_resolution_immutability_v1, leads_v1.
+- App já preparado para os dois estados (antes/depois) em lote de importação, proposta, clientes, leads e conflitos. Multi-org e escopo de tenant do client são código e já valem hoje; RPCs de tenant-por-recurso dependem da migration.

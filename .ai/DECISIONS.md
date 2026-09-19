@@ -238,3 +238,12 @@
 - **Decisão 3:** dados de comissão/financeiro são legíveis apenas por supervisor+ no banco (RLS), não só na UI. Colunas de comissão em `proposal_commercial_snapshots` e `import_normalized_rows` exigem views por coluna (dívida B).
 - **Decisão 4:** conflitos de importação são registrados de forma persistente, ligados às linhas raw imutáveis, idempotentes por fingerprint, sem poder publicar verdade financeira (`auto_publish_allowed=false` por CHECK).
 - **Decisão 5:** o E2E rollback-only contra o schema live é o gate obrigatório antes de considerar uma cadeia de RPCs "funcional"; validação estrutural não basta (quatro RPCs live nunca funcionaram para usuário real).
+
+## ADR-0016 — Segurança por coluna via readers privados, tenant ativo explícito, resolução imutável, leads como CRM
+- **Data:** 20/09/2026 — **Status:** aceita; migrations `20260920_*` PREPARADAS, não aplicadas.
+- **Decisão 1:** como `authenticated` é um único role de banco, colunas econômicas de tabelas mistas (`import_normalized_rows`, `proposal_commercial_snapshots`) saem do SELECT direto e são servidas por readers SECURITY DEFINER no schema `private` (membership + supervisor+ dentro), com wrappers INVOKER em `public`. Readers devem tratar role NULL como proibido (`coalesce(role,'')`).
+- **Decisão 2:** o tenant ativo é explícito e determinístico: um membership → ele; vários → cookie `corban_org` re-validado contra memberships ativos a cada request; senão `/organizacao`. O client do app é escopado à organização ativa; RPCs derivam o tenant do recurso; RPCs sem recurso recebem `p_organization_id` validado.
+- **Decisão 3:** catálogo comercial (`product_table_external_identities`) = manager+ em política e RPC.
+- **Decisão 4:** a resolução de conciliação (nota/quem/quando) só muda junto da transição open→resolved, é carimbada pela sessão e é imutável; refresh não reabre caso resolvido.
+- **Decisão 5:** Lead é registro de CRM com timeline append-only, sem colunas financeiras; escrita só por RPC; conversão atômica/idempotente; intake idempotente por (organização, canal, ref externa).
+- **Decisão 6:** submissão externa passa por executor idempotente com ledger; providers externos ficam bloqueados por padrão; Bevicred permanece DEFERRED (recusa incondicional).

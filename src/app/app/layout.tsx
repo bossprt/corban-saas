@@ -13,6 +13,7 @@ const nav = [
   { href: '/app/operacao', label: 'Operação', icon: Workflow },
   { href: '/app/rede', label: 'Rede comercial', icon: Network },
   { href: '/app/importacoes', label: 'Importações', icon: Upload },
+  { href: '/app/leads', label: 'Leads', icon: Upload },
   { href: '/app/financeiro', label: 'Financeiro', icon: WalletCards },
   { href: '/app/configuracao', label: 'Configuração', icon: Settings },
 ]
