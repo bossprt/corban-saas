@@ -214,3 +214,12 @@ A primeira conclui as transições controladas da Mesa sem permitir marcação m
 - NOT LIVE (harness 40/40): `20260929_catalog_publish_v1`.
 - IMPLEMENTED: catalogo administravel pelo navegador, status de configuracao, rota de referencia da plataforma, bootstrap seguro de organizacao, env fail-closed, preflight.
 - OWNER: dominio, Vercel + env, Auth (URLs, SMTP, senha), dados do catalogo de referencia, criar a Smart, dados comerciais da Smart, decisao de comissao, revisar `20260929`.
+
+
+## 22. Catalog publication LIVE — 19/09/2026
+- LIVE: `20260929_catalog_publish_v1`, registered by Supabase as `20260919231013 catalog_publish_v1`. Do not reapply.
+- Table-version and checklist publication are now governed and usable without SQL. Full harness 40/40 PASS before and after LIVE apply.
+- Security remains clean: 0 WARN / 0 ERROR; SECURITY DEFINER 8; anon DEFINER execute 0; zero synthetic residue.
+- Post-apply Performance Advisor exposed 2 WARNs for multiple permissive UPDATE policies created by the catalog publication design.
+- PREPARED, NOT LIVE: `20260930_catalog_update_policy_merge_v1.sql`, which merges those policies without changing grants/functions/triggers/data. Merge harness 4/4 PASS; full catalog regression with merge 40/40 PASS.
+- HUMAN GATE: authorize LIVE apply of 20260930 before continuing deployment closure.
