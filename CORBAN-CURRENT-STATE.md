@@ -198,3 +198,12 @@ A primeira conclui as transições controladas da Mesa sem permitir marcação m
 - IMPLEMENTED: feedback por codigos, sniffing de upload, busca, menu por perfil, dashboard do operador, labels, sweep no worker (tolera banco sem a funcao).
 - Regressao LIVE desta onda: chain E2E 35/35. Nao rerodadas: leads, operacional, integration runs, worker governance, financeiro, conflicts, reconciliation, paid evidence, team (nenhum objeto LIVE delas mudou).
 - NAO FEITO: E2E de navegador, QA visual, teste humano de convite. GATES: Auth (URLs, SMTP, senha), deploy, criar organizacao Smart, catalogo comercial, decisao de comissao, worker (segredo + agendador).
+
+
+## 21. Revoked-actor dispatch LIVE — 19/09/2026
+- LIVE: `20260928_revoked_actor_dispatch_v1`, registrada no Supabase como `20260919194224 revoked_actor_dispatch_v1`. Não reaplicar.
+- O starvation por ator revogado foi fechado: runs órfãos deixam de ocupar a lista dispatchable e o sweep service-role-only terminaliza/cancela estados elegíveis de forma governada.
+- Harness LIVE rollback-only: 22/22 PASS. SECURITY DEFINER permanece 8; anon EXECUTE 0.
+- Advisors pós-apply: segurança 0 WARN/0 ERROR; performance sem WARN novo, somente INFO já conhecidos.
+- Zero resíduo sintético em runs, artifacts, financial_events e reconciliation.
+- P0 técnico independente conhecido para o worker: nenhum. Gates atuais para piloto Smart: criar organização Smart, publicar app/origin, configurar Auth+SMTP, publicar catálogo comercial e executar teste humano pelo navegador. Segredo+agendador do worker permanecem desativados.
