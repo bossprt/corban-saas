@@ -171,6 +171,8 @@ begin
  perform pg_temp.check_that((select count(*) from public.financial_events)=fe,'END: the ledger is exactly as before the whole operational flow');
  perform pg_temp.check_that(not exists(select 1 from public.financial_reconciliation_cases where settled_amount>0 or reported_amount>0),'END: no reconciliation case has received or reported money');
 
+ perform pg_temp.check_that(not exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where p.prosecdef and n.nspname in ('public','private') and p.proname in ('claim_integration_run','complete_integration_run','fail_integration_run','cancel_integration_run','integration_content_has_secret','guard_integration_run_state','guard_integration_artifact_write','guard_operational_pipeline_write','send_proposal_to_digitization')),'END: none of the new/changed functions is SECURITY DEFINER');
+
  select string_agg(case when pass then 'ok   ' else 'FAIL ' end||label,E'\n' order by pass,label),count(*) filter (where not pass) into r,k from t_res;
  raise exception 'RESULTS: %
 %',case when k=0 then 'ALL PASS ('||(select count(*) from t_res)||' checks)' else k||' FAILED' end,r;
