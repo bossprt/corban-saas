@@ -183,3 +183,16 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 ### Segurança — 19/09/2026
 - PREPARADAS, NÃO APLICADAS: `20260919_restore_rbac_helper_execute_v1`, `20260919_fix_digest_search_path_v1`, `20260919_reconciliation_cases_write_hardening_v1`, `20260919_financial_reversal_paths_v1` (reescrita), `20260919_import_batch_adapter_lineage_v1` (reescrita).
 - JÁ APLICADA externamente (ChatGPT): revogação de TRUNCATE/REFERENCES/TRIGGER (`20260919_revoke_excess_table_privileges_v1`).
+
+### Adicionado — 19/09/2026 (LONG-RUN parte 3)
+- `/app/financeiro`: lista de casos com filtros e `/app/financeiro/casos/[id]` com ledger ORIGINAL → REVERSÕES → SALDO LÍQUIDO, evidência/fonte/referência, reversão parcial/total via RPC e resolução humana (só status + justificativa; resolved_by/at do banco). Valores como texto decimal (sem float).
+- `src/lib/finance/ledger.ts`, `prepareImport` com detecção de formato por conteúdo, `conflict-persist.ts`, vetores de comissão (60 aleatórios vs Postgres, 0 divergências).
+- Harnesses SQL rollback-only: E2E financeiro (44), tenant A/B adversarial (19), conflitos (24), helper+lineage (32).
+- Auditorias `docs/audits/AUDIT-2026-09-19-SECURITY-DEFINER.md` e `AUDIT-2026-09-19-E2E-LIVE-BLOCKERS.md`.
+
+### Segurança — 19/09/2026 (PREPARADAS, NÃO APLICADAS)
+`20260919_rbac_helper_security_invoker_v1`, `20260919_import_batch_adapter_lineage_v1` (reescrita: schema private), `20260919_financial_read_rbac_v1`, `20260919_fix_import_matching_uuid_aggregate_v1`, `20260919_import_apply_rls_v1`, `20260919_import_identity_case_normalization_v1`, `20260919_import_conflicts_v1`.
+LIVE (aplicadas pelo ChatGPT): `revoke_excess_table_privileges_v1`, `restore_rbac_helper_execute_v1`, `fix_digest_search_path_v1`, `financial_reversal_paths_v1`, `reconciliation_cases_write_hardening_v1`.
+
+### Corrigido — 19/09/2026
+- Ingestão rejeita mesmo arquivo já importado em outra fonte; extensão do arquivo não decide mais o parser (conteúdo decide).

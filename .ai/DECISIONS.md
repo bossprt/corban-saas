@@ -229,3 +229,12 @@
 - **Decisão 4:** `financial_reconciliation_cases` só recebe valores derivados via `refresh_financial_reconciliation`; humanos apenas resolvem casos com nota.
 - **Decisão 5:** `attach_import_batch_adapter` é SECURITY DEFINER estreito (única forma de gravar linhagem de adapter) porque `import_batches` não tem policy de UPDATE.
 - **Achados live (A):** `has_active_organization_role` sem EXECUTE para `authenticated` (todas as escritas com RBAC falham) e `digest()` não qualificado sob `search_path=public` (ingestão e publisher de evidência falham).
+
+## ADR-0015 — Helper de RBAC como SECURITY INVOKER, definer só em schema privado, leitura financeira supervisor+
+- **Data:** 19/09/2026
+- **Status:** aceita; migrations correspondentes PREPARADAS, não aplicadas.
+- **Decisão 1:** `has_active_organization_role` passa a SECURITY INVOKER (mesma assinatura). O definer era desnecessário: `organization_memberships` tem uma única policy (`select_self`) que não chama o helper e expõe exatamente as linhas que o helper lê. Remove o WARN do advisor sem tocar 36 policies e 10 funções.
+- **Decisão 2:** quando um SECURITY DEFINER for inevitável (escrita em tabela sem policy de UPDATE), ele vive no schema não exposto `private` (PostgREST expõe só `public` e `graphql_public`, verificado), com `search_path=''`, sem argumento de organização e tenant derivado do recurso; a entrada pública é INVOKER. Caso atual: `private.attach_import_batch_adapter`.
+- **Decisão 3:** dados de comissão/financeiro são legíveis apenas por supervisor+ no banco (RLS), não só na UI. Colunas de comissão em `proposal_commercial_snapshots` e `import_normalized_rows` exigem views por coluna (dívida B).
+- **Decisão 4:** conflitos de importação são registrados de forma persistente, ligados às linhas raw imutáveis, idempotentes por fingerprint, sem poder publicar verdade financeira (`auto_publish_allowed=false` por CHECK).
+- **Decisão 5:** o E2E rollback-only contra o schema live é o gate obrigatório antes de considerar uma cadeia de RPCs "funcional"; validação estrutural não basta (quatro RPCs live nunca funcionaram para usuário real).

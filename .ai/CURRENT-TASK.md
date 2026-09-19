@@ -359,3 +359,28 @@ Depois de aplicar: rodar `tests/security/financial-reversal-paths-contract.sql` 
 **Não feito:** UI de reversão/resolução de casos (depende das migrations aplicadas); tabela persistente de conflitos de importação (exigiria DDL novo); E2E com navegador (sem credenciais/usuário de teste); pipeline operacional/backend API além do que existe.
 
 **Próximo ponto exato de retomada:** após o ChatGPT/usuário aplicar as migrations 1–2, rodar o harness rollback-only completo contra o live; então implementar UI de reversão (`publish_financial_reversal`) e resolução de casos em `/app/financeiro`, e o registro persistente de conflitos (`import_conflicts`) com DDL preparado. Com arquivo real BuscaContrato: registrar impressão de schema e confirmar aliases.
+
+
+## LONG-RUN parte 3 — handoff 19/09/2026
+**Commits (branch `architecture/corban-os-master-v2`, HEAD no push final):** `e6cd557` helper INVOKER + lineage em schema private + auditoria definer; `1f38dfe` UI financeira + ledger; `306f90f` conflitos/format detection/money; `ce…` E2E rollback + fixes de blockers; commit final de docs. (`git log --oneline` tem a lista completa.)
+
+**LIVE (não reaplicar):** revoke_excess_table_privileges_v1, restore_rbac_helper_execute_v1, fix_digest_search_path_v1, financial_reversal_paths_v1, reconciliation_cases_write_hardening_v1.
+**NOT LIVE (preparadas, aplicar nesta ordem após autorização):**
+1. `20260919_fix_import_matching_uuid_aggregate_v1.sql` (matching + guard de candidatos) — CRÍTICA
+2. `20260919_import_apply_rls_v1.sql` — CRÍTICA
+3. `20260919_import_identity_case_normalization_v1.sql` — CRÍTICA (depende de 2 para o teste)
+4. `20260919_financial_read_rbac_v1.sql` — reduz leitura de `agent`; app já gateia por role.
+5. `20260919_rbac_helper_security_invoker_v1.sql` — remove o WARN do advisor.
+6. `20260919_import_batch_adapter_lineage_v1.sql` (substituta segura, schema `private`).
+7. `20260919_import_conflicts_v1.sql`.
+Após aplicar: rodar os harnesses rollback-only (todos terminam em RAISE EXCEPTION; passam se a mensagem começa com `RESULTS: ALL PASS`) e os contratos estruturais (`security-definer-inventory-contract.sql`, `financial-reversal-paths-contract.sql`, `integration-contract-v1-contract.sql`).
+
+**Testes:** `npm run test:unit` 65 passam; tsc limpo; eslint 0 erros; `next build --webpack` ok; SQL rollback-only: E2E financeiro 44/44, tenant A/B 19/19, conflitos 24/24, helper+lineage 32/32, reversão 57/57, reconciliation 10/10 (com as migrations preparadas executadas na mesma transação; nada persistiu).
+
+**Bugs/vulnerabilidades desta rodada:** ver `docs/audits/AUDIT-2026-09-19-E2E-LIVE-BLOCKERS.md` e `AUDIT-2026-09-19-SECURITY-DEFINER.md` (min(uuid); apply sem policy; identidade duplicada por caixa; forja de candidato/identidade por agent; leitura financeira aberta; definer exposto).
+
+**HUMAN GATES:** aplicar as 7 migrations; modelo multi-org do app (fail-closed com 2+ memberships); colunas de comissão em `proposal_commercial_snapshots`/`import_normalized_rows` (views por coluna); `product_table_external_identities` exige manager+ mas o RPC admite supervisor; identidade de teste para E2E de navegador; Leaked Password Protection; arquivo real BuscaContrato (aliases e fingerprint seguem PROVISÓRIOS/vazios). Bevicred adiada.
+
+**Não feito:** E2E de navegador; entidade Lead; integração outbound de submissão; UI para conflitos persistidos (o lote recalcula ao vivo); views por coluna.
+
+**Próximo ponto exato de retomada:** com as migrations 1–3 aplicadas, rodar o E2E rollback e habilitar a UI do lote a ler `import_conflicts`; depois views por coluna para comissão e seletor de organização multi-org.
