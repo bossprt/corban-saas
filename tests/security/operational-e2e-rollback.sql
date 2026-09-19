@@ -1,8 +1,7 @@
 -- Operational E2E, rollback-only: Lead -> Customer -> Simulation -> Proposal -> Esteira -> Integration Run (fake provider result)
 -- -> Evidence -> Financial Truth guard -> Reconciliation, attacked with every role. Proves that CRM / operational / provider
 -- success NEVER create financial truth by themselves.
--- Requires the LIVE closure-wave objects plus 20260921_integration_run_state_machine_v1 executed earlier in the same transaction
--- (the __MIG__ placeholder is replaced by the migration text when run from tooling; __MIG2__ = 20260921_operational_pipeline_write_hardening_v1). Ends with RAISE EXCEPTION; pass = 'RESULTS: ALL PASS'.
+-- Every migration it depends on is LIVE (through worker_governance_v1): run this file as is. Ends with RAISE EXCEPTION; pass = 'RESULTS: ALL PASS'.
 do $test$
 declare
  o1 uuid:=gen_random_uuid(); o2 uuid:=gen_random_uuid();
@@ -12,8 +11,6 @@ declare
  fe int; fc int; fp int; r text; k int; c record; fpr text:=repeat('a',64); t0 timestamptz:='2026-09-21 10:00:00+00';
  lead_b uuid;
 begin
- execute $d$__MIG__$d$;
- execute $d$__MIG2__$d$;
  create temp table t_res(label text, pass boolean) on commit drop;
  create function pg_temp.as_role(p_role text,p_uid uuid) returns void language plpgsql as $f$
  begin
@@ -112,7 +109,7 @@ begin
  perform pg_temp.expect_err('service_role',null,format($q$select * from public.claim_integration_run(%L,%L,'status',%L,%L,3,60,'{}'::jsonb,'c',now(),'local/e2e')$q$,o1,bind1,repeat('b',64),uAg),'actor_not_authorized','agent cannot start an integration run');
  perform pg_temp.expect_err('service_role',null,format($q$select * from public.claim_integration_run(%L,%L,'status',%L,%L,3,60,'{}'::jsonb,'c',now(),'local/e2e')$q$,o1,bind1,repeat('c',64),uB),'actor_not_authorized','tenant B user cannot start a run on tenant A binding');
  -- the provider SAYS the proposal is paid and that money arrived
- r:=pg_temp.run_as('service_role',null,format($q$select public.complete_integration_run(%L,%L,%L,'ext-e2e','[{"kind":"response_metadata","payload":{"status":"paid","commissionPaid":500,"note":"provider claims payment"},"sha256":"e2e1"}]'::jsonb)$q$,o1,c.run_id,c.claim_token));
+ r:=pg_temp.run_as('service_role',null,format($q$select public.complete_integration_run(%L,%L,%L,'ext-e2e','[{"kind":"response_metadata","payload":{"status":"paid","commission":999999,"approved":true,"note":"provider claims payment"},"sha256":"e2e1"}]'::jsonb)$q$,o1,c.run_id,c.claim_token));
  perform pg_temp.check_that(r='succeeded' and (select status='succeeded' from public.integration_runs where id=c.run_id),'provider success is recorded as a succeeded RUN with evidence');
  perform pg_temp.check_that((select status='digitization' from public.proposals_v2 where id=prop),'provider saying "paid" does NOT change the proposal status');
  perform pg_temp.check_that((select canonical_state='digitization_queue' from public.operational_cases where proposal_id=prop),'provider saying "paid" does NOT move the operational case');
@@ -170,6 +167,7 @@ begin
  -- ===== 9. Closing invariants =====
  perform pg_temp.check_that((select count(*) from public.financial_events)=fe,'END: the ledger is exactly as before the whole operational flow');
  perform pg_temp.check_that(not exists(select 1 from public.financial_reconciliation_cases where settled_amount>0 or reported_amount>0),'END: no reconciliation case has received or reported money');
+ perform pg_temp.check_that(not exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where p.prosecdef and n.nspname in ('public','private') and p.proname not in ('attach_import_batch_adapter','caller_role_in','commercial_route','import_row_evidence','lead_write','list_import_rows','bootstrap_organization_admin','get_user_organization_id')),'END: DEFINER inventory equals the reviewed list');
 
  perform pg_temp.check_that(not exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where p.prosecdef and n.nspname in ('public','private') and p.proname in ('claim_integration_run','complete_integration_run','fail_integration_run','cancel_integration_run','integration_content_has_secret','guard_integration_run_state','guard_integration_artifact_write','guard_operational_pipeline_write','send_proposal_to_digitization')),'END: none of the new/changed functions is SECURITY DEFINER');
 

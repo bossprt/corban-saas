@@ -1,5 +1,4 @@
--- Rollback-only contract for 20260921_integration_run_state_machine_v1.sql (NOT LIVE).
--- Execute the migration earlier in the SAME transaction (this file wraps it in EXECUTE via the __MIG__ placeholder when run from tooling).
+-- Rollback-only contract for 20260921_integration_run_state_machine_v1.sql (LIVE as integration_run_state_machine_v1; run this file as is).
 -- Ends with RAISE EXCEPTION so nothing persists; pass = message starting with 'RESULTS: ALL PASS'.
 -- Concurrency note: true parallel sessions cannot exist inside one transaction. The tests prove the serialization primitives
 -- (unique (tenant,binding,fingerprint), SELECT ... FOR UPDATE inside the claim, fencing token, lease takeover) by replaying the
@@ -13,7 +12,6 @@ declare
  t0 timestamptz:='2026-09-21 10:00:00+00'; c record; c2 record; r text; k int; fe int; fc int; runid uuid; tok uuid; tok2 uuid; run2 uuid;
  arts text:='[{"kind":"response_metadata","payload":{"status":"accepted"},"sha256":"h1"}]';
 begin
- execute $d$__MIG__$d$;
  create temp table t_res(label text, pass boolean) on commit drop;
  create function pg_temp.as_role(p_role text,p_uid uuid) returns void language plpgsql as $f$
  begin
@@ -103,6 +101,7 @@ begin
  perform pg_temp.expect_err('service_role',null,format($q$select * from public.claim_integration_run(%L,%L,'proposal_status',%L,%L,3,1,'{}'::jsonb,'c')$q$,o1,bA,f1,uS),'invalid_lease','lease bounded');
  perform pg_temp.expect_err('service_role',null,format($q$select * from public.claim_integration_run(%L,%L,'not_a_capability',%L,%L,3,60,'{}'::jsonb,'c')$q$,o1,bA,f1,uS),'capability unavailable','capability not declared by the adapter is refused');
  perform pg_temp.expect_err('service_role',null,format($q$select * from public.claim_integration_run(%L,%L,'proposal_status',%L,%L,3,60,'{"apiKey":"sk_live_abcdef123456"}'::jsonb,'c')$q$,o1,bA,f1,uS),'secret_like_content','request metadata carrying a secret is rejected by the database');
+ perform pg_temp.expect_err('service_role',null,format($q$select * from public.claim_integration_run(%L,%L,'proposal_status',%L,%L,3,60,'{}'::jsonb,'c',now(),'other/adapter')$q$,o1,bA,f1,uS),'adapter_mismatch','claim is refused when the binding belongs to a different adapter key');
  perform pg_temp.check_that((select count(*) from public.integration_runs)=0,'every rejected claim left no run behind');
 
  -- ===== happy path, idempotency, evidence =====

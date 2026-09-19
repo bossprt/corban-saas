@@ -1,5 +1,5 @@
--- Rollback-only contract for 20260922_worker_governance_v1.sql (NOT LIVE; requires the LIVE closure/integration/operational migrations).
--- __MIG__ is replaced by the migration text when run from tooling (executed first, in the same transaction). Ends with RAISE EXCEPTION;
+-- Rollback-only contract for 20260922_worker_governance_v1.sql. That migration is LIVE (worker_governance_v1): run this file as is.
+-- Ends with RAISE EXCEPTION;
 -- pass = 'RESULTS: ALL PASS'. Covers: esteira transition regression, proposals_v2 governance, customer timeline governance, enqueue /
 -- dispatch selection, lease + fencing, re-execution lineage, cancel, and "provider says paid" isolation from financial truth.
 do $test$
@@ -12,9 +12,8 @@ declare
  fe int; fc int; r text; k int; c record; c2 record; hb text; t0 timestamptz:='2026-09-22 10:00:00+00';
  fa text:=repeat('a',64); fb text:=repeat('b',64); fc_ text:=repeat('c',64); fd text:=repeat('d',64); fe_ text:=repeat('e',64); ff text:=repeat('f',64); f1 text:=repeat('1',64);
  dt uuid:=gen_random_uuid(); rid1 uuid; rid2 uuid; rid3 uuid; child record; tokA uuid; tokB uuid; cust2 uuid;
- arts text:='[{"kind":"response_metadata","payload":{"status":"paid","commissionPaid":500},"sha256":"w1"}]';
+ arts text:='[{"kind":"response_metadata","payload":{"status":"paid","commission":999999,"approved":true},"sha256":"w1"}]';
 begin
- execute $d$__MIG__$d$;
  create temp table t_res(label text, pass boolean) on commit drop;
  create function pg_temp.as_role(p_role text,p_uid uuid) returns void language plpgsql as $f$
  begin
@@ -111,15 +110,18 @@ begin
  for k in 1..4 loop
   perform pg_temp.expect_err('authenticated',(array[uAg,uS,uM,uAd])[k],format($q$update public.proposals_v2 set expected_commission_amount=999999 where id=%L$q$,prop),'proposal_write_requires_governed_rpc','no member role can rewrite proposal commission by direct UPDATE ('||k||')');
   perform pg_temp.expect_err('authenticated',(array[uAg,uS,uM,uAd])[k],format($q$update public.proposals_v2 set status='cancelled' where id=%L$q$,prop),'proposal_write_requires_governed_rpc','no member role can change proposal status by direct UPDATE ('||k||')');
+  perform pg_temp.expect_err('authenticated',(array[uAg,uS,uM,uAd])[k],format($q$update public.proposals_v2 set organization_id=%L where id=%L$q$,o2,prop),'proposal_write_requires_governed_rpc','no member role can move a proposal to another tenant ('||k||')');
+  perform pg_temp.expect_err('authenticated',(array[uAg,uS,uM,uAd])[k],format($q$update public.proposals_v2 set simulation_id=gen_random_uuid(),created_by=%L where id=%L$q$,uAg,prop),'proposal_write_requires_governed_rpc','no member role can repoint simulation or forge created_by ('||k||')');
+  perform pg_temp.expect_err('authenticated',(array[uAg,uS,uM,uAd])[k],'delete from public.proposals_v2','permission denied','no member role can DELETE proposals ('||k||')');
  end loop;
  perform pg_temp.expect_err('authenticated',uAd,format($q$update public.proposals_v2 set commercial_snapshot='{}' where id=%L$q$,prop),'proposal_write_requires_governed_rpc','commercial snapshot column cannot be rewritten directly');
  perform pg_temp.expect_err('authenticated',uS,format($q$update public.proposals_v2 set customer_id=%L where id=%L$q$,gen_random_uuid(),prop),'proposal_write_requires_governed_rpc','customer_id cannot be repointed directly');
  perform pg_temp.expect_err('authenticated',uS,format($q$insert into public.proposals_v2(organization_id,customer_id,product_table_version_id,customer_snapshot,commercial_snapshot,status) values(%L,%L,%L,'{}','{}','approved')$q$,o1,cust,pver),'proposal_write_requires_governed_rpc','direct INSERT of a proposal (even pre-approved) is impossible');
- perform pg_temp.expect_err('authenticated',uAd,'delete from public.proposals_v2','permission denied','no DELETE privilege on proposals');
  perform pg_temp.expect_err('service_role',null,format($q$update public.proposals_v2 set status='approved' where id=%L$q$,prop),'proposal_write_requires_governed_rpc','the worker role cannot write proposals directly either');
  perform pg_temp.check_that(pg_temp.u(uB,format($q$with u as (update public.proposals_v2 set status='cancelled' where id=%L returning 1) select count(*)::text from u$q$,prop))='0','tenant B update of a tenant A proposal by known UUID touches nothing');
  perform pg_temp.check_that(pg_temp.u(uN,format($q$with u as (update public.proposals_v2 set status='cancelled' where id=%L returning 1) select count(*)::text from u$q$,prop))='0' and pg_temp.u(uR,format($q$with u as (update public.proposals_v2 set status='cancelled' where id=%L returning 1) select count(*)::text from u$q$,prop))='0','no-membership and revoked users touch nothing');
  perform pg_temp.expect_err('anon',null,format($q$update public.proposals_v2 set status='cancelled' where id=%L$q$,prop),'permission denied','anon cannot write proposals');
+ perform pg_temp.expect_err('anon',null,'delete from public.proposals_v2','permission denied','anon cannot delete proposals');
  begin
   perform set_config('corban.proposal_rpc','on',true);
   update public.proposals_v2 set customer_id=gen_random_uuid() where id=prop;
@@ -136,10 +138,12 @@ begin
  perform pg_temp.u(uS,format($q$select public.send_proposal_to_digitization(%L)::text$q$,prop));
  select id into case_id from public.operational_cases where proposal_id=prop;
  perform pg_temp.check_that((select status='digitization' from public.proposals_v2 where id=prop),'send_proposal_to_digitization works with the proposal token');
+ perform pg_temp.check_that((select count(*) from public.operational_events where operational_case_id=case_id)=1,'send_proposal_to_digitization wrote its esteira event');
  perform pg_temp.check_that(pg_temp.u(uAg,format($q$select public.transition_operational_case(%L,'digitizing')$q$,case_id))='digitizing','agent can move a case to digitizing through the governed RPC');
  perform pg_temp.check_that((select canonical_state='digitizing' from public.operational_cases where id=case_id) and (select status='in_progress' from public.digitization_jobs where proposal_id=prop) and (select count(*) from public.operational_events where operational_case_id=case_id)=2,'transition updates case, job and history atomically');
  perform pg_temp.expect_err('authenticated',uAg,format($q$select public.transition_operational_case(%L,'approved')$q$,case_id),'invalid_operational_state_transition|operational_decision_requires_privileged_role','agent still cannot take a privileged decision');
  perform pg_temp.expect_err('authenticated',uS,format($q$select public.transition_operational_case(%L,'paid')$q$,case_id),'paid_requires_confirmed_financial_source','no RPC path to paid on the esteira');
+ perform pg_temp.expect_err('authenticated',uS,format($q$select public.transition_operational_case(%L,'digitization_queue')$q$,case_id),'invalid_operational_state_transition','backwards transition is invalid');
  perform pg_temp.expect_err('authenticated',uB,format($q$select public.transition_operational_case(%L,'submitted')$q$,case_id),'operational_case_not_found_or_forbidden','tenant B cannot transition a tenant A case by UUID');
  r:=pg_temp.u(uS,format($q$select public.transition_operational_case(%L,'submitted','synthetic-status')$q$,case_id));
  perform pg_temp.check_that(r='submitted' and (select status='submitted' from public.proposals_v2 where id=prop),'supervisor transition to submitted moves the proposal too');
@@ -149,6 +153,7 @@ begin
  -- ===== customer timeline governance =====
  for k in 1..4 loop
   perform pg_temp.expect_err('authenticated',(array[uAg,uS,uM,uAd])[k],format($q$insert into public.customer_timeline_events(organization_id,customer_id,event_type,source) values(%L,%L,'customer.paid','corban_os')$q$,o1,cust),'timeline_write_requires_governed_rpc','no member role can forge a timeline event ('||k||')');
+  perform pg_temp.expect_err('authenticated',(array[uAg,uS,uM,uAd])[k],format($q$insert into public.customer_timeline_events(organization_id,customer_id,event_type,source,actor_user_id) values(%L,%L,'proposal.approved','corban_os',%L)$q$,o1,cust,uAd),'timeline_write_requires_governed_rpc','no member role can forge a proposal event with a forged actor ('||k||')');
  end loop;
  perform pg_temp.expect_err('authenticated',uB,format($q$insert into public.customer_timeline_events(organization_id,customer_id,event_type,source) values(%L,%L,'x','corban_os')$q$,o1,cust),'timeline_write_requires_governed_rpc|row-level security','tenant B cannot write a timeline on a tenant A customer UUID');
  perform pg_temp.expect_err('authenticated',uB,format($q$insert into public.customer_timeline_events(organization_id,customer_id,event_type,source) values(%L,%L,'x','corban_os')$q$,o2,cust),'timeline_write_requires_governed_rpc|row-level security|violates foreign key','tenant B cannot attach an event to a foreign customer under its own org');
@@ -224,6 +229,7 @@ begin
  perform pg_temp.expect_err('service_role',null,format($q$select * from public.create_integration_reexecution(%L,%L,%L,'run again please, retry not allowed','c')$q$,o1,rid1,uM),'parent_not_reexecutable','a SUCCEEDED run cannot be re-executed');
  c:=pg_temp.enq(o1,b1,fd,uS);
  c2:=pg_temp.claim(o1,b1,fd,uS,t0);
+ perform pg_temp.expect_err('service_role',null,format($q$select public.cancel_integration_run(%L,%L,%L)$q$,o1,c.run_id,uM),'illegal_integration_run_transition','a RUNNING run cannot be cancelled (explicit)');
  perform pg_temp.svc(format($q$select public.fail_integration_run(%L,%L,%L,'timeout','x',true,30,%L)$q$,o1,c.run_id,c2.claim_token,t0));
  perform pg_temp.expect_err('service_role',null,format($q$select * from public.create_integration_reexecution(%L,%L,%L,'skip the governed backoff please','c')$q$,o1,c.run_id,uM),'parent_not_reexecutable','a still-retryable run must use RETRY, not re-execution');
  perform pg_temp.svc(format($q$select run_id::text||'|'||fingerprint||'|'||created::text from public.create_integration_reexecution(%L,%L,%L,'operator fixed the payload','ui-1')$q$,o1,rid2,uM));
@@ -245,6 +251,9 @@ begin
  perform pg_temp.expect_err('service_role',null,format($q$select public.cancel_integration_run(%L,%L,%L)$q$,o1,c.run_id,uS),'actor_not_authorized','supervisor cannot cancel');
  perform pg_temp.check_that(pg_temp.svc(format($q$select public.cancel_integration_run(%L,%L,%L)$q$,o1,c.run_id,uM))='cancelled' and pg_temp.disp(t0+interval '1 day') not like '%'||fe_||'%','manager cancels; a cancelled run is not dispatchable');
  perform pg_temp.check_that((select status='cancelled' and finished_at is not null from public.integration_runs where id=c.run_id),'cancellation is recorded on the run itself (auditable, not deleted)');
+ perform pg_temp.expect_err('service_role',null,format($q$select public.cancel_integration_run(%L,%L,%L)$q$,o1,c.run_id,uM),'illegal_integration_run_transition','cancelling twice is an explicit error, not silent');
+ perform pg_temp.expect_err('service_role',null,format($q$select public.cancel_integration_run(%L,%L,%L)$q$,o1,rid1,uM),'illegal_integration_run_transition','a SUCCEEDED run cannot be cancelled');
+ perform pg_temp.expect_err('service_role',null,format($q$select public.cancel_integration_run(%L,%L,%L)$q$,o1,rid2,uM),'illegal_integration_run_transition','a terminally FAILED run cannot be cancelled to hide it');
  perform pg_temp.check_that(pg_temp.svc(format($q$select created::text from public.create_integration_reexecution(%L,%L,%L,'cancelled by mistake, run it again','ui-2')$q$,o1,c.run_id,uAd))='true','a cancelled run can only be superseded by a re-execution, never reopened');
 
  -- ===== read RBAC over lineage columns / no financial dependency =====
