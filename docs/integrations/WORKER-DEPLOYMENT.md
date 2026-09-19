@@ -36,3 +36,29 @@ The domain never depends on a scheduler: anything that can send `POST /api/integ
 | Observability | one sanitized JSON event per step (`correlationId`, `runId`, provider, adapter, capability, attempt, duration, outcome, error code) | metrics derivable with `computeRunMetrics` |
 
 Not activated: no cron entry, no `INTEGRATION_WORKER_SECRET`, no external service, no provider credentials.
+
+## Activation runbook (exact order; nothing here was executed)
+1. Confirm the database has `20260923_worker_dispatch_hardening_v1` (it is LIVE). The code also tolerates the older 2-argument dispatch function, but scoped dispatch needs the new one.
+2. Generate a random secret of 32+ characters outside the repository. Store it ONLY in the hosting provider's server-side environment as `INTEGRATION_WORKER_SECRET`. Never prefix it with `NEXT_PUBLIC_`, never put it in the repository, chat or logs.
+3. Keep `CORBAN_ALLOW_LOCAL_PROVIDERS` unset in production. The fake provider then cannot run there, whatever else is set.
+4. Deploy. Open `/app/integracoes` as a supervisor: "Prontidão do processamento" must show the secret as configured. It shows booleans only.
+5. Smoke test from a trusted terminal (expects HTTP 200 and counts only; the first call processes nothing if the queue is empty):
+   `curl -sS -X POST https://<host>/api/integrations/dispatch -H "Authorization: Bearer $INTEGRATION_WORKER_SECRET"`
+   Without the header the answer must be 403; without the secret configured, 503.
+6. Choose ONE scheduler and point it at that URL (every 1-5 minutes). Vercel Cron, n8n, GitHub Actions and a queue consumer are equivalent because the domain only sees the HTTP call. Give it the same header.
+7. Watch the sanitized JSON events (`correlationId`, `runId`, provider, adapter, outcome). Nothing in them is secret.
+8. To stop everything at once: remove the secret (the route answers 503) or pause the scheduler. Queued runs stay queued; nothing is lost.
+
+Uptime monitors use `GET /api/health` (application + database reachability only). Provider or worker state is business readiness and is shown only to signed-in supervisors.
+
+## Failure modes (behaviour proved by the worker hardening tests and SQL harnesses)
+| Situation | What happens |
+|---|---|
+| Scheduler never calls | Runs stay queued/eligible; the operator sees them in `/app/integracoes`. Nothing is lost or duplicated. |
+| Scheduler calls twice / two instances at once | `claim` serializes per run (row lock + lease + fencing token). One executes, the other sees `in_progress`. |
+| HTTP request times out or the process is killed | The lease expires (60 s); the next pass takes the run over and the lost attempt is recorded as `lease_expired` in the immutable history. |
+| Provider timeout | The run is failed as retryable with backoff; attempts are bounded; after the last attempt it is terminal and waits for a human (re-execution creates a NEW run). |
+| Provider unavailable / hostile error text | Same as timeout; secret-looking messages are replaced by fixed markers so the run never gets stuck. |
+| Database briefly unavailable | The pass answers 500 `dispatch_failed` (no details); the next pass continues from the persisted state. |
+| Wrong secret / malformed header / empty | 403. Missing or short secret on the server: 503. No value is ever logged. |
+| Backlog larger than one pass | At most 10 runs per call (hard cap 25), oldest eligible first; the rest drains over the next passes. Runs of adapters the worker cannot execute never occupy a slot. |

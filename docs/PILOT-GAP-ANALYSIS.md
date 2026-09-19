@@ -1,30 +1,43 @@
-# Pilot gap analysis (2026-09-23)
+# Pilot gap analysis (revalidated 2026-09-24)
 
-Method: routes, RPCs, harness results and live advisors were compared with what a promotora needs on day one. Nothing below is guessed from marketing; each line is something the code or the database shows.
+Method: every P0 of the 2026-09-23 version was re-proved against the code, the LIVE database and the harnesses. Nothing here is guessed; each line names its evidence.
 
-## What works end to end today (proved by rollback-only harnesses on the live schema)
-Lead → cliente → simulação → proposta → documentos → esteira (transições governadas) → integração com run/worker/fencing/retry/cancel/reexecução → evidência → import/matching → verdade financeira somente por evidência governada → conciliação. Isolamento de tenant, RBAC e o firewall financeiro (provider dizendo "paid" não gera receita) foram atacados por todos os papéis.
+Classification: RESOLVED (code + tests, waiting only for a NOT LIVE migration to be applied), REAL P0, EXTERNAL GATE, PRODUCT DECISION, NOT P0, STALE.
 
-## P0 — impede o piloto
-| # | Gap | Por que | Estado |
+## What works end to end (rollback-only harnesses on the live schema)
+Invite -> accept -> lead -> customer -> simulation -> proposal -> documents -> esteira -> integration run (worker, lease, fencing, retry, cancel, re-execution) -> evidence -> import/matching -> financial truth only through governed evidence -> reconciliation. Tenant isolation, RBAC, revocation and the financial firewall (a provider saying "paid" / commission 999999 creates no financial fact) were attacked with every role. Pilot E2E: `tests/security/pilot-e2e-rollback.sql` (45 checks).
+
+## P0 revalidation
+| # | Gap (2026-09-23) | Now | Evidence |
 |---|---|---|---|
-| P0-1 | Aplicar `20260923_worker_dispatch_hardening_v1` e `20260924_confirm_paid_replay_v1` | o worker novo chama a assinatura nova de dispatch; replay de PAID falha hoje | HUMAN GATE (revisão ChatGPT) |
-| P0-2 | Convite / gestão de usuários da organização | só existe criação de organização por administrador de plataforma (`/api/admin/organizations`); não há tela para o dono da promotora adicionar agentes/supervisores nem revogar acesso | precisa decisão (provedor de e-mail, política de senha) → HUMAN GATE |
-| P0-3 | Alguém acionar o worker | a rota existe, está desabilitada e não é agendada | HUMAN GATE (segredo + agendador) |
-| P0-4 | Decisão: agent vê comissão? | `simulations.expected_commission_amount` e `proposals_v2.expected_commission_amount` são legíveis por agent; a regra de negócio não foi decidida | decisão comercial |
+| P0-1 | Apply worker_dispatch_hardening_v1 + confirm_paid_replay_v1 | STALE - both are LIVE (20260919140756, 20260919140800) | ChatGPT handoff 38fb59e; live advisors/inventory checked 2026-09-24 |
+| P0-2 | Team management: invite, roles, revocation | RESOLVED in code; needs `20260925_team_access_lifecycle_v1` applied (NOT LIVE) | `team-access-rollback.sql` 131/131, `pilot-e2e-rollback.sql` 45/45, unit `team-access.test.ts`; page `/app/equipe` |
+| P0-2b | Invited person could not set a password (no `/auth/*` handler existed, so the existing platform invite e-mail led nowhere) | RESOLVED in code | `/auth/definir-senha`, `/auth/confirm`; first-login acceptance in `/access-pending` |
+| P0-3 | Someone must trigger the worker | EXTERNAL GATE (secret + scheduler are Owner decisions); runbook + readiness panel ready | `docs/integrations/WORKER-DEPLOYMENT.md`, readiness in `/app/integracoes` |
+| P0-4 | Should an agent see expected commission? | PRODUCT DECISION. App side is centralised and fail-closed in `canViewCommission` (supervisor+). DB side unchanged: see "Commission visibility" below | `rbac.ts`, unit test pins every screen to the function |
+| new | Auth e-mail configuration | EXTERNAL GATE: Site URL / Redirect URLs must allow `<origin>/auth/definir-senha`; SMTP sender; optional token-hash template | see "External dependencies" |
 
-## P1 — logo depois do piloto
-- Escrita de `simulations` ainda é INSERT/UPDATE direto por qualquer membro (o app faz `insert`); mesmo padrão de governança já aplicado a proposals (RPC + token).
-- Primeiro provider real (2Tech aguarda arquivo real; homologação em `docs/integrations/2TECH-BUSCACONTRATO-HOMOLOGATION.md`).
-- Tela de histórico de tentativas por execução (os diagnósticos existem no banco após a migration 0923).
-- Notificação ao operador quando uma execução vira "aguardando ação humana".
-- Leaked Password Protection (configuração do Auth).
+## Commission visibility (pending business decision)
+Today: supervisor, manager and admin see commission/financial data in the app; agents do not (dashboard, financeiro, proposal financial events, import commission columns all call `canViewCommission`).
+Known DB fact: `simulations.expected_commission_amount` and `proposals_v2.expected_commission_amount` are column values readable by any member of the tenant through the API (RLS is per row, not per column). The app does not display them to agents, but an agent calling the API directly could read them. Closing that needs a NEW migration (column privileges or a view) AFTER the Owner decides; it was not done here because it would change data access without that decision.
+To change the policy: edit `canViewCommission` (one line) and, if agents must NOT read the column, add the migration above.
 
-## P2 — melhorias
-- Métricas persistidas (hoje derivadas do stream de eventos), painel de saúde do worker.
-- Cancelamento de execução em andamento (hoje explicitamente recusado; exigiria cooperação do provider).
-- Prioridade de execução (o domínio ainda não a define; nenhuma foi inventada).
-- Limpeza de índices não usados: só depois de haver tráfego real.
+## P1 - right after the pilot starts
+- Simulations are written by direct INSERT/UPDATE from any member; same governed-RPC treatment already applied to proposals.
+- First real provider (2Tech waits for a real file; Bevicred deferred).
+- Attempt-history screen per execution (diagnostics exist in the database since worker_dispatch_hardening_v1).
+- Operator notification when a run needs a human.
+- "Forgot password" screen (recovery already lands on `/auth/definir-senha`; the trigger button on the login page is missing).
+- Leaked Password Protection (Auth setting).
+- Invitation e-mail for an address that already has an account (it sees the access after login; no e-mail is sent).
+- Row-level `platform_administrators` UI (bootstrap of a NEW organization stays a platform action, see below).
 
-## Implementado nesta onda por ser P0 independente e reversível
-Mensagens de erro classificadas na esteira e nas integrações (o operador distingue transição inválida, falta de permissão, estado que mudou e erro inesperado), estados de carregando/erro/indisponível, linhagem visual de reexecução.
+## P2
+Persisted worker metrics; cancellation of in-flight runs; execution priority; unused-index cleanup once real traffic exists; bulk member import.
+
+## Platform bootstrap vs organization administration
+- Platform bootstrap (creating an organization and its first admin): `POST /api/admin/organizations`, platform administrators only. Not self-service and not needed for the pilot: the pilot organization already exists.
+- Organization administration (invite, role, deactivate, audit): `/app/equipe`, admin and manager (manager limited to supervisor/agent). Governed by RPCs, guard triggers and an append-only audit table.
+
+## Implemented in this wave because it is independent and reversible
+Team page, invitation acceptance, password setup, access-pending recovery paths (verify again, sign out), role-aware menu, pilot dashboard with honest "indisponível" states, LOCAL / TESTE labelling of fake providers, worker readiness panel, `/api/health`.

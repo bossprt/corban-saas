@@ -526,3 +526,12 @@ Post-apply verification:
 - Performance Advisor: only INFO (unused indexes on near-empty DB + Auth fixed connection allocation); no new actionable warning.
 
 Next P0 work is product/deployment rather than these migrations: organization user invitation/access lifecycle, worker secret+scheduler activation, and commercial decision on agent commission visibility. Real 2Tech remains blocked on a real file; Bevicred remains deferred.
+
+
+## Pilot readiness wave - handoff 24/09/2026 (para o ChatGPT)
+**LIVE (nao reaplicar):** tudo ate 20260924, incluindo worker_dispatch_hardening_v1 e confirm_paid_replay_v1.
+**NOT LIVE - revisar e aplicar:** `supabase/migrations/20260925_team_access_lifecycle_v1.sql`. Cria `organization_invitations`, `organization_admin_events`, policies de time em `organization_memberships`, revoga INSERT/DELETE e restringe UPDATE a `role,status,updated_at` para `authenticated`, guard triggers e 5 RPCs INVOKER (`create_organization_invitation`, `revoke_organization_invitation`, `set_member_role`, `set_member_status` para authenticated; `accept_organization_invitations` so service_role) + `can_manage_member_role`. Sem SECURITY DEFINER novo. Harnesses: `tests/security/team-access-rollback.sql` (rodar o texto da migration antes, mesma transacao; 131 checagens) e `tests/security/pilot-e2e-rollback.sql` (45 checagens). Depois de aplicada, rodar ambos so com o bloco DO (modo LIVE).
+**Antes de convidar alguem em producao (gates externos):** Supabase Auth > URL Configuration: Site URL e Redirect URL `<origin>/auth/definir-senha`; SMTP proprio; opcional template com `token_hash` apontando para `/auth/confirm`. Segredo do worker e agendador: `docs/integrations/WORKER-DEPLOYMENT.md`.
+**Decisao humana pendente:** o agente pode ver comissao esperada? App: fail-closed centralizado em `canViewCommission`. Banco: colunas `expected_commission_amount` legiveis por qualquer membro (RLS por linha); fechar exige nova migration depois da decisao.
+**Testes locais:** unit 171/171, tsc 0, eslint 0 warnings, build ok.
+**Retomada exata:** aplicar a migration, rodar os dois harnesses em modo LIVE, testar convite real com um e-mail do Owner em ambiente com SMTP configurado, e so entao ativar segredo+agendador do worker.

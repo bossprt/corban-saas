@@ -230,3 +230,11 @@ Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`)
 
 ### Segurança — 23/09/2026 (PREPARADAS, NÃO APLICADAS)
 `20260923_worker_dispatch_hardening_v1`, `20260924_confirm_paid_replay_v1`. Achados: starvation de dispatch por adapters irrecuperáveis; histórico de tentativas apagado no retry; mensagem de falha "secreta" travava o run; replay de PAID não idempotente.
+
+### Adicionado - 24/09/2026 (onda de prontidao para piloto)
+- Equipe (`/app/equipe`): convidar, reenviar/cancelar convite, alterar perfil, desativar/reativar acesso, trilha de auditoria. Fluxo de convite completo: `/auth/definir-senha`, `/auth/confirm`, aceite no `/access-pending` e `/organizacao`.
+- Menu por perfil, dashboard piloto (leads, integracoes com atencao, conciliacoes pendentes, estados `indisponivel`), politica central `canViewCommission`, rotulo `LOCAL / TESTE`, painel de prontidao do worker, `GET /api/health`.
+- Testes: `team-access-rollback.sql` (131), `pilot-e2e-rollback.sql` (45), unit 171. Runbook de ativacao e modos de falha do worker/scheduler em `docs/integrations/WORKER-DEPLOYMENT.md`.
+
+### Seguranca - 24/09/2026 (PREPARADA, NAO APLICADA)
+`20260925_team_access_lifecycle_v1`. Achado: nao havia caminho governado para gerir equipe e o e-mail de convite nao tinha handler no app.

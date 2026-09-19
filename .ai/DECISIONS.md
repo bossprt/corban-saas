@@ -274,3 +274,13 @@
 - **Decisão 4:** o fake local só resolve com `NODE_ENV` em {development,test} E `CORBAN_ALLOW_LOCAL_PROVIDERS=1` (allow-list; NODE_ENV ausente/desconhecido não basta).
 - **Decisão 5:** o endpoint de dispatch é uma função pura (`handleDispatchRequest`): 503 sem segredo forte, 403 para credencial errada/malformada, corpo só com contagens; esquema Bearer case-insensitive, credencial exata.
 - **Decisão 6:** replay de `confirm_proposal_paid_from_import` devolve a mesma evidência (idempotente) em vez de errar com `proposal_must_be_approved`.
+
+## ADR-0020 - Governed team access lifecycle (invitations, role/status changes, admin audit)
+- **Data:** 24/09/2026 - **Status:** aceita; `20260925_team_access_lifecycle_v1` PREPARADA, NAO aplicada.
+- **Decisao 1:** identidade continua sendo Supabase Auth + `organization_memberships`. Nao existe segundo sistema de identidade nem token de convite proprio: o e-mail/link e emitido e verificado pelo Auth.
+- **Decisao 2:** toda escrita de membership/convite/auditoria passa por RPC SECURITY INVOKER + guard trigger (`corban.membership_rpc`). O authenticated perde INSERT/DELETE em memberships e so atualiza `role,status,updated_at`. Nenhuma funcao SECURITY DEFINER nova (baseline 8 mantido).
+- **Decisao 3 (politica):** admin gerencia todos; gerente so supervisor/agente (no perfil atual E no novo); ninguem altera o proprio acesso; supervisor/agente nada. Perder o ultimo admin e estruturalmente impossivel (so admin toca admin, nunca a si mesmo).
+- **Decisao 4:** aceite de convite e service_role-only, usa a identidade validada pelo Auth (`getUser`, `email_confirmed_at`). Convite nunca altera silenciosamente o perfil de um membro ativo; membro desativado e reativado com o perfil do convite (resultado explicito).
+- **Decisao 5:** auditoria append-only (`organization_admin_events`), sem token/senha/segredo. Limite de 20 convites/hora/ator no banco.
+- **Decisao 6:** visibilidade de comissao continua fail-closed (supervisor+) e centralizada em `canViewCommission`; a decisao comercial sobre o agente segue PENDENTE do Owner (ver gap analysis).
+- **Decisao 7:** `/api/health` publico so devolve app+banco; prontidao de worker/provedor e visivel apenas a supervisores logados. Providers locais sempre rotulados `LOCAL / TESTE`.

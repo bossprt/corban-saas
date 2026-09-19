@@ -175,3 +175,11 @@ A primeira conclui as transições controladas da Mesa sem permitir marcação m
 - NOT LIVE (preparadas, harness rollback-only verde): `20260923_worker_dispatch_hardening_v1` (histórico de tentativas, dispatch escopado, mensagem hostil não trava) e `20260924_confirm_paid_replay_v1` (replay idempotente de PAID, 18 checagens).
 - IMPLEMENTED (código, ativa-se sozinho após as migrations): despacho por adapter, orçamento de tempo, histórico e linhagem na UI, mensagens de erro classificadas em /app/operacao e /app/integracoes.
 - BLOCKED: 2Tech (arquivo real). DEFERRED: Bevicred. HUMAN GATE: aplicar as 2 migrations; segredo + agendador do worker; regra de comissão visível ao agent.
+
+
+## 18. Pilot readiness wave - 24/09/2026
+- LIVE: tudo ate `20260924_confirm_paid_replay_v1` (worker_dispatch_hardening_v1 e confirm_paid_replay_v1 aplicadas pelo ChatGPT). Regressao LIVE rerodada nesta onda: dispatch hardening 24/24 sem prelude; inventario SECURITY DEFINER = 8; advisors 0 WARN/0 ERROR; zero residuo.
+- NOT LIVE (preparada, harness rollback-only 131/131 + E2E de piloto 45/45): `20260925_team_access_lifecycle_v1` (convites, RPCs de papel/status, auditoria, grants/guard de memberships).
+- IMPLEMENTED (codigo, dorme ate a migration): `/app/equipe`, aceite de convite, `/auth/definir-senha`, `/auth/confirm`.
+- IMPLEMENTED (ativo): menu por perfil, dashboard piloto, `canViewCommission`, rotulo LOCAL/TESTE, painel de prontidao, `/api/health`.
+- EXTERNAL GATES: Auth Site URL/Redirect URLs + SMTP; segredo e agendador do worker. PRODUCT DECISION: comissao visivel ao agente. BLOCKED: 2Tech (arquivo real). DEFERRED: Bevicred.
