@@ -12,7 +12,7 @@ declare
  pA uuid:=gen_random_uuid(); pB uuid:=gen_random_uuid();
  sc uuid:=gen_random_uuid(); sp uuid:=gen_random_uuid(); so uuid:=gen_random_uuid(); ch uuid:=gen_random_uuid();
  b_c text; b_p text; b_o text; b_dup text; n_c uuid; n_p uuid; n_o uuid; c_c uuid; c_p uuid; c_o uuid; d_c uuid; d_p uuid; d_o uuid;
- ev_rep text; ev_pay text; ev_rep2 text; r text; k int; case_id uuid; m text;
+ ev_rep text; ev_pay text; ev_rep2 text; r text; k int; case_id uuid; m text; uM uuid:=gen_random_uuid(); uR uuid:=gen_random_uuid(); s2b uuid:=gen_random_uuid(); bM1 text; bM2 text; cu1 uuid; cu2 uuid;
 begin
  create temp table t_res(label text, pass boolean) on commit drop;
  create function pg_temp.as_user(p_uid uuid) returns void language plpgsql as $f$
@@ -46,9 +46,11 @@ begin
  begin insert into t_res values(label,coalesce(cond,false)); end $f$;
 
  -- ---------- synthetic fixtures ----------
- insert into auth.users(id) values(uS),(uA),(uB);
+ insert into auth.users(id) values(uS),(uA),(uB),(uM),(uR);
  insert into public.organizations(id,name,document) values(o1,'E2E-A','doc-'||o1),(o2,'E2E-B','doc-'||o2);
  insert into public.organization_memberships(organization_id,user_id,role) values(o1,uS,'supervisor'),(o1,uA,'agent'),(o2,uB,'admin');
+ insert into public.organization_memberships(organization_id,user_id,role,status) values(o1,uM,'supervisor','active'),(o2,uM,'admin','active'),(o1,uR,'admin','revoked');
+ insert into public.import_sources(id,organization_id,name,source_kind) values(s2b,o2,'src-b','manual');
  insert into public.import_sources(id,organization_id,name,source_kind,financial_semantic) values
   (sc,o1,'commission statement','bank','commission_statement'),(sp,o1,'payment statement','bank','payment_statement'),(so,o1,'table offer','bank','commercial_offer');
  set local session_replication_role='replica';
@@ -144,9 +146,43 @@ begin
  perform pg_temp.expect_err(uS,$q$update public.financial_events set amount=1$q$,'permission denied','ledger cannot be updated by members (no UPDATE privilege)');
  perform pg_temp.expect_err(uA,format($q$insert into public.import_match_candidates(organization_id,normalized_row_id,proposal_id,match_strength,match_basis,status) values(%L,%L,%L,'exact','{}','suggested')$q$,o1,n_c,pA),'match_candidate_requires_governed_rpc|row-level security','agent cannot forge an exact match candidate');
  perform pg_temp.expect_err(uA,format($q$insert into public.proposal_external_identities(organization_id,proposal_id,institution_key,external_proposal_number) values(%L,%L,'daycoval','999')$q$,o1,pA),'row-level security','agent cannot bind an external proposal identity');
+
+ -- ===== column security (20260920_column_security_and_tenant_derivation_v1) =====
+ perform pg_temp.expect_err(uA,'select commission_upfront from public.import_normalized_rows','permission denied','agent cannot read commission columns of import rows');
+ perform pg_temp.expect_err(uA,'select normalized_payload from public.import_normalized_rows','permission denied','agent cannot read the economic payload of import rows');
+ perform pg_temp.expect_err(uA,'select * from public.import_normalized_rows','permission denied','select * on import rows is denied for agent (restricted columns)');
+ perform pg_temp.check_that(pg_temp.run_as(uA,'select count(*)::text from (select id,record_kind,bank_key,external_proposal_number,term,rate from public.import_normalized_rows) t')::int>=1,'agent still reads operational import columns');
+ perform pg_temp.check_that(pg_temp.run_as(uA,format($q$select count(*)::text from public.list_import_rows(%L) where amount is not null or normalized_payload is not null or commission_upfront is not null$q$,b_c::uuid))='0' and pg_temp.run_as(uA,format($q$select count(*)::text from public.list_import_rows(%L)$q$,b_c::uuid))::int>=1,'list_import_rows masks economics for agent');
+ perform pg_temp.check_that(pg_temp.run_as(uS,format($q$select max(amount)::text from public.list_import_rows(%L)$q$,b_c::uuid))::numeric=120,'list_import_rows returns economics to supervisor');
+ perform pg_temp.expect_err(uB,format($q$select * from public.list_import_rows(%L)$q$,b_c::uuid),'batch_not_found_or_forbidden','tenant B cannot list tenant A import rows');
+ perform pg_temp.expect_err(uR,format($q$select * from public.list_import_rows(%L)$q$,b_c::uuid),'batch_not_found_or_forbidden','revoked membership cannot list import rows');
+ perform pg_temp.expect_err(uA,'select snapshot from public.proposal_commercial_snapshots','permission denied','agent cannot read the commercial snapshot economics');
+ perform pg_temp.expect_err(uA,'select commission_rule_version_id from public.proposal_commercial_snapshots','permission denied','agent cannot read commission rule ids');
+ perform pg_temp.check_that(pg_temp.run_as(uA,'select count(*)::text from (select proposal_id,channel_id from public.proposal_commercial_snapshots) t')='1','agent reads operational snapshot columns');
+ perform pg_temp.expect_err(uA,format($q$select * from public.get_commercial_route(%L)$q$,pA),'forbidden','agent cannot get the commercial route economics');
+ perform pg_temp.expect_err(uB,format($q$select * from public.get_commercial_route(%L)$q$,pA),'forbidden','tenant B cannot get tenant A route economics');
+ perform pg_temp.check_that(pg_temp.run_as(uS,format($q$select (snapshot->>'calculation_base_amount') from public.get_commercial_route(%L)$q$,pA))='1000','supervisor reads the frozen route economics');
+ -- ===== multi-organization user: tenant comes from the resource, never arbitrary =====
+ bM1:=pg_temp.run_as(uM,format($q$select public.ingest_normalized_import_batch(%L,'m1.csv',repeat('e',64),'text/csv','p','1','[{"rowNumber":1,"rawPayload":{"x":1},"normalized":{"recordKind":"other","normalizedPayload":{}}}]'::jsonb)::text$q$,sc));
+ bM2:=pg_temp.run_as(uM,format($q$select public.ingest_normalized_import_batch(%L,'m2.csv',repeat('f',64),'text/csv','p','1','[{"rowNumber":1,"rawPayload":{"x":2},"normalized":{"recordKind":"other","normalizedPayload":{}}}]'::jsonb)::text$q$,s2b));
+ perform pg_temp.check_that((select organization_id from public.import_batches where id=bM1::uuid)=o1 and (select organization_id from public.import_batches where id=bM2::uuid)=o2,'multi-org user: each batch lands in the organization of ITS source');
+ perform pg_temp.expect_err(uR,format($q$select public.ingest_normalized_import_batch(%L,'r.csv',repeat('9',64),'text/csv','p','1','[{"rowNumber":1,"rawPayload":{},"normalized":{"recordKind":"other","normalizedPayload":{}}}]'::jsonb)$q$,sc),'source_not_found','revoked membership cannot ingest');
+ cu1:=pg_temp.run_as(uM,format($q$select public.create_customer_with_timeline(%L::uuid,'Multi A','11111111111')::text$q$,o1))::uuid;
+ cu2:=pg_temp.run_as(uM,format($q$select public.create_customer_with_timeline(%L::uuid,'Multi B','22222222222')::text$q$,o2))::uuid;
+ perform pg_temp.check_that((select organization_id from public.clients where id=cu1)=o1 and (select organization_id from public.clients where id=cu2)=o2,'explicit organization decides where the customer is created');
+ perform pg_temp.expect_err(uM,$q$select public.create_customer_with_timeline('Ambiguous','33333333333')$q$,'organization_required','legacy customer RPC refuses when the user has 2+ memberships');
+ perform pg_temp.expect_err(uB,format($q$select public.create_customer_with_timeline(%L::uuid,'Cross','44444444444')$q$,o1),'active_membership_required','cannot create a customer in a foreign organization');
+ perform pg_temp.expect_err(uR,format($q$select public.create_customer_with_timeline(%L::uuid,'Revoked','55555555555')$q$,o1),'active_membership_required','revoked membership cannot create customers');
+ perform pg_temp.check_that(pg_temp.run_as(uA,$q$select public.create_customer_with_timeline('Single','66666666666')::text$q$) is not null,'legacy customer RPC still works for a single-membership user');
+ perform pg_temp.expect_err(uM,format($q$select public.create_and_publish_commission_rule(%L,%L,'upfront',1,null,null,'gross',now(),null)$q$,ch,gen_random_uuid()),'channel_not_found','multi-org user is only supervisor in the channel organization: manager-only rule publishing is refused there');
+ perform pg_temp.expect_err(uS,format($q$select public.create_and_publish_commission_rule(%L,%L,'upfront',1,null,null,'gross',now(),null)$q$,ch,gen_random_uuid()),'channel_not_found','supervisor cannot publish rules (manager+ only)');
+ perform pg_temp.check_that(pg_get_functiondef('public.apply_approved_import_match'::regproc) like '%table_identity_requires_manager%','table identities require manager+ (same rule as the RLS policy)');
  perform pg_temp.check_that(not exists(select 1 from public.financial_reconciliation_cases where expected_amount<0 or reported_amount<0 or settled_amount<0),'no negative bucket anywhere');
 
  select string_agg(case when pass then 'ok   ' else 'FAIL ' end||label,E'\n' order by pass,label),count(*) filter (where not pass) into r,k from t_res;
  raise exception 'RESULTS: %
 %',case when k=0 then 'ALL PASS ('||(select count(*) from t_res)||' checks)' else k||' FAILED' end,r;
 end $test$;
+
+-- Regression (found by this harness): private readers must treat a NULL role as forbidden. `NULL not in (...)` is NULL, which
+-- silently let tenant B call get_commercial_route / import_row_evidence for tenant A. Fixed with coalesce(role,'').
