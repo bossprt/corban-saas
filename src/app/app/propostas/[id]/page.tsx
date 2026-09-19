@@ -18,7 +18,7 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
 
   if (!proposal) notFound()
 
-  const [{ data: requirements }, { data: job }, { data: operationalCase }, { data: customerDocuments }, { data: externalIds }, { data: commercialRoute }, { data: financialEventsRaw }] = await Promise.all([
+  const [{ data: requirements }, { data: job }, { data: operationalCase }, { data: customerDocuments }, { data: externalIds }, { data: commercialRouteRaw }, { data: financialEventsRaw }] = await Promise.all([
     supabase.from('proposal_document_requirements')
       .select('id,document_type_id,label_snapshot,required_snapshot,status,exception_reason')
       .eq('proposal_id', id).order('created_at'),
@@ -32,10 +32,17 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
       .select('id,document_type_id,original_file_name,version,status')
       .eq('customer_id', proposal.customer_id).eq('status', 'active').order('created_at', { ascending: false }),
     supabase.from('proposal_external_identities').select('institution_key,external_proposal_number,source,channel_id,first_seen_at').eq('proposal_id', id).order('first_seen_at'),
-    supabase.from('proposal_commercial_snapshots').select('channel_id,producer_entity_id,payer_entity_id,commission_rule_version_id,split_rule_version_id,snapshot,created_at').eq('proposal_id', id).maybeSingle(),
+    atLeast(membership.role,'supervisor')
+      ? supabase.rpc('get_commercial_route',{p_proposal_id:id}).maybeSingle().then(async r => r.error
+        // RPC absent (migration not applied yet) or refused: operational columns only, valid before and after the migration
+        ? supabase.from('proposal_commercial_snapshots').select('channel_id,producer_entity_id,payer_entity_id,created_at').eq('proposal_id', id).maybeSingle()
+        : r)
+      : supabase.from('proposal_commercial_snapshots').select('channel_id,producer_entity_id,payer_entity_id,created_at').eq('proposal_id', id).maybeSingle(),
     supabase.from('financial_events').select('id,event_type,component_type,amount,currency,created_at').eq('proposal_id',id).order('created_at',{ascending:false}),
   ])
 
+  type CommercialRoute = { channel_id: string | null; producer_entity_id: string | null; payer_entity_id: string | null; commission_rule_version_id?: string | null; split_rule_version_id?: string | null; snapshot?: unknown } | null
+  const commercialRoute = commercialRouteRaw as CommercialRoute
   // Financial facts expose commission economics: only supervisor+ roles see them (server-side gate on top of RLS).
   const financialEvents = atLeast(membership.role,'supervisor') ? financialEventsRaw : []
   const customer = (proposal.customer_snapshot ?? {}) as Record<string, unknown>

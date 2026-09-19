@@ -6,6 +6,8 @@ import type { NormalizedImportRow } from '@/lib/imports/contract'
 import { applyApprovedImportMatch, decideImportCandidate, publishApprovedImportFinancialFact, confirmPaidFromImport, resolveImportConflict } from './actions'
 import { atLeast } from '@/lib/rbac'
 
+type ImportRow={id:string;raw_row_id:string;batch_id:string;source_id:string;row_number:number;normalization_version:string|null;normalized_payload:Record<string,unknown>|null;record_kind:string;bank_key:string|null;external_proposal_number:string|null;producer_tax_id:string|null;external_table_code:string|null;external_table_name:string|null;operation_type:string|null;term:number|null;rate:number|null;commission_upfront:number|null;commission_deferred:number|null;amount:number|null}
+
 export default async function ImportBatchPage({params}:{params:Promise<{id:string}>}){
  const {id}=await params
  const {supabase,membership}=await requireAppContext()
@@ -13,24 +15,30 @@ export default async function ImportBatchPage({params}:{params:Promise<{id:strin
  if(!batch)notFound()
  const {data:source}=await supabase.from('import_sources').select('financial_semantic').eq('id',batch.source_id).maybeSingle()
  const {data:adapter}=batch.adapter_id?await supabase.from('integration_adapters').select('adapter_key,provider_key,transport,contract_version').eq('id',batch.adapter_id).maybeSingle():{data:null}
- const {data:rows}=await supabase.from('import_normalized_rows').select('id,raw_row_id,normalization_version,normalized_payload,record_kind,bank_key,external_proposal_number,producer_tax_id,external_table_code,external_table_name,operation_type,term,rate,commission_upfront,commission_deferred').in('raw_row_id',(await supabase.from('import_raw_rows').select('id').eq('batch_id',id)).data?.map(r=>r.id)??[]).limit(200)
+ // Economic columns (commission, amount, payload) are no longer selectable from the base table: the governed RPC returns them
+ // only to supervisor+ of the batch's organization and masks them (null) for other roles.
+ const rpcRows=await supabase.rpc('list_import_rows',{p_batch_id:id})
+ // Before 20260920_column_security is applied the RPC does not exist: fall back to OPERATIONAL columns only (valid both before
+ // and after the migration). Economic columns are never selected from the base table.
+ let rows:ImportRow[]
+ if(!rpcRows.error)rows=(rpcRows.data??[]) as ImportRow[]
+ else{
+  const {data:raws}=await supabase.from('import_raw_rows').select('id,row_number').eq('batch_id',id)
+  const rowNo=new Map((raws??[]).map(r=>[r.id,r.row_number]))
+  const {data:base}=(raws??[]).length?await supabase.from('import_normalized_rows').select('id,raw_row_id,normalization_version,record_kind,bank_key,external_proposal_number,producer_tax_id,external_table_code,external_table_name,operation_type,term,rate').in('raw_row_id',(raws??[]).map(r=>r.id)).limit(500):{data:[]}
+  rows=((base??[]) as Record<string,unknown>[]).map(r=>({...r,batch_id:id,source_id:batch.source_id,row_number:rowNo.get(r.raw_row_id as string)??0,normalized_payload:null,commission_upfront:null,commission_deferred:null,amount:null}) as ImportRow)
+ }
  const rowIds=rows?.map(r=>r.id)??[]
  const canSeeCommission=atLeast(membership.role,'supervisor')
  // Same-tenant rows (RLS-scoped) sharing an external proposal number, to surface cross-batch/source conflicts.
  const numbers=[...new Set((rows??[]).map(r=>r.external_proposal_number).filter((x):x is string=>!!x))]
- const {data:peers}=numbers.length?await supabase.from('import_normalized_rows').select('id,raw_row_id,record_kind,bank_key,external_proposal_number,producer_tax_id,external_table_code,external_table_name,operation_type,term,rate,commission_upfront,commission_deferred,amount,normalized_payload').in('external_proposal_number',numbers).limit(500):{data:[]}
- const peerRawIds=[...new Set((peers??[]).map(p=>p.raw_row_id))]
- const {data:peerRaw}=peerRawIds.length?await supabase.from('import_raw_rows').select('id,batch_id').in('id',peerRawIds):{data:[]}
- const peerBatchIds=[...new Set((peerRaw??[]).map(r=>r.batch_id))]
- const {data:peerBatches}=peerBatchIds.length?await supabase.from('import_batches').select('id,source_id,organization_id,received_at').in('id',peerBatchIds):{data:[]}
- const rawToBatch=new Map((peerRaw??[]).map(r=>[r.id,r.batch_id]))
- const batchInfo=new Map((peerBatches??[]).map(b=>[b.id,b]))
- const conflictRows:ConflictRow[]=(peers??[]).flatMap(p=>{
-  const b=batchInfo.get(rawToBatch.get(p.raw_row_id)??'')
-  if(!b)return []
+ const peersRpc=numbers.length?await supabase.rpc('list_import_rows',{p_batch_id:id,p_numbers:numbers}):{data:[],error:null}
+ const peers=peersRpc.error?[]:peersRpc.data
+ const conflictRows:ConflictRow[]=((peers??[]) as ImportRow[]).flatMap(p=>{
   const pl=(p.normalized_payload??{}) as Record<string,unknown>
-  const normalized:NormalizedImportRow={recordKind:p.record_kind as NormalizedImportRow['recordKind'],bankKey:p.bank_key,externalProposalNumber:p.external_proposal_number,producerTaxId:p.producer_tax_id,externalTableCode:p.external_table_code,externalTableName:p.external_table_name,operationType:p.operation_type,term:p.term,rate:p.rate==null?null:String(p.rate),commissionUpfront:p.commission_upfront==null?null:String(p.commission_upfront),commissionDeferred:p.commission_deferred==null?null:String(p.commission_deferred),amount:p.amount==null?null:String(p.amount),normalizedPayload:pl}
-  return [{ref:p.id,organizationId:b.organization_id,sourceId:b.source_id,providerKey:adapter?.provider_key??null,batchId:b.id,occurredAt:typeof pl.occurredAt==='string'?pl.occurredAt:null,normalized}]
+  const num=(v:unknown)=>v==null?null:String(v)
+  const normalized:NormalizedImportRow={recordKind:p.record_kind as NormalizedImportRow['recordKind'],bankKey:p.bank_key as string|null,externalProposalNumber:p.external_proposal_number as string|null,producerTaxId:p.producer_tax_id as string|null,externalTableCode:p.external_table_code as string|null,externalTableName:p.external_table_name as string|null,operationType:p.operation_type as string|null,term:p.term as number|null,rate:num(p.rate),commissionUpfront:num(p.commission_upfront),commissionDeferred:num(p.commission_deferred),amount:num(p.amount),normalizedPayload:pl}
+  return [{ref:p.id,organizationId:batch.organization_id,sourceId:p.source_id,providerKey:adapter?.provider_key??null,batchId:p.batch_id,occurredAt:typeof pl.occurredAt==='string'?pl.occurredAt:null,normalized}]
  })
  const conflicts=detectConflicts(conflictRows).filter(f=>f.rowRefs.some(ref=>rowIds.includes(ref)))
  // Persistent register (import_conflicts_v1). supervisor+ only (RLS). Three explicit states: store missing (migration not

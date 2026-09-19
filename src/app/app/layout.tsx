@@ -18,7 +18,7 @@ const nav = [
 ]
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const { organization, membership } = await requireAppContext()
+  const { organization, membership, membershipCount } = await requireAppContext()
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 md:flex">
@@ -34,7 +34,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </Link>
           ))}
         </nav>
-        <div className="mt-8 border-t border-slate-800 pt-4 text-xs text-slate-500">Perfil: {membership.role}</div>
+        <div className="mt-8 border-t border-slate-800 pt-4 text-xs text-slate-500">Perfil: {membership.role}{membershipCount > 1 && <> · <Link href="/organizacao" className="underline">trocar organização</Link></>}</div>
         <form action={signOut} className="mt-3">
           <button type="submit" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-white">
             <LogOut size={16}/>Sair
