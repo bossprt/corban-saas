@@ -59,6 +59,8 @@ export class SupabaseRunRepository implements RunRepository{
  private async call(fn:string,args:Record<string,unknown>):Promise<unknown>{
   const {data,error}=await this.client.rpc(fn,args)
   if(error){
+   // PostgREST: the function (or that argument list) does not exist in this database yet (code deployed before its migration).
+   if(error.code==='PGRST202')throw new RepositoryError('rpc_function_missing')
    // Surface only the stable error token raised by the database, never the raw statement or arguments.
    const token=/^[a-z_]+(?=[:\s]|$)/.exec(error.message)?.[0]??'rpc_failed'
    throw new RepositoryError(token,token)
@@ -72,7 +74,16 @@ export class SupabaseRunRepository implements RunRepository{
   return {runId:row.run_id,status:row.status,created:row.created===true}
  }
  async listDispatchable(limit:number,now:Date,adapterKeys?:readonly string[]):Promise<DispatchItem[]>{
-  const data=await this.call('list_dispatchable_integration_runs',{p_limit:Math.min(Math.max(1,limit),50),p_now:iso(now),p_adapter_keys:adapterKeys?[...adapterKeys]:null})
+  const base={p_limit:Math.min(Math.max(1,limit),50),p_now:iso(now)}
+  let data:unknown
+  try{data=await this.call('list_dispatchable_integration_runs',{...base,p_adapter_keys:adapterKeys?[...adapterKeys]:null})}
+  catch(e){
+   // Compatibility while 20260923_worker_dispatch_hardening_v1 is not applied: the legacy 2-argument function, filtered here.
+   // (Still correct; it only loses the SQL-side starvation protection until the migration is live.)
+   if(!(e instanceof RepositoryError)||e.code!=='rpc_function_missing')throw e
+   const legacy=await this.call('list_dispatchable_integration_runs',base)
+   data=Array.isArray(legacy)&&adapterKeys?(legacy as Record<string,unknown>[]).filter(r=>adapterKeys.includes(String(r.adapter_key))):legacy
+  }
   if(!Array.isArray(data))throw new RepositoryError('dispatch_response_invalid')
   return (data as Record<string,unknown>[]).map(r=>{
    if(typeof r.run_id!=='string'||typeof r.organization_id!=='string'||typeof r.binding_id!=='string'||typeof r.adapter_key!=='string'||typeof r.fingerprint!=='string'||typeof r.actor_user_id!=='string')throw new RepositoryError('dispatch_response_invalid')

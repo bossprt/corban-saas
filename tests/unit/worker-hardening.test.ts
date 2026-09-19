@@ -349,3 +349,14 @@ test('budget: a pass stops starting runs when the remaining time cannot cover a 
  const next=await runDispatchCycle(deps(repo,p,1000,{limit:25}));assert.equal(next.succeeded,10-s.examined)
  const noBudget=await runDispatchCycle(deps(guarded(),prov(),0));assert.equal(noBudget.deferred,0)
 })
+
+// ============ J. code deployed before its migration ============
+test('compat: with the legacy 2-argument dispatch function (migration not applied) the repository falls back and filters client-side',async()=>{
+ const rows=[{run_id:'r1',organization_id:'o1',binding_id:'b1',adapter_key:'local/fake',capability:'status',fingerprint:'f'.repeat(64),correlation_id:'c',status:'queued',attempt_count:0,max_attempts:3,request:{},actor_user_id:'u'},{run_id:'r2',organization_id:'o1',binding_id:'b1',adapter_key:'2tech/busca_contrato_file',capability:'status',fingerprint:'e'.repeat(64),correlation_id:'c',status:'queued',attempt_count:0,max_attempts:3,request:{},actor_user_id:'u'}]
+ const calls:Record<string,unknown>[]=[]
+ const client={rpc:async(_fn:string,args:Record<string,unknown>)=>{calls.push(args);return 'p_adapter_keys' in args?{data:null,error:{message:'Could not find the function public.list_dispatchable_integration_runs(p_adapter_keys, p_limit, p_now) in the schema cache',code:'PGRST202'}}:{data:rows,error:null}}}
+ const items=await new SupabaseRunRepository(client as never).listDispatchable(10,new Date(T0),['local/fake'])
+ assert.deepEqual(items.map(i=>i.runId),['r1']);assert.equal(calls.length,2);assert.equal('p_adapter_keys' in calls[1],false)
+ const broken=new SupabaseRunRepository({rpc:async()=>({data:null,error:{message:'boom',code:'XX000'}})} as never)
+ await assert.rejects(()=>broken.listDispatchable(1,new Date(T0),['local/fake']),(e:RepositoryError)=>e.code==='boom'||e.code==='rpc_failed')
+})
