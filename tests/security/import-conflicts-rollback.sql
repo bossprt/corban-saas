@@ -61,12 +61,23 @@ begin
  perform pg_temp.expect_err(uS,format($q$select public.record_import_conflicts(%L,%L::jsonb)$q$,b2,f),'batch_not_found_or_forbidden','tenant A supervisor cannot use tenant B batch');
  perform pg_temp.expect_err(uS,format($q$select public.record_import_conflicts(%L,%L::jsonb)$q$,b1,format('[{"kind":"duplicate_row","severity":"info","rawRowIds":["%s"]}]',rr3)),'conflict_row_not_in_batch','row from another batch of the same tenant is rejected');
  perform pg_temp.expect_err(uS,format($q$select public.record_import_conflicts(%L,%L::jsonb)$q$,b1,format('[{"kind":"duplicate_row","severity":"info","rawRowIds":["%s"]}]',rrB)),'conflict_row_not_in_batch','cross-tenant raw row is rejected');
- perform pg_temp.expect_err(uS,format($q$select public.record_import_conflicts(%L,%L::jsonb)$q$,b1,'[{"kind":"made_up","severity":"info","rawRowIds":[]}]'),'violates check','unknown kind rejected by CHECK');
+ perform pg_temp.expect_err(uS,format($q$select public.record_import_conflicts(%L,%L::jsonb)$q$,b1,format('[{"kind":"made_up","severity":"info","rawRowIds":["%s"]}]',rr1)),'violates check','unknown kind rejected by CHECK');
  perform pg_temp.expect_err(uS,format($q$insert into public.import_conflicts(organization_id,batch_id,kind,severity,fingerprint) values(%L,%L,'duplicate_row','info','x')$q$,o1,b1),'import_conflict_requires_governed_rpc','direct insert blocked');
+ perform pg_temp.expect_err(uS,format($q$select public.record_import_conflicts(%L,%L::jsonb)$q$,b1,'[{"kind":"duplicate_row","severity":"info","rawRowIds":[]}]'),'conflict_evidence_required','a conflict without raw evidence is rejected');
+ perform pg_temp.check_that(pg_temp.run_as(uS,format($q$select public.record_import_conflicts(%L,%L::jsonb)::text$q$,b1,format('[{"kind":"unknown_schema","severity":"review","detail":{"reason":"x"},"rawRowIds":["%s","%s"]}]',rr2,rr2)))='1','duplicate raw ids inside a finding are de-duplicated (no PK error)');
+ perform pg_temp.expect_err(uS,format($q$select public.record_import_conflicts(%L,(select jsonb_agg(jsonb_build_object('kind','duplicate_row','severity','info','identityKey',g::text,'rawRowIds',jsonb_build_array(%L))) from generate_series(1,501) g))$q$,b1,rr1::text),'too_many_findings','finding count is capped');
+ perform pg_temp.expect_err(uS,format($q$select public.record_import_conflicts(%L,%L::jsonb)$q$,b1,format('[{"kind":"duplicate_row","severity":"info","identityKey":"big","detail":{"x":"%s"},"rawRowIds":["%s"]}]',repeat('a',9000),rr1)),'violates check','oversized detail is rejected');
+ begin
+  perform set_config('corban.import_conflict_rpc','on',true);
+  insert into public.import_conflict_rows(conflict_id,organization_id,raw_row_id) select id,o1,rr3 from public.import_conflicts where kind='contradictory_status';
+  perform pg_temp.check_that(false,'guard: raw row from ANOTHER batch must not link to the conflict');
+ exception when others then perform pg_temp.check_that(sqlerrm ~ 'tenant_or_batch_mismatch','guard: conflict->raw_row->batch integrity holds even for the owner role ('||sqlerrm||')'); end;
+ perform set_config('corban.import_conflict_rpc','off',true);
  perform pg_temp.check_that(pg_temp.run_as(uA,'select count(*)::text from public.import_conflicts')='0','agent reads no conflicts');
  perform pg_temp.check_that(pg_temp.run_as(uB,'select count(*)::text from public.import_conflicts')='0','tenant B reads no tenant A conflicts');
- perform pg_temp.check_that(pg_temp.run_as(uS,'select count(*)::text from public.import_conflicts')='2','supervisor reads tenant conflicts');
+ perform pg_temp.check_that(pg_temp.run_as(uS,'select count(*)::text from public.import_conflicts')='3','supervisor reads tenant conflicts');
  select id into cid from public.import_conflicts where kind='contradictory_status';
+ perform pg_temp.expect_err(uS,format($q$select public.resolve_import_conflict(%L,'resolved','short')$q$,cid),'resolution_note_length_invalid','resolution note must be 10..2000 chars');
  perform pg_temp.expect_err(uS,format($q$update public.import_conflicts set detail='{}' where id=%L$q$,cid),'import_conflict_evidence_is_immutable','evidence (detail) is immutable');
  perform pg_temp.expect_err(uS,format($q$update public.import_conflicts set kind='duplicate_row' where id=%L$q$,cid),'import_conflict_evidence_is_immutable','kind is immutable');
  perform pg_temp.expect_err(uS,format($q$update public.import_conflicts set status='resolved' where id=%L$q$,cid),'resolution_note_required','resolution requires a note');

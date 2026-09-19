@@ -384,3 +384,14 @@ Após aplicar: rodar os harnesses rollback-only (todos terminam em RAISE EXCEPTI
 **Não feito:** E2E de navegador; entidade Lead; integração outbound de submissão; UI para conflitos persistidos (o lote recalcula ao vivo); views por coluna.
 
 **Próximo ponto exato de retomada:** com as migrations 1–3 aplicadas, rodar o E2E rollback e habilitar a UI do lote a ler `import_conflicts`; depois views por coluna para comissão e seletor de organização multi-org.
+
+
+## Revisão 3x de import_conflicts (9e6d851..321ac3d) — 19/09/2026
+**Achados e correções (migration ainda NÃO live; nada aplicado):**
+- Integridade conflict→raw_row→batch→tenant: o guard de `import_conflict_rows` já checava lote (9e6d851); adicionados: conflito sem evidência raw é rejeitado (`conflict_evidence_required`), raw ids duplicados são deduplicados (evitava erro de PK e quebra de idempotência), teto de 500 findings por chamada, `detail` limitado a 8000 bytes (CHECK), nota de resolução 10–2000 caracteres no RPC.
+- UI do lote: três estados explícitos (tabela ausente `42P01/PGRST205`, falha de consulta = alerta vermelho, tabela disponível mesmo vazia); antes qualquer erro virava "indisponível" e tabela vazia exibia texto errado. Abertos primeiro, limite 50 visíveis, números das linhas raw exibidos, achados calculados (cross-lote) continuam visíveis com rótulo correto.
+- Action `resolveImportConflict`: valida UUIDs, nota 10–2000, confirma que o conflito pertence ao lote (RLS+batch), `resolved_by/at` só do banco.
+- Risco aceito (B): `detail` é informado pelo chamador supervisor+ e não é reverificado contra o raw; a evidência verificável são os vínculos às linhas raw imutáveis.
+**Testes:** unit 65 ok; tsc limpo; eslint 0 erros; build ok; `tests/security/import-conflicts-rollback.sql` 30/30 (rollback-only, com a migration executada na mesma transação).
+**LIVE (não reaplicar):** revoke_excess_table_privileges_v1, restore_rbac_helper_execute_v1, fix_digest_search_path_v1, financial_reversal_paths_v1, reconciliation_cases_write_hardening_v1. **NOT LIVE:** import_conflicts_v1 e as demais da lista anterior.
+**Próximo ponto:** aplicar migrations 1–3 (matching/apply) e depois import_conflicts_v1; views por coluna para comissão; seletor multi-org.

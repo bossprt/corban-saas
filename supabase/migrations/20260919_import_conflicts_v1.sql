@@ -15,7 +15,7 @@ create table public.import_conflicts (
  kind text not null check (kind in ('duplicate_row','duplicate_file','multi_source_same_proposal','contradictory_status','ambiguous_identity','correction_replay','cross_tenant_attempt','unknown_schema','unresolved_matching','missing_identity')),
  severity text not null check (severity in ('info','review','block')),
  identity_key text,
- detail jsonb not null default '{}'::jsonb check (jsonb_typeof(detail)='object'),
+ detail jsonb not null default '{}'::jsonb check (jsonb_typeof(detail)='object' and octet_length(detail::text)<=8000),
  fingerprint text not null,
  auto_publish_allowed boolean not null default false check (auto_publish_allowed=false),
  status text not null default 'open' check (status in ('open','resolved','dismissed')),
@@ -97,11 +97,14 @@ returns integer language plpgsql set search_path='' as $$
 declare b record;f jsonb;v_fp text;v_id uuid;v_new integer:=0;v_row uuid;v_rows uuid[];
 begin
  if jsonb_typeof(p_findings)<>'array' then raise exception 'findings_must_be_array'; end if;
+ if jsonb_array_length(p_findings)>500 then raise exception 'too_many_findings'; end if;
  select id,organization_id into b from public.import_batches where id=p_batch_id;
  if not found or not public.has_active_organization_role(b.organization_id,array['admin','manager','supervisor']) then raise exception 'batch_not_found_or_forbidden'; end if;
  perform set_config('corban.import_conflict_rpc','on',true);
  for f in select value from jsonb_array_elements(p_findings) loop
-  select coalesce(array_agg(x::uuid order by x),'{}') into v_rows from jsonb_array_elements_text(coalesce(f->'rawRowIds','[]'::jsonb)) x;
+  select coalesce(array_agg(distinct x::uuid order by x::uuid),'{}') into v_rows from jsonb_array_elements_text(coalesce(f->'rawRowIds','[]'::jsonb)) x;
+  -- a conflict without preserved raw evidence is not a conflict record
+  if cardinality(v_rows)=0 then raise exception 'conflict_evidence_required'; end if;
   if exists(select 1 from unnest(v_rows) rid where not exists(select 1 from public.import_raw_rows r where r.id=rid and r.batch_id=p_batch_id and r.organization_id=b.organization_id)) then
    perform set_config('corban.import_conflict_rpc','off',true);
    raise exception 'conflict_row_not_in_batch';
@@ -127,6 +130,7 @@ returns void language plpgsql set search_path='' as $$
 declare v_org uuid;
 begin
  if p_status not in ('resolved','dismissed') then raise exception 'invalid_status'; end if;
+ if p_note is null or length(btrim(p_note)) not between 10 and 2000 then raise exception 'resolution_note_length_invalid'; end if;
  select organization_id into v_org from public.import_conflicts where id=p_conflict_id;
  if v_org is null or not public.has_active_organization_role(v_org,array['admin','manager','supervisor']) then raise exception 'conflict_not_found_or_forbidden'; end if;
  update public.import_conflicts set status=p_status,resolution_note=p_note where id=p_conflict_id and organization_id=v_org;

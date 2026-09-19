@@ -70,6 +70,8 @@ export async function confirmPaidFromImport(formData:FormData){
 }
 
 
+const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export async function resolveImportConflict(formData:FormData){
  const {supabase,membership}=await requireAppContext()
  if(!atLeast(membership.role,'supervisor'))throw new Error('Ação exige perfil de supervisão')
@@ -77,8 +79,13 @@ export async function resolveImportConflict(formData:FormData){
  const conflictId=String(formData.get('conflict_id')??'')
  const status=String(formData.get('status')??'')
  const note=String(formData.get('resolution_note')??'').trim()
- if(!batchId||!conflictId||!note)throw new Error('Resolução de conflito incompleta')
+ if(!UUID.test(batchId)||!UUID.test(conflictId))throw new Error('Resolução de conflito inválida')
  if(!['resolved','dismissed'].includes(status))throw new Error('Status de resolução inválido')
+ if(note.length<10||note.length>2000)throw new Error('A justificativa deve ter entre 10 e 2000 caracteres')
+ // The conflict must belong to the batch shown on the page (RLS already scopes it to the tenant).
+ const {data:c}=await supabase.from('import_conflicts').select('id').eq('id',conflictId).eq('batch_id',batchId).maybeSingle()
+ if(!c)throw new Error('Conflito não encontrado neste lote')
+ // resolved_by / resolved_at are stamped by the database; the client never sends them.
  const {error}=await supabase.rpc('resolve_import_conflict',{p_conflict_id:conflictId,p_status:status,p_note:note})
  if(error)throw new Error('Não foi possível resolver o conflito')
  revalidatePath(`/app/importacoes/${batchId}`)
