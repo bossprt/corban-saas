@@ -59,6 +59,8 @@ export async function executeRun(input:{
  timeoutMs?:number
  allowExternal?:boolean
  logger?:RunLogger
+ // Stored identity of an already-enqueued run (dispatch / re-execution). Otherwise derived from the request.
+ fingerprint?:string
 }):Promise<ExecuteOutcome>{
  const {repo,adapter,request,credentials}=input
  const now=input.now??(()=>new Date())
@@ -76,7 +78,7 @@ export async function executeRun(input:{
 
  const leaseSeconds=input.leaseSeconds??DEFAULT_LEASE_SECONDS
  const timeoutMs=Math.min(input.timeoutMs??DEFAULT_TIMEOUT_MS,(leaseSeconds-1)*1000)
- const fingerprint=requestFingerprint(request,m.adapterKey)
+ const fingerprint=input.fingerprint??requestFingerprint(request,m.adapterKey)
  let claim
  try{
   claim=await repo.claim({organizationId:request.organizationId,bindingId:request.bindingId,adapterKey:m.adapterKey,capability:request.capability,fingerprint,actorUserId:request.actorUserId,maxAttempts:input.maxAttempts??3,leaseSeconds,request:redact(request.payload) as Record<string,unknown>,correlationId,now:now()})

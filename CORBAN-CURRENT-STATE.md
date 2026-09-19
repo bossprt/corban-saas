@@ -159,6 +159,12 @@ A primeira conclui as transições controladas da Mesa sem permitir marcação m
 
 ## 15. Operational integration wave — 21/09/2026
 - Seção 14 está superada: import_conflicts_v1, column_security_and_tenant_derivation_v1, reconciliation_resolution_immutability_v1, leads_v1 e leads_customer_fk_index_v1 estão LIVE (aplicadas pelo ChatGPT; Security Advisor 0 WARN/0 ERROR).
-- NOT LIVE (preparadas, harness rollback-only verde): `20260921_integration_run_state_machine_v1` e `20260921_operational_pipeline_write_hardening_v1`. Ordem: state machine primeiro, esteira depois (independentes).
+- LIVE (aplicadas pelo ChatGPT em 19/09/2026): `20260921_integration_run_state_machine_v1` (registrada como 20260919035427) e `20260921_operational_pipeline_write_hardening_v1` (20260919035447). Não reaplicar.
 - Código pronto: `src/lib/integrations/{contract,executor,repository,fake-provider,registry,redact,observability,view-state}.ts`, `/app/integracoes` (degrada corretamente antes da migration).
 - Nenhum provider real habilitado. 2Tech aguarda arquivo real; Bevicred DEFERRED.
+
+
+## 16. Worker + governance wave — 22/09/2026
+- LIVE: tudo até `operational_pipeline_write_hardening_v1` (seção 15 corrigida).
+- NOT LIVE (preparada, harness rollback-only): `20260922_worker_governance_v1` — inclui HOTFIX de `transition_operational_case`, que está QUEBRADA no banco live desde o hardening da esteira (falha com `operational_write_requires_governed_rpc`). Prioridade de aplicação: alta.
+- Código pronto (aplica-se sozinho quando a migration existir): worker server-only, dispatch, cancel/retry/reexecução, `/app/integracoes` com ações. Sem cron; sem provider real; Bevicred DEFERRED; 2Tech awaiting_real_file.

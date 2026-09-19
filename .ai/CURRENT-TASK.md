@@ -443,7 +443,7 @@ Next execution target: implement Supabase `RunRepository` for outbound executor 
 
 ## Operational integration wave — handoff 21/09/2026 (para o ChatGPT)
 **LIVE (não reaplicar):** todas as anteriores + import_conflicts_v1, column_security_and_tenant_derivation_v1, reconciliation_resolution_immutability_v1, leads_v1, leads_customer_fk_index_v1.
-**NOT LIVE — revisar e aplicar após autorização humana (harness rollback-only em `tests/security/`):**
+**(SUPERADO: ambas estão LIVE, ver seção 'LIVE operational integration application') — histórico do que foi preparado:**
 1. `20260921_integration_run_state_machine_v1.sql` — `integration-runs-rollback.sql` (111 checagens). Colunas de lease/fencing, trigger de estados, artefatos append-only, guarda de segredos, funções de worker só `service_role`, SELECT de runs/artifacts restrito a supervisor+. Sem SECURITY DEFINER novo.
 2. `20260921_operational_pipeline_write_hardening_v1.sql` — coberta por `operational-e2e-rollback.sql` (executar as DUAS migrations no mesmo bloco antes). Redefine `send_proposal_to_digitization` (mesmo corpo + token) e revoga DELETE/UPDATE em excesso.
 **Depois de aplicar:** rodar `security-definer-inventory-contract.sql`, advisors de segurança/performance, e o worker: `new SupabaseRunRepository(createAdminClient())` (service role, servidor apenas).
@@ -463,3 +463,18 @@ Both applied successfully; DO NOT REAPPLY.
 Post-apply verification: integration_runs now has lease/fencing/state columns; security advisor remains 0 WARN / 0 ERROR with only the same two intentional INFO on closed platform-admin tables. Performance advisor has no new actionable FK warning; remaining findings are unused-index INFO on the near-empty database plus Auth fixed connection-count INFO.
 No synthetic operational data persisted: integration_runs=0, integration_run_artifacts=0, operational_events=0, digitization_jobs=0, operational_cases=0 at verification.
 Next execution target: server-only worker/route that instantiates SupabaseRunRepository(createAdminClient()) and executeRun. Keep local/fake confined to rollback/test; no real provider/network call. Add governed cancel/retry UI only after worker path is proven. proposals_v2 direct UPDATE and customer_timeline_events direct INSERT remain explicit security debt to review before production.
+
+
+## Worker + governance wave — handoff 22/09/2026 (para o ChatGPT)
+**LIVE (não reaplicar):** todas as anteriores, inclusive `integration_run_state_machine_v1` e `operational_pipeline_write_hardening_v1`.
+**ACHADO URGENTE NO LIVE:** `public.transition_operational_case` (usada por `/app/operacao`) grava em `operational_cases`/`digitization_jobs`/`operational_events`/`proposals_v2` sem o token que o hardening LIVE passou a exigir → toda transição de esteira falha hoje. Corrigida em `20260922_worker_governance_v1.sql` (NOT LIVE). Sugestão: aplicar esta migration antes de qualquer uso da esteira.
+**NOT LIVE — `20260922_worker_governance_v1.sql`** (harness `tests/security/worker-governance-rollback.sql`, executar a migration antes na mesma transação; pré-requisitos todos LIVE):
+1. HOTFIX `transition_operational_case` + `send_proposal_to_digitization` com token de proposta.
+2. `proposals_v2`: escrita só por RPC (`create_proposal_from_simulation`, `prepare_proposal_documents`, `send_proposal_to_digitization`, `transition_operational_case`; `confirm_proposal_paid_from_import` já tem seu token), identidade imutável, sem DELETE.
+3. `customer_timeline_events`: append-only + insert só por RPC (`create_customer_with_timeline` redefinida; `lead_write` DEFINER segue pelo caminho do owner).
+4. Worker: `enqueue_integration_run`, `list_dispatchable_integration_runs`, `create_integration_reexecution` (service_role, SECURITY INVOKER) + colunas `parent_run_id` / `reexecution_reason`.
+Sem SECURITY DEFINER novo; inventário inalterado.
+**Como operar o worker:** definir `INTEGRATION_WORKER_SECRET` (>=24 chars) no servidor; `POST /api/integrations/dispatch` com `Authorization: Bearer <segredo>`; nada é agendado. Fake local só com `CORBAN_ALLOW_LOCAL_PROVIDERS=1` fora de produção. Ver `docs/integrations/WORKER-DEPLOYMENT.md`.
+**Requests devem conter referências, não PII** (o payload persistido é redigido; CPF/tokens viram máscara).
+**HUMAN GATES:** aplicar a migration; definir o segredo do worker e o agendador; arquivo real 2Tech; Leaked Password Protection; regra de comissão visível ao agent em `simulations`.
+**Não feito:** agendador/cron; provider real; catálogo com linha `local/fake` (só em teste); UI de linhagem completa (mostra o pai da nova execução).

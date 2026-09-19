@@ -213,3 +213,11 @@ Achados: leitura por agent de colunas econômicas; role NULL contornando `not in
 ### Segurança — 21/09/2026 (PREPARADAS, NÃO APLICADAS)
 `20260921_integration_run_state_machine_v1`, `20260921_operational_pipeline_write_hardening_v1`.
 Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`); ledger de integração sem máquina de estados; payload bruto de provider legível por todo membro; segredo persistível em metadata/artefato/erro.
+
+### Adicionado — 22/09/2026 (worker + scheduler + governed retry/cancel)
+- `src/lib/integrations/{worker,worker.server,metrics}.ts`, rota `POST /api/integrations/dispatch` (Bearer, desabilitada sem segredo), ações de servidor `retryRun` / `cancelRun` / `reexecuteRun`, UI `/app/integracoes` com Nova tentativa / Cancelar / Nova execução, RunRepository com `enqueue` / `listDispatchable` / `reexecute`.
+- Harness `tests/security/worker-governance-rollback.sql`; testes unitários `worker.test.ts` (21).
+- Auditoria `docs/audits/AUDIT-2026-09-22-WORKER-GOVERNANCE-WAVE.md`; deploy do worker em `docs/integrations/WORKER-DEPLOYMENT.md`.
+
+### Segurança — 22/09/2026 (PREPARADA, NÃO APLICADA)
+`20260922_worker_governance_v1`: corrige `transition_operational_case` (regressão do hardening LIVE), governa escrita de `proposals_v2` e `customer_timeline_events`, adiciona enqueue/dispatch/reexecução.

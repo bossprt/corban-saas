@@ -34,7 +34,9 @@ export async function updateSession(request: NextRequest) {
   if (
     !user &&
     !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/auth')
+    !request.nextUrl.pathname.startsWith('/auth') &&
+    // machine trigger: authenticates itself with a bearer secret (see authorizeWorkerRequest), never with a browser session
+    request.nextUrl.pathname !== '/api/integrations/dispatch'
   ) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
