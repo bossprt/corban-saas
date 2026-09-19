@@ -5,6 +5,7 @@ import { requireAppContext } from '@/lib/appContext'
 import { prepareImport, ImportPipelineError, MAX_IMPORT_BYTES } from '@/lib/imports/pipeline'
 import { TWOTECH_ADAPTER_KEY } from '@/lib/imports/twotech'
 import { atLeast } from '@/lib/rbac'
+import { buildBatchFindings } from '@/lib/imports/conflict-persist'
 
 const semantics=new Set(['commercial_offer','production_report','commission_statement','payment_statement','network_payment_statement'])
 
@@ -64,6 +65,13 @@ export async function ingestImportFile(formData:FormData){
  }
  const {error:matchError}=await supabase.rpc('generate_import_match_candidates',{p_batch_id:batchId})
  if(matchError)throw new Error('Lote ingerido, mas o matching determinístico falhou')
+ // Persist detected conflicts (evidence-linked, advisory only). Best-effort: until import_conflicts_v1 is applied the RPC
+ // does not exist and the batch page still recomputes conflicts on the fly; a failure here must not undo the ingestion.
+ try{
+  const {data:raws}=await supabase.from('import_raw_rows').select('id,row_number').eq('batch_id',batchId)
+  const findings=buildBatchFindings(parsed,{organizationId:organization.id,sourceId,providerKey:adapter.key===TWOTECH_ADAPTER_KEY?'2tech':null,batchId},new Map((raws??[]).map(r=>[r.row_number as number,r.id as string])))
+  if(findings.length)await supabase.rpc('record_import_conflicts',{p_batch_id:batchId,p_findings:findings})
+ }catch{ /* advisory */ }
  // Server Actions bound directly to <form action> intentionally return void.
  revalidatePath('/app/importacoes')
 }

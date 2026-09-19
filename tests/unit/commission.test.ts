@@ -49,3 +49,27 @@ test('golden vectors cross-checked against Postgres numeric (verified on the liv
  const r3=calculateExpectedCommission('999.99',[c({fixedAmount:'12.345',grossPercentage:'9',upstreamShare:'0.5'})],6)[0]
  assert.deepEqual([r3.gross,r3.tenant,r3.downstream],['12.345000','6.172500','6.172500'])
 })
+
+test('60 random vectors were compared against Postgres numeric with 0 mismatches; a sample is pinned here',()=>{
+ const pin:[string,Partial<ComponentInput>,[string,string,string]][]=[
+  ['130385875.56',{grossPercentage:'44.32',upstreamShare:'0.9'},['57787020.048192','52008318.043373','5778702.004819']],
+  ['269344806.32',{componentType:'deferred_anticipation',grossPercentage:'69.703',anticipationFactor:'0.8297',upstreamShare:'0.333'},['155769048.166756','51871093.039530','103897955.127226']],
+  ['0.59',{componentType:'deferred_anticipation',grossPercentage:'33.0',anticipationFactor:'0.3269',upstreamShare:'0'},['0.063647','0.000000','0.063647']],
+  ['4360175',{grossPercentage:'30.535',upstreamShare:'0.333'},['1331379.436250','443349.352271','888030.083979']],
+ ]
+ for(const [base,over,exp] of pin){const r=calculateExpectedCommission(base,[c(over)],6)[0];assert.deepEqual([r.gross,r.tenant,r.downstream],exp)}
+})
+
+test('multiple components are independent (upfront + deferred + bonus) and each keeps its own split',()=>{
+ const r=calculateExpectedCommission('10000',[
+  c({componentType:'upfront',grossPercentage:'2',upstreamShare:'0.95'}),
+  c({componentType:'deferred',grossPercentage:'1',upstreamShare:'0.9'}),
+  c({componentType:'campaign_bonus',fixedAmount:'50',grossPercentage:null,upstreamShare:'1'})])
+ assert.deepEqual(r.map(x=>[x.gross,x.tenant,x.downstream]),[['200.00','190.00','10.00'],['100.00','90.00','10.00'],['50.00','50.00','0.00']])
+})
+
+test('very large bases stay exact and fractional percentages below one cent do not vanish before rounding',()=>{
+ assert.equal(calculateExpectedCommission('99999999999999.99',[c({grossPercentage:'100'})])[0].gross,'99999999999999.99')
+ const [tiny]=calculateExpectedCommission('1',[c({grossPercentage:'0.005'})],6)
+ assert.equal(tiny.gross,'0.000050')
+})

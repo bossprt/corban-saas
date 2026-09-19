@@ -67,3 +67,23 @@ test('matcher compares institutions case-insensitively (mirrors SQL lower())',()
  const m=matchNormalizedRow(row,{proposals:[{id:'p',institutionKey:'daycoval',externalProposalNumber:'9'}],tables:[]})
  assert.equal(m.strength,'exact')
 })
+
+test('format is detected from content: renamed files are neither mis-parsed nor accepted blindly',async()=>{
+ const { detectFormat }=await import('../../src/lib/imports/pipeline')
+ const wb=new ExcelJS.Workbook();wb.addWorksheet('a').addRow(['NumeroProposta','StatusProposta'])
+ const xlsx=Buffer.from(await wb.xlsx.writeBuffer())
+ assert.equal(detectFormat('renamed.csv',xlsx),'xlsx')
+ assert.equal(detectFormat('renamed.xls',xlsx),'xlsx')
+ assert.equal(detectFormat('a.xls',Buffer.from('<html><body><TABLE><tr><td>a</td></tr></TABLE>')),'xls_html')
+ assert.equal(detectFormat('a.csv',Buffer.from('a;b\n1;2')),'csv')
+ assert.equal(detectFormat('a.xls',Buffer.from([0xd0,0xcf,0x11,0xe0,0xa1,0xb1,0x1a,0xe1,0,0])),'xls_binary')
+ assert.throws(()=>detectFormat('fake.xlsx',Buffer.from('a;b\n1;2')),/XLSX válido/)
+ assert.throws(()=>detectFormat('a.pdf',Buffer.from('%PDF')),/Formato não suportado/)
+})
+
+test('an xlsx uploaded under a .csv name is parsed as xlsx (same normalized rows)',async()=>{
+ const wb=new ExcelJS.Workbook();const ws=wb.addWorksheet('a')
+ ws.addRow(['NumeroProposta','StatusProposta']);ws.addRow(['5','Paga'])
+ const p=await prepareImport({filename:'misnamed.csv',buffer:Buffer.from(await wb.xlsx.writeBuffer()),sourceKey:'2tech_busca_contrato',sourceSemantic:'production_report'})
+ assert.equal(p.rows[0].normalized.externalProposalNumber,'5')
+})
