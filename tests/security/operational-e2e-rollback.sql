@@ -91,8 +91,8 @@ begin
  perform pg_temp.check_that((select status='draft' and organization_id=o1 and simulation_id=sim from public.proposals_v2 where id=prop),'Proposal created as draft (not paid, not approved)');
  perform pg_temp.check_that((select status='selected' from public.simulations where id=sim),'simulation consumed by the proposal');
  perform pg_temp.check_that((select count(*) from public.financial_events)=fe and (select count(*) from public.financial_reconciliation_cases)=fc,'Proposal creation creates no financial truth');
- perform pg_temp.expect_err('authenticated',uS,format($q$update public.proposals_v2 set status='paid' where id=%L$q$,prop),'invalid_proposal_status_transition|paid_requires','a proposal cannot be marked PAID by UPDATE');
- perform pg_temp.expect_err('authenticated',uAd,format($q$update public.proposals_v2 set status='paid' where id=%L$q$,prop),'invalid_proposal_status_transition|paid_requires|permission denied','not even admin can mark PAID by UPDATE');
+ perform pg_temp.expect_err('authenticated',uS,format($q$update public.proposals_v2 set status='paid' where id=%L$q$,prop),'invalid_proposal_status_transition|paid_requires|proposal_write_requires_governed_rpc','a proposal cannot be marked PAID by UPDATE');
+ perform pg_temp.expect_err('authenticated',uAd,format($q$update public.proposals_v2 set status='paid' where id=%L$q$,prop),'invalid_proposal_status_transition|paid_requires|permission denied|proposal_write_requires_governed_rpc','not even admin can mark PAID by UPDATE');
 
  -- ===== 5. Esteira =====
  set local session_replication_role='replica';
