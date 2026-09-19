@@ -282,3 +282,29 @@ test('fingerprint ignores secret rotation but changes with tenant, binding, capa
  for(const other of[requestFingerprint(req({organizationId:'o2',payload:{a:1}}),'local/fake'),requestFingerprint(req({bindingId:'b2',payload:{a:1}}),'local/fake'),requestFingerprint(req({capability:'submit',payload:{a:1}}),'local/fake'),requestFingerprint(req({payload:{a:1}}),'x/y'),requestFingerprint(req({payload:{a:2}}),'local/fake')])assert.notEqual(other,base)
  assert.equal(requestFingerprint(req({payload:{b:2,a:1}}),'local/fake'),requestFingerprint(req({payload:{a:1,b:2}}),'local/fake'))
 })
+
+// ---------- registry / homologation ----------
+import { BEVI_MANIFEST, PROVIDER_REGISTRY, TWOTECH_MANIFEST, usability, findProvider } from '../../src/lib/integrations/registry'
+import { analyzeTwoTechSchema } from '../../src/lib/imports/twotech'
+
+test('registry: only local providers are usable today; 2Tech waits for a real file; Bevicred is deferred',()=>{
+ assert.deepEqual(usability('local/fake'),{usable:true})
+ const t=usability('2tech/busca_contrato_file');assert.equal(t.usable,false);assert.match(String(!t.usable&&t.reason),/real BuscaContrato/)
+ const b=usability('bevi/webservice_agente');assert.equal(b.usable,false);assert.match(String(!b.usable&&b.reason),/deferred/i)
+ assert.deepEqual(usability('nope/x'),{usable:false,reason:'unknown_provider'})
+ assert.equal(findProvider('2tech/busca_contrato_file')?.homologation,'awaiting_real_file')
+ assert.equal(new Set(PROVIDER_REGISTRY.map(e=>e.manifest.adapterKey)).size,PROVIDER_REGISTRY.length)
+})
+
+test('2Tech manifest matches the live catalog row; capabilities are evidence semantics of a FILE provider (no submit/cancel)',()=>{
+ assert.deepEqual(capabilityNames(TWOTECH_MANIFEST),['commercial_lineage','commission','production','proposal','status'])
+ assert.equal(TWOTECH_MANIFEST.transport,'file');assert.equal(declares(TWOTECH_MANIFEST,'submit'),false);assert.equal(declares(TWOTECH_MANIFEST,'cancel'),false)
+ assert.equal(BEVI_MANIFEST.external,true)
+})
+
+test('unknown BuscaContrato schema is quarantined and never reported as verified (synthetic headers only)',()=>{
+ const r=analyzeTwoTechSchema(['SYNTHETIC_A','SYNTHETIC_B'])
+ assert.equal(r.state,'quarantined');assert.equal(r.fingerprintKnown,false)
+ const r2=analyzeTwoTechSchema(['NumeroProposta','StatusProposta','ColunaNova'])
+ assert.equal(r2.fingerprintKnown,false);assert.deepEqual(r2.unmappedHeaders,['ColunaNova'])
+})
