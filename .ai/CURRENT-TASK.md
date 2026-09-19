@@ -656,3 +656,13 @@ Vercel connector is now connected and the real account/project were discovered:
 - Current Vercel connector surface in this session does not expose environment-variable mutation, production promotion, or a working deploy action; deploy_to_vercel/build-log actions advertised by metadata were unavailable at runtime.
 
 HUMAN GATE remains for Vercel project production configuration: production target/branch or promotion plus production environment variables. After that, ChatGPT can inspect deployment state/logs/runtime errors and continue acceptance checks.
+
+
+## Vercel environment configuration — 19/09/2026 (Owner)
+Owner confirmed the following Vercel environment variables were configured for the project:
+- NEXT_PUBLIC_SUPABASE_URL
+- NEXT_PUBLIC_SUPABASE_ANON_KEY
+- NEXT_PUBLIC_SITE_URL
+- SUPABASE_SERVICE_ROLE_KEY
+
+Worker variables remain intentionally unset. This documentation commit also serves to trigger a fresh preview deployment so the new environment configuration is picked up.
