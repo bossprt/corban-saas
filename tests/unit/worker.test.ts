@@ -42,7 +42,7 @@ test('fake/local provider is impossible to select in production or without the e
  assert.equal(localProvidersAllowed({NODE_ENV:'production',CORBAN_ALLOW_LOCAL_PROVIDERS:'1'}),false)
  const repo=mkRepo();const p=prov();await enq(repo)
  const s=await runDispatchCycle(deps(repo,p,0,{env:{NODE_ENV:'production',CORBAN_ALLOW_LOCAL_PROVIDERS:'1'}}))
- assert.equal(s.refused,1);assert.equal(p.calls.length,0);assert.equal(only(repo).status,'queued')
+ assert.equal(s.examined,0);assert.equal(p.calls.length,0);assert.equal(only(repo).status,'queued')
 })
 
 test('registry is the only source of providers: unknown, deferred, unregistered, or manifest-swapped adapters are not resolved',()=>{

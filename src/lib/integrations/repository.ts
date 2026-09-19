@@ -36,7 +36,8 @@ export interface RunRepository{
  // Governed request without execution. Idempotent per (tenant, binding, fingerprint).
  enqueue(input:EnqueueInput):Promise<EnqueueResult>
  // Work that may be eligible now: queued, retry due, expired lease. Advisory only: claim() stays the authority.
- listDispatchable(limit:number,now:Date):Promise<DispatchItem[]>
+ // adapterKeys = only the adapters this worker can actually run (others must not occupy dispatch slots); undefined = no filter.
+ listDispatchable(limit:number,now:Date,adapterKeys?:readonly string[]):Promise<DispatchItem[]>
  // NEW execution that points at a terminal parent (lineage). Not a retry: the parent is never touched.
  reexecute(input:ReexecuteInput):Promise<ReexecuteResult>
  claim(input:ClaimInput):Promise<ClaimResult>
@@ -70,8 +71,8 @@ export class SupabaseRunRepository implements RunRepository{
   if(!row||typeof row.run_id!=='string'||typeof row.status!=='string')throw new RepositoryError('enqueue_response_invalid')
   return {runId:row.run_id,status:row.status,created:row.created===true}
  }
- async listDispatchable(limit:number,now:Date):Promise<DispatchItem[]>{
-  const data=await this.call('list_dispatchable_integration_runs',{p_limit:Math.min(Math.max(1,limit),50),p_now:iso(now)})
+ async listDispatchable(limit:number,now:Date,adapterKeys?:readonly string[]):Promise<DispatchItem[]>{
+  const data=await this.call('list_dispatchable_integration_runs',{p_limit:Math.min(Math.max(1,limit),50),p_now:iso(now),p_adapter_keys:adapterKeys?[...adapterKeys]:null})
   if(!Array.isArray(data))throw new RepositoryError('dispatch_response_invalid')
   return (data as Record<string,unknown>[]).map(r=>{
    if(typeof r.run_id!=='string'||typeof r.organization_id!=='string'||typeof r.binding_id!=='string'||typeof r.adapter_key!=='string'||typeof r.fingerprint!=='string'||typeof r.actor_user_id!=='string')throw new RepositoryError('dispatch_response_invalid')
@@ -114,6 +115,7 @@ type Mem={
  attemptCount:number;maxAttempts:number;claimToken:string|null;leaseExpiresAt:number|null;nextAttemptAt:number|null;terminal:boolean
  externalRequestId:string|null;errorCode:string|null;errorMessage:string|null;createdBy:string;correlationId:string;metadata:Record<string,unknown>
  artifacts:Artifact[];parentRunId:string|null;reexecutionReason:string|null
+ history:{attempt:number;outcome:string;code?:string;message?:string}[]
 }
 export type MembershipCheck=(organizationId:string,userId:string,roles:readonly string[])=>boolean
 export type BindingLookup=(organizationId:string,bindingId:string)=>{adapterKey:string;capabilities:readonly string[]}|null
@@ -147,7 +149,7 @@ export class InMemoryRunRepository implements RunRepository{
    const now=i.now.getTime()
    let r=this.byIdentity(i.organizationId,i.bindingId,i.fingerprint)
    if(!r){
-    r={id:randomUUID(),organizationId:i.organizationId,bindingId:i.bindingId,adapterKey:i.adapterKey,capability:i.capability,fingerprint:i.fingerprint,status:'queued',attemptCount:0,maxAttempts:i.maxAttempts,claimToken:null,leaseExpiresAt:null,nextAttemptAt:null,terminal:false,externalRequestId:null,errorCode:null,errorMessage:null,createdBy:i.actorUserId,correlationId:i.correlationId,metadata:{request:safeRequest(i.request)},artifacts:[],parentRunId:null,reexecutionReason:null}
+    r={id:randomUUID(),organizationId:i.organizationId,bindingId:i.bindingId,adapterKey:i.adapterKey,capability:i.capability,fingerprint:i.fingerprint,status:'queued',attemptCount:0,maxAttempts:i.maxAttempts,claimToken:null,leaseExpiresAt:null,nextAttemptAt:null,terminal:false,externalRequestId:null,errorCode:null,errorMessage:null,createdBy:i.actorUserId,correlationId:i.correlationId,metadata:{request:safeRequest(i.request)},artifacts:[],parentRunId:null,reexecutionReason:null,history:[]}
     this.runs.set(r.id,r)
    }
    const res=(outcome:ClaimOutcome,token:string|null=null):ClaimResult=>({runId:r!.id,outcome,claimToken:token,attemptCount:r!.attemptCount,status:r!.status,nextAttemptAt:r!.nextAttemptAt===null?null:new Date(r!.nextAttemptAt),externalRequestId:r!.externalRequestId,errorCode:r!.errorCode})
@@ -156,6 +158,7 @@ export class InMemoryRunRepository implements RunRepository{
    if(r.status==='failed'&&(r.terminal||r.attemptCount>=r.maxAttempts))return res('failed_terminal')
    if(r.status==='failed'&&r.nextAttemptAt!==null&&now<r.nextAttemptAt)return res('retry_scheduled')
    if(r.status==='running'&&r.leaseExpiresAt!==null&&r.leaseExpiresAt>now)return res('in_progress')
+   if(r.status==='running')r.history.push({attempt:r.attemptCount,outcome:'lease_expired'})
    if(r.status==='running'&&r.attemptCount>=r.maxAttempts){
     r.status='failed';r.terminal=true;r.errorCode='terminal:lease_expired_attempts_exhausted';r.errorMessage='worker lease expired on the last attempt';r.nextAttemptAt=null;r.claimToken=null;r.leaseExpiresAt=null
     return res('failed_terminal')
@@ -165,6 +168,7 @@ export class InMemoryRunRepository implements RunRepository{
    return res(takeover?'takeover':'claimed',r.claimToken)
   })
  }
+  history(runId:string){return this.runs.get(runId)?.history??[]}
  private checkActor(o:string,u:string,roles:readonly string[]){if(this.opts.isMember&&!this.opts.isMember(o,u,roles))throw new RepositoryError('actor_not_authorized')}
  async enqueue(i:EnqueueInput):Promise<EnqueueResult>{
   if(!/^[0-9a-f]{64}$/.test(i.fingerprint))throw new RepositoryError('invalid_fingerprint')
@@ -178,14 +182,17 @@ export class InMemoryRunRepository implements RunRepository{
   return this.lock(`${i.organizationId}|${i.bindingId}|${i.fingerprint}`,()=>{
    const ex=this.byIdentity(i.organizationId,i.bindingId,i.fingerprint)
    if(ex)return {runId:ex.id,status:ex.status,created:false}
-   const r:Mem={id:randomUUID(),organizationId:i.organizationId,bindingId:i.bindingId,adapterKey:i.adapterKey,capability:i.capability,fingerprint:i.fingerprint,status:'queued',attemptCount:0,maxAttempts:i.maxAttempts,claimToken:null,leaseExpiresAt:null,nextAttemptAt:null,terminal:false,externalRequestId:null,errorCode:null,errorMessage:null,createdBy:i.actorUserId,correlationId:i.correlationId,metadata:{request:safeRequest(i.request)},artifacts:[],parentRunId:null,reexecutionReason:null}
+   const r:Mem={id:randomUUID(),organizationId:i.organizationId,bindingId:i.bindingId,adapterKey:i.adapterKey,capability:i.capability,fingerprint:i.fingerprint,status:'queued',attemptCount:0,maxAttempts:i.maxAttempts,claimToken:null,leaseExpiresAt:null,nextAttemptAt:null,terminal:false,externalRequestId:null,errorCode:null,errorMessage:null,createdBy:i.actorUserId,correlationId:i.correlationId,metadata:{request:safeRequest(i.request)},artifacts:[],parentRunId:null,reexecutionReason:null,history:[]}
    this.runs.set(r.id,r)
    return {runId:r.id,status:'queued',created:true}
   })
  }
- async listDispatchable(limit:number,now:Date):Promise<DispatchItem[]>{
+ // Same eligibility and ordering as the SQL function: by the moment the run became eligible, then creation.
+ async listDispatchable(limit:number,now:Date,adapterKeys?:readonly string[]):Promise<DispatchItem[]>{
   const t=now.getTime()
-  return [...this.runs.values()].filter(r=>r.status==='queued'||(r.status==='failed'&&!r.terminal&&r.attemptCount<r.maxAttempts&&r.nextAttemptAt!==null&&r.nextAttemptAt<=t)||(r.status==='running'&&r.leaseExpiresAt!==null&&r.leaseExpiresAt<=t))
+  const since=(r:Mem)=>r.nextAttemptAt??r.leaseExpiresAt??0
+  return [...this.runs.values()].filter(r=>(!adapterKeys||adapterKeys.includes(r.adapterKey))&&(r.status==='queued'||(r.status==='failed'&&!r.terminal&&r.attemptCount<r.maxAttempts&&r.nextAttemptAt!==null&&r.nextAttemptAt<=t)||(r.status==='running'&&r.leaseExpiresAt!==null&&r.leaseExpiresAt<=t)))
+   .map((r,i)=>({r,i})).sort((a,b)=>since(a.r)-since(b.r)||a.i-b.i).map(x=>x.r)
    .slice(0,Math.min(Math.max(1,limit),50)).map(r=>({runId:r.id,organizationId:r.organizationId,bindingId:r.bindingId,adapterKey:r.adapterKey,capability:r.capability,fingerprint:r.fingerprint,correlationId:r.correlationId,status:r.status,attemptCount:r.attemptCount,maxAttempts:r.maxAttempts,request:(r.metadata.request as Record<string,unknown>)??{},actorUserId:r.createdBy}))
  }
  async reexecute(i:ReexecuteInput):Promise<ReexecuteResult>{
@@ -197,7 +204,7 @@ export class InMemoryRunRepository implements RunRepository{
    if(child)return {runId:child.id,fingerprint:child.fingerprint,created:false}
    if(!((p.status==='failed'&&(p.terminal||p.attemptCount>=p.maxAttempts))||p.status==='cancelled'))throw new RepositoryError('parent_not_reexecutable')
    const fp=createHash('sha256').update(`${p.fingerprint}:reexec:${p.id}`).digest('hex')
-   const r:Mem={...p,id:randomUUID(),fingerprint:fp,status:'queued',attemptCount:0,claimToken:null,leaseExpiresAt:null,nextAttemptAt:null,terminal:false,externalRequestId:null,errorCode:null,errorMessage:null,createdBy:i.actorUserId,correlationId:i.correlationId||p.correlationId,metadata:{request:p.metadata.request,reexecution_of:p.id},artifacts:[],parentRunId:p.id,reexecutionReason:i.reason.trim()}
+   const r:Mem={...p,id:randomUUID(),fingerprint:fp,status:'queued',attemptCount:0,claimToken:null,leaseExpiresAt:null,nextAttemptAt:null,terminal:false,externalRequestId:null,errorCode:null,errorMessage:null,createdBy:i.actorUserId,correlationId:i.correlationId||p.correlationId,metadata:{request:p.metadata.request,reexecution_of:p.id},artifacts:[],parentRunId:p.id,reexecutionReason:i.reason.trim(),history:[]}
    this.runs.set(r.id,r)
    return {runId:r.id,fingerprint:fp,created:true}
   })
@@ -219,6 +226,7 @@ export class InMemoryRunRepository implements RunRepository{
    const r=this.get(i.organizationId,i.runId)
    if(r.status!=='running'||r.claimToken!==i.claimToken)return 'lease_lost'
    const terminal=!i.retryable||r.attemptCount>=r.maxAttempts
+   r.history.push({attempt:r.attemptCount,outcome:terminal?'failed_terminal':'retry_scheduled',code:i.code.slice(0,80),message:i.message.slice(0,500)})
    r.status='failed';r.terminal=terminal;r.errorCode=i.retryable?i.code.slice(0,80):`terminal:${i.code.slice(0,80)}`;r.errorMessage=i.message.slice(0,500)
    r.nextAttemptAt=terminal?null:i.now.getTime()+Math.max(0,Math.min(i.backoffSeconds,3600))*1000;r.claimToken=null;r.leaseExpiresAt=null
    return terminal?'failed_terminal':'retry_scheduled'

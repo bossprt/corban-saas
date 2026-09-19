@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireAppContext } from '@/lib/appContext'
-import { attachDocument, prepareDocuments, sendToDigitization, validateRequirement, publishExpectedCommission, freezeCommercialRoute } from './actions'
+import { attachDocument, prepareDocuments, sendToDigitization, validateRequirement, publishExpectedCommission } from './actions'
 import { atLeast } from '@/lib/rbac'
 
 function brl(value: number | string | null) {

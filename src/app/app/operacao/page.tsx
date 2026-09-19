@@ -2,9 +2,11 @@ import Link from 'next/link'
 import { requireAppContext } from '@/lib/appContext'
 import { transitionOperationalCase } from './actions'
 import { atLeast } from '@/lib/rbac'
+import { OPERATIONAL_MESSAGES, isOperationalErrorCode } from '@/lib/operational'
 
-export default async function OperationsPage() {
+export default async function OperationsPage({ searchParams }: { searchParams: Promise<{ erro?: string; ok?: string }> }) {
   const { supabase, membership } = await requireAppContext()
+  const sp = await searchParams
   const [casesResult, jobsResult] = await Promise.all([
     supabase.from('operational_cases')
       .select('id,canonical_state,external_status_raw,entered_stage_at,due_at,proposal_id')
@@ -18,6 +20,9 @@ export default async function OperationsPage() {
   return <section>
     <h1 className="text-3xl font-semibold">Operação</h1>
     <p className="mt-2 text-sm text-slate-400">Fila de digitação e esteira técnica separadas da apresentação comercial.</p>
+    {isOperationalErrorCode(sp.erro) && <p role="alert" className="mt-4 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200">{OPERATIONAL_MESSAGES[sp.erro]}</p>}
+    {sp.ok && <p role="status" className="mt-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-200">Transição registrada.</p>}
+    {(casesResult.error || jobsResult.error) && <p role="alert" className="mt-4 rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">Não foi possível carregar toda a esteira agora. Os dados abaixo podem estar incompletos.</p>}
 
     <div className="mt-6 grid gap-6 xl:grid-cols-2">
       <div>
