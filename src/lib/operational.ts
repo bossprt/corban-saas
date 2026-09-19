@@ -37,3 +37,17 @@ export const CASE_STATE_LABEL:Record<string,{label:string;next:string}>={
 export const caseStateLabel=(s:string)=>CASE_STATE_LABEL[s]??{label:'Situação desconhecida',next:''}
 export const JOB_STATUS_LABEL:Record<string,string>={queued:'Na fila',assigned:'Atribuída',in_progress:'Em andamento',blocked:'Bloqueada',submitted:'Enviada',completed:'Concluída',cancelled:'Cancelada'}
 export const jobStatusLabel=(s:string)=>JOB_STATUS_LABEL[s]??'Situação desconhecida'
+
+// Operator-facing proposal status and the next step. No status here is ever set by a person as "paid": that one only appears through the evidence path.
+export const PROPOSAL_STATUS_LABEL:Record<string,{label:string;next:string}>={
+ draft:{label:'Rascunho',next:'Prepare o checklist de documentos.'},
+ documents_pending:{label:'Documentos pendentes',next:'Anexe os documentos exigidos; um supervisor valida.'},
+ ready_for_digitization:{label:'Pronta para a operação',next:'Envie para a operação.'},
+ digitization:{label:'Na operação (digitação)',next:'Acompanhe em Operação.'},
+ submitted:{label:'Enviada ao banco',next:'Aguarde o retorno do banco.'},
+ approved:{label:'Aprovada',next:'Sem ação. O pagamento só é confirmado por evidência de importação.'},
+ rejected:{label:'Recusada',next:'Encerrada.'},
+ cancelled:{label:'Cancelada',next:'Encerrada.'},
+ paid:{label:'Paga (confirmada por evidência)',next:'Encerrada.'}
+}
+export const proposalStatusLabel=(s:string)=>PROPOSAL_STATUS_LABEL[s]??{label:'Situação desconhecida',next:''}

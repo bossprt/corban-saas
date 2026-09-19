@@ -1,5 +1,8 @@
 import { requireAppContext } from '@/lib/appContext'
 import { uploadCustomerDocument } from './actions'
+import { SubmitButton } from '@/components/SubmitButton'
+
+const DOC_STATUS: Record<string, string> = { active: 'Ativo', archived: 'Arquivado', expired: 'Vencido', rejected: 'Recusado' }
 
 export default async function DocumentsPage() {
   const { supabase } = await requireAppContext()
@@ -30,8 +33,8 @@ export default async function DocumentsPage() {
         {typesResult.data?.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
       </select>
       <input required type="file" name="file" accept=".pdf,image/jpeg,image/png,image/webp" className="field"/>
-      <button className="rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-slate-950">Enviar documento</button>
-      <p className="text-xs text-slate-500 md:col-span-4">Bucket privado · PDF/JPEG/PNG/WebP · máximo 15 MiB · evidência sem sobrescrita.</p>
+      <SubmitButton className="rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-slate-950" pendingText="Enviando...">Enviar documento</SubmitButton>
+      <p className="text-xs text-slate-500 md:col-span-4">Arquivo privado · PDF, JPG, PNG ou WebP · máximo 15 MB · o tipo é conferido pelo conteúdo do arquivo · nada é sobrescrito (um novo envio vira uma nova versão).</p>
     </form>
 
     <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">
@@ -43,9 +46,9 @@ export default async function DocumentsPage() {
             <td className="p-4">{typeNames.get(d.document_type_id) ?? 'Documento'}</td>
             <td className="p-4 text-slate-400">{d.original_file_name}</td>
             <td className="p-4 text-slate-400">v{d.version}</td>
-            <td className="p-4"><span className="rounded-full bg-slate-800 px-2.5 py-1 text-xs">{d.status}</span></td>
+            <td className="p-4"><span className="rounded-full bg-slate-800 px-2.5 py-1 text-xs">{DOC_STATUS[d.status] ?? d.status}</span></td>
           </tr>)}
-          {!documentsResult.data?.length && <tr><td colSpan={5} className="p-8 text-center text-slate-500">Nenhum documento armazenado. Upload permanecerá bloqueado até as políticas privadas de Storage serem aplicadas.</td></tr>}
+          {!documentsResult.data?.length && <tr><td colSpan={5} className="p-8 text-center text-slate-500">Nenhum documento ainda. Escolha o cliente, o tipo e o arquivo acima. Depois, na proposta, anexe o documento ao item do checklist.</td></tr>}
         </tbody>
       </table></div>
     </div>

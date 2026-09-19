@@ -3,9 +3,10 @@ import { notFound } from 'next/navigation'
 import { requireAppContext } from '@/lib/appContext'
 import { attachDocument, prepareDocuments, sendToDigitization, validateRequirement, publishExpectedCommission } from './actions'
 import { atLeast, canViewCommission } from '@/lib/rbac'
+import { proposalStatusLabel } from '@/lib/operational'
 
 function brl(value: number | string | null) {
-  return value === null ? '—' : Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  return value === null ? 'Não calculado' : Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
 export default async function ProposalDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -57,7 +58,7 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
         <h1 className="mt-1 text-3xl font-semibold">{String(customer.full_name ?? 'Cliente')}</h1>
         <p className="mt-2 text-sm text-slate-400">Criada em {new Date(proposal.created_at).toLocaleString('pt-BR')}</p>
       </div>
-      <span className="rounded-full bg-slate-800 px-3 py-1.5 text-sm">{proposal.status}</span>
+      <div className="text-right"><span className="rounded-full bg-slate-800 px-3 py-1.5 text-sm">{proposalStatusLabel(proposal.status).label}</span><p className="mt-2 max-w-xs text-xs text-slate-400">{proposalStatusLabel(proposal.status).next}</p></div>
     </div>
 
     <div className="mt-6 flex flex-wrap gap-3">

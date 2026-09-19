@@ -3,6 +3,8 @@ import { LayoutDashboard, Users, UserPlus, FileText, Workflow, Landmark, Library
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast, canManageTeam, canViewCommission } from '@/lib/rbac'
 import { ROLE_LABEL } from '@/lib/team'
+import { Suspense } from 'react'
+import { FlashBanner } from '@/components/FlashBanner'
 import { signOut } from './actions'
 
 // `show` only decides what is offered in the menu; every page, action and RPC enforces the role again (a hidden link is not authorization).
@@ -10,17 +12,17 @@ const nav: { href: string; label: string; icon: typeof Users; show?: (role: stri
   { href: '/app', label: 'Visão geral', icon: LayoutDashboard },
   { href: '/app/leads', label: 'Leads', icon: UserPlus },
   { href: '/app/clientes', label: 'Clientes', icon: Users },
-  { href: '/app/catalogo', label: 'Catálogo', icon: Library },
+  { href: '/app/catalogo', label: 'Catálogo', icon: Library, show: r => atLeast(r, 'supervisor') },
   { href: '/app/simulacoes', label: 'Simulações', icon: Calculator },
   { href: '/app/propostas', label: 'Propostas', icon: FileText },
   { href: '/app/documentos', label: 'Documentos', icon: FolderLock },
   { href: '/app/operacao', label: 'Operação', icon: Workflow },
-  { href: '/app/rede', label: 'Rede comercial', icon: Network },
-  { href: '/app/importacoes', label: 'Importações', icon: Upload },
+  { href: '/app/rede', label: 'Rede comercial', icon: Network, show: canManageTeam },
+  { href: '/app/importacoes', label: 'Importações', icon: Upload, show: r => atLeast(r, 'supervisor') },
   { href: '/app/integracoes', label: 'Integrações', icon: Plug, show: r => atLeast(r, 'supervisor') },
   { href: '/app/financeiro', label: 'Financeiro e conciliação', icon: WalletCards, show: canViewCommission },
   { href: '/app/equipe', label: 'Equipe', icon: ShieldCheck, show: canManageTeam },
-  { href: '/app/configuracao', label: 'Configuração', icon: Settings },
+  { href: '/app/configuracao', label: 'Configuração', icon: Settings, show: canManageTeam },
 ]
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -47,7 +49,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </button>
         </form>
       </aside>
-      <main className="flex-1 p-5 md:p-8">{children}</main>
+      <main className="min-w-0 flex-1 p-4 md:p-8"><Suspense fallback={null}><FlashBanner /></Suspense>{children}</main>
     </div>
   )
 }

@@ -1,11 +1,16 @@
 import { requireAppContext } from '@/lib/appContext'
 import { convertLead, createLead, setLeadStatus } from './actions'
+import { SubmitButton } from '@/components/SubmitButton'
+import { digitsOnly, searchTerm } from '@/lib/search'
 
 const STATUS: Record<string, string> = { new: 'Novo', contacted: 'Contatado', qualified: 'Qualificado', converted: 'Convertido', lost: 'Perdido' }
 
-export default async function LeadsPage() {
+export default async function LeadsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const { supabase } = await requireAppContext()
-  const { data: leads, error } = await supabase.from('leads').select('id,status,channel,campaign,full_name,phone,created_at,customer_id').order('created_at', { ascending: false }).limit(100)
+  const q = searchTerm((await searchParams).q)
+  let query = supabase.from('leads').select('id,status,channel,campaign,full_name,phone,created_at,customer_id').order('created_at', { ascending: false }).limit(100)
+  if (q) { const d = digitsOnly(q); query = query.or(d.length >= 4 ? `full_name.ilike.%${q}%,phone.ilike.%${q}%,phone.ilike.%${d}%` : `full_name.ilike.%${q}%`) }
+  const { data: leads, error } = await query
   // The leads module needs 20260920_leads_v1 (not applied yet): explicit state, never a silent empty list.
   if (error && ['42P01', 'PGRST205'].includes(String((error as { code?: string }).code))) {
     return <section><h1 className="text-3xl font-semibold">Leads</h1><p className="mt-3 text-sm text-slate-400">O módulo de leads ainda não está disponível neste ambiente (migration pendente de autorização).</p></section>
@@ -20,11 +25,14 @@ export default async function LeadsPage() {
         <input name="phone" placeholder="Telefone" className="rounded-lg border border-slate-700 bg-slate-950 p-2" />
         <input name="email" type="email" placeholder="E-mail" className="rounded-lg border border-slate-700 bg-slate-950 p-2" />
         <input name="campaign" placeholder="Campanha" className="rounded-lg border border-slate-700 bg-slate-950 p-2 md:col-span-2" />
-        <button className="rounded-lg bg-emerald-500 px-4 py-2 font-semibold text-slate-950 md:col-span-2">Registrar lead</button>
+        <SubmitButton className="rounded-lg bg-emerald-500 px-4 py-2 font-semibold text-slate-950 md:col-span-2">Registrar lead</SubmitButton>
       </form></details>
-    {error ? <p role="alert" className="mt-4 text-amber-300">Não foi possível consultar os leads.</p> : !leads?.length ? <p className="mt-4 rounded-xl border border-slate-800 p-5 text-sm text-slate-400">Nenhum lead.</p> :
+    <form className="mt-4 flex gap-2" role="search"><input name="q" defaultValue={q ?? ''} placeholder="Buscar por nome ou telefone" className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950 p-2 text-sm" /><button className="rounded-lg border border-slate-700 px-3 text-sm">Buscar</button></form>
+    {error ? <p role="alert" className="mt-4 text-amber-300">Não foi possível consultar os leads agora. Tente de novo.</p> : !leads?.length ? <p className="mt-4 rounded-xl border border-slate-800 p-5 text-sm text-slate-400">{q ? 'Nenhum lead encontrado para esta busca.' : 'Nenhum lead ainda. Quando um cliente chamar no WhatsApp, abra “Novo lead” acima e registre nome e telefone; o resto pode ser preenchido depois.'}</p> :
       <div className="mt-4 space-y-2">{leads.map(l => <div key={l.id} className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm">
         <div className="flex flex-wrap items-baseline justify-between gap-2"><strong>{l.full_name}</strong><span className="text-slate-400">{STATUS[l.status] ?? l.status} · {l.channel}{l.campaign ? ` · ${l.campaign}` : ''}</span></div>
+        {l.phone && <div className="mt-1 text-xs text-slate-400">{l.phone}</div>}
+        {l.customer_id && <div className="mt-1 text-xs"><a href={`/app/clientes/${l.customer_id}`} className="text-emerald-400 hover:underline">Ver cliente</a></div>}
         {l.status !== 'converted' && <div className="mt-3 flex flex-wrap gap-2">
           {['contacted', 'qualified'].map(s => <form key={s} action={setLeadStatus}><input type="hidden" name="lead_id" value={l.id} /><button name="status" value={s} className="rounded border border-slate-700 px-2 py-1 text-xs">Marcar {STATUS[s].toLowerCase()}</button></form>)}
           <form action={setLeadStatus} className="flex gap-1"><input type="hidden" name="lead_id" value={l.id} /><input name="lost_reason" placeholder="Motivo da perda" className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs" /><button name="status" value="lost" className="rounded border border-slate-700 px-2 py-1 text-xs">Perdido</button></form>

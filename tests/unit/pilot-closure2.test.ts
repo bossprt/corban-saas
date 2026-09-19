@@ -90,8 +90,8 @@ test('simulation action: the RPC is the primary path; nothing but ids and two nu
   assert.match(a, /supabase\.rpc\('create_simulation'/)
   const primary = a.slice(a.indexOf('export async function createSimulation'), a.indexOf('export async function createProposalFromSimulation'))
   assert.doesNotMatch(primary, /formData\.get\('(organization|created_by|expected|commission|rate|coefficient|installment)/)
-  // the pre-migration fallback exists ONLY behind rpc_unavailable and never sets a commission
-  assert.match(a, /code === 'rpc_unavailable'/)
+  // governance is LIVE: the pre-migration fallback was removed, so there is no client-side insert path left
+  assert.doesNotMatch(a, /legacyInsert|\.from\('simulations'\)\.insert/)
   assert.doesNotMatch(a, /expected_commission_amount/)
 })
 test('the migration governs simulations the way the action expects', () => {

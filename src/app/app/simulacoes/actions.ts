@@ -1,8 +1,12 @@
 'use server'
 
+import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
-import { SIMULATION_ERRORS, classifySimulationError } from '@/lib/simulation'
+import { classifySimulationError } from '@/lib/simulation'
+import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedback'
+
+const go = (code: FeedbackCode, path = '/app/simulacoes'): never => redirect(feedbackUrl(path, code))
 
 function money(value: FormDataEntryValue | null) {
   const normalized = String(value ?? '').trim().replace(',', '.')
@@ -21,40 +25,33 @@ export async function createSimulation(formData: FormData) {
   const tableVersionId = String(formData.get('product_table_version_id') ?? '')
   const requestedAmount = money(formData.get('requested_amount'))
   const term = integer(formData.get('term'))
-
-  if (!customerId || !tableVersionId || requestedAmount === null || requestedAmount <= 0 || !term) {
-    throw new Error('Dados obrigatórios da simulação são inválidos.')
-  }
+  if (!customerId || !tableVersionId || requestedAmount === null || requestedAmount <= 0 || !term) return go('erro:requisicao_invalida')
 
   // The database derives the tenant from the customer, checks that the table version is published for THAT tenant, applies the table rate and
   // coefficient, computes the installment and records the actor. Nothing but the four ids/numbers above comes from the browser.
   const { error } = await supabase.rpc('create_simulation', {
-    p_customer_id: customerId,
-    p_table_version_id: tableVersionId,
-    p_requested_amount: requestedAmount,
-    p_term: term,
+    p_customer_id: customerId, p_table_version_id: tableVersionId, p_requested_amount: requestedAmount, p_term: term,
   })
-  const code = error ? classifySimulationError(error) : null
-  if (code) throw new Error(SIMULATION_ERRORS[code])
+  if (error) {
+    const c = classifySimulationError(error)
+    return go(c === 'rpc_unavailable' ? 'erro:indisponivel' : c === 'not_authorized' ? 'erro:sem_permissao' : c === 'unexpected' ? 'erro:inesperado' : (`erro:sim_${c}` as FeedbackCode))
+  }
   revalidatePath('/app/simulacoes')
   revalidatePath('/app')
+  return go('ok:simulacao_registrada')
 }
 
 export async function createProposalFromSimulation(formData: FormData) {
   const { supabase } = await requireAppContext()
   const simulationId = String(formData.get('simulation_id') ?? '')
-  if (!simulationId) throw new Error('Simulação inválida.')
-
-  const { error } = await supabase.rpc('create_proposal_from_simulation', {
-    p_simulation_id: simulationId,
-  })
-
+  if (!simulationId) return go('erro:requisicao_invalida')
+  const { error } = await supabase.rpc('create_proposal_from_simulation', { p_simulation_id: simulationId })
   if (error) {
-    if (error.code === '23505') throw new Error('Esta simulação já possui proposta.')
-    throw new Error('Não foi possível criar a proposta de forma atômica.')
+    // The RPC locks the simulation and flips it to "selected" atomically: a double submit reaches one of these two refusals.
+    if (error.code === '23505' || /simulation_not_available_for_proposal/.test(error.message ?? '')) return go('erro:proposta_duplicada')
+    if (/simulation_not_found_or_forbidden|published_table_version_not_available|customer_not_available/.test(error.message ?? '')) return go('erro:simulacao_indisponivel')
+    return go(classifyDbFeedback(error))
   }
-
-  revalidatePath('/app/simulacoes')
-  revalidatePath('/app/propostas')
-  revalidatePath('/app')
+  revalidatePath('/app/simulacoes'); revalidatePath('/app/propostas'); revalidatePath('/app')
+  return go('ok:proposta_criada', '/app/propostas')
 }

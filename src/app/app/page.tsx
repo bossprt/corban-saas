@@ -11,7 +11,10 @@ const isoAgo = (ms: number) => new Date(Date.now() - ms).toISOString()
 const brl = (n: number) => `R$ ${n.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
 
 export default async function DashboardPage() {
-  const { supabase, organization, membership } = await requireAppContext()
+  const { supabase, organization, membership, user } = await requireAppContext()
+  // An operator sees THEIR own leads and proposals first; supervision roles see the whole organization.
+  const mine = membership.role === 'agent'
+  const own = <T,>(q: T): T => (mine ? (q as unknown as { eq: (c: string, v: string) => T }).eq('created_by', user.id) : q)
   const canSeeFinance = canViewCommission(membership.role)
   const canSeeIntegrations = atLeast(membership.role, 'supervisor')
   const head = { count: 'exact', head: true } as const
@@ -19,12 +22,12 @@ export default async function DashboardPage() {
   const noRows = { data: [] as { amount: number | string; metadata?: unknown }[], error: null }
   const staleCutoff = isoAgo(2 * 24 * 3600 * 1000)
   const [staleLeads, draftProposals, overdueCases, leads, customers, proposals, jobs, cases, runs, divergences, reviews, expected, received, reversals] = await Promise.all([
-    supabase.from('leads').select('*', head).eq('status', 'new').lt('created_at', staleCutoff),
-    supabase.from('proposals_v2').select('*', head).eq('status', 'draft'),
+    own(supabase.from('leads').select('*', head).eq('status', 'new').lt('created_at', staleCutoff)),
+    own(supabase.from('proposals_v2').select('*', head).eq('status', 'draft')),
     supabase.from('operational_cases').select('*', head).not('canonical_state', 'in', '("paid","cancelled","rejected")').lt('due_at', isoAgo(0)),
-    supabase.from('leads').select('*', head).in('status', ['new', 'contacted', 'qualified']),
+    own(supabase.from('leads').select('*', head).in('status', ['new', 'contacted', 'qualified'])),
     supabase.from('clients').select('*', head).is('deleted_at', null),
-    supabase.from('proposals_v2').select('*', head),
+    own(supabase.from('proposals_v2').select('*', head)),
     supabase.from('digitization_jobs').select('*', head).in('status', ['queued', 'assigned', 'in_progress', 'blocked']),
     supabase.from('operational_cases').select('*', head).not('canonical_state', 'in', '("paid","cancelled","rejected")'),
     canSeeIntegrations ? supabase.from('integration_runs').select('*', head).eq('status', 'failed').eq('terminal', true) : Promise.resolve({ count: null, error: null }),
@@ -35,9 +38,9 @@ export default async function DashboardPage() {
     canSeeFinance ? supabase.from('financial_events').select('amount,metadata').eq('event_type', 'reversal') : Promise.resolve(noRows),
   ])
   const cards: [string, string, string, string][] = [
-    ['Leads em aberto', num(leads), '/app/leads', 'novos, em contato ou qualificados'],
+    [mine ? 'Meus leads em aberto' : 'Leads em aberto', num(leads), '/app/leads', 'novos, em contato ou qualificados'],
     ['Clientes ativos', num(customers), '/app/clientes', ''],
-    ['Propostas', num(proposals), '/app/propostas', 'todas as propostas da organização'],
+    [mine ? 'Minhas propostas' : 'Propostas', num(proposals), '/app/propostas', mine ? 'propostas criadas por você' : 'todas as propostas da organização'],
     ['Casos na operação', num(cases), '/app/operacao', 'em andamento na esteira'],
     ['Fila de digitação', num(jobs), '/app/operacao', ''],
   ]
