@@ -48,7 +48,7 @@ create policy import_conflicts_update_supervisor_plus on public.import_conflicts
 create policy import_conflict_rows_select_supervisor_plus on public.import_conflict_rows for select to authenticated using (public.has_active_organization_role(organization_id,array['admin','manager','supervisor']));
 create policy import_conflict_rows_insert_supervisor_plus on public.import_conflict_rows for insert to authenticated with check (public.has_active_organization_role(organization_id,array['admin','manager','supervisor']));
 
--- Same-tenant + immutability guard (independent of the RPCs).
+-- Same-tenant, same-batch + immutability guard (independent of the RPCs).
 create or replace function public.guard_import_conflict_write()
 returns trigger language plpgsql set search_path='' as $$
 declare b_org uuid;
@@ -84,7 +84,7 @@ begin
  if current_setting('corban.import_conflict_rpc',true) is distinct from 'on' then raise exception 'import_conflict_requires_governed_rpc'; end if;
  select organization_id,batch_id into c_org,c_batch from public.import_conflicts where id=new.conflict_id;
  select organization_id,batch_id into r_org,r_batch from public.import_raw_rows where id=new.raw_row_id;
- if c_org is null or c_org<>new.organization_id or r_org is distinct from c_org then raise exception 'import_conflict_tenant_mismatch'; end if;
+ if c_org is null or c_org<>new.organization_id or r_org is distinct from c_org or r_batch is distinct from c_batch then raise exception 'import_conflict_tenant_or_batch_mismatch'; end if;
  return new;
 end $$;
 revoke all on function public.guard_import_conflict_row_write() from public,anon,authenticated;
