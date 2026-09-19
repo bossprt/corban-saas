@@ -439,3 +439,17 @@ Security Advisor after application: no WARN/ERROR; only the same 2 intentional I
 Performance Advisor found one new actionable INFO: composite FK `leads(organization_id,customer_id)` lacked a covering index. Added repo migration commit `0ebb7f7` and applied live as `20260919024604 leads_customer_fk_index_v1`. Re-run removed the unindexed-FK finding. Remaining performance findings are unused-index INFO expected on the near-empty database plus Auth fixed connection-count INFO.
 No synthetic business/test rows were persisted.
 Next execution target: implement Supabase `RunRepository` for outbound executor against existing `integration_runs` / `integration_run_artifacts`, with tests and no real provider/network calls.
+
+
+## Operational integration wave — handoff 21/09/2026 (para o ChatGPT)
+**LIVE (não reaplicar):** todas as anteriores + import_conflicts_v1, column_security_and_tenant_derivation_v1, reconciliation_resolution_immutability_v1, leads_v1, leads_customer_fk_index_v1.
+**NOT LIVE — revisar e aplicar após autorização humana (harness rollback-only em `tests/security/`):**
+1. `20260921_integration_run_state_machine_v1.sql` — `integration-runs-rollback.sql` (111 checagens). Colunas de lease/fencing, trigger de estados, artefatos append-only, guarda de segredos, funções de worker só `service_role`, SELECT de runs/artifacts restrito a supervisor+. Sem SECURITY DEFINER novo.
+2. `20260921_operational_pipeline_write_hardening_v1.sql` — coberta por `operational-e2e-rollback.sql` (executar as DUAS migrations no mesmo bloco antes). Redefine `send_proposal_to_digitization` (mesmo corpo + token) e revoga DELETE/UPDATE em excesso.
+**Depois de aplicar:** rodar `security-definer-inventory-contract.sql`, advisors de segurança/performance, e o worker: `new SupabaseRunRepository(createAdminClient())` (service role, servidor apenas).
+**Testes:** unit 105; tsc 0; eslint 0 erros (4 warnings antigos); build ok.
+**Bugs/vulnerabilidades:** ver `docs/audits/AUDIT-2026-09-21-OPERATIONAL-INTEGRATION-WAVE.md` (esteira forjável, ledger sem state machine, payload bruto legível, segredo persistível).
+**HUMAN GATES:** aplicar as 2 migrations; arquivo real BuscaContrato (homologação em `docs/integrations/2TECH-BUSCACONTRATO-HOMOLOGATION.md`); regra de visibilidade de comissão em `proposals_v2`/`simulations` para agent; adapter catalog: cadastrar linha `local/fake` só em ambiente de teste (nunca em produção); Leaked Password Protection.
+**Dependências externas:** nenhuma credencial usada; nenhuma chamada de rede; nenhum provider real iniciado.
+**Não feito:** worker/cron que chama `executeRun` (interface pronta, sem processo agendado); botão de cancelar/reexecutar na UI (RPC `cancel_integration_run` existe); provider real.
+**Retomada exata:** após autorização aplicar a migration 1, criar rota/worker servidor que instancie `SupabaseRunRepository` + `executeRun` com o provider `local/fake` num binding de teste (rollback-only), depois escolher o primeiro provider real quando houver arquivo/credencial.

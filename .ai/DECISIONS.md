@@ -247,3 +247,12 @@
 - **Decisão 4:** a resolução de conciliação (nota/quem/quando) só muda junto da transição open→resolved, é carimbada pela sessão e é imutável; refresh não reabre caso resolvido.
 - **Decisão 5:** Lead é registro de CRM com timeline append-only, sem colunas financeiras; escrita só por RPC; conversão atômica/idempotente; intake idempotente por (organização, canal, ref externa).
 - **Decisão 6:** submissão externa passa por executor idempotente com ledger; providers externos ficam bloqueados por padrão; Bevicred permanece DEFERRED (recusa incondicional).
+
+## ADR-0017 — Estado de integration_runs no banco, lease com fencing, evidência determinística, esteira só por RPC
+- **Data:** 21/09/2026 — **Status:** aceita; migrations `20260921_*` PREPARADAS, não aplicadas.
+- **Decisão 1:** a posse de um run é do BANCO, não de memória do worker: `claim_integration_run` serializa por `SELECT … FOR UPDATE` na identidade única (tenant, binding, fingerprint), concede lease + `claim_token` (fencing). Worker que perdeu o token não escreve mais nada; lease vencido permite takeover contando tentativa.
+- **Decisão 2:** máquina de estados fail-closed em trigger (queued→running, running→running/succeeded/failed, failed→running só se não terminal e com tentativas, queued/failed→cancelled). `succeeded` exige artefato `response_metadata`; identidade do run é imutável; DELETE impossível; artefatos append-only e idempotentes por hash.
+- **Decisão 3:** fencing por token e não por expiração: um worker lento e sozinho ainda registra o resultado real (evita segunda submissão ao provider). Revogação de membership bloqueia novo claim/retry/cancel, mas não descarta resultado em voo.
+- **Decisão 4:** funções de worker são SECURITY INVOKER executáveis só por `service_role` (nenhum SECURITY DEFINER novo). Segredo em metadata/artefato/erro é rejeitado pelo banco e redigido antes pelo app (redactor determinístico e idempotente).
+- **Decisão 5:** providers declaram `CapabilityManifest`; o executor consulta o manifest, nunca o nome do provider. Registro de providers guarda o estado de homologação; 2Tech = `awaiting_real_file`, Bevicred = `deferred`.
+- **Decisão 6:** esteira (`operational_cases`, `operational_events`, `digitization_jobs`) só é escrita por RPC governada (token de guarda); eventos são append-only. Sucesso de provider é evidência de execução, nunca receita nem status pago.

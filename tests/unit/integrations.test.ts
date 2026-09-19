@@ -308,3 +308,24 @@ test('unknown BuscaContrato schema is quarantined and never reported as verified
  const r2=analyzeTwoTechSchema(['NumeroProposta','StatusProposta','ColunaNova'])
  assert.equal(r2.fingerprintKnown,false);assert.deepEqual(r2.unmappedHeaders,['ColunaNova'])
 })
+
+// ---------- UI state model ----------
+import { classifyRunsView, runPhase } from '../../src/lib/integrations/view-state'
+test('runs view distinguishes permission denied, unavailable, error, empty and ready',()=>{
+ const row={id:'r',status:'succeeded' as const,capability:'status',attempt_count:1,max_attempts:3,error_code:null,created_at:'x',finished_at:null}
+ assert.deepEqual(classifyRunsView({role:'agent',error:null,rows:[row]}),{kind:'permission_denied'})
+ assert.deepEqual(classifyRunsView({role:undefined,error:null,rows:[row]}),{kind:'permission_denied'})
+ assert.deepEqual(classifyRunsView({role:'supervisor',error:{code:'42P01'},rows:null}),{kind:'unavailable'})
+ assert.deepEqual(classifyRunsView({role:'manager',error:{code:'42703'},rows:null}),{kind:'unavailable'})
+ assert.deepEqual(classifyRunsView({role:'admin',error:{code:'XX000'},rows:null}),{kind:'error'})
+ assert.deepEqual(classifyRunsView({role:'admin',error:null,rows:[]}),{kind:'empty'})
+ assert.equal(classifyRunsView({role:'supervisor',error:null,rows:[row]}).kind,'ready')
+})
+test('run phases: terminal failure waits for a human, retryable failure is scheduled, running is processing',()=>{
+ assert.equal(runPhase({status:'running',attempt_count:1,max_attempts:3}),'processing')
+ assert.equal(runPhase({status:'succeeded',attempt_count:1,max_attempts:3}),'completed')
+ assert.equal(runPhase({status:'failed',terminal:false,attempt_count:1,max_attempts:3}),'retry_scheduled')
+ assert.equal(runPhase({status:'failed',terminal:true,attempt_count:1,max_attempts:3}),'needs_human')
+ assert.equal(runPhase({status:'failed',terminal:false,attempt_count:3,max_attempts:3}),'needs_human')
+ assert.equal(runPhase({status:'cancelled',attempt_count:1,max_attempts:3}),'cancelled')
+})

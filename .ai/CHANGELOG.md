@@ -204,3 +204,12 @@ LIVE (aplicadas pelo ChatGPT): `revoke_excess_table_privileges_v1`, `restore_rba
 ### Segurança — 20/09/2026 (PREPARADAS, NÃO APLICADAS)
 `20260920_column_security_and_tenant_derivation_v1`, `20260920_reconciliation_resolution_immutability_v1`, `20260920_leads_v1` (+ `20260919_import_conflicts_v1` ainda pendente).
 Achados: leitura por agent de colunas econômicas; role NULL contornando `not in` nos readers privados (corrigido antes de aplicar); nota/autor/data de resolução reescritos com status inalterado; refresh órfão de caso resolvido; 9 funções com `limit 1` de membership.
+
+### Adicionado — 21/09/2026 (operational integration wave)
+- Executor outbound reescrito sobre `RunRepository` (Supabase + gêmeo em memória), contrato de provider com `CapabilityManifest`, gate de evidência, redactor, logger whitelist, provider fake roteirizado (11 comportamentos), registro de homologação, `/app/integracoes`.
+- Harnesses: `integration-runs-rollback.sql` (111), `operational-e2e-rollback.sql` (Lead→…→Reconciliation com todas as roles).
+- Auditoria `docs/audits/AUDIT-2026-09-21-OPERATIONAL-INTEGRATION-WAVE.md`; contrato de homologação `docs/integrations/2TECH-BUSCACONTRATO-HOMOLOGATION.md`.
+
+### Segurança — 21/09/2026 (PREPARADAS, NÃO APLICADAS)
+`20260921_integration_run_state_machine_v1`, `20260921_operational_pipeline_write_hardening_v1`.
+Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`); ledger de integração sem máquina de estados; payload bruto de provider legível por todo membro; segredo persistível em metadata/artefato/erro.
