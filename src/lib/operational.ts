@@ -22,3 +22,18 @@ export const OPERATIONAL_MESSAGES:Record<OperationalErrorCode,string>={
 }
 
 export const isOperationalErrorCode=(v:unknown):v is OperationalErrorCode=>typeof v==='string'&&Object.prototype.hasOwnProperty.call(OPERATIONAL_MESSAGES,v)
+
+// Operator-facing names for esteira states and the next step for each. `paid` is deliberately described as evidence-backed: no screen offers to set it.
+export const CASE_STATE_LABEL:Record<string,{label:string;next:string}>={
+ digitization_queue:{label:'Na fila de digitação',next:'Alguém precisa iniciar a digitação.'},
+ digitizing:{label:'Em digitação',next:'Quando terminar, marque como enviado.'},
+ submitted:{label:'Enviada ao banco',next:'Aguarde o retorno; um supervisor pode aprovar ou recusar.'},
+ pending_external:{label:'Aguardando retorno do banco',next:'Um supervisor registra a decisão quando ela chegar.'},
+ approved:{label:'Aprovada',next:'Sem ação na operação. O pagamento só é confirmado por evidência (importação), nunca manualmente.'},
+ rejected:{label:'Recusada',next:'Encerrada.'},
+ cancelled:{label:'Cancelada',next:'Encerrada.'},
+ paid:{label:'Paga (confirmada por evidência)',next:'Encerrada.'}
+}
+export const caseStateLabel=(s:string)=>CASE_STATE_LABEL[s]??{label:'Situação desconhecida',next:''}
+export const JOB_STATUS_LABEL:Record<string,string>={queued:'Na fila',assigned:'Atribuída',in_progress:'Em andamento',blocked:'Bloqueada',submitted:'Enviada',completed:'Concluída',cancelled:'Cancelada'}
+export const jobStatusLabel=(s:string)=>JOB_STATUS_LABEL[s]??'Situação desconhecida'

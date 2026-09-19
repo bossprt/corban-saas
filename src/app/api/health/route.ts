@@ -20,7 +20,12 @@ async function databaseReachable(): Promise<boolean> {
   }
 }
 
+// A monitor (or an attacker) hammering this endpoint costs at most one upstream probe every 5 seconds per instance.
+let cached: { at: number; ok: boolean } | null = null
+const CACHE_MS = 5000
+
 export async function GET() {
-  const database = (await databaseReachable()) ? 'ok' : 'unavailable'
+  if (!cached || Date.now() - cached.at > CACHE_MS) cached = { at: Date.now(), ok: await databaseReachable() }
+  const database = cached.ok ? 'ok' : 'unavailable'
   return NextResponse.json({ status: database === 'ok' ? 'ok' : 'degraded', app: 'ok', database }, { status: database === 'ok' ? 200 : 503, headers: { 'Cache-Control': 'no-store' } })
 }

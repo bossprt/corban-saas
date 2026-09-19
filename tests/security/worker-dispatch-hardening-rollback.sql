@@ -1,4 +1,4 @@
--- Rollback-only contract for 20260923_worker_dispatch_hardening_v1.sql (NOT LIVE). __MIG__ = the migration text, executed first in the same
+-- Rollback-only contract for 20260923_worker_dispatch_hardening_v1 (LIVE): run this file as is (no prelude).
 -- transaction; everything else it depends on is LIVE. Covers: adapter-scoped dispatch (starvation), eligibility ordering, immutable attempt
 -- history across retry / takeover / exhausted crash, hostile failure messages, and that the lifecycle guarantees still hold.
 do $test$
@@ -10,7 +10,6 @@ declare
  t0 timestamptz:='2026-09-23 10:00:00+00'; c record; c2 record; r text; k int; fe int; fc int; rid uuid; tok uuid; n int;
  arts text:='[{"kind":"response_metadata","payload":{"status":"paid","commission":999999,"approved":true},"sha256":"h1"}]';
 begin
- execute $d$__MIG__$d$;
  create temp table t_res(label text, pass boolean) on commit drop;
  create function pg_temp.as_role(p_role text,p_uid uuid) returns void language plpgsql as $f$
  begin

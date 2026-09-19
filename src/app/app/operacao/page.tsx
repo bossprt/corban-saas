@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { requireAppContext } from '@/lib/appContext'
 import { transitionOperationalCase } from './actions'
 import { atLeast } from '@/lib/rbac'
-import { OPERATIONAL_MESSAGES, isOperationalErrorCode } from '@/lib/operational'
+import { OPERATIONAL_MESSAGES, caseStateLabel, isOperationalErrorCode, jobStatusLabel } from '@/lib/operational'
 
 export default async function OperationsPage({ searchParams }: { searchParams: Promise<{ erro?: string; ok?: string }> }) {
   const { supabase, membership } = await requireAppContext()
@@ -30,7 +30,7 @@ export default async function OperationsPage({ searchParams }: { searchParams: P
         <div className="grid gap-3">
           {jobsResult.data?.map(j => <div key={j.id} className="rounded-xl border border-slate-800 bg-slate-900 p-5">
             <div className="flex items-center justify-between gap-3">
-              <div><div className="text-xs text-slate-500"><Link href={`/app/propostas/${j.proposal_id}`} className="hover:text-emerald-400">Proposta {j.proposal_id.slice(0, 8)}</Link></div><div className="mt-1 font-medium">{j.status}</div></div>
+              <div><div className="text-xs text-slate-500"><Link href={`/app/propostas/${j.proposal_id}`} className="hover:text-emerald-400">Proposta {j.proposal_id.slice(0, 8)}</Link></div><div className="mt-1 font-medium">{jobStatusLabel(j.status)}</div></div>
               <div className="text-right text-xs text-slate-500"><div>Prioridade {j.priority}</div><div>Tentativas {j.attempt_count}</div></div>
             </div>
             {j.last_error && <p className="mt-3 rounded-lg bg-red-500/10 p-2 text-xs text-red-300">{j.last_error}</p>}
@@ -44,7 +44,7 @@ export default async function OperationsPage({ searchParams }: { searchParams: P
         <div className="grid gap-3">
           {casesResult.data?.map(c => <div key={c.id} className="rounded-xl border border-slate-800 bg-slate-900 p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div><div className="text-xs text-slate-500"><Link href={`/app/propostas/${c.proposal_id}`} className="hover:text-emerald-400">Proposta {c.proposal_id.slice(0, 8)}</Link></div><div className="mt-1 font-medium">{c.canonical_state}</div></div>
+              <div><div className="text-xs text-slate-500"><Link href={`/app/propostas/${c.proposal_id}`} className="hover:text-emerald-400">Proposta {c.proposal_id.slice(0, 8)}</Link></div><div className="mt-1 font-medium">{caseStateLabel(c.canonical_state).label}</div><div className="mt-1 text-xs text-slate-400">{caseStateLabel(c.canonical_state).next}</div></div>
               <div className="text-sm text-slate-400">{c.external_status_raw ?? 'Sem status externo'}</div>
             </div>
             {c.due_at && <div className="mt-3 text-xs text-slate-500">SLA: {new Date(c.due_at).toLocaleString('pt-BR')}</div>}

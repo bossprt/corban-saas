@@ -13,7 +13,7 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
   const { supabase, membership } = await requireAppContext()
 
   const { data: proposal } = await supabase.from('proposals_v2')
-    .select('id,status,customer_id,simulation_id,requested_amount,released_amount,installment_amount,term,rate,expected_commission_amount,customer_snapshot,commercial_snapshot,created_at')
+    .select('id,status,customer_id,simulation_id,requested_amount,released_amount,installment_amount,term,rate,customer_snapshot,commercial_snapshot,created_at')
     .eq('id', id).maybeSingle()
 
   if (!proposal) notFound()

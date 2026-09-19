@@ -1,18 +1,11 @@
 import 'server-only'
-import { headers } from 'next/headers'
+import { siteOrigin } from '@/lib/site-origin'
 import { createAdminClient } from '@/lib/supabaseAdmin'
 import { isExistingUserError } from '@/lib/team'
 
 // Server-only identity plumbing for the team module. The service role never leaves the server and is used for exactly three things:
 // (1) asking Supabase Auth to send the invitation e-mail, (2) reading member e-mail addresses for display, (3) the service_role-only
 // accept RPC. Authorization ALWAYS happens before, with the caller's own session (RLS + governed RPCs).
-
-async function siteOrigin():Promise<string|null>{
- const configured=process.env.NEXT_PUBLIC_SITE_URL
- const h=await headers()
- const candidate=configured||h.get('origin')||''
- try{const u=new URL(candidate);return u.protocol==='https:'||u.protocol==='http:'?u.origin:null}catch{return null}
-}
 
 export type InviteEmailOutcome='sent'|'existing_user'|'failed'
 export async function sendInvitationEmail(email:string):Promise<InviteEmailOutcome>{

@@ -1,4 +1,4 @@
--- (Run with 20260924_confirm_paid_replay_v1.sql executed first in the same transaction: __MIG__ below.)
+-- 20260924_confirm_paid_replay_v1 is LIVE: run this file as is (no prelude).
 -- Rollback-only proof that the ONLY way a proposal becomes PAID is confirm_proposal_paid_from_import (approved import decision + production
 -- report status evidence), that the proposals_v2 write guard (worker_governance_v1) lets that path through, and that a PAID status is NOT money.
 do $test$
@@ -6,7 +6,6 @@ declare
  o1 uuid:=gen_random_uuid(); o2 uuid:=gen_random_uuid(); uS uuid:=gen_random_uuid(); uA uuid:=gen_random_uuid(); uB uuid:=gen_random_uuid();
  pA uuid:=gen_random_uuid(); sp uuid:=gen_random_uuid(); cu uuid:=gen_random_uuid(); ptab uuid:=gen_random_uuid(); pver uuid:=gen_random_uuid(); b text; n uuid; cnd uuid; d uuid:=gen_random_uuid(); r text; k int; fe int; fc int;
 begin
- execute $d$__MIG__$d$;
  create temp table t_res(label text, pass boolean) on commit drop;
  create function pg_temp.as_user(p_uid uuid) returns void language plpgsql as $f$
  begin
@@ -67,7 +66,8 @@ begin
  r:=pg_temp.run_as(uS,format($q$select public.confirm_proposal_paid_from_import(%L)::text$q$,d));
  perform pg_temp.check_that((select status='paid' from public.proposals_v2 where id=pA),'the governed evidence path DOES mark the proposal paid (the write guard lets it through)');
  perform pg_temp.check_that((select count(*)=1 and bool_and(canonical_status='paid' and raw_status='PAGO') from public.proposal_status_evidence where proposal_id=pA),'exactly one status evidence row backs the change');
- perform pg_temp.check_that(pg_temp.run_as(uS,format($q$select public.confirm_proposal_paid_from_import(%L)::text$q$,d))=r,'confirmation is idempotent');
+ perform pg_temp.check_that(pg_temp.run_as(uS,format($q$select public.confirm_proposal_paid_from_import(%L)::text$q$,d))=r,'REPLAY: the same decision returns the same evidence (idempotent, no error)');
+ perform pg_temp.check_that((select count(*) from public.proposal_status_evidence where proposal_id=pA)=1,'REPLAY: zero duplicate evidence');
  perform pg_temp.check_that((select count(*) from public.financial_events)=fe and (select count(*) from public.financial_reconciliation_cases)=fc,'a PAID STATUS is not money: no financial event and no reconciliation case was created');
  perform pg_temp.expect_err(uS,format($q$update public.proposals_v2 set status='approved' where id=%L$q$,pA),'proposal_write_requires_governed_rpc','a paid proposal cannot be moved back by UPDATE');
  perform pg_temp.check_that((select status='paid' from public.proposals_v2 where id=pA),'still paid after the attempt');

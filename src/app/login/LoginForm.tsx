@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 
@@ -47,6 +48,7 @@ export default function LoginForm({ notice }: { notice?: string }) {
             <input name="password" type="password" autoComplete="current-password" required className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white text-sm" />
           </div>
           {error ? <p role="alert" className="text-sm text-red-300">{error}</p> : null}
+          <p className="text-right text-xs"><Link href="/login/recuperar" className="text-slate-400 underline hover:text-slate-200">Esqueci minha senha</Link></p>
           <button disabled={loading} type="submit" className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white font-medium py-3 rounded-lg text-sm">
             {loading ? 'Entrando...' : 'Entrar no Sistema'}
           </button>
