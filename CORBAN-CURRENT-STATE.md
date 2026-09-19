@@ -233,3 +233,13 @@ A primeira conclui as transições controladas da Mesa sem permitir marcação m
 - Security Advisor: 0 WARN/0 ERROR; SECURITY DEFINER 8; anon DEFINER execute 0.
 - Zero synthetic residue in catalog/financial reconciliation surfaces.
 - Current pilot blockers are now deployment and real Smart configuration rather than an independent technical P0.
+
+
+## 24. Vercel project discovered — 19/09/2026
+- Connected Vercel account/team: `bossprt's projects`.
+- Project exists: `corban-saas` (`prj_X63Eyy85aWFU1DvPV0XtnM0F1BG5`).
+- Git integration is active: pushes on `architecture/corban-os-master-v2` are producing READY preview deployments.
+- Latest observed preview: `dpl_Bgtw1VJwWCqypgyQtF1Cyg3Cbp95`, commit `01011c74...`; target is not production.
+- The latest preview is protected by Vercel Authentication. No runtime logs were present for it.
+- Historical runtime telemetry shows an older deployment had missing Supabase URL/key in middleware; last occurrence was on 18/09/2026.
+- This connector session can inspect projects/deployments/runtime telemetry, but does not expose production env mutation or production promotion. Those remain an external Owner action.
