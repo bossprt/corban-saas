@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireAppContext } from '@/lib/appContext'
-import { atLeast } from '@/lib/rbac'
+import { canViewCommission } from '@/lib/rbac'
 import { buildLedger,bucketTotals,EVENT_LABEL,formatBRL,type LedgerEvent } from '@/lib/finance/ledger'
 import { cmp,fromDecimalString } from '@/lib/commission/money'
 import { refreshFinancialReconciliation } from '../../../propostas/[id]/actions'
@@ -21,7 +21,7 @@ export default async function CasePage({params,searchParams}:{params:Promise<{id
  const {id}=await params
  const sp=await searchParams
  const {supabase,membership}=await requireAppContext()
- if(!atLeast(membership.role,'supervisor'))return <section><h1 className="text-3xl font-semibold">Financeiro</h1><p className="mt-3 text-sm text-slate-400">Dados de comissão e conciliação são restritos aos perfis administrador, gerente e supervisor.</p></section>
+ if(!canViewCommission(membership.role))return <section><h1 className="text-3xl font-semibold">Financeiro</h1><p className="mt-3 text-sm text-slate-400">Dados de comissão e conciliação são restritos aos perfis administrador, gerente e supervisor.</p></section>
  const {data:c}=await supabase.from('financial_reconciliation_cases').select('id,proposal_id,component_type,status,resolution_note,resolved_by,resolved_at,updated_at,expected_text:expected_amount::text,reported_text:reported_amount::text,settled_text:settled_amount::text,divergence_text:divergence_amount::text').eq('id',id).maybeSingle()
  if(!c)notFound()
  let q=supabase.from('financial_events').select('id,event_type,component_type,amount_text:amount::text,currency,occurred_at,created_at,source_kind,source_reference,reverses_event_id,metadata').eq('proposal_id',c.proposal_id).order('created_at')

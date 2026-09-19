@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireAppContext } from '@/lib/appContext'
 import { attachDocument, prepareDocuments, sendToDigitization, validateRequirement, publishExpectedCommission } from './actions'
-import { atLeast } from '@/lib/rbac'
+import { atLeast, canViewCommission } from '@/lib/rbac'
 
 function brl(value: number | string | null) {
   return value === null ? '—' : Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -32,7 +32,7 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
       .select('id,document_type_id,original_file_name,version,status')
       .eq('customer_id', proposal.customer_id).eq('status', 'active').order('created_at', { ascending: false }),
     supabase.from('proposal_external_identities').select('institution_key,external_proposal_number,source,channel_id,first_seen_at').eq('proposal_id', id).order('first_seen_at'),
-    atLeast(membership.role,'supervisor')
+    canViewCommission(membership.role)
       ? supabase.rpc('get_commercial_route',{p_proposal_id:id}).maybeSingle().then(async r => r.error
         // RPC absent (migration not applied yet) or refused: operational columns only, valid before and after the migration
         ? supabase.from('proposal_commercial_snapshots').select('channel_id,producer_entity_id,payer_entity_id,created_at').eq('proposal_id', id).maybeSingle()
@@ -44,7 +44,7 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
   type CommercialRoute = { channel_id: string | null; producer_entity_id: string | null; payer_entity_id: string | null; commission_rule_version_id?: string | null; split_rule_version_id?: string | null; snapshot?: unknown } | null
   const commercialRoute = commercialRouteRaw as CommercialRoute
   // Financial facts expose commission economics: only supervisor+ roles see them (server-side gate on top of RLS).
-  const financialEvents = atLeast(membership.role,'supervisor') ? financialEventsRaw : []
+  const financialEvents = canViewCommission(membership.role) ? financialEventsRaw : []
   const customer = (proposal.customer_snapshot ?? {}) as Record<string, unknown>
   const commercial = (proposal.commercial_snapshot ?? {}) as Record<string, unknown>
   const pendingRequired = (requirements ?? []).filter(r => r.required_snapshot && !['validated', 'waived'].includes(r.status))

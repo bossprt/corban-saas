@@ -4,7 +4,7 @@ import { requireAppContext } from '@/lib/appContext'
 import { detectConflicts,requiresHumanReview,type ConflictRow } from '@/lib/imports/conflicts'
 import type { NormalizedImportRow } from '@/lib/imports/contract'
 import { applyApprovedImportMatch, decideImportCandidate, publishApprovedImportFinancialFact, confirmPaidFromImport, resolveImportConflict } from './actions'
-import { atLeast } from '@/lib/rbac'
+import { atLeast, canViewCommission } from '@/lib/rbac'
 
 type ImportRow={id:string;raw_row_id:string;batch_id:string;source_id:string;row_number:number;normalization_version:string|null;normalized_payload:Record<string,unknown>|null;record_kind:string;bank_key:string|null;external_proposal_number:string|null;producer_tax_id:string|null;external_table_code:string|null;external_table_name:string|null;operation_type:string|null;term:number|null;rate:number|null;commission_upfront:number|null;commission_deferred:number|null;amount:number|null}
 
@@ -29,7 +29,7 @@ export default async function ImportBatchPage({params}:{params:Promise<{id:strin
   rows=((base??[]) as Record<string,unknown>[]).map(r=>({...r,batch_id:id,source_id:batch.source_id,row_number:rowNo.get(r.raw_row_id as string)??0,normalized_payload:null,commission_upfront:null,commission_deferred:null,amount:null}) as ImportRow)
  }
  const rowIds=rows?.map(r=>r.id)??[]
- const canSeeCommission=atLeast(membership.role,'supervisor')
+ const canSeeCommission=canViewCommission(membership.role)
  // Same-tenant rows (RLS-scoped) sharing an external proposal number, to surface cross-batch/source conflicts.
  const numbers=[...new Set((rows??[]).map(r=>r.external_proposal_number).filter((x):x is string=>!!x))]
  const peersRpc=numbers.length?await supabase.rpc('list_import_rows',{p_batch_id:id,p_numbers:numbers}):{data:[],error:null}

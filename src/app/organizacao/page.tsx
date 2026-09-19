@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
+import { acceptInvitationsFor } from '@/lib/team.server'
 import { selectOrganization } from './actions'
 
 const ROLE: Record<string, string> = { admin: 'Administrador', manager: 'Gerente', supervisor: 'Supervisor', agent: 'Operador' }
@@ -8,6 +9,7 @@ export default async function OrganizationPickerPage({ searchParams }: { searchP
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+  await acceptInvitationsFor(user) // an existing user invited to a second organization sees it here
   const { data: memberships } = await supabase.from('organization_memberships').select('organization_id, role').eq('user_id', user.id).eq('status', 'active')
   if (!memberships?.length) redirect('/access-pending')
   const ids = memberships.map(m => m.organization_id)

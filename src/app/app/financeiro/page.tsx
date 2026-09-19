@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { requireAppContext } from '@/lib/appContext'
-import { atLeast } from '@/lib/rbac'
+import { canViewCommission } from '@/lib/rbac'
 import { formatBRL } from '@/lib/finance/ledger'
 import { add,fromDecimalString,toDecimalString } from '@/lib/commission/money'
 
@@ -9,7 +9,7 @@ const FILTERS=['all','open','divergent','human_required','matched','resolved'] a
 
 export default async function FinancePage({searchParams}:{searchParams:Promise<{status?:string}>}){
  const {supabase,membership}=await requireAppContext()
- if(!atLeast(membership.role,'supervisor'))return <section><h1 className="text-3xl font-semibold">Financeiro</h1><p className="mt-3 text-sm text-slate-400">Dados de comissão e conciliação são restritos aos perfis administrador, gerente e supervisor.</p></section>
+ if(!canViewCommission(membership.role))return <section><h1 className="text-3xl font-semibold">Financeiro</h1><p className="mt-3 text-sm text-slate-400">Dados de comissão e conciliação são restritos aos perfis administrador, gerente e supervisor.</p></section>
  const sp=await searchParams
  const filter=(FILTERS as readonly string[]).includes(sp.status??'')?sp.status!:'all'
  const {count:events}=await supabase.from('financial_events').select('*',{count:'exact',head:true})
