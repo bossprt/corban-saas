@@ -453,3 +453,13 @@ Next execution target: implement Supabase `RunRepository` for outbound executor 
 **Dependências externas:** nenhuma credencial usada; nenhuma chamada de rede; nenhum provider real iniciado.
 **Não feito:** worker/cron que chama `executeRun` (interface pronta, sem processo agendado); botão de cancelar/reexecutar na UI (RPC `cancel_integration_run` existe); provider real.
 **Retomada exata:** após autorização aplicar a migration 1, criar rota/worker servidor que instancie `SupabaseRunRepository` + `executeRun` com o provider `local/fake` num binding de teste (rollback-only), depois escolher o primeiro provider real quando houver arquivo/credencial.
+
+
+## LIVE operational integration application — 19/09/2026 (ChatGPT)
+Applied after reviewing Claude HEAD `a2aa621` and reconciling against live migration history:
+- `20260919035427 integration_run_state_machine_v1`
+- `20260919035447 operational_pipeline_write_hardening_v1`
+Both applied successfully; DO NOT REAPPLY.
+Post-apply verification: integration_runs now has lease/fencing/state columns; security advisor remains 0 WARN / 0 ERROR with only the same two intentional INFO on closed platform-admin tables. Performance advisor has no new actionable FK warning; remaining findings are unused-index INFO on the near-empty database plus Auth fixed connection-count INFO.
+No synthetic operational data persisted: integration_runs=0, integration_run_artifacts=0, operational_events=0, digitization_jobs=0, operational_cases=0 at verification.
+Next execution target: server-only worker/route that instantiates SupabaseRunRepository(createAdminClient()) and executeRun. Keep local/fake confined to rollback/test; no real provider/network call. Add governed cancel/retry UI only after worker path is proven. proposals_v2 direct UPDATE and customer_timeline_events direct INSERT remain explicit security debt to review before production.
