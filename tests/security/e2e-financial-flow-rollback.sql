@@ -177,11 +177,47 @@ begin
  perform pg_temp.expect_err(uM,format($q$select public.create_and_publish_commission_rule(%L,%L,'upfront',1,null,null,'gross',now(),null)$q$,ch,gen_random_uuid()),'channel_not_found','multi-org user is only supervisor in the channel organization: manager-only rule publishing is refused there');
  perform pg_temp.expect_err(uS,format($q$select public.create_and_publish_commission_rule(%L,%L,'upfront',1,null,null,'gross',now(),null)$q$,ch,gen_random_uuid()),'channel_not_found','supervisor cannot publish rules (manager+ only)');
  perform pg_temp.check_that(pg_get_functiondef('public.apply_approved_import_match'::regproc) like '%table_identity_requires_manager%','table identities require manager+ (same rule as the RLS policy)');
+
+ -- ===== release gate: direct calls to private.* helpers (authenticated must NOT get an RLS/tenant bypass) =====
+ perform pg_temp.check_that(pg_temp.run_as(uA,format($q$select coalesce(private.caller_role_in(%L::uuid),'null')$q$,o1))='agent','caller_role_in answers only about the caller (agent in own tenant)');
+ perform pg_temp.check_that(pg_temp.run_as(uB,format($q$select coalesce(private.caller_role_in(%L::uuid),'null')$q$,o1))='null','caller_role_in for a tenant where the caller has no membership is NULL (no oracle on others)');
+ perform pg_temp.check_that(pg_temp.run_as(uR,format($q$select coalesce(private.caller_role_in(%L::uuid),'null')$q$,o1))='null','revoked membership: caller_role_in is NULL');
+ perform pg_temp.check_that(pg_temp.run_as(gen_random_uuid(),format($q$select coalesce(private.caller_role_in(%L::uuid),'null')$q$,o1))='null','user without any membership: caller_role_in is NULL');
+ perform pg_temp.check_that(pg_temp.run_as(uM,format($q$select coalesce(private.caller_role_in(%L::uuid),'null')||'/'||coalesce(private.caller_role_in(%L::uuid),'null')$q$,o1,o2))='supervisor/admin','multi-org user: role is per organization, never merged');
+ perform pg_temp.expect_err(uB,format($q$select * from private.list_import_rows(%L)$q$,b_c::uuid),'batch_not_found_or_forbidden','direct private.list_import_rows: tenant B refused');
+ perform pg_temp.expect_err(uR,format($q$select * from private.list_import_rows(%L)$q$,b_c::uuid),'batch_not_found_or_forbidden','direct private.list_import_rows: revoked refused');
+ perform pg_temp.expect_err(gen_random_uuid(),format($q$select * from private.list_import_rows(%L)$q$,b_c::uuid),'batch_not_found_or_forbidden','direct private.list_import_rows: no membership refused');
+ perform pg_temp.expect_err(uB,format($q$select * from private.list_import_rows(%L,array['100'])$q$,b_c::uuid),'batch_not_found_or_forbidden','private.list_import_rows with p_numbers cannot be used to read another tenant rows');
+ perform pg_temp.check_that(pg_temp.run_as(uA,format($q$select count(*)::text from private.list_import_rows(%L) where amount is not null or normalized_payload is not null$q$,b_c::uuid))='0','direct private.list_import_rows still masks economics for agent');
+ perform pg_temp.expect_err(uA,format($q$select * from private.import_row_evidence(%L)$q$,n_c),'forbidden','direct private.import_row_evidence: agent refused');
+ perform pg_temp.expect_err(uB,format($q$select * from private.import_row_evidence(%L)$q$,n_c),'forbidden','direct private.import_row_evidence: tenant B refused');
+ perform pg_temp.expect_err(uR,format($q$select * from private.import_row_evidence(%L)$q$,n_c),'forbidden','direct private.import_row_evidence: revoked refused');
+ perform pg_temp.expect_err(gen_random_uuid(),format($q$select * from private.import_row_evidence(%L)$q$,n_c),'forbidden','direct private.import_row_evidence: no membership refused');
+ perform pg_temp.expect_err(uR,format($q$select * from private.commercial_route(%L)$q$,pA),'forbidden','direct private.commercial_route: revoked refused');
+ perform pg_temp.expect_err(gen_random_uuid(),format($q$select * from private.commercial_route(%L)$q$,pA),'forbidden','direct private.commercial_route: no membership refused');
+ perform pg_temp.expect_err(uB,format($q$select * from private.commercial_route(%L)$q$,pA),'forbidden','direct private.commercial_route: tenant B refused');
+ perform pg_temp.expect_err(uB,format($q$select * from private.import_row_evidence(%L)$q$,gen_random_uuid()),'forbidden','unknown row id and foreign row id give the same error');
+ begin
+  set local role anon;
+  perform private.caller_role_in(o1);
+  reset role;
+  perform pg_temp.check_that(false,'anon must not be able to call private helpers');
+ exception when others then reset role; perform pg_temp.check_that(sqlerrm ~ 'permission denied','anon cannot call private helpers ('||sqlerrm||')'); end;
+ perform pg_temp.check_that(not has_schema_privilege('anon','private','USAGE') and not has_schema_privilege('anon','private','CREATE') and not has_schema_privilege('authenticated','private','CREATE'),'private schema: no anon USAGE, nobody can CREATE objects there');
+ -- inventory: every SECURITY DEFINER in application schemas pins search_path, is never executable by anon or PUBLIC, and none lives in an exposed schema for authenticated
+ perform pg_temp.check_that(not exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where p.prosecdef and n.nspname in ('public','private') and not exists(select 1 from unnest(coalesce(p.proconfig,'{}')) c where c like 'search_path=%')),'every SECURITY DEFINER in public/private pins search_path');
+ perform pg_temp.check_that(not exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace,lateral aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a where p.prosecdef and n.nspname in ('public','private') and (a.grantee=0 or a.grantee=(select oid from pg_roles where rolname='anon'))),'no SECURITY DEFINER in public/private is executable by PUBLIC or anon');
+ perform pg_temp.check_that(not exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace where p.prosecdef and n.nspname='public' and has_function_privilege('authenticated',p.oid,'EXECUTE')),'no SECURITY DEFINER function in the exposed public schema is executable by authenticated');
+ perform pg_temp.check_that(not exists(select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace,lateral aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a where n.nspname='private' and (a.grantee=0 or a.grantee=(select oid from pg_roles where rolname='anon'))),'no function in private is executable by PUBLIC or anon (definer or not)');
+ raise notice 'DEFINER_INVENTORY %',(select string_agg(n.nspname||'.'||p.proname||'('||pg_get_function_identity_arguments(p.oid)||') auth='||has_function_privilege('authenticated',p.oid,'EXECUTE')::text||' anon='||has_function_privilege('anon',p.oid,'EXECUTE')::text,E'\n' order by 1) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where p.prosecdef and n.nspname in ('public','private'));
  perform pg_temp.check_that(not exists(select 1 from public.financial_reconciliation_cases where expected_amount<0 or reported_amount<0 or settled_amount<0),'no negative bucket anywhere');
 
  select string_agg(case when pass then 'ok   ' else 'FAIL ' end||label,E'\n' order by pass,label),count(*) filter (where not pass) into r,k from t_res;
  raise exception 'RESULTS: %
-%',case when k=0 then 'ALL PASS ('||(select count(*) from t_res)||' checks)' else k||' FAILED' end,r;
+%
+DEFINER INVENTORY:
+%',case when k=0 then 'ALL PASS ('||(select count(*) from t_res)||' checks)' else k||' FAILED' end,r,(select string_agg(n.nspname||'.'||p.proname||'('||pg_get_function_identity_arguments(p.oid)||') authenticated='||has_function_privilege('authenticated',p.oid,'EXECUTE')::text||' anon='||has_function_privilege('anon',p.oid,'EXECUTE')::text,E'
+' order by n.nspname,p.proname) from pg_proc p join pg_namespace n on n.oid=p.pronamespace where p.prosecdef and n.nspname in ('public','private'));
 end $test$;
 
 -- Regression (found by this harness): private readers must treat a NULL role as forbidden. `NULL not in (...)` is NULL, which

@@ -79,6 +79,25 @@ begin
  perform pg_temp.check_that(not exists(select 1 from information_schema.columns where table_schema='public' and table_name in ('leads','lead_events') and column_name ~* '(commission|amount|split|fee|payout)'),'CRM tables carry no financial columns');
  perform pg_temp.check_that((select count(*) from public.lead_events where lead_id=l1)=4,'timeline: created, contacted, qualified, converted');
 
+
+ -- ===== release gate: private.lead_write called DIRECTLY by authenticated (helper must not become a bypass) =====
+ perform pg_temp.expect_err(uB,format($q$select private.lead_write(%L::uuid,%L::uuid,'status','{"status":"contacted"}'::jsonb)$q$,o1,l1),'lead_forbidden','direct lead_write: tenant B with the right org id and lead id is refused');
+ perform pg_temp.expect_err(uB,format($q$select private.lead_write(%L::uuid,%L::uuid,'convert','{"cpf":"99999999999"}'::jsonb)$q$,o2,l1),'lead_forbidden','direct lead_write: B passing ITS OWN org with a tenant A lead id cannot touch the lead');
+ perform pg_temp.expect_err(uB,format($q$select private.lead_write(%L::uuid,null,'create','{"channel":"manual","full_name":"Injected"}'::jsonb)$q$,o1),'lead_forbidden','direct lead_write: B cannot create in tenant A');
+ perform pg_temp.expect_err(uR,format($q$select private.lead_write(%L::uuid,null,'create','{"channel":"manual","full_name":"Injected"}'::jsonb)$q$,o1),'lead_forbidden','direct lead_write: revoked membership refused');
+ perform pg_temp.expect_err(gen_random_uuid(),format($q$select private.lead_write(%L::uuid,null,'create','{"channel":"manual","full_name":"Injected"}'::jsonb)$q$,o1),'lead_forbidden','direct lead_write: user without membership refused');
+ perform pg_temp.expect_err(uA,'select private.lead_write(null,null,''create'',''{"channel":"manual","full_name":"Injected"}''::jsonb)','lead_forbidden','direct lead_write: NULL organization refused');
+ perform pg_temp.expect_err(uA,format($q$select private.lead_write(%L::uuid,%L::uuid,'delete','{}'::jsonb)$q$,o1,l1),'invalid_lead_operation','direct lead_write: unknown operation refused');
+ perform pg_temp.expect_err(uA,format($q$select private.lead_write(%L::uuid,%L::uuid,'status','{"status":"contacted"}'::jsonb)$q$,o1,l1),'lead_already_converted','direct lead_write by a member follows exactly the same business rules as the wrapper');
+ perform pg_temp.expect_err(uA,format($q$select private.lead_write(%L::uuid,null,'create','{"channel":"not_a_channel","full_name":"Bad Channel"}'::jsonb)$q$,o1),'violates check','direct lead_write: table constraints still apply');
+ perform pg_temp.check_that((select count(*) from public.leads where full_name='Injected')=0,'no injected lead exists');
+ perform pg_temp.check_that((select count(*) from public.leads where organization_id=o2 and channel='manual')=0,'nothing was created in tenant B either');
+ perform pg_temp.check_that(pg_temp.run_as(uB,'select count(*)::text from public.clients where organization_id is not null')='0','tenant B still cannot read tenant A customers after all attempts');
+ perform pg_temp.check_that((select prosecdef and 'search_path=""' = any(proconfig) from pg_proc where oid='private.lead_write(uuid,uuid,text,jsonb)'::regprocedure),'lead_write is a definer with pinned search_path');
+ perform pg_temp.check_that(not has_function_privilege('anon','private.lead_write(uuid,uuid,text,jsonb)','EXECUTE') and not has_function_privilege('anon','public.create_lead(uuid,text,text,text,text,text,text,jsonb)','EXECUTE') and not has_function_privilege('anon','public.set_lead_status(uuid,text,text)','EXECUTE') and not has_function_privilege('anon','public.convert_lead_to_customer(uuid,text)','EXECUTE'),'anon cannot execute any lead function');
+ perform pg_temp.check_that(not exists(select 1 from pg_proc p,lateral aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a where p.oid in ('private.lead_write(uuid,uuid,text,jsonb)'::regprocedure,'public.create_lead(uuid,text,text,text,text,text,text,jsonb)'::regprocedure,'public.set_lead_status(uuid,text,text)'::regprocedure,'public.convert_lead_to_customer(uuid,text)'::regprocedure) and a.grantee=0),'no lead function is executable by PUBLIC');
+ perform pg_temp.check_that((select count(*) from public.financial_events)=0 and (select count(*) from public.financial_reconciliation_cases)=0,'Lead -> Customer created no financial event or reconciliation case');
+ perform pg_temp.check_that(not exists(select 1 from pg_depend d join pg_class c on c.oid=d.refobjid where d.objid in ('public.leads'::regclass,'public.lead_events'::regclass) and c.relname like 'financial%'),'no dependency from CRM tables to financial tables');
  select string_agg(case when pass then 'ok   ' else 'FAIL ' end||label,E'\n' order by pass,label),count(*) filter (where not pass) into r,k from t_res;
  raise exception 'RESULTS: %
 %',case when k=0 then 'ALL PASS ('||(select count(*) from t_res)||' checks)' else k||' FAILED' end,r;
