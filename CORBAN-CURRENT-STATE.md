@@ -243,3 +243,7 @@ A primeira conclui as transições controladas da Mesa sem permitir marcação m
 - The latest preview is protected by Vercel Authentication. No runtime logs were present for it.
 - Historical runtime telemetry shows an older deployment had missing Supabase URL/key in middleware; last occurrence was on 18/09/2026.
 - This connector session can inspect projects/deployments/runtime telemetry, but does not expose production env mutation or production promotion. Those remain an external Owner action.
+
+
+## 25. Vercel env configured — 19/09/2026
+Owner confirmed Vercel environment variables for Supabase URL, publishable/anon key, public site URL and service-role secret were configured. Worker variables remain intentionally absent. A fresh preview deployment should be generated from this branch to validate the runtime with the new configuration.
