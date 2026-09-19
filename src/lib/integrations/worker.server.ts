@@ -18,6 +18,8 @@ export function buildFactories():ProviderFactories{
 
 export function createWorkerRepository(){return new SupabaseRunRepository(createAdminClient())}
 
+// Serverless-safe defaults: provider timeout 20s, lease 60s (must exceed the timeout), pass budget 45s (< maxDuration 60s of the route).
+// A run that starts and is then killed is recovered by lease takeover after 60s and its attempt is kept in the history.
 export async function dispatchOnce(opts:{limit?:number;onlyRunId?:string}={}):Promise<CycleSummary>{
- return runDispatchCycle({repo:createWorkerRepository(),factories:buildFactories(),env:process.env,credentials:noCredentials,logger:consoleLogger,limit:opts.limit,onlyRunId:opts.onlyRunId})
+ return runDispatchCycle({repo:createWorkerRepository(),factories:buildFactories(),env:process.env,credentials:noCredentials,logger:consoleLogger,limit:opts.limit,onlyRunId:opts.onlyRunId,timeoutMs:20_000,leaseSeconds:60,budgetMs:45_000})
 }

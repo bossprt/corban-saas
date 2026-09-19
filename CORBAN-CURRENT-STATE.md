@@ -166,5 +166,12 @@ A primeira conclui as transições controladas da Mesa sem permitir marcação m
 
 ## 16. Worker + governance wave — 22/09/2026
 - LIVE: tudo até `operational_pipeline_write_hardening_v1` (seção 15 corrigida).
-- NOT LIVE (preparada, harness rollback-only): `20260922_worker_governance_v1` — inclui HOTFIX de `transition_operational_case`, que está QUEBRADA no banco live desde o hardening da esteira (falha com `operational_write_requires_governed_rpc`). Prioridade de aplicação: alta.
+- LIVE (aplicada pelo ChatGPT como 20260919044054 worker_governance_v1): inclui o HOTFIX de `transition_operational_case` (a RPC estava quebrada no live entre o hardening da esteira e esta migration). Corrigida e provada em 125 checagens. Não reaplicar.
 - Código pronto (aplica-se sozinho quando a migration existir): worker server-only, dispatch, cancel/retry/reexecução, `/app/integracoes` com ações. Sem cron; sem provider real; Bevicred DEFERRED; 2Tech awaiting_real_file.
+
+
+## 17. Live regression + closure — 23/09/2026
+- LIVE (nada novo aplicado por esta onda): tudo até `worker_governance_v1`. Suítes rerodadas contra o estado LIVE (sem preludes): worker governance 125, integration runs 111, operational E2E 72, financial E2E 93, leads 47 — todas ALL PASS; advisors: segurança 0 WARN/0 ERROR (2 INFO intencionais), performance só INFO (índices não usados em banco vazio; conexões de auth).
+- NOT LIVE (preparadas, harness rollback-only verde): `20260923_worker_dispatch_hardening_v1` (histórico de tentativas, dispatch escopado, mensagem hostil não trava) e `20260924_confirm_paid_replay_v1` (replay idempotente de PAID, 18 checagens).
+- IMPLEMENTED (código, ativa-se sozinho após as migrations): despacho por adapter, orçamento de tempo, histórico e linhagem na UI, mensagens de erro classificadas em /app/operacao e /app/integracoes.
+- BLOCKED: 2Tech (arquivo real). DEFERRED: Bevicred. HUMAN GATE: aplicar as 2 migrations; segredo + agendador do worker; regra de comissão visível ao agent.

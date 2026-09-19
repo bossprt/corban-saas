@@ -19,3 +19,20 @@ The persisted request (`integration_runs.metadata.request`) is redacted before i
 ## Retry vs re-execution
 - **Nova tentativa** continues the same run; the database still enforces backoff, attempts and lease.
 - **Nova execução** creates a new run pointing at a terminal parent (failed terminally or cancelled) with a mandatory reason. A succeeded run is never re-executed.
+
+## Scheduler readiness (nothing below is configured)
+The domain never depends on a scheduler: anything that can send `POST /api/integrations/dispatch` with `Authorization: Bearer <secret>` works (Vercel Cron, n8n, GitHub Actions, a queue consumer, an operator with curl). Moving between them changes no domain code.
+
+| Parameter | Value in code | Why |
+|---|---|---|
+| Recommended frequency | every 1 minute (5 minutes is enough for a pilot) | retries back off by 30 s, 60 s, 120 s…; a shorter period only adds empty passes |
+| Runs per pass | at most 10 from the route (hard cap 25) | bounded work per invocation |
+| Provider timeout | 20 s | must be shorter than the lease |
+| Lease | 60 s | a killed invocation is recovered by takeover after 60 s and the lost attempt is kept in the history |
+| Pass budget | 45 s, route `maxDuration` 60 s | no new run starts when a provider timeout no longer fits; the rest waits for the next pass |
+| Concurrency | any number of overlapping callers | `claim` serializes per run (row lock + lease + fencing token); a run in flight is `in_progress` for everyone else |
+| Backpressure | 25-run ceiling per pass, oldest-eligible first | a backlog drains over passes; runs the worker cannot execute (unregistered / deferred / local-in-production adapters) are filtered out in SQL and never occupy a slot |
+| Retry | database-governed (backoff, max attempts, terminal errors) | the caller never decides |
+| Observability | one sanitized JSON event per step (`correlationId`, `runId`, provider, adapter, capability, attempt, duration, outcome, error code) | metrics derivable with `computeRunMetrics` |
+
+Not activated: no cron entry, no `INTEGRATION_WORKER_SECRET`, no external service, no provider credentials.

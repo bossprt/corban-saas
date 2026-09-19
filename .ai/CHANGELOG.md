@@ -221,3 +221,12 @@ Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`)
 
 ### Segurança — 22/09/2026 (PREPARADA, NÃO APLICADA)
 `20260922_worker_governance_v1`: corrige `transition_operational_case` (regressão do hardening LIVE), governa escrita de `proposals_v2` e `customer_timeline_events`, adiciona enqueue/dispatch/reexecução.
+
+### Adicionado — 23/09/2026 (regressão LIVE + prova do worker + prontidão de scheduler)
+- Dispatch como função pura (`handleDispatchRequest`), guard do fake por allow-list, despacho escopado por adapter, orçamento de tempo do ciclo, histórico de tentativas, erros classificados na UI de operação e de integrações, linhagem visual (execução original / nova execução / motivo).
+- Testes: `worker-hardening.test.ts` (arquitetura, dispatch auth, matriz do guard, backpressure/starvation, cancel vs fencing, histórico, repositório real sobre ponte RPC, contrato RPC×SQL).
+- SQL: harnesses rodados contra o estado LIVE sem preludes; novos `worker-dispatch-hardening-rollback.sql` e `proposal-paid-evidence-rollback.sql`.
+- Docs: `docs/audits/AUDIT-2026-09-23-LIVE-REGRESSION-AND-CLOSURE.md`, `docs/PILOT-GAP-ANALYSIS.md`, seção de scheduler em `docs/integrations/WORKER-DEPLOYMENT.md`.
+
+### Segurança — 23/09/2026 (PREPARADAS, NÃO APLICADAS)
+`20260923_worker_dispatch_hardening_v1`, `20260924_confirm_paid_replay_v1`. Achados: starvation de dispatch por adapters irrecuperáveis; histórico de tentativas apagado no retry; mensagem de falha "secreta" travava o run; replay de PAID não idempotente.

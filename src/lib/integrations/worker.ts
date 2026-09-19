@@ -33,7 +33,7 @@ export function resolveProvider(adapterKey:string,factories:ProviderFactories,en
 }
 
 export type CycleSummary={
- examined:number;succeeded:number;replayed:number;retryScheduled:number;failed:number;inProgress:number;leaseLost:number;refused:number;errors:number
+ examined:number;succeeded:number;replayed:number;retryScheduled:number;failed:number;inProgress:number;leaseLost:number;refused:number;errors:number;deferred:number
  runs:{runId:string;state:string}[]
 }
 
@@ -49,9 +49,14 @@ export type WorkerDeps={
  timeoutMs?:number
  // restrict the pass to a single run (used by the governed "Nova tentativa" action)
  onlyRunId?:string
+ // wall-clock budget for the whole pass (serverless platforms kill long invocations): no NEW run is started when less than
+ // timeoutMs + safety margin remains. Unstarted runs stay eligible for the next pass.
+ budgetMs?:number
+ // monotonic clock in ms (injectable for tests)
+ clockMs?:()=>number
 }
 
-const empty=():CycleSummary=>({examined:0,succeeded:0,replayed:0,retryScheduled:0,failed:0,inProgress:0,leaseLost:0,refused:0,errors:0,runs:[]})
+const empty=():CycleSummary=>({examined:0,succeeded:0,replayed:0,retryScheduled:0,failed:0,inProgress:0,leaseLost:0,refused:0,errors:0,deferred:0,runs:[]})
 
 export async function runDispatchCycle(deps:WorkerDeps):Promise<CycleSummary>{
  const now=deps.now??(()=>new Date())
@@ -66,7 +71,11 @@ export async function runDispatchCycle(deps:WorkerDeps):Promise<CycleSummary>{
  let items:DispatchItem[]=await deps.repo.listDispatchable(deps.onlyRunId?50:limit,now(),runnable)
  if(deps.onlyRunId)items=items.filter(i=>i.runId===deps.onlyRunId)
  items=items.slice(0,limit)
+ const clockMs=deps.clockMs??Date.now
+ const startedAt=clockMs()
+ const margin=1000
  for(const item of items){
+  if(deps.budgetMs!==undefined&&clockMs()-startedAt+(deps.timeoutMs??30_000)+margin>deps.budgetMs){sum.deferred++;continue}
   sum.examined++
   const adapter=resolveProvider(item.adapterKey,deps.factories,deps.env)
   if(!adapter){sum.refused++;sum.runs.push({runId:item.runId,state:'refused'});continue}

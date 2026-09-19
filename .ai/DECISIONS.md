@@ -265,3 +265,12 @@
 - **Decisão 4:** RETRY continua a MESMA execução (governada pelo claim: espera, tentativas, lease). REEXECUÇÃO cria um run NOVO com `parent_run_id` + motivo obrigatório (10–500), fingerprint derivado do pai, idempotente por pai, manager+, só de pai terminal (falha terminal ou cancelado). Run concluído nunca é reexecutado; run retentável usa retry. O pai nunca é alterado.
 - **Decisão 5:** `proposals_v2` e `customer_timeline_events` só são escritos por RPC governada (token transacional); identidade da proposta é imutável mesmo com o token; timeline é append-only inclusive para o owner. O trigger de proposta é nomeado para disparar antes dos guards antigos.
 - **Decisão 6:** CORREÇÃO de regressão LIVE: `transition_operational_case` não setava o token da esteira exigido pelo hardening LIVE de 20260921 e falhava para todos os usuários; redefinida na nova migration.
+
+## ADR-0019 — Despacho escopado por adapter, histórico de tentativas imutável, orçamento de tempo, replay idempotente de PAID
+- **Data:** 23/09/2026 — **Status:** aceita; `20260923_worker_dispatch_hardening_v1` e `20260924_confirm_paid_replay_v1` PREPARADAS, não aplicadas.
+- **Decisão 1:** o worker só pede ao banco runs de adapters que ele consegue executar (`p_adapter_keys`). Runs sem provider utilizável (2Tech sem arquivo, Bevicred, fake em produção) NÃO ocupam slots do ciclo. Ordenação por "momento em que ficou elegível" (`coalesce(next_attempt_at, lease_expires_at, created_at)`), sem prioridade inventada.
+- **Decisão 2:** toda tentativa falha e todo lease expirado viram artefato `diagnostic` append-only (idempotente por tentativa). O retry limpa as colunas vivas de erro, mas o histórico nunca some. Mensagem de falha com cara de segredo vira marcador fixo e não trava mais o run.
+- **Decisão 3:** um ciclo tem orçamento de relógio (`budgetMs`); não inicia run novo se não couber um timeout de provider. Defaults serverless: timeout 20s, lease 60s, orçamento 45s, `maxDuration` 60s. O que sobra fica elegível no próximo ciclo.
+- **Decisão 4:** o fake local só resolve com `NODE_ENV` em {development,test} E `CORBAN_ALLOW_LOCAL_PROVIDERS=1` (allow-list; NODE_ENV ausente/desconhecido não basta).
+- **Decisão 5:** o endpoint de dispatch é uma função pura (`handleDispatchRequest`): 503 sem segredo forte, 403 para credencial errada/malformada, corpo só com contagens; esquema Bearer case-insensitive, credencial exata.
+- **Decisão 6:** replay de `confirm_proposal_paid_from_import` devolve a mesma evidência (idempotente) em vez de errar com `proposal_must_be_approved`.

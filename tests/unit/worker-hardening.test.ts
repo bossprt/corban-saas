@@ -53,7 +53,7 @@ test('architecture: only server modules import admin/worker code, and the worker
 
 // ============ B. dispatch endpoint ============
 const SECRET='S3cr3t-'.repeat(5)
-const okRun=async():Promise<CycleSummary>=>({examined:2,succeeded:1,replayed:0,retryScheduled:1,failed:0,inProgress:0,leaseLost:0,refused:0,errors:0,runs:[{runId:'r1',state:'succeeded'},{runId:'r2',state:'retry_scheduled'}]})
+const okRun=async():Promise<CycleSummary>=>({examined:2,succeeded:1,replayed:0,retryScheduled:1,failed:0,inProgress:0,leaseLost:0,refused:0,errors:0,deferred:0,runs:[{runId:'r1',state:'succeeded'},{runId:'r2',state:'retry_scheduled'}]})
 const call=(authorization:string|null|undefined,secret:string|undefined|'default'='default',run=okRun)=>handleDispatchRequest({authorization,secret:secret==='default'?SECRET:secret,run})
 
 test('dispatch: disabled without a secret or with a weak one (503), never runs',async()=>{
@@ -337,4 +337,15 @@ test('run action feedback: repository codes map to stable operator codes',()=>{
  const m:[string|null,string][]=[['actor_not_authorized','forbidden'],['run_not_found','run_not_found'],['parent_not_reexecutable','not_reexecutable'],['illegal_integration_run_transition','illegal_transition'],['reexecution_reason_length_invalid','reason_invalid'],['weird',"unexpected"],[null,'unexpected']]
  for(const [c,o] of m)assert.equal(classifyRunActionError(c),o)
  assert.ok(Object.values(RUN_ERROR_MESSAGES).every(x=>!/[a-z]+_[a-z]+_/.test(x)))
+})
+
+// ============ I. wall-clock budget (serverless-safe pass) ============
+test('budget: a pass stops starting runs when the remaining time cannot cover a provider timeout; the rest stays for the next pass',async()=>{
+ const repo=guarded();for(let i=0;i<10;i++)await enq(repo,{ref:`b${i}`})
+ let t=0;const p=prov({kind:'success'})
+ const s=await runDispatchCycle({...deps(repo,p,0,{limit:10,timeoutMs:100}),budgetMs:5_000,clockMs:()=>{t+=1_000;return t}})
+ assert.ok(s.examined>=1&&s.examined<10);assert.equal(s.deferred,10-s.examined);assert.equal(s.succeeded,s.examined)
+ assert.equal([...repo.runs.values()].filter(r=>r.status==='queued').length,10-s.examined)
+ const next=await runDispatchCycle(deps(repo,p,1000,{limit:25}));assert.equal(next.succeeded,10-s.examined)
+ const noBudget=await runDispatchCycle(deps(guarded(),prov(),0));assert.equal(noBudget.deferred,0)
 })

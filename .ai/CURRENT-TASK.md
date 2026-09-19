@@ -494,3 +494,15 @@ Verified live after application:
 - Security Advisor: 0 WARN / 0 ERROR, only the same 2 intentional INFO on closed platform-admin tables.
 - Performance Advisor: no new actionable warning; unused-index INFO reflects the near-empty database, plus Auth fixed connection-count INFO.
 Next target: regression verification against the now-migrated live schema (integration-runs + operational E2E patterns), then configure a worker secret/scheduler only with an explicit deployment/configuration gate. No provider real/network call.
+
+
+## Live regression + worker proof + scheduler readiness — handoff 23/09/2026 (para o ChatGPT)
+**LIVE (não reaplicar):** todas, inclusive `worker_governance_v1` (20260919044054). O hotfix de `transition_operational_case` está comprovado LIVE (agent/supervisor movem a esteira; direto continua bloqueado; `paid` continua exigindo fonte financeira).
+**Regressão LIVE executada (rollback-only, sem preludes):** worker governance 125/125, integration runs 111/111, operational E2E 72/72, financial E2E 93/93, leads 47/47 (o E2E financeiro e o de leads usam os caminhos de cliente/timeline/proposta alterados por worker_governance). Não rerodados: import conflicts (30) e reconciliation (18) — nada do que tocam mudou. Sem resíduo: runs/artifacts/leads/propostas/esteira/timeline/clients/financial_events = 0.
+**NOT LIVE — revisar e aplicar (2 migrations pequenas e independentes):**
+1. `20260923_worker_dispatch_hardening_v1.sql` — harness `tests/security/worker-dispatch-hardening-rollback.sql` (executar a migration antes, mesma transação). Substitui `list_dispatchable_integration_runs` (nova assinatura com `p_adapter_keys`; a antiga é dropada), `fail_integration_run` e `claim_integration_run` (histórico `diagnostic` por tentativa/lease expirado; mensagem hostil não trava). Sem SECURITY DEFINER novo. ATENÇÃO: o código novo do worker já chama a assinatura nova; aplicar a migration antes de habilitar o dispatch (hoje ele nem está habilitado: sem segredo).
+2. `20260924_confirm_paid_replay_v1.sql` — harness `tests/security/proposal-paid-evidence-rollback.sql` (18 checagens). Só o replay de `confirm_proposal_paid_from_import` passa a devolver a evidência existente.
+**Como o scheduler pode ser acionado:** ver `docs/integrations/WORKER-DEPLOYMENT.md` (Vercel Cron, n8n, GitHub Actions ou fila chamam `POST /api/integrations/dispatch` com Bearer; nada foi configurado).
+**Testes locais:** unit 152 (novos 27 em worker-hardening), tsc 0, eslint 0 warnings, build ok.
+**HUMAN GATES:** aplicar as 2 migrations; definir `INTEGRATION_WORKER_SECRET` e o agendador; arquivo 2Tech; regra de comissão do agent; convites/gestão de usuários da organização (ver `docs/PILOT-GAP-ANALYSIS.md`).
+**Retomada exata:** após aplicar as migrations, rodar `worker-dispatch-hardening-rollback.sql` de novo já sem prelúdio (modo LIVE), e então testar o worker real com `CORBAN_ALLOW_LOCAL_PROVIDERS=1` em ambiente NÃO produtivo contra um binding de teste.
