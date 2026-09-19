@@ -3,7 +3,8 @@
 -- Fixtures are synthetic and never persisted: the whole DO block ends with RAISE EXCEPTION.
 -- Pass = message starting with 'RESULTS: ALL PASS'. Requires 20260919_financial_read_rbac_v1.sql (applied or executed
 -- earlier in the same transaction) for the agent-read checks, plus 20260919_fix_import_matching_uuid_aggregate_v1.sql and
--- 20260919_import_apply_rls_v1.sql (live matching/apply are broken without them: min(uuid), missing INSERT policy).
+-- 20260919_import_apply_rls_v1.sql and 20260919_import_identity_case_normalization_v1.sql (live matching/apply are broken
+-- without them: min(uuid), missing INSERT policy, case-sensitive identity lookup creating duplicates).
 do $test$
 declare
  o1 uuid:=gen_random_uuid(); o2 uuid:=gen_random_uuid();
@@ -84,6 +85,7 @@ begin
  perform pg_temp.expect_err(uS,format($q$select public.publish_financial_fact_from_import_decision(%L)$q$,d_c),'identity_match_must_be_applied_first','financial fact requires the identity match to be applied first');
  perform pg_temp.expect_err(uB,format($q$select public.apply_approved_import_match(%L)$q$,d_c),'approved_decision_required','tenant B cannot apply tenant A decision');
  perform pg_temp.run_as(uS,format($q$select public.apply_approved_import_match(%L)::text$q$,d_c));
+ perform pg_temp.check_that((select count(*) from public.proposal_external_identities where proposal_id=pA)=1,'apply did not duplicate the identity when only the bank spelling differs in case');
  ev_rep:=pg_temp.run_as(uS,format($q$select public.publish_financial_fact_from_import_decision(%L)::text$q$,d_c));
  perform pg_temp.check_that((select event_type='commission_reported' and amount=120 and source_kind='import' from public.financial_events where id=ev_rep::uuid),'commission statement publishes commission_reported 120 with import evidence');
  perform pg_temp.check_that((select count(*) from public.financial_evidence_links where financial_event_id=ev_rep::uuid)=1,'evidence lineage link recorded');
@@ -138,8 +140,8 @@ begin
  perform pg_temp.expect_err(uB,format($q$select public.refresh_financial_reconciliation(%L,'upfront')$q$,pA),'proposal_not_found','tenant B cannot recompute tenant A reconciliation');
  perform pg_temp.expect_err(uB,format($q$select public.publish_financial_fact_from_import_decision(%L)$q$,d_c),'approved_decision_not_found_or_forbidden','tenant B cannot publish from tenant A decision');
  perform pg_temp.check_that(pg_temp.run_as(uB,format($q$with u as (update public.financial_reconciliation_cases set resolution_note='pwn' where id=%L returning 1) select count(*)::text from u$q$,case_id))='0','tenant B cannot update tenant A cases');
- perform pg_temp.check_that(pg_temp.run_as(uS,$q$with d as (delete from public.financial_events returning 1) select count(*)::text from d$q$)='0','ledger cannot be deleted by members');
- perform pg_temp.check_that(pg_temp.run_as(uS,$q$with u as (update public.financial_events set amount=1 returning 1) select count(*)::text from u$q$)='0','ledger cannot be updated by members');
+ perform pg_temp.expect_err(uS,$q$delete from public.financial_events$q$,'permission denied','ledger cannot be deleted by members (no DELETE privilege)');
+ perform pg_temp.expect_err(uS,$q$update public.financial_events set amount=1$q$,'permission denied','ledger cannot be updated by members (no UPDATE privilege)');
  perform pg_temp.expect_err(uA,format($q$insert into public.import_match_candidates(organization_id,normalized_row_id,proposal_id,match_strength,match_basis,status) values(%L,%L,%L,'exact','{}','suggested')$q$,o1,n_c,pA),'match_candidate_requires_governed_rpc|row-level security','agent cannot forge an exact match candidate');
  perform pg_temp.expect_err(uA,format($q$insert into public.proposal_external_identities(organization_id,proposal_id,institution_key,external_proposal_number) values(%L,%L,'daycoval','999')$q$,o1,pA),'row-level security','agent cannot bind an external proposal identity');
  perform pg_temp.check_that(not exists(select 1 from public.financial_reconciliation_cases where expected_amount<0 or reported_amount<0 or settled_amount<0),'no negative bucket anywhere');
