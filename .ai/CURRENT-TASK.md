@@ -625,3 +625,20 @@ Evidence:
 The migration only merges equivalent permissive UPDATE policies; no grants, functions, triggers or data change.
 
 HUMAN GATE: explicit authorization required before applying `20260930_catalog_update_policy_merge_v1` LIVE.
+
+
+## Catalog update policy merge LIVE — 19/09/2026 (ChatGPT)
+Authorized by Owner and applied successfully:
+- `20260919231650 catalog_update_policy_merge_v1`
+DO NOT REAPPLY.
+
+Post-apply verification:
+- rollback-only merge harness against LIVE: 4/4 PASS;
+- `product_table_versions`: exactly 1 authenticated UPDATE policy;
+- `document_checklist_templates`: exactly 1 authenticated UPDATE policy;
+- Performance Advisor: the 2 `multiple_permissive_policies` WARNs are gone; remaining findings are INFO only (unused indexes on near-empty DB + Auth connection strategy);
+- Security Advisor: 0 WARN / 0 ERROR; only the same 2 intentional INFO for closed platform-admin tables;
+- SECURITY DEFINER inventory remains 8; anon DEFINER execute = 0;
+- synthetic/business residue remains zero in product versions, checklists, financial events and reconciliation cases.
+
+No known P0 technical blocker remains before Smart deployment preparation. Next gates are external/Owner actions: deploy/origin, env vars, Supabase Auth/SMTP, real reference catalog, Smart organization bootstrap, tenant catalog/checklist/stages, invitations, and human browser acceptance.
