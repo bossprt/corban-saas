@@ -1248,3 +1248,108 @@ A sincronização interna tenant-to-tenant é apenas o caso mais eficiente, não
 1. sincronização de esteira/status de contratos;
 2. sincronização de condições/tabelas upstream;
 3. apenas depois estudar automação mais profunda de comissionamento entre empresas.
+
+
+## Importação de Produto/Tabela — componentes de comissão e repasses nomeados
+Requisito refinado pelo Owner após análise da tela 2Tech e do arquivo real RelatorioProdutos.xls.
+
+### Estrutura observada no arquivo real
+O modelo possui, além dos dados do produto/tabela:
+- Banco;
+- Convênio;
+- Tabela/Nome do Produto;
+- Código no Banco;
+- Vigência;
+- Prazo inicial/final;
+- Tipo de Contrato;
+- Tipo de Formalização;
+- Fator;
+- Taxa a.m.;
+- faixas de idade/valor/taxa.
+
+A remuneração da **empresa** aparece decomposta em vários componentes:
+- À Vista (Empresa);
+- Bônus (Empresa);
+- Diferido (Empresa);
+- Bônus 2 % (Empresa);
+- Bônus 3 % (Empresa);
+- Plástico (Empresa);
+- Seguro fixo (Empresa).
+
+Depois existem até **5 conjuntos de repasse**, cada um repetindo os mesmos componentes:
+- À Vista (Repasse N);
+- Bônus (Repasse N);
+- Diferido (Repasse N);
+- Bônus 2 % (Repasse N);
+- Bônus 3 % (Repasse N);
+- Plástico (Repasse N);
+- Seguro fixo (Repasse N).
+
+O arquivo suporta valores percentuais e valores monetários, evidenciado por células com formato/símbolo de R$ em componentes como plástico/seguro.
+
+### Problema de UX identificado
+Rótulos genéricos como **Repasse 1, Repasse 2, Repasse 3...** são perigosos para o tenant.
+Se a organização já possui os grupos de comissão configurados, uma coluna ordinal pode causar erro humano, por exemplo:
+- comissão destinada a Corretor ser importada como Parceiro;
+- Parceiro ser confundido com Indicador.
+
+### Decisão para Corban OS
+A exportação/modelo de importação deve ser **gerada dinamicamente a partir da configuração do tenant**.
+
+Exemplo: se os grupos ativos forem:
+- Corretor;
+- Parceiro;
+- Indicador;
+
+o modelo deve gerar colunas semanticamente nomeadas, por exemplo:
+- À Vista (Corretor);
+- Bônus (Corretor);
+- Diferido (Corretor);
+- Plástico (Corretor);
+- Seguro fixo (Corretor);
+- À Vista (Parceiro);
+- Bônus (Parceiro);
+- ...;
+- À Vista (Indicador);
+- ...
+
+Não usar "Repasse 1/2/3" como nomenclatura principal quando o sistema já conhece o grupo correspondente.
+
+### Modelo financeiro
+Separar explicitamente:
+1. **Componentes recebidos pela empresa**
+   - à vista;
+   - diferido;
+   - bônus 1/2/3;
+   - plástico;
+   - seguro fixo;
+   - futuros componentes configuráveis.
+
+2. **Componentes de repasse por grupo**
+   - cada grupo pode receber valores diferentes por componente;
+   - o repasse representa quanto a empresa paga àquele grupo/canal;
+   - grupo de vendedor e grupo de comissão continuam vínculos distintos no cadastro do vendedor.
+
+### Tipo do componente
+Cada componente deve suportar sua unidade:
+- percentual (%);
+- valor fixo (R$).
+
+Não inferir somente pelo nome.
+No importador, a unidade deve ser validada explicitamente ou inferida apenas quando o arquivo traz evidência inequívoca (ex.: símbolo R$), sempre com prévia.
+
+### Importador adaptativo
+O Corban OS não deve depender de posição fixa de coluna.
+Fluxo:
+`arquivo -> leitura estrutural -> identificação semântica -> mapeamento para componentes/grupos -> prévia -> validação -> importação atômica`
+
+O mapeamento deve:
+- reconhecer nomes dos grupos do tenant;
+- preservar colunas desconhecidas;
+- detectar troca/ambiguidade entre grupos;
+- impedir publicação se houver risco de mapear comissão para o grupo errado;
+- permitir modelo Excel gerado pelo próprio Corban OS já com os nomes reais dos grupos.
+
+### Regra importante
+A tabela recebida de um upstream pode trazer **quanto o upstream paga para a empresa**, mas as colunas de repasse interno são responsabilidade do tenant.
+Nunca transportar automaticamente regras internas de comissão de outra organização para o tenant downstream.
