@@ -789,3 +789,119 @@ O mapeamento deve:
 ### Regra importante
 A tabela recebida de um upstream pode trazer **quanto o upstream paga para a empresa**, mas as colunas de repasse interno são responsabilidade do tenant.
 Nunca transportar automaticamente regras internas de comissão de outra organização para o tenant downstream.
+
+
+## Meta principal — importação inteligente com cálculo automático de repasses
+
+Decisão central do Owner para o Corban OS:
+
+O sistema deve eliminar o trabalho manual de passar horas atualizando tabelas e comissões.
+
+### Cenário alvo
+O usuário recebe uma planilha de um banco/master/origem, por exemplo HOPE, contendo:
+- banco;
+- convênio;
+- produto/tabela;
+- tipo de contrato;
+- prazos;
+- base de cálculo;
+- comissão à vista;
+- bônus;
+- diferido;
+- vigência;
+- taxa;
+- tipo de fator/fator;
+- e outros componentes conforme o produto.
+
+O usuário importa o arquivo e informa as regras locais da empresa, por exemplo:
+- imposto: 6%;
+- Corretores: 65%;
+- Parceiro: 80%;
+- Balcão: 50%.
+
+A partir daí o Corban OS deve:
+1. interpretar o arquivo;
+2. cadastrar/atualizar automaticamente tabelas, prazos, vigências, taxas, fatores e componentes recebidos;
+3. identificar quais componentes existem de fato no arquivo;
+4. aplicar as regras locais já cadastradas para os grupos;
+5. perguntar ao usuário apenas o que realmente for necessário quando surgir um componente novo ou opcional.
+
+### Perguntas condicionais
+Se o arquivo tiver **Diferido > 0**, perguntar algo como:
+- "Deseja repassar comissão diferida?"
+- se sim, para quais grupos e em qual percentual/regra?
+
+Se houver **Plástico**, perguntar:
+- se esse componente entra no repasse;
+- para quais grupos;
+- se o repasse é em % ou R$, conforme o componente.
+
+Mesma lógica para:
+- Bônus;
+- Bônus 2;
+- Bônus 3;
+- Seguro fixo;
+- outros componentes futuros.
+
+Se o componente não existir no arquivo, não perguntar sobre ele.
+
+### Regras por convênio
+As políticas não são necessariamente universais.
+O sistema deve aceitar regras em camadas:
+1. padrão da organização;
+2. override por banco/instituição;
+3. override por convênio;
+4. override por produto/tabela;
+5. exceção explícita por condição, se necessário.
+
+A regra mais específica prevalece, sempre com rastreabilidade.
+
+Exemplo:
+- padrão Smart: imposto 6%, Corretor 65%, Parceiro 80%, Balcão 50%;
+- Governo do Acre pode ter regra diferente;
+- outro convênio pode não repassar Diferido;
+- produto cartão pode ter regra específica para Plástico/Seguro.
+
+### Princípio de UX
+O usuário não deve preencher centenas de células manualmente.
+
+Fluxo desejado:
+`Upload -> leitura automática -> reconhecimento de componentes -> aplicação das regras conhecidas -> perguntas somente sobre ambiguidades/novos componentes -> prévia completa -> confirmar -> importação atômica`
+
+### Exemplo com arquivo HOPE analisado em 20/09/2026
+O arquivo `RelatorioMelhorComissao.xls` possui:
+- Banco: HOPE;
+- Convênio: Gov. AC;
+- Produto;
+- Tipo de Contrato;
+- Prazo Inicial/Final;
+- Base Cálculo À Vista/Bônus/Diferido;
+- À Vista;
+- Bônus;
+- Diferido;
+- Ativação Imediata;
+- vigência;
+- TAXA a.m.;
+- Tipo Fator;
+- Fator.
+
+No arquivo analisado, os valores de **Bônus** e **Diferido** estão zerados em todas as linhas, portanto o sistema não deveria perguntar sobre repasse desses componentes nessa importação.
+
+O arquivo traz `Tipo Fator = DIÁRIO`, o que também deve alimentar a configuração de fator aplicável sem exigir recadastro manual.
+
+### Motor de cálculo
+Separar:
+- componente recebido do upstream;
+- base bruta/líquida;
+- imposto/desconto;
+- regra de repasse do grupo;
+- componente repassado;
+- receita esperada da empresa.
+
+Exemplo simplificado:
+`comissão recebida -> base após imposto -> regra do grupo -> repasse -> retenção/receita esperada`
+
+Todos os cálculos financeiros devem ser determinísticos, versionados e auditáveis. IA pode mapear a planilha, mas não deve inventar percentuais nem executar cálculo financeiro fora das regras determinísticas.
+
+### Objetivo final
+O Corban OS deve transformar atualização de tabela/comissão de uma tarefa manual de horas em um fluxo de poucos minutos, com revisão humana apenas onde houver novidade, ambiguidade ou regra ainda não cadastrada.
