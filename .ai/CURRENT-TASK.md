@@ -868,3 +868,26 @@ Prática obrigatória:
 - mudanças arquiteturais/invariantes -> ADR;
 - migrations LIVE devem registrar versão real do Supabase e "DO NOT REAPPLY";
 - nunca considerar uma decisão importante "salva" apenas porque apareceu no chat.
+
+
+## Regra de economia de Claude — 20/09/2026
+
+Owner pediu para preservar o limite semanal do Claude Code (restante informado: 29%, renovação sábado 09h).
+
+Regra operacional a partir de agora:
+- ChatGPT deve executar diretamente tudo que conseguir com as ferramentas conectadas (GitHub, Supabase, Vercel etc.).
+- Só enviar tarefa ao Claude quando houver uma capacidade realmente necessária que o ChatGPT não possua, especialmente execução local complexa, ferramenta/plugin local ou diagnóstico que dependa do ambiente local.
+- Não usar Claude como executor padrão nem como ponte entre IAs.
+- Antes de pedir Claude, registrar exatamente por que a tarefa não pode ser concluída diretamente pelo ChatGPT.
+
+## UX Comercial — execução direta pelo ChatGPT
+Sem uso de Claude, foram preparados/implementados na branch:
+- tela principal Comercial deixa de listar instituições, origens, convênios e grupos indefinidamente; mostra resumo + botão Gerenciar;
+- páginas dedicadas: `/app/comercial/instituicoes`, `/app/comercial/origens`, `/app/comercial/convenios`, `/app/comercial/grupos`;
+- gerenciadores permitem editar nome e inativar/reativar;
+- Grupo de Comissão não pede mais “tipo” técnico ao usuário; o tipo fica oculto/technical-only;
+- base do grupo virou uma escolha explicada por exemplos: % da comissão recebida ou % direto da operação;
+- “Política de repasse” foi apresentada como **Regra padrão de comissão (opcional)**;
+- importação CSV/XLSX das condições ganhou destaque como ação principal; modo manual ficou secundário;
+- ações de cadastro/edição permanecem na página gerenciadora após salvar;
+- nenhuma DDL nova e nenhum uso do Claude.
