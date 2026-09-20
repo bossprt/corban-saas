@@ -1352,3 +1352,91 @@ Distinção:
 - Grupo de vendedor = perfil/canal comercial do vendedor;
 - Regra de comissão = como esse grupo é remunerado;
 - classificação adicional de performance (Bronze/Prata/Ouro etc.) pode existir futuramente como outra dimensão, mas não deve ser confundida com o grupo comercial principal.
+
+
+## Vendedor — grupo comercial, grupo de comissão e categoria PF/PJ/SUB
+Correção conceitual do Owner a partir das telas reais da 2Tech.
+
+### 1. Grupo de Vendedores
+É um cadastro livre do tenant. O tenant pode criar quantos grupos quiser; o exemplo da 2Tech mostra apenas "BÁSICO", mas isso não limita o conceito.
+
+Exemplos possíveis no Corban OS:
+- Corretor;
+- Parceiro;
+- Afiliado;
+- Indicador;
+- Time interno;
+- qualquer outro grupo criado pela empresa.
+
+No cadastro do vendedor existe um campo explícito **Grupo de Vendedor** que aponta para esse cadastro.
+
+### 2. Grupo de Comissão
+É outro vínculo, separado do Grupo de Vendedor.
+
+No cadastro do vendedor também deve existir **Grupo de Comissão**.
+Esse vínculo determina qual regra de comissão o vendedor herda quando a produção/condição correspondente é calculada.
+
+Portanto:
+`Vendedor -> Grupo de Vendedor`
+e
+`Vendedor -> Grupo de Comissão`
+são relações distintas.
+
+Não colapsar uma na outra.
+
+### 3. Categoria PF / PJ / SUB
+O cadastro do vendedor possui uma categoria operacional/comercial:
+- PF;
+- PJ;
+- SUB;
+- outros tipos futuros se necessário.
+
+A categoria **SUB** tem impacto financeiro e não é mero rótulo.
+
+Regra de negócio descrita pelo Owner:
+- SUB 100%: quando a produção vem do banco/master, a comissão esperada para a empresa pode vir zerada, pois 100% do resultado pertence ao sub;
+- SUB 90%: a produção deve registrar que a empresa espera reter 10% do total econômico daquela produção;
+- de forma geral, o percentual do SUB determina a parcela do resultado destinada ao sub e, por diferença, a parcela esperada para a empresa.
+
+Exemplo conceitual:
+`base econômica 100% -> SUB 90% -> empresa espera 10%`.
+
+Essa regra deve ser modelada separadamente da comissão de vendedor e da comissão recebida do banco, para não confundir:
+- receita recebida da instituição;
+- participação do SUB;
+- comissão do vendedor/grupo;
+- receita líquida/esperada da empresa.
+
+### 4. Outras regras do cadastro
+As telas da 2Tech mostram diversas flags e parâmetros no cadastro do vendedor, como:
+- bloqueio de comissão no fechamento;
+- comissão diferida;
+- comissão bônus;
+- permissão para cadastrar contrato;
+- visualização de comissão de repasse;
+- liberação sem físico;
+- chamados;
+- contrato com físico ausente;
+- termo assinado;
+- relatório de refinanciamento;
+- custo de portabilidade;
+- quantidade de dias para pendências/bloqueios/estornos;
+- desconto de IR;
+- valor mínimo para fechamento;
+- desconto TED;
+- dados Assertiva;
+- observação.
+
+Decisão: esses campos **não devem ser copiados automaticamente** para o Corban OS. Eles servem como evidência de que o vendedor pode ter políticas, permissões, SLAs e parâmetros financeiros/operacionais próprios. Cada regra deve ser avaliada antes de entrar no produto, agrupando por domínio em vez de criar uma tela monolítica.
+
+### Direção de produto
+O cadastro do vendedor deve ser modular, provavelmente por abas/seções:
+- Dados básicos;
+- Dados bancários;
+- Vínculos comerciais;
+- Comissão;
+- Permissões;
+- Regras operacionais;
+- Contatos/documentos.
+
+Evitar uma tela única com dezenas de toggles sem contexto.
