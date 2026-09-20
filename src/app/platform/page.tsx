@@ -69,8 +69,8 @@ export default async function PlatformPage({searchParams}:{searchParams:Promise<
             <div className="mt-4 flex flex-wrap gap-2">{products.data?.map(x=><span key={x.id} className="rounded-full border border-slate-700 px-3 py-1 text-xs">{x.name}</span>)}</div>
           </div>
 
-          <div className={card}><h3 className="flex items-center gap-2 font-semibold"><Layers3 size={18}/> Modalidades</h3>
-            <form action={addModality} className="mt-4 grid grid-cols-2 gap-2"><select name="product_id" required defaultValue="" className={field}><option value="" disabled>Produto</option>{products.data?.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><input name="code" required placeholder="Código" className={field}/><input name="name" required placeholder="Nome da modalidade" className={field}/><button className={button}>Cadastrar modalidade</button></form>
+          <div className={card}><h3 className="flex items-center gap-2 font-semibold"><Layers3 size={18}/> Tipos de Contrato</h3>
+            <form action={addModality} className="mt-4 grid grid-cols-2 gap-2"><select name="product_id" required defaultValue="" className={field}><option value="" disabled>Produto</option>{products.data?.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><input name="code" required placeholder="Código" className={field}/><input name="name" required placeholder="Nome da tipo de contrato" className={field}/><button className={button}>Cadastrar tipo de contrato</button></form>
             <div className="mt-4 space-y-1 text-xs text-slate-300">{modalities.data?.map(x=><div key={x.id}>{productNames.get(x.product_id)??'Produto'} → {x.name}</div>)}</div>
           </div>
 
