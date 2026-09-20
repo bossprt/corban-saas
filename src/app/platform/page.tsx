@@ -37,10 +37,10 @@ export default async function PlatformPage({searchParams}:{searchParams:Promise<
       {sp.erro&&<p className="mb-5 rounded-xl border border-red-500/30 bg-red-500/5 p-3 text-sm text-red-200">{sp.erro}</p>}
 
       <div className="grid gap-4 md:grid-cols-4">
-        <div className={card}><Landmark className="text-emerald-400"/><div className="mt-3 text-3xl font-semibold">{banks.data?.length??0}</div><div className="text-sm text-slate-400">Bancos</div></div>
+        <div className={card}><Landmark className="text-emerald-400"/><div className="mt-3 text-3xl font-semibold">{banks.data?.length??0}</div><div className="text-sm text-slate-400">Instituições</div></div>
         <div className={card}><Building2 className="text-emerald-400"/><div className="mt-3 text-3xl font-semibold">{orgs.data?.length??0}</div><div className="text-sm text-slate-400">Organizações</div></div>
         <div className={card}><Package className="text-emerald-400"/><div className="mt-3 text-3xl font-semibold">{products.data?.length??0}</div><div className="text-sm text-slate-400">Produtos</div></div>
-        <div className={card}><Network className="text-emerald-400"/><div className="mt-3 text-3xl font-semibold">{agreements.data?.length??0}</div><div className="text-sm text-slate-400">Convênios banco</div></div>
+        <div className={card}><Network className="text-emerald-400"/><div className="mt-3 text-3xl font-semibold">{agreements.data?.length??0}</div><div className="text-sm text-slate-400">Convênios</div></div>
       </div>
 
       <section className="mt-8">
@@ -48,9 +48,9 @@ export default async function PlatformPage({searchParams}:{searchParams:Promise<
         <p className="mt-1 text-sm text-slate-400">Esta camada não define coeficiente nem comissão. Ela libera os blocos que o Admin de cada empresa usa para criar suas tabelas comerciais.</p>
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
 
-          <div className={card}><h3 className="flex items-center gap-2 font-semibold"><Landmark size={18}/> Bancos</h3>
-            <form action={addBank} className="mt-4 grid grid-cols-3 gap-2"><input name="code" required placeholder="Código: PAN" className={field}/><input name="name" required placeholder="Nome do banco" className={field+" col-span-2"}/><button className={button+" col-span-3"}>Cadastrar banco</button></form>
-            <div className="mt-4 flex flex-wrap gap-2">{banks.data?.map(x=><span key={x.id} className="rounded-full border border-slate-700 px-3 py-1 text-xs">{x.name} · {x.code}</span>)}</div>
+          <div className={card}><h3 className="flex items-center gap-2 font-semibold"><Landmark size={18}/> Instituições / bancos</h3>
+            <form action={addBank} className="mt-4 grid grid-cols-3 gap-2"><input name="code" placeholder="Código (opcional)" className={field}/><input name="name" required placeholder="Nome da instituição" className={field+" col-span-2"}/><button className={button+" col-span-3"}>Cadastrar instituição</button></form>
+            <div className="mt-4 flex flex-wrap gap-2">{banks.data?.map(x=><span key={x.id} className="rounded-full border border-slate-700 px-3 py-1 text-xs">{x.name}{x.code ? ` · ${x.code}` : ' · sem código'}</span>)}</div>
           </div>
 
           <div className={card}><h3 className="flex items-center gap-2 font-semibold"><Network size={18}/> Provedores / masters</h3>
@@ -68,8 +68,8 @@ export default async function PlatformPage({searchParams}:{searchParams:Promise<
             <div className="mt-4 space-y-1 text-xs text-slate-300">{modalities.data?.map(x=><div key={x.id}>{productNames.get(x.product_id)??'Produto'} → {x.name}</div>)}</div>
           </div>
 
-          <div className={card}><h3 className="flex items-center gap-2 font-semibold"><Network size={18}/> Convênios por banco</h3>
-            <form action={addAgreement} className="mt-4 grid grid-cols-2 gap-2"><select name="bank_id" required defaultValue="" className={field}><option value="" disabled>Banco</option>{banks.data?.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><input name="code" required placeholder="Código" className={field}/><input name="name" required placeholder="Convênio: Governo do Acre" className={field}/><button className={button}>Cadastrar convênio</button></form>
+          <div className={card}><h3 className="flex items-center gap-2 font-semibold"><Network size={18}/> Convênios por instituição</h3>
+            <form action={addAgreement} className="mt-4 grid grid-cols-2 gap-2"><select name="bank_id" required defaultValue="" className={field}><option value="" disabled>Instituição / banco</option>{banks.data?.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><input name="code" required placeholder="Código" className={field}/><input name="name" required placeholder="Convênio: Governo do Acre" className={field}/><button className={button}>Cadastrar convênio</button></form>
             <div className="mt-4 space-y-1 text-xs text-slate-300">{agreements.data?.map(x=><div key={x.id}>{bankNames.get(x.bank_id)??'Banco'} → {x.name}</div>)}</div>
           </div>
 
