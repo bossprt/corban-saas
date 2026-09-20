@@ -482,3 +482,56 @@ Origem da tabela / Correspondente
 O tenant deve poder cadastrar/editar seus próprios provedores/origens. Não depender do Platform Admin para isso.
 
 **Pendente de definição pelo Owner:** melhoria final de UX/nomenclatura para esse campo além do benchmark da 2Tech. Não implementar uma taxonomia rígida antes dessa definição.
+
+
+### 19.3 Produção própria x produção de terceiro
+
+Decisão funcional do Owner:
+
+- Se a organização opera como **Master** ou **Sub**, a produção é considerada **Própria**.
+- Só deve ser tratada como produção de **Terceiro** quando a tabela/operação vier de uma empresa externa, como:
+  - Lev;
+  - Bevi;
+  - Efetiva;
+  - outra correspondente/promotora/parceiro.
+
+Isso significa que o campo de UX não deve induzir o usuário a classificar toda operação como “Correspondente”.
+
+Modelo recomendado:
+
+```text
+Origem da Produção
+[ Própria ]
+[ Terceiro ]
+```
+
+Se selecionar **Própria**:
+- não exigir fornecedor externo;
+- a organização atual é a responsável comercial pela produção.
+
+Se selecionar **Terceiro**:
+- exigir selecionar/cadastrar a empresa de origem;
+- essa empresa pode ser classificada como:
+  - Correspondente;
+  - Promotora;
+  - Parceiro;
+  - outro tipo futuro, se necessário.
+
+Exemplo:
+
+```text
+Origem da Produção: Terceiro
+Empresa de Origem: Lev
+Tipo: Promotora/Parceiro
+```
+
+ou:
+
+```text
+Origem da Produção: Própria
+```
+
+Observação arquitetural:
+- não confundir “Própria” com Banco;
+- não confundir “Terceiro” com Provedor técnico;
+- o executor deve revisar se a entidade atual `providers` pode representar essa empresa de origem sem perda semântica. Se não puder, criar camada compatível em vez de deformar o conceito existente.
