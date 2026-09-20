@@ -1440,3 +1440,90 @@ O cadastro do vendedor deve ser modular, provavelmente por abas/seções:
 - Contatos/documentos.
 
 Evitar uma tela única com dezenas de toggles sem contexto.
+
+
+## Fatores diários e fatores fixos por instituição
+Requisito do Owner a partir da operação real e da tela 2Tech "Importar Fator Diário".
+
+### Objetivo
+O Corban OS precisa suportar bancos/instituições que trabalham com **fatores diários** e também instituições/produtos que usam **fatores fixos** até nova alteração.
+
+Isso é necessário tanto para o módulo comercial quanto para o CRM, porque simulação, qualificação e oferta ao cliente dependem do fator vigente correto.
+
+### Modelo funcional
+Cada instituição/produto/convênio deve poder definir seu regime de fator:
+
+1. **Fator diário**
+   - usado por instituições como Daycoval;
+   - pode variar por data/período, convênio, produto/tabela e tipo de contrato;
+   - deve permitir importação em lote;
+   - formatos prioritários: PDF e Excel/XLSX; CSV também pode ser aceito;
+   - o sistema deve interpretar o arquivo, mostrar prévia, detectar alterações e só então publicar/ativar a nova versão;
+   - histórico nunca deve ser apagado: nova carga gera versão/vigência nova;
+   - deve ser possível consultar qual fator estava vigente em uma data passada.
+
+2. **Fator fixo**
+   - cadastro manual;
+   - permanece vigente até uma alteração futura;
+   - alteração cria nova vigência/versão em vez de sobrescrever o histórico;
+   - pode ser definido por instituição + convênio + produto/tabela + tipo de contrato + prazo, conforme aplicável.
+
+### Importação de fator diário
+Fluxo desejado:
+`Instituição -> Convênio -> Produto/Tabela (opcional conforme banco) -> Tipo de Contrato -> Período/data -> Arquivo -> Prévia -> Validar -> Publicar`
+
+A tela deve permitir:
+- selecionar instituição;
+- selecionar convênio;
+- opcionalmente limitar a produto/tabela;
+- selecionar um ou mais tipos de contrato;
+- informar data/período de vigência;
+- enviar PDF/XLSX/CSV;
+- visualizar fatores detectados;
+- comparar com a versão atual;
+- sinalizar linhas novas, alteradas, removidas/ausentes e conflitos;
+- confirmar antes de tornar os fatores vigentes.
+
+### PDF/Excel
+A extração pode usar o mesmo princípio do importador comercial adaptativo:
+- parser determinístico para estrutura/números;
+- IA somente para mapear layout/semântica quando necessário;
+- nenhum fator financeiro pode ser inventado;
+- baixa confiança exige revisão humana;
+- preservar arquivo original, fingerprint, mapeamento e linhagem.
+
+### Integração com CRM
+O CRM deve consultar automaticamente o fator vigente aplicável ao lead/cliente/proposta no momento da simulação.
+A interface não deve exigir que o operador procure manualmente a planilha do banco quando houver fator válido no sistema.
+
+### Relação com Tabelas/Condições
+Fator é um domínio próprio, mas se relaciona com:
+- Instituição;
+- Convênio;
+- Produto/Tabela;
+- Tipo de Contrato;
+- Prazo;
+- Vigência.
+
+Não confundir fator diário com:
+- comissão recebida;
+- regra de comissão;
+- taxa nominal;
+- coeficiente, embora possam coexistir na mesma condição comercial.
+
+### UX
+Criar no futuro uma área dedicada, provavelmente em:
+`Cadastros/Comercial -> Fatores`
+ou
+`Operacional -> Importações -> Fatores`
+
+Com duas ações claras:
+- **Importar fatores diários**
+- **Cadastrar fator fixo**
+
+### Segurança e histórico
+- nunca sobrescrever silenciosamente histórico;
+- publicação deve ser versionada e auditável;
+- importação deve ter prévia;
+- alterações em massa devem ser atômicas;
+- arquivo de origem deve permanecer vinculado à versão publicada.
