@@ -641,3 +641,106 @@ PDF deve entrar como segunda etapa do mesmo pipeline:
 - comissão calculada para grupos deve ser derivada/versionada;
 - alteração futura na política de repasse não deve reescrever contratos/histórico já fechado;
 - propostas/contratos devem manter snapshot da regra aplicada.
+
+
+## 21. IMPORTAÇÃO ADAPTATIVA POR AGENTE DE IA
+
+### 21.1 Decisão do Owner
+As regras de repasse/comissão são **tenant-owned**: cada empresa usuária cria e mantém suas próprias políticas.
+
+Exemplo:
+- Corretor = 65% da comissão base;
+- Parceiro = 80%;
+- Balcão = 50%;
+- Indicador = 25%.
+
+Essas regras não são globais da plataforma e não devem ser impostas pelo Platform Admin.
+
+### 21.2 Problema dos layouts fixos
+Planilhas de bancos, promotoras e parceiros mudam com frequência:
+- novas colunas;
+- nomes diferentes;
+- ordem alterada;
+- abas diferentes;
+- campos removidos/adicionados;
+- formatos variados de comissão, prazo, coeficiente, vigência e convênio.
+
+Portanto, **não construir o importador principal baseado em um template rígido de Excel por fornecedor** como fonte de verdade operacional.
+
+Templates/mapeamentos salvos podem existir apenas como aceleração/fallback, nunca como dependência estrutural que quebra quando o fornecedor muda o arquivo.
+
+### 21.3 Papel do agente de IA
+O pipeline deve possuir um **Agente de Importação Comercial** capaz de:
+
+1. receber XLSX/CSV/PDF;
+2. inspecionar estrutura, abas, cabeçalhos, amostras e tipos de dados;
+3. inferir semanticamente quais campos representam banco, convênio, produto/tabela, tipo de contrato, prazo, coeficiente, taxa, comissão, vigência e origem;
+4. comparar a inferência com o schema canônico do Corban OS;
+5. propor mapeamento com nível de confiança e evidência;
+6. detectar campos novos/desconhecidos em vez de descartá-los;
+7. pedir validação humana apenas nos pontos ambíguos;
+8. gerar uma prévia/dry-run;
+9. aplicar a política de repasse escolhida pelo tenant;
+10. importar somente após confirmação.
+
+### 21.4 Aprendizado sem acoplamento
+Quando o usuário confirma um mapeamento:
+- o sistema pode salvar a decisão por fornecedor/origem como memória operacional;
+- em arquivos futuros semelhantes, reutiliza esse conhecimento;
+- se o layout mudar, o agente reavalia em vez de falhar silenciosamente;
+- divergências relevantes devem reabrir revisão.
+
+Não treinar/ajustar modelo proprietário do usuário como requisito para V1; usar memória/mapeamentos versionados + inferência do agente.
+
+### 21.5 Guardrails
+O agente **não pode**:
+- publicar/importar silenciosamente campos financeiros ambíguos;
+- inventar comissão, prazo, coeficiente, banco ou convênio;
+- descartar coluna desconhecida sem registrar;
+- sobrescrever tabela publicada/histórico;
+- alterar política de repasse do tenant sem ação explícita;
+- usar Float para valores/percentuais financeiros.
+
+Deve:
+- preservar arquivo bruto;
+- guardar lineage/mapeamento;
+- registrar confiança e decisões humanas;
+- manter trilha de auditoria;
+- permitir rollback/reprocessamento;
+- separar extração, interpretação, cálculo e publicação.
+
+### 21.6 Arquitetura-alvo do pipeline
+
+```text
+Arquivo recebido (XLSX/CSV/PDF)
+        ↓
+Leitor estrutural determinístico
+        ↓
+Agente IA de interpretação semântica
+        ↓
+Schema canônico proposto
+        ↓
+Validação / confiança / conflitos
+        ↓
+Prévia humana
+        ↓
+Política de repasse do tenant
+        ↓
+Cálculo das comissões por grupo
+        ↓
+Importação versionada
+        ↓
+Publicação
+```
+
+O componente determinístico continua responsável por leitura do arquivo, tipos, normalização e validações matemáticas. A IA decide **semântica/mapeamento**, não substitui integridade transacional nem regras financeiras.
+
+### 21.7 Estratégia de robustez
+Preferir arquitetura híbrida:
+- parser determinístico para XLSX/CSV/PDF extraível;
+- LLM/agente para entender colunas e contexto;
+- validadores determinísticos para percentuais, prazos e duplicidade;
+- Human Gate para baixa confiança;
+- cache/memória de mapeamento por origem.
+
+Assim o sistema continua funcionando mesmo quando o fornecedor muda a planilha diariamente.
