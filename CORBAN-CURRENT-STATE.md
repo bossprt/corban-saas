@@ -295,3 +295,18 @@ Owner confirmed Vercel environment variables for Supabase URL, publishable/anon 
 - Security Advisor has no WARN/ERROR; only known INFO for closed platform-admin tables.
 - Zero synthetic AI/attention data persisted after verification.
 - Remaining gates: Gemini secret, first paid call, credit tariff/monthly limits, and all Wave F financial/payout DDL.
+
+
+## Regra permanente de continuidade entre chats
+
+Decisão do Owner: toda decisão relevante de produto, arquitetura, segurança, operação, Human Gate, migration LIVE e próximo passo deve ser registrada nos arquivos do projeto antes de depender do histórico do chat.
+
+Objetivo: qualquer novo chat/IA deve conseguir retomar o Corban OS lendo o repositório, sem exigir que o Owner reconte o contexto.
+
+Prática obrigatória:
+- requisitos de produto -> documentação funcional/ADR correspondente;
+- estado executável/LIVE -> `CORBAN-CURRENT-STATE.md`;
+- próxima execução -> `.ai/CURRENT-TASK.md`;
+- mudanças arquiteturais/invariantes -> ADR;
+- migrations LIVE devem registrar versão real do Supabase e "DO NOT REAPPLY";
+- nunca considerar uma decisão importante "salva" apenas porque apareceu no chat.
