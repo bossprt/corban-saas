@@ -59,7 +59,9 @@ begin
  perform pg_temp.check_that(pg_temp.imp(uMg,v1,(select jsonb_agg(jsonb_build_object('contract_type_id',ctN,'term',(g%600)+1,'coefficient','0.1','received','1'))::text from generate_series(1,501) g)) like 'err:too_many_rows%','more than 500 rows refused before any work');
  perform pg_temp.check_that(pg_temp.imp(uMg,v1,'[1,"x",null]') like 'err:bulk_import_rejected|%invalid_row%','non object elements are refused per line');
  perform pg_temp.check_that(pg_temp.imp(uMg,v1,format('[{"contract_type_id":"%s","term":"x","coefficient":"1","received":"1"}]',ctN)) like 'err:bulk_import_rejected|%invalid_row%','a malformed term is refused');
- perform pg_temp.check_that(pg_temp.imp(uMg,v1,format('[{"contract_type_id":"%s","term":5,"coefficient":"1","received":"1","organization_id":"%s"}]',ctN,o2)) like 'ok:%' and (select organization_id=o1 from public.commercial_conditions where product_table_version_id=v1 and term=5),'a forged organization_id in the payload is ignored: the tenant comes from the version');
+ res:=pg_temp.imp(uMg,v1,format('[{"contract_type_id":"%s","term":5,"coefficient":"1","received":"1","organization_id":"%s"}]',ctN,o2));
+ perform pg_temp.check_that(res like 'ok:%','a forged organization_id in the payload is ignored: the call succeeds');
+ perform pg_temp.check_that((select organization_id=o1 from public.commercial_conditions where product_table_version_id=v1 and term=5),'a forged organization_id in the payload is ignored: the tenant comes from the version');
  -- authorization
  perform pg_temp.check_that(pg_temp.imp(uAg,v1,'[]') like 'err:not_authorized%' and pg_temp.imp(uSv,v1,'[]') like 'err:not_authorized%' and pg_temp.imp(uR,v1,'[]') similar to 'err:(not_authorized|version_not_found)%','agent, supervisor and inactive manager cannot import (an inactive member no longer even sees the version)');
  perform pg_temp.check_that(pg_temp.imp(uB,v1,'[]') like 'err:version_not_found%','tenant B cannot even see the version');
