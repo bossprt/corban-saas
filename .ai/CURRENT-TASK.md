@@ -753,3 +753,28 @@ Claude deve:
 **Adiado por exigir Human Gate proprio (chave de IA / gasto):** agente de importacao por IA, PDF, metering de creditos, agente operacional (V3 §20.6, §21-§23). **Adiado por ser independente:** CEP com preenchimento automatico (V3 §19.1).
 
 **Proxima onda (nao exige Human Gate):** RPC de importacao em transacao unica; ligar grupos ao snapshot/split/repasse; UI Platform Admin para templates; aposentar catalogo global legado com plano de migracao de dados.
+
+
+## Commercial Model V3 LIVE — 20/09/2026
+
+Owner authorized and ChatGPT applied `20261002_commercial_model_v3_foundation_v1.sql` LIVE. Supabase registered it as `20260920133017 commercial_model_v3_foundation_v1`. **DO NOT REAPPLY.**
+
+Verification:
+- rollback-only LIVE harness: 139/139 PASS (expected final RAISE used as rollback sentinel);
+- RLS enabled on all 12 new V3 tables;
+- 4 contract types + 53 national public-agreement templates seeded;
+- zero tenant/business V3 residue immediately after apply;
+- SECURITY DEFINER app inventory still 8 total (6 private + 2 public), none introduced by V3;
+- Security Advisor: no WARN/ERROR, only 2 known intentional INFO on platform-admin tables;
+- Performance Advisor: INFO only, including 11 unindexed-FK candidates on V3 tables. No WARN/ERROR.
+
+Next product/engineering targets from `docs/CORBAN-COMMERCIAL-MODEL-V3.md`:
+1. real Smart tenant configuration through `/app/comercial`;
+2. CEP autofill;
+3. adaptive AI import agent (Gemini preferred initial provider, provider-agnostic);
+4. AI metering/credits and pass-through cost;
+5. operational monitoring agent / Action Center;
+6. proposal snapshot + payout execution linkage;
+7. atomic bulk import for conditions.
+
+Keep all future decisions persisted in repo docs before chat context is lost.
