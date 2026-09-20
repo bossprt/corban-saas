@@ -64,7 +64,8 @@ export default async function PlatformPage({searchParams}:{searchParams:Promise<
           </div>
 
           <div className={card}><h3 className="flex items-center gap-2 font-semibold"><Package size={18}/> Produtos</h3>
-            <form action={addProduct} className="mt-4 grid grid-cols-3 gap-2"><input name="code" required placeholder="Código" className={field}/><input name="name" required placeholder="Nome do produto" className={field+" col-span-2"}/><button className={button+" col-span-3"}>Cadastrar produto</button></form>
+            <form action={addProduct} className="mt-4 grid gap-2"><input name="name" required placeholder="Nome do produto (ex.: Empréstimo Consignado)" className={field}/><button className={button}>Cadastrar produto</button></form>
+            <p className="mt-2 text-xs text-slate-500">O identificador técnico é gerado automaticamente pelo sistema e conflitos são resolvidos sem intervenção do usuário.</p>
             <div className="mt-4 flex flex-wrap gap-2">{products.data?.map(x=><span key={x.id} className="rounded-full border border-slate-700 px-3 py-1 text-xs">{x.name}</span>)}</div>
           </div>
 
