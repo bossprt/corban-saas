@@ -247,3 +247,17 @@ A primeira conclui as transições controladas da Mesa sem permitir marcação m
 
 ## 25. Vercel env configured — 19/09/2026
 Owner confirmed Vercel environment variables for Supabase URL, publishable/anon key, public site URL and service-role secret were configured. Worker variables remain intentionally absent. A fresh preview deployment should be generated from this branch to validate the runtime with the new configuration.
+
+
+## 26. Commercial Model V3 — 19/09/2026
+- Decisão de produto aprovada e documentada em `docs/CORBAN-COMMERCIAL-MODEL-V3.md`.
+- O tenant deve possuir sua operação comercial; Platform Admin não deve cadastrar a operação de cada empresa.
+- Fluxo-alvo: Banco → Convênio → Produto/Tabela → Tipo de Contrato → Prazo → coeficiente/taxa → comissão recebida → distribuição por grupos.
+- Tipo de Contrato substitui “Modalidade” na UX e deve ser independente de Produto.
+- Produto operacional = tabela comercial do tenant.
+- Catálogo nacional deverá trazer 27 governos/GDF + 26 prefeituras de capitais como templates habilitáveis, sem amarrar convênio a banco.
+- Bancos, provedores, convênios usados, tabelas, prazos, coeficientes, comissões, grupos e repasses são controlados pelo tenant.
+- Códigos técnicos devem ser gerados automaticamente e escondidos do usuário.
+- Grupos de comissão são dinâmicos e uma condição comercial deve cadastrar todos os repasses de uma vez; importação deve suportar uma coluna por grupo.
+- A modelagem LIVE atual ainda usa conceitos antigos (`products` globais, `modalities.product_id`, `agreements.bank_id`); precisa de migração compatível, sem renome/destruição direta.
+- Próxima onda deve começar por auditoria de impacto e migration plan. Nenhuma DDL LIVE autorizada por esta decisão.
