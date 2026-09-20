@@ -778,3 +778,26 @@ Next product/engineering targets from `docs/CORBAN-COMMERCIAL-MODEL-V3.md`:
 7. atomic bulk import for conditions.
 
 Keep all future decisions persisted in repo docs before chat context is lost.
+
+
+## Próxima wave preparada — UX, importação atômica e agentes
+
+Fonte operacional detalhada: `docs/NEXT-WAVE-PLAN-V3.md`.
+
+Prioridade de execução:
+1. validar e polir `/app/comercial` como tenant real;
+2. CEP automático no cadastro/edição de cliente;
+3. importação comercial atômica em lote;
+4. fundação provider-agnostic do Agente de Importação IA, com Gemini como default inicial e fake provider para testes;
+5. metering/créditos de IA;
+6. Action Center / Agente Operacional deterministic-first;
+7. integração de payout/snapshot com o financeiro existente.
+
+Regras:
+- sem main;
+- sem secret Gemini real;
+- sem gasto;
+- sem DDL LIVE;
+- sem mudança financeira irreversível;
+- tudo reversível pode ser preparado/testado/commitado/pushado na branch;
+- parar em Human Gate real com evidências.
