@@ -28,6 +28,18 @@ export async function addBank(f: FormData) {
   go('ok','Instituição cadastrada.')
 }
 
+export async function updateBank(f: FormData) {
+  await gate()
+  const id=clean(f.get('id'))
+  const name=clean(f.get('name'))
+  const rawCode=clean(f.get('code'))
+  const c=rawCode ? code(rawCode) : null
+  if(!id || !name) go('erro','Instituição inválida ou sem nome.')
+  const {error}=await createAdminClient().from('banks').update({name,code:c}).eq('id',id)
+  if(error) go('erro', error.code==='23505'?'Código já cadastrado em outra instituição.':'Não foi possível atualizar a instituição.')
+  go('ok','Instituição atualizada.')
+}
+
 export async function addProvider(f: FormData) {
   await gate()
   const name=clean(f.get('name')), c=code(clean(f.get('code'))), provider_type=clean(f.get('provider_type'))
