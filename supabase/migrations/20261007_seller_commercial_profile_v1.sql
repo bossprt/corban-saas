@@ -108,18 +108,19 @@ begin
        or new.organization_id is distinct from old.organization_id
        or new.seller_id is distinct from old.seller_id
        or new.version is distinct from old.version
-       or new.component_key is distinct from old.component_key
-       or new.effective_from is distinct from old.effective_from
-       or new.sub_share_pct is distinct from old.sub_share_pct
        or new.created_by is distinct from old.created_by
        or new.created_at is distinct from old.created_at
-    then raise exception 'sub_rule_content_is_immutable'; end if;
+    then raise exception 'sub_rule_identity_is_immutable'; end if;
     if old.status='draft' and new.status='published' then
+      if current_user in ('authenticated','anon') and current_setting('corban.seller_sub_publish',true) is distinct from 'on' then
+        raise exception 'sub_rule_publish_requires_governed_rpc';
+      end if;
       new.published_at:=coalesce(new.published_at,now());
     elsif new.status is distinct from old.status then
       raise exception 'invalid_sub_rule_transition';
     end if;
   elsif current_user in ('authenticated','anon') then
+    if new.status<>'draft' then raise exception 'sub_rule_must_start_draft'; end if;
     new.created_by:=auth.uid();
   end if;
   return new;
@@ -137,7 +138,9 @@ begin
   if not found then raise exception 'sub_rule_not_found'; end if;
   if not public.has_active_organization_role(r.organization_id,array['admin','manager']) then raise exception 'not_authorized'; end if;
   if r.status<>'draft' then raise exception 'sub_rule_not_draft'; end if;
+  perform set_config('corban.seller_sub_publish','on',true);
   update public.seller_sub_rule_versions set status='published',published_at=now() where id=r.id;
+  perform set_config('corban.seller_sub_publish','off',true);
   return r.id;
 end $$;
 
