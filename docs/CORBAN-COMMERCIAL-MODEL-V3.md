@@ -1878,3 +1878,30 @@ Todos os cálculos financeiros devem ser determinísticos, versionados e auditá
 
 ### Objetivo final
 O Corban OS deve transformar atualização de tabela/comissão de uma tarefa manual de horas em um fluxo de poucos minutos, com revisão humana apenas onde houver novidade, ambiguidade ou regra ainda não cadastrada.
+
+
+## Estrutura macro do ecossistema Corban
+Correção do Owner:
+
+A estrutura conceitual final deve ser entendida como:
+
+```text
+CORBAN
+├── SmartMatch
+└── DeskcommCRM
+```
+
+### CORBAN
+É a camada/ecossistema principal, o sistema operacional do correspondente bancário.
+
+### SmartMatch
+É um módulo/produto dentro do ecossistema Corban, voltado para aquisição, atendimento, qualificação, recuperação e medição de receita/leads.
+
+### DeskcommCRM
+Também faz parte da estrutura maior do Corban como frente/módulo de CRM e comunicação/operação comercial, ainda que possa continuar existindo tecnicamente como projeto/repositório separado durante o desenvolvimento.
+
+### Regra arquitetural
+- Corban é o guarda-chuva principal.
+- SmartMatch e DeskcommCRM não devem ser tratados como projetos totalmente desconectados do ponto de vista de produto.
+- Integrações entre eles devem ser feitas por contratos claros (APIs/eventos/identidades), sem acoplamento inseguro de banco ou secrets.
+- Cada componente pode manter infraestrutura/repositório independente enquanto a arquitetura de produto converge sob Corban.
