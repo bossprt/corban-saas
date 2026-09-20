@@ -1308,3 +1308,17 @@ Não copiar a interface da 2Tech literalmente, mas preservar o princípio observ
 - grupos aparecem como colunas/saídas da mesma condição;
 - não repetir a tabela uma vez por grupo;
 - cadastro em massa deve ser caminho de primeira classe, não recurso escondido.
+
+
+## Empresa de origem — classificação editável
+Decisão do Owner: a classificação de uma empresa de origem de terceiros não é definitiva no cadastro.
+
+Exemplo:
+- cadastrar inicialmente como Correspondente;
+- depois corrigir para Promotora.
+
+Regra de UX:
+- o gerenciador de empresas de origem deve permitir editar **nome + classificação**;
+- classificações atuais: Banco direto, Master, Promotora, Correspondente, Parceiro, Outro;
+- editar a classificação não muda automaticamente a direção da relação comercial nem a origem da produção das tabelas;
+- alterações históricas sensíveis devem continuar auditáveis quando houver vínculo financeiro/contratual.
