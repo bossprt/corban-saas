@@ -10,7 +10,7 @@ function brl(value: number | string | null) {
 
 export default async function SimulationsPage() {
   const { supabase } = await requireAppContext()
-  const [tablesResult, customersResult, versionsResult, simulationsResult, proposalsResult] = await Promise.all([
+  const [tablesResult, customersResult, versionsResult, simulationsResult, proposalsResult, typesResult, conditionsResult] = await Promise.all([
     supabase.from('product_tables').select('id,name,code'),
     supabase.from('clients').select('id,full_name').is('deleted_at', null).order('full_name').limit(200),
     supabase.from('product_table_versions')
@@ -20,7 +20,11 @@ export default async function SimulationsPage() {
       .select('id,customer_id,product_table_version_id,status,requested_amount,installment_amount,term,rate,created_at')
       .order('created_at', { ascending: false }).limit(100),
     supabase.from('proposals_v2').select('id,simulation_id').not('simulation_id', 'is', null),
+    supabase.from('contract_types').select('id,name').eq('is_active', true).order('sort_order'),
+    supabase.from('commercial_conditions').select('product_table_version_id'),
   ])
+  const conditionCount = new Map<string, number>()
+  for (const c of conditionsResult.data ?? []) conditionCount.set(c.product_table_version_id, (conditionCount.get(c.product_table_version_id) ?? 0) + 1)
 
   const tableNames = new Map((tablesResult.data ?? []).map(t => [t.id, t.name || t.code]))
   const customerNames = new Map((customersResult.data ?? []).map(c => [c.id, c.full_name]))
@@ -41,7 +45,11 @@ export default async function SimulationsPage() {
       </select>
       <select required name="product_table_version_id" className="field md:col-span-2" defaultValue="">
         <option value="" disabled>Selecione a tabela publicada</option>
-        {versionsResult.data?.map(v => <option key={v.id} value={v.id}>{tableNames.get(v.product_table_id) ?? 'Tabela'} · v{v.version} · prazo {v.term_min ?? '—'}–{v.term_max ?? '—'}</option>)}
+        {versionsResult.data?.map(v => <option key={v.id} value={v.id}>{tableNames.get(v.product_table_id) ?? 'Tabela'} · v{v.version} · {conditionCount.has(v.id) ? `${conditionCount.get(v.id)} condição(ões)` : `prazo ${v.term_min ?? '—'}–${v.term_max ?? '—'}`}</option>)}
+      </select>
+      <select name="contract_type_id" defaultValue="" className="field md:col-span-2">
+        <option value="">Tipo de Contrato (tabelas com condições)</option>
+        {typesResult.data?.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
       </select>
       <input required name="requested_amount" inputMode="decimal" placeholder="Valor solicitado" className="field md:col-span-2"/>
       <input required name="term" inputMode="numeric" placeholder="Prazo" className="field"/>

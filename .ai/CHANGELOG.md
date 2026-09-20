@@ -15,6 +15,15 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Adicionado — 26/09/2026 (Commercial Model V3)
+
+- Migration preparada `20261002_commercial_model_v3_foundation_v1` (aditiva; não aplicada): `contract_types`, `national_agreement_templates` (27 governos/DF + 26 prefeituras de capitais), catálogo do tenant (`organization_banks/providers/agreements`, `commission_groups`), rota V3, `commercial_conditions` + comissão/participações por grupo, `save_commercial_condition`, `create_simulation_for_condition`.
+- `/app/comercial`, importação CSV/XLSX com uma coluna por grupo de comissão, simulação por condição, configuração V3, testes unitários e harness SQL rollback-only.
+
+### Segurança — 26/09/2026
+
+- Unicidade de nomes por `lower(btrim(name))` (espaços não burlam duplicidade); condições congeladas após publicar; comissão e participações só supervisor+; sem Float.
+- Teste de arquitetura `worker-hardening` alinhado com os importadores reais do admin client (deriva pré-existente, módulos server-side).
 ### Segurança — 18/09/2026
 
 - Preparada, mas deliberadamente não aplicada, a migration de policies legadas → membership. O gate A/B exige identidades autenticadas reais em ambiente controlado.

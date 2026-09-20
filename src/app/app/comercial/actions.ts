@@ -1,0 +1,190 @@
+'use server'
+
+import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
+import { requireAppContext } from '@/lib/appContext'
+import { atLeast } from '@/lib/rbac'
+import { classifyDbFeedback, feedbackUrl, isFeedbackCode, type FeedbackCode } from '@/lib/feedback'
+import { isLabel } from '@/lib/catalog'
+import { isUuid } from '@/lib/team'
+import { IMPORT_ISSUE_TEXT, mapConditionRows, parseCoefficient, parseDelimited, parsePercent, parseRate, parseTerm, validateShares, type Basis, type ShareInput } from '@/lib/commercial'
+import { xlsxRows } from '@/lib/commercial-xlsx'
+
+const PATH = '/app/comercial'
+const go = (code: FeedbackCode): never => { revalidatePath(PATH); revalidatePath('/app/configuracao'); return redirect(feedbackUrl(PATH, code)) }
+const text = (f: FormData, k: string) => String(f.get(k) ?? '').trim()
+// The database authorizes every write (RLS + guard triggers + governed RPC); the role check here only fails early with a clear message.
+const COM_CODES = ['condition_already_exists', 'invalid_shares', 'duplicate_group_share', 'commission_group_not_found', 'production_shares_exceed_received_commission', 'received_commission_shares_exceed_100', 'invalid_term', 'coefficient_or_rate_required', 'invalid_received_commission', 'contract_type_not_found', 'condition_not_found', 'version_not_draft', 'national_template_not_available'] as const
+const comError = (e: { message?: string; code?: string }): FeedbackCode => {
+  const m = String(e.message ?? '')
+  if (e.code === '23505') return 'erro:duplicado'
+  if (e.code === '23503' || e.code === '23514') return 'erro:catalogo_invalido'
+  for (const c of COM_CODES) if (m.includes(c)) { const k = `erro:com_${c}`; if (isFeedbackCode(k)) return k }
+  if (m.includes('rate_or_coefficient_required')) return 'erro:cat_rate_or_coefficient_required'
+  return classifyDbFeedback(e)
+}
+const manager = async () => {
+  const ctx = await requireAppContext()
+  return atLeast(ctx.membership.role, 'manager') ? ctx : null
+}
+
+export async function createBank(f: FormData) {
+  const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')
+  const name = text(f, 'name')
+  if (!isLabel(name)) return go('erro:nome_invalido')
+  const { error } = await ctx.supabase.from('organization_banks').insert({ organization_id: ctx.membership.organization_id, name })
+  return error ? go(comError(error)) : go('ok:banco_cadastrado')
+}
+
+export async function createProvider(f: FormData) {
+  const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')
+  const name = text(f, 'name'), type = text(f, 'provider_type')
+  if (!isLabel(name) || !['bank_direct', 'master', 'promotora', 'other'].includes(type)) return go('erro:nome_invalido')
+  const { error } = await ctx.supabase.from('organization_providers').insert({ organization_id: ctx.membership.organization_id, name, provider_type: type })
+  return error ? go(comError(error)) : go('ok:provedor_cadastrado')
+}
+
+// Enabling a national template gives the OFFICIAL name (the database forces it); the tenant chooses which ones it works with.
+export async function enableAgreementTemplate(f: FormData) {
+  const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')
+  const template_id = text(f, 'template_id')
+  if (!isUuid(template_id)) return go('erro:catalogo_invalido')
+  const { error } = await ctx.supabase.from('organization_agreements').insert({ organization_id: ctx.membership.organization_id, template_id, name: 'nacional' })
+  return error ? go(comError(error)) : go('ok:convenio_habilitado')
+}
+
+export async function createAgreement(f: FormData) {
+  const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')
+  const name = text(f, 'name')
+  if (!isLabel(name)) return go('erro:nome_invalido')
+  const { error } = await ctx.supabase.from('organization_agreements').insert({ organization_id: ctx.membership.organization_id, name })
+  return error ? go(comError(error)) : go('ok:convenio_cadastrado')
+}
+
+export async function createCommissionGroup(f: FormData) {
+  const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')
+  const name = text(f, 'name'), kind = text(f, 'kind'), basis = text(f, 'calculation_basis')
+  if (!isLabel(name, 80) || !['broker', 'partner', 'referrer', 'employee', 'sales_team', 'counter', 'supervisor', 'manager', 'other'].includes(kind) || !['percent_of_production', 'percent_of_received_commission'].includes(basis)) return go('erro:catalogo_invalido')
+  const { error } = await ctx.supabase.from('commission_groups').insert({ organization_id: ctx.membership.organization_id, name, kind, calculation_basis: basis })
+  return error ? go(comError(error)) : go('ok:grupo_cadastrado')
+}
+
+// Deactivate / reactivate. Nothing is ever deleted: history keeps pointing at the row.
+export async function setActive(f: FormData) {
+  const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')
+  const table = text(f, 'kind'), id = text(f, 'id'), active = text(f, 'active') === 'true'
+  const allowed = { bank: 'organization_banks', provider: 'organization_providers', agreement: 'organization_agreements', group: 'commission_groups' } as const
+  if (!isUuid(id) || !Object.prototype.hasOwnProperty.call(allowed, table)) return go('erro:catalogo_invalido')
+  const { error } = await ctx.supabase.from(allowed[table as keyof typeof allowed]).update({ is_active: active }).eq('id', id)
+  return error ? go(comError(error)) : go('ok:situacao_atualizada')
+}
+
+// A commercial table = bank + agreement (+ optional provider). The route and the technical code are generated here; the person only names the table.
+export async function createCommercialTable(f: FormData) {
+  const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')
+  const bank = text(f, 'bank_id'), provider = text(f, 'provider_id'), agreement = text(f, 'agreement_id'), name = text(f, 'name')
+  if (!isUuid(bank) || !isUuid(agreement) || (provider !== '' && !isUuid(provider)) || !isLabel(name)) return go('erro:catalogo_invalido')
+  const org = ctx.membership.organization_id
+  const ins = await ctx.supabase.from('organization_product_routes').insert({ organization_id: org, org_bank_id: bank, org_provider_id: provider || null, org_agreement_id: agreement, status: 'active' }).select('id').single()
+  let routeId = ins.data?.id as string | undefined
+  if (ins.error) {
+    if (ins.error.code !== '23505') return go(comError(ins.error))
+    // the route already exists (same bank/agreement/provider): reuse it, several tables may hang on one route
+    let q = ctx.supabase.from('organization_product_routes').select('id').eq('org_bank_id', bank).eq('org_agreement_id', agreement)
+    q = provider ? q.eq('org_provider_id', provider) : q.is('org_provider_id', null)
+    routeId = (await q.limit(1).maybeSingle()).data?.id
+  }
+  if (!routeId) return go('erro:inesperado')
+  const code = `t-${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`
+  const tbl = await ctx.supabase.from('product_tables').insert({ organization_id: org, route_id: routeId, code, name, status: 'active' }).select('id').single()
+  if (tbl.error || !tbl.data) return go(tbl.error ? comError(tbl.error) : 'erro:inesperado')
+  const ver = await ctx.supabase.from('product_table_versions').insert({ organization_id: org, product_table_id: tbl.data.id, version: 1, status: 'draft' })
+  return ver.error ? go(comError(ver.error)) : go('ok:tabela_criada')
+}
+
+export async function newDraftVersion(f: FormData) {
+  const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')
+  const table_id = text(f, 'table_id')
+  if (!isUuid(table_id)) return go('erro:catalogo_invalido')
+  const { data: last } = await ctx.supabase.from('product_table_versions').select('version').eq('product_table_id', table_id).order('version', { ascending: false }).limit(1).maybeSingle()
+  const { error } = await ctx.supabase.from('product_table_versions').insert({ organization_id: ctx.membership.organization_id, product_table_id: table_id, version: (last?.version ?? 0) + 1, status: 'draft' })
+  return error ? go(comError(error)) : go('ok:versao_criada')
+}
+
+export async function publishCommercialVersion(f: FormData) {
+  const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')
+  const id = text(f, 'version_id')
+  if (!isUuid(id)) return go('erro:catalogo_invalido')
+  const { error } = await ctx.supabase.rpc('publish_product_table_version', { p_version_id: id })
+  return error ? go(comError(error)) : go('ok:versao_publicada')
+}
+
+const loadGroups = async (ctx: NonNullable<Awaited<ReturnType<typeof manager>>>) => {
+  const { data } = await ctx.supabase.from('commission_groups').select('id,name,calculation_basis').eq('is_active', true)
+  return (data ?? []).map(g => ({ id: g.id as string, name: g.name as string, basis: g.calculation_basis as Basis }))
+}
+
+// ONE form = the whole condition: Tipo de Contrato, prazo, coeficiente/taxa, comissão recebida and one percentage per commission group (blank = group not in this condition).
+export async function saveCondition(f: FormData) {
+  const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')
+  const version = text(f, 'version_id'), contractType = text(f, 'contract_type_id'), condition = text(f, 'condition_id')
+  if (!isUuid(version) || !isUuid(contractType) || (condition !== '' && !isUuid(condition))) return go('erro:catalogo_invalido')
+  const term = parseTerm(text(f, 'term'))
+  const coefficient = text(f, 'coefficient') === '' ? null : parseCoefficient(text(f, 'coefficient'))
+  const rate = text(f, 'rate') === '' ? null : parseRate(text(f, 'rate'))
+  const received = parsePercent(text(f, 'received'))
+  if (term === null) return go('erro:com_invalid_term')
+  if ((text(f, 'coefficient') !== '' && coefficient === null) || (text(f, 'rate') !== '' && rate === null) || (coefficient === null && rate === null)) return go('erro:com_coefficient_or_rate_required')
+  if (received === null) return go('erro:com_invalid_received_commission')
+  const groups = await loadGroups(ctx)
+  const shares: ShareInput[] = []
+  for (const g of groups) {
+    const raw = text(f, `g_${g.id}`)
+    if (raw === '') continue
+    const pct = parsePercent(raw)
+    if (pct === null) return go('erro:com_invalid_shares')
+    shares.push({ group_id: g.id, pct })
+  }
+  const bad = validateShares(groups, shares, received)
+  if (bad) return go(`erro:com_${bad}` as FeedbackCode)
+  const { error } = await ctx.supabase.rpc('save_commercial_condition', {
+    p_version: version, p_contract_type: contractType, p_term: term, p_coefficient: coefficient, p_rate: rate, p_received: received, p_shares: shares, p_condition: condition || null,
+  })
+  return error ? go(comError(error)) : go('ok:condicao_salva')
+}
+
+// CSV/XLSX with one column per commission group. The whole file is validated first (one bad line refuses everything); then each line goes through the
+// same governed RPC as the form, updating a condition that already exists for the same Tipo de Contrato + prazo.
+export async function importConditions(f: FormData) {
+  const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')
+  const version = text(f, 'version_id'), file = f.get('file')
+  if (!isUuid(version)) return go('erro:catalogo_invalido')
+  if (!(file instanceof File) || file.size === 0 || file.size > 1_048_576) return go('erro:import_arquivo')
+  const buf = Buffer.from(await file.arrayBuffer())
+  let rows: string[][]
+  try {
+    const isXlsx = /\.xlsx$/i.test(file.name) || (buf[0] === 0x50 && buf[1] === 0x4b)
+    rows = isXlsx ? await xlsxRows(buf) : parseDelimited(buf.toString('utf-8'))
+  } catch { return go('erro:import_arquivo') }
+  const [groups, types, existing] = await Promise.all([
+    loadGroups(ctx),
+    ctx.supabase.from('contract_types').select('id,name,tech_key').eq('is_active', true),
+    ctx.supabase.from('commercial_conditions').select('id,contract_type_id,term').eq('product_table_version_id', version),
+  ])
+  const { conditions, issues } = mapConditionRows(rows, { groups, contractTypes: (types.data ?? []) as { id: string; name: string; tech_key: string }[] })
+  if (issues.length) {
+    const first = issues[0]
+    const code = Object.prototype.hasOwnProperty.call(IMPORT_ISSUE_TEXT, first.code) ? first.code : 'invalid_shares'
+    revalidatePath(PATH)
+    return redirect(`${feedbackUrl(PATH, 'erro:import_invalido')}&l=${first.line}&c=${code}&n=${issues.length}`)
+  }
+  const byKey = new Map((existing.data ?? []).map(c => [`${c.contract_type_id}|${c.term}`, c.id as string]))
+  for (const c of conditions) {
+    const { error } = await ctx.supabase.rpc('save_commercial_condition', {
+      p_version: version, p_contract_type: c.contractTypeId, p_term: c.term, p_coefficient: c.coefficient, p_rate: c.rate, p_received: c.received, p_shares: c.shares,
+      p_condition: byKey.get(`${c.contractTypeId}|${c.term}`) ?? null,
+    })
+    if (error) return go(comError(error))
+  }
+  return go('ok:condicoes_importadas')
+}

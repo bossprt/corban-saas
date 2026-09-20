@@ -73,3 +73,6 @@ Persisted worker metrics; cancellation of in-flight runs; execution priority; un
 
 ## Implemented in this wave because it is independent and reversible
 Team page, invitation acceptance, password setup, access-pending recovery paths (verify again, sign out), role-aware menu, pilot dashboard with honest "indisponível" states, LOCAL / TESTE labelling of fake providers, worker readiness panel, `/api/health`.
+
+## Commercial Model V3 (26/09/2026)
+Implementado na branch, aguardando o Human Gate de DDL LIVE: catálogo do tenant (bancos, provedores, convênios nacionais/próprios), grupos de comissão dinâmicos, condição única e importação por grupo. Pendente após o gate: integrar grupos ao snapshot/split/repasse, RPC de importação em transação única, UI de plataforma para templates. Decisão sobre comissão visível ao agente segue PENDENTE do Owner (fail-closed).

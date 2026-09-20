@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
 import { classifySimulationError } from '@/lib/simulation'
 import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedback'
+import { parseDecimal } from '@/lib/commercial'
+import { isUuid } from '@/lib/team'
 
 const go = (code: FeedbackCode, path = '/app/simulacoes'): never => redirect(feedbackUrl(path, code))
 
@@ -20,6 +22,7 @@ function integer(value: FormDataEntryValue | null) {
 }
 
 export async function createSimulation(formData: FormData) {
+  if (String(formData.get('contract_type_id') ?? '') !== '') return createSimulationForCondition(formData)
   const { supabase } = await requireAppContext()
   const customerId = String(formData.get('customer_id') ?? '')
   const tableVersionId = String(formData.get('product_table_version_id') ?? '')
@@ -38,6 +41,24 @@ export async function createSimulation(formData: FormData) {
   }
   revalidatePath('/app/simulacoes')
   revalidatePath('/app')
+  return go('ok:simulacao_registrada')
+}
+
+// Commercial Model V3: the simulation is taken from a commercial CONDITION (Tipo de Contrato + prazo). The amount travels as a decimal string, never a float;
+// coefficient/rate come from the condition inside the database and commission is never copied into the simulation.
+async function createSimulationForCondition(formData: FormData) {
+  const { supabase } = await requireAppContext()
+  const customerId = String(formData.get('customer_id') ?? ''), versionId = String(formData.get('product_table_version_id') ?? ''), typeId = String(formData.get('contract_type_id') ?? '')
+  const amount = parseDecimal(formData.get('requested_amount'), { maxInt: 9, scale: 2 })
+  const term = integer(formData.get('term'))
+  if (!isUuid(customerId) || !isUuid(versionId) || !isUuid(typeId) || amount === null || Number(amount) <= 0 || !term) return go('erro:requisicao_invalida')
+  const { error } = await supabase.rpc('create_simulation_for_condition', { p_customer_id: customerId, p_table_version_id: versionId, p_contract_type_id: typeId, p_requested_amount: amount, p_term: term })
+  if (error) {
+    if (/condition_not_found/.test(error.message ?? '')) return go('erro:sim_condition_not_found')
+    const c = classifySimulationError(error)
+    return go(c === 'rpc_unavailable' ? 'erro:indisponivel' : c === 'not_authorized' ? 'erro:sem_permissao' : c === 'unexpected' ? 'erro:inesperado' : (`erro:sim_${c}` as FeedbackCode))
+  }
+  revalidatePath('/app/simulacoes'); revalidatePath('/app')
   return go('ok:simulacao_registrada')
 }
 

@@ -17,7 +17,7 @@ export default async function CatalogPage() {
     supabase.from('banks').select('id,name').order('name'), supabase.from('providers').select('id,name').order('name'),
     supabase.from('agreements').select('id,bank_id,name').order('name'), supabase.from('products').select('id,name').order('name'),
     supabase.from('modalities').select('id,product_id,name').order('name'), supabase.from('document_types').select('id,name').eq('is_active', true).order('name'),
-    supabase.from('organization_product_routes').select('id,bank_id,provider_id,agreement_id,product_id,modality_id,status').order('created_at', { ascending: false }),
+    supabase.from('organization_product_routes').select('id,bank_id,provider_id,agreement_id,product_id,modality_id,status').not('bank_id', 'is', null).order('created_at', { ascending: false }),
     supabase.from('product_tables').select('id,route_id,code,name,status').order('name'),
     supabase.from('product_table_versions').select('id,product_table_id,version,status,rate,coefficient,term_min,term_max').order('version', { ascending: false }),
     supabase.from('document_checklist_templates').select('id,route_id,version,status,name').order('version', { ascending: false }),
@@ -35,6 +35,7 @@ export default async function CatalogPage() {
   return <section>
     <h1 className="text-3xl font-semibold">Catálogo comercial</h1>
     <p className="mt-2 text-sm text-slate-400">Rotas, tabelas, checklist de documentos e etapas da operação da sua organização. Isto é o <strong>cadastro comercial</strong> usado nas simulações; não liga nenhum banco automaticamente.</p>
+    <p className="mt-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm text-emerald-200">Novo: cadastre bancos, convênios (governos e prefeituras), tabelas, prazos, coeficientes e grupos de comissão em <a href="/app/comercial" className="underline">Modelo comercial</a>. Esta tela mostra o catálogo anterior (rotas por produto e modalidade), que continua funcionando.</p>
     {!canCatalog && <p className="mt-3 rounded-xl border border-slate-800 p-3 text-xs text-slate-400">Seu perfil só consulta o catálogo{canChecklist ? ' e edita checklists' : ''}. Rotas, tabelas e etapas são de gerente/administrador.</p>}
     {!referenceReady && <p role="alert" className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-200">O catálogo de referência (bancos, convênios, produtos, tipos de contrato, tipos de documento) ainda não foi carregado pelo administrador da plataforma. Sem ele não é possível criar rotas nem checklists.</p>}
 

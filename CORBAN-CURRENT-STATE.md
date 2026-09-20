@@ -261,3 +261,8 @@ Owner confirmed Vercel environment variables for Supabase URL, publishable/anon 
 - Grupos de comissão são dinâmicos e uma condição comercial deve cadastrar todos os repasses de uma vez; importação deve suportar uma coluna por grupo.
 - A modelagem LIVE atual ainda usa conceitos antigos (`products` globais, `modalities.product_id`, `agreements.bank_id`); precisa de migração compatível, sem renome/destruição direta.
 - Próxima onda deve começar por auditoria de impacto e migration plan. Nenhuma DDL LIVE autorizada por esta decisão.
+
+## 27. Commercial Model V3 implementado na branch — 26/09/2026
+- Migration `20261002_commercial_model_v3_foundation_v1` PREPARADA (NÃO aplicada LIVE). Harness rollback-only: ALL PASS (100 checks), sem resíduo. Unit 257/257, tsc, eslint, build verdes.
+- App: `/app/comercial` (bancos, provedores, convênios nacionais 27+26 e próprios, grupos de comissão dinâmicos, tabelas, condição única com todos os grupos, importação CSV/XLSX com uma coluna por grupo, publicação); simulação por condição; configuração V3.
+- LIVE continua no modelo antigo até o Human Gate de aplicação. Grupos ainda não alimentam snapshot/split/repasse.

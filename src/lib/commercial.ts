@@ -1,0 +1,186 @@
+// Commercial Model V3 helpers (pure, no I/O). The database is the authority (save_commercial_condition validates everything again);
+// this mirrors it so forms and imports fail early with a clear message.
+// Money and percentages NEVER become a JavaScript float: they travel as canonical decimal STRINGS (PostgREST casts them to numeric) and are only
+// compared as scaled BigInt.
+
+export type Basis = 'percent_of_production' | 'percent_of_received_commission'
+export type GroupRef = { id: string; name: string; basis: Basis }
+export type ContractTypeRef = { id: string; name: string; tech_key: string }
+export type ShareInput = { group_id: string; pct: string }
+
+const FACTOR = BigInt(1000000) // 6 decimal places, same as numeric(9,6)
+
+// "1,85" | "1.85" | "1,85%" -> "1.85". Rejects thousands separators, exponents, signs and anything with more digits than the column can store.
+export function parseDecimal(raw: unknown, opts: { maxInt: number; scale: number }): string | null {
+  let t = String(raw ?? '').trim().replace(/%$/, '').trim()
+  if (t === '') return null
+  t = t.replace(',', '.')
+  const m = /^(\d+)(?:\.(\d+))?$/.exec(t)
+  if (!m) return null
+  const int = m[1].replace(/^0+(?=\d)/, ''), frac = m[2] ?? ''
+  if (int.length > opts.maxInt || frac.length > opts.scale) return null
+  return frac ? `${int}.${frac}` : int
+}
+export const parsePercent = (raw: unknown) => parseDecimal(raw, { maxInt: 3, scale: 6 })
+export const parseCoefficient = (raw: unknown) => parseDecimal(raw, { maxInt: 6, scale: 8 })
+export const parseRate = (raw: unknown) => parseDecimal(raw, { maxInt: 3, scale: 6 })
+export const parseTerm = (raw: unknown): number | null => {
+  const t = String(raw ?? '').trim()
+  if (!/^\d{1,3}$/.test(t)) return null
+  const n = Number(t)
+  return n >= 1 && n <= 600 ? n : null
+}
+
+// Percentages compared exactly (6 decimal places, same as numeric(9,6)).
+export function scaled(dec: string): bigint {
+  const [i, f = ''] = dec.split('.')
+  return BigInt(i) * FACTOR + BigInt((f + '000000').slice(0, 6))
+}
+const HUNDRED = BigInt(100) * FACTOR
+
+export type ShareError = 'invalid_shares' | 'duplicate_group_share' | 'commission_group_not_found' | 'production_shares_exceed_received_commission' | 'received_commission_shares_exceed_100'
+// Mirrors the RPC: each calculation basis is validated on its own, never added to the other.
+export function validateShares(groups: readonly GroupRef[], shares: readonly ShareInput[], received: string): ShareError | null {
+  const byId = new Map(groups.map(g => [g.id, g]))
+  const seen = new Set<string>()
+  let prod = BigInt(0), rc = BigInt(0)
+  for (const s of shares) {
+    const pct = parsePercent(s.pct)
+    if (pct === null) return 'invalid_shares'
+    if (seen.has(s.group_id)) return 'duplicate_group_share'
+    seen.add(s.group_id)
+    const g = byId.get(s.group_id)
+    if (!g) return 'commission_group_not_found'
+    const v = scaled(pct)
+    if (v > HUNDRED) return 'invalid_shares'
+    if (g.basis === 'percent_of_production') prod += v; else rc += v
+  }
+  if (prod > scaled(received)) return 'production_shares_exceed_received_commission'
+  if (rc > HUNDRED) return 'received_commission_shares_exceed_100'
+  return null
+}
+
+// ---------------------------------------------------------------- file import (CSV / XLSX rows) with ONE COLUMN PER COMMISSION GROUP
+export const normalizeHeader = (s: unknown) => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
+
+// Minimal RFC-4180 reader: BOM, CRLF, quoted fields with "" escapes, delimiter chosen from the header (; , or tab).
+export function parseDelimited(text: string): string[][] {
+  const src = text.replace(/^\uFEFF/, '')
+  const firstLine = src.split(/\r?\n/, 1)[0] ?? ''
+  const count = (c: string) => firstLine.split(c).length - 1
+  const delim = count(';') >= count(',') && count(';') >= count('\t') && count(';') > 0 ? ';' : count('\t') > count(',') ? '\t' : ','
+  const rows: string[][] = []
+  let row: string[] = [], cell = '', quoted = false
+  for (let i = 0; i < src.length; i++) {
+    const c = src[i]
+    if (quoted) {
+      if (c === '"') { if (src[i + 1] === '"') { cell += '"'; i++ } else quoted = false } else cell += c
+    } else if (c === '"') quoted = true
+    else if (c === delim) { row.push(cell); cell = '' }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && src[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = '' }
+    else cell += c
+  }
+  if (cell !== '' || row.length) { row.push(cell); rows.push(row) }
+  return rows.filter(r => r.some(x => x.trim() !== ''))
+}
+
+export type ParsedCondition = { line: number; contractTypeId: string; term: number; coefficient: string | null; rate: string | null; received: string; shares: ShareInput[] }
+export type ImportIssue = { line: number; code: string; detail?: string }
+export const IMPORT_MAX_ROWS = 500
+
+const ALIASES = {
+  contract: ['tipo_de_contrato', 'tipo_contrato', 'contrato'],
+  term: ['prazo', 'prazo_meses', 'prazo_em_meses'],
+  coefficient: ['coeficiente'],
+  rate: ['taxa', 'taxa_mensal'],
+  received: ['comissao_recebida', 'comissao', 'comissao_do_banco'],
+} as const
+
+export function mapConditionRows(rows: readonly (readonly unknown[])[], ctx: { groups: readonly GroupRef[]; contractTypes: readonly ContractTypeRef[] }): { conditions: ParsedCondition[]; issues: ImportIssue[] } {
+  const issues: ImportIssue[] = []
+  const fail = (line: number, code: string, detail?: string) => { issues.push({ line, code, detail }) }
+  if (rows.length < 2) { fail(1, 'file_without_rows'); return { conditions: [], issues } }
+  if (rows.length - 1 > IMPORT_MAX_ROWS) { fail(1, 'too_many_rows'); return { conditions: [], issues } }
+
+  const groupKey = new Map<string, GroupRef>()
+  for (const g of ctx.groups) {
+    const k = normalizeHeader(g.name)
+    if (groupKey.has(k)) { fail(1, 'ambiguous_group_names', g.name); return { conditions: [], issues } }
+    groupKey.set(k, g)
+  }
+  const head = rows[0].map(normalizeHeader)
+  const col: Partial<Record<keyof typeof ALIASES, number>> = {}
+  const groupCols = new Map<number, GroupRef>()
+  const seenCols = new Set<string>()
+  head.forEach((h, i) => {
+    if (!h) return
+    if (seenCols.has(h)) { fail(1, 'duplicate_column', String(rows[0][i])); return }
+    seenCols.add(h)
+    const field = (Object.keys(ALIASES) as (keyof typeof ALIASES)[]).find(f => (ALIASES[f] as readonly string[]).includes(h))
+    if (field) { col[field] = i; return }
+    const g = groupKey.get(h) ?? groupKey.get(h.replace(/^grupo_/, ''))
+    // an unknown column is refused, never silently ignored: a typo in a group name would otherwise drop that group's commission
+    if (g) groupCols.set(i, g); else fail(1, 'unknown_column', String(rows[0][i]))
+  })
+  for (const f of ['contract', 'term', 'received'] as const) if (col[f] === undefined) fail(1, `missing_column_${f}`)
+  if (col.coefficient === undefined && col.rate === undefined) fail(1, 'missing_column_coefficient_or_rate')
+  if (issues.length) return { conditions: [], issues }
+
+  const typeKey = new Map<string, ContractTypeRef>()
+  for (const t of ctx.contractTypes) { typeKey.set(normalizeHeader(t.name), t); typeKey.set(normalizeHeader(t.tech_key), t) }
+  const conditions: ParsedCondition[] = []
+  const seen = new Set<string>()
+  rows.slice(1).forEach((r, idx) => {
+    const line = idx + 2
+    const cell = (i: number | undefined) => (i === undefined ? '' : String(r[i] ?? '').trim())
+    const type = typeKey.get(normalizeHeader(cell(col.contract)))
+    if (!type) return fail(line, 'unknown_contract_type', cell(col.contract))
+    const term = parseTerm(cell(col.term))
+    if (term === null) return fail(line, 'invalid_term', cell(col.term))
+    const coefficient = cell(col.coefficient) === '' ? null : parseCoefficient(cell(col.coefficient))
+    const rate = cell(col.rate) === '' ? null : parseRate(cell(col.rate))
+    if ((cell(col.coefficient) !== '' && coefficient === null) || (cell(col.rate) !== '' && rate === null)) return fail(line, 'invalid_number')
+    if (coefficient === null && rate === null) return fail(line, 'coefficient_or_rate_required')
+    const received = parsePercent(cell(col.received))
+    if (received === null || scaled(received) > HUNDRED) return fail(line, 'invalid_received_commission', cell(col.received))
+    const shares: ShareInput[] = []
+    for (const [i, g] of groupCols) {
+      const raw = cell(i)
+      if (raw === '') continue // blank = this group is not part of this condition (never read as zero)
+      const pct = parsePercent(raw)
+      if (pct === null) return fail(line, 'invalid_shares', g.name)
+      shares.push({ group_id: g.id, pct })
+    }
+    const err = validateShares(ctx.groups, shares, received)
+    if (err) return fail(line, err)
+    const key = `${type.id}|${term}`
+    if (seen.has(key)) return fail(line, 'duplicate_row')
+    seen.add(key)
+    conditions.push({ line, contractTypeId: type.id, term, coefficient, rate, received, shares })
+  })
+  return { conditions: issues.length ? [] : conditions, issues }
+}
+
+// Whole-file import is all-or-nothing at the validation step: one bad line refuses the file (the operator fixes it and sends again).
+export const IMPORT_ISSUE_TEXT: Record<string, string> = {
+  file_without_rows: 'O arquivo não tem linhas de dados.',
+  too_many_rows: `O arquivo passa de ${IMPORT_MAX_ROWS} linhas. Divida em partes.`,
+  ambiguous_group_names: 'Dois grupos de comissão têm nomes parecidos demais. Renomeie um deles.',
+  duplicate_column: 'Coluna repetida.',
+  unknown_column: 'Coluna desconhecida (não é um campo nem um grupo de comissão ativo).',
+  missing_column_contract: 'Falta a coluna Tipo de Contrato.',
+  missing_column_term: 'Falta a coluna Prazo.',
+  missing_column_received: 'Falta a coluna Comissão recebida.',
+  missing_column_coefficient_or_rate: 'Falta a coluna Coeficiente ou Taxa.',
+  unknown_contract_type: 'Tipo de Contrato desconhecido.',
+  invalid_term: 'Prazo inválido (1 a 600).',
+  invalid_number: 'Número inválido no coeficiente ou na taxa.',
+  coefficient_or_rate_required: 'Informe coeficiente ou taxa.',
+  invalid_received_commission: 'Comissão recebida inválida (0 a 100).',
+  invalid_shares: 'Percentual de grupo inválido.',
+  duplicate_group_share: 'Grupo repetido.',
+  commission_group_not_found: 'Grupo de comissão não encontrado ou inativo.',
+  production_shares_exceed_received_commission: 'A soma dos grupos sobre produção passa da comissão recebida.',
+  received_commission_shares_exceed_100: 'A soma dos grupos sobre a comissão recebida passa de 100%.',
+  duplicate_row: 'Mesmo Tipo de Contrato e prazo repetidos no arquivo.',
+}

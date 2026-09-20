@@ -742,3 +742,12 @@ Claude deve:
 7. parar antes de DDL LIVE e pedir Human Gate com evidências.
 
 **Não trabalhar na main. Não aplicar DDL LIVE sem autorização explícita.**
+
+## Commercial Model V3 - implementacao (Claude) - 26/09/2026
+**Estado:** implementado na branch, testado; migration PREPARADA, NAO aplicada. Auditoria: `docs/audits/AUDIT-2026-09-26-COMMERCIAL-MODEL-V3.md`. ADR-0024.
+
+**Feito:** migration `20261002_commercial_model_v3_foundation_v1` (aditiva, INVOKER, RLS em todas as tabelas novas); harness `tests/security/commercial-model-v3-rollback.sql` (100 checks, `RESULTS: ALL PASS`, zero residuo); `src/lib/commercial.ts` + `commercial-xlsx.ts`; `/app/comercial` (bancos, provedores, convenios nacionais/proprios, grupos, tabelas, condicao unica, importacao CSV/XLSX por grupo, publicar); simulacao por condicao; configuracao V3; 23 testes unitarios novos (257/257), tsc, eslint, build verdes.
+
+**HUMAN GATE (unico pendente):** autorizar aplicar `20261002_commercial_model_v3_foundation_v1` LIVE (DDL em producao: 9 tabelas novas, `organization_product_routes` alterada, `publish_product_table_version` substituida). Depois de aplicar: rodar o harness (rollback-only), advisors (RLS), inventario DEFINER (deve seguir igual).
+
+**Proxima onda (nao exige Human Gate):** RPC de importacao em transacao unica; ligar grupos ao snapshot/split/repasse; UI Platform Admin para templates; aposentar catalogo global legado com plano de migracao de dados.
