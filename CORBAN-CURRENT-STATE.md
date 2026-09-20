@@ -335,3 +335,17 @@ Implementado diretamente pelo ChatGPT na branch `architecture/corban-os-master-v
 - The table manager shows conditions in a compact grid and makes **Importar planilha** the primary path; manual condition entry is secondary/collapsible.
 - CSV/XLSX bulk import remains atomic and uses the LIVE `import_commercial_conditions` RPC.
 - No new DDL and no Claude usage.
+
+
+## Empresa de origem — classificação editável
+Decisão do Owner: a classificação de uma empresa de origem de terceiros não é definitiva no cadastro.
+
+Exemplo:
+- cadastrar inicialmente como Correspondente;
+- depois corrigir para Promotora.
+
+Regra de UX:
+- o gerenciador de empresas de origem deve permitir editar **nome + classificação**;
+- classificações atuais: Banco direto, Master, Promotora, Correspondente, Parceiro, Outro;
+- editar a classificação não muda automaticamente a direção da relação comercial nem a origem da produção das tabelas;
+- alterações históricas sensíveis devem continuar auditáveis quando houver vínculo financeiro/contratual.
