@@ -1032,3 +1032,28 @@ O agente operacional não deve:
 
 ### 23.8 Objetivo de produto
 Transformar o Corban OS de um sistema passivo, que apenas armazena dados, em um **sistema operacional ativo**, capaz de perceber gargalos e chamar atenção para o que precisa ser resolvido antes que vire perda de receita.
+
+
+## 24. UX REFINEMENT — BANKS VS ORIGIN COMPANIES
+
+Observation from live tenant screen review:
+
+The current section "Bancos e provedores" can still confuse business semantics because a tenant may accidentally register a non-bank commercial source as a bank.
+
+Concrete example observed in the Smart tenant:
+- Daycoval is an institution/bank;
+- NASP appears under the Banks list, but operationally it is not a bank/institution;
+- Efetiva Mais appears as provider/master.
+
+Decision:
+- Keep **Banco / Instituição** strictly for the financial institution that grants/originates the credit.
+- Keep third-party commercial sources such as master/promotora/correspondente/parceiro outside the bank list.
+- Replace the user-facing label **"Provedores / masters"** with a clearer business label such as **"Empresas de origem / parceiros comerciais"** or **"Origem comercial de terceiros"**.
+- Production-origin semantics remain:
+  - Própria = no external company;
+  - Terceiro = choose one registered external origin company.
+- Do not force every external origin into a fixed "Master" type. Allow business classifications such as Master, Promotora, Correspondente, Parceiro, and future values if needed.
+- Existing wrongly classified rows must not be silently deleted or reclassified. Provide an explicit tenant-admin correction flow/migration assistant.
+- UI should visually separate:
+  1. Bancos / Instituições;
+  2. Empresas de origem / parceiros comerciais.
