@@ -28,7 +28,7 @@ function ConditionForm({ versionId, contractTypes, groups, policies, cond, recei
     <input name="coefficient" inputMode="decimal" defaultValue={cond?.coefficient ?? ''} placeholder="Coeficiente" className={field} />
     <input name="rate" inputMode="decimal" defaultValue={cond?.rate ?? ''} placeholder="Taxa (%)" className={field} />
     <input required name="received" inputMode="decimal" defaultValue={received ?? ''} placeholder="Comissão recebida (%)" className={`${field} md:col-span-2`} />
-    <select name="policy_version_id" defaultValue={policyVersion ?? ''} className={`${field} md:col-span-2`}><option value="">Sem política de repasse</option>{policies.map(p => <option key={p.versionId} value={p.versionId}>Política: {p.name}</option>)}</select>
+    <select name="policy_version_id" defaultValue={policyVersion ?? ''} className={`${field} md:col-span-2`}><option value="">Sem regra padrão</option>{policies.map(p => <option key={p.versionId} value={p.versionId}>Regra padrão: {p.name}</option>)}</select>
     {groups.map(g => <label key={g.id} className="text-xs text-slate-400">{g.name} <span className="text-slate-500">({BASIS[g.calculation_basis] ?? g.calculation_basis})</span>
       <input name={`g_${g.id}`} inputMode="decimal" defaultValue={shares?.get(g.id) ?? ''} placeholder={policies.length ? '% (vazio = política / não participa)' : '% (vazio = não participa)'} className={`${field} mt-1 w-full`} /></label>)}
     <SubmitButton className={`${ghost} md:col-span-4 md:justify-self-end`} pendingText="Salvando...">{cond ? 'Salvar alterações' : 'Adicionar condição'}</SubmitButton>
@@ -43,11 +43,10 @@ export default async function CommercialPage({ searchParams }: { searchParams: P
   if (!atLeast(membership.role, 'supervisor')) return <section><h1 className="text-3xl font-semibold">Modelo comercial</h1>
     <p role="alert" className="mt-3 rounded-xl border border-slate-800 p-5 text-sm text-slate-300">O modelo comercial é restrito a supervisor, gerente e administrador.</p></section>
 
-  const [banks, providers, agreements, templates, groups, contractTypes, routes, tables, versions, conditions, commissions, shares, polRows, polVersions, polItems] = await Promise.all([
+  const [banks, providers, agreements, groups, contractTypes, routes, tables, versions, conditions, commissions, shares, polRows, polVersions, polItems] = await Promise.all([
     supabase.from('organization_banks').select('id,name,is_active').order('name'),
     supabase.from('organization_providers').select('id,name,provider_type,is_active').order('name'),
     supabase.from('organization_agreements').select('id,name,template_id,is_active').order('name'),
-    supabase.from('national_agreement_templates').select('id,kind,name,uf').eq('is_active', true).order('sort_order'),
     supabase.from('commission_groups').select('id,name,kind,calculation_basis,is_active').order('sort_order').order('name'),
     supabase.from('contract_types').select('id,name').eq('is_active', true).order('sort_order'),
     supabase.from('organization_product_routes').select('id,org_bank_id,org_provider_id,org_agreement_id,status').not('org_bank_id', 'is', null),
