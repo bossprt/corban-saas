@@ -744,3 +744,72 @@ Preferir arquitetura híbrida:
 - cache/memória de mapeamento por origem.
 
 Assim o sistema continua funcionando mesmo quando o fornecedor muda a planilha diariamente.
+
+
+## 22. IA COMO RECURSO MEDIDO E CUSTO REPASSÁVEL
+
+### 22.1 Decisão do Owner
+Os recursos de IA do Corban OS, especialmente o **Agente de Importação Comercial**, podem ter custo de uso repassado ao tenant/usuário.
+
+A plataforma não deve absorver indefinidamente o custo variável de LLM/OCR/processamento de arquivos.
+
+### 22.2 Modelo recomendado
+Separar:
+- assinatura base do Corban OS;
+- franquia de IA incluída no plano, se desejado;
+- consumo excedente de IA medido por uso;
+- custo de terceiros + margem/configuração comercial da plataforma.
+
+Unidades possíveis de medição:
+- por arquivo processado;
+- por página de PDF;
+- por linha/aba de planilha processada;
+- por job de importação;
+- por créditos de IA;
+- internamente por tokens/OCR/compute, sem expor complexidade técnica ao usuário.
+
+### 22.3 UX recomendada
+O usuário deve ver algo simples, por exemplo:
+- “Este processamento consumirá aproximadamente X créditos”
+- “Saldo de IA: Y créditos”
+- “Processar arquivo”
+- histórico de consumo por organização.
+
+Não exibir tokens como unidade principal para usuário final.
+
+### 22.4 Governança de custo
+Antes de executar um job pago:
+- estimar custo quando possível;
+- aplicar limite por tenant;
+- permitir orçamento/teto mensal;
+- bloquear estouro não autorizado;
+- registrar consumo por job;
+- separar custo real do provedor, crédito cobrado e margem;
+- suportar fallback de modelo mais barato quando a confiança continuar aceitável;
+- não processar novamente o mesmo arquivo sem necessidade (fingerprint/cache).
+
+### 22.5 Arquitetura
+Cada job de IA deve ter metering próprio, por exemplo:
+- organization_id;
+- user_id;
+- job_id;
+- capability;
+- provider/model;
+- input/output usage;
+- custo estimado/real;
+- créditos debitados;
+- status;
+- timestamps;
+- referência ao arquivo/importação.
+
+Os valores financeiros devem usar NUMERIC/inteiro escalado, nunca Float.
+
+### 22.6 Estratégia comercial possível
+Exemplo:
+- Plano inclui N créditos/mês;
+- excedente cobrado por créditos;
+- recursos simples podem usar modelos baratos;
+- PDF complexo/baixa confiança pode usar modelo superior e consumir mais créditos;
+- usuário pode optar por não usar IA e fazer mapeamento manual quando disponível.
+
+A precificação final ainda é decisão comercial futura; não hardcodar valores no produto.
