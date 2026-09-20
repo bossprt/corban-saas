@@ -428,3 +428,57 @@ O Corban OS deve implementar o princípio de negócio com arquitetura própria, 
 Claude deve assumir como executor local de longa duração, seguindo `AGENTS.md`, `.ai/RULES.md`, `.ai/DECISIONS.md`, `.ai/CLAUDE-LONG-RUN.md` e este documento.
 
 Primeiro passo obrigatório: **auditoria de impacto e plano de migração**, depois implementação reversível na feature branch. Se DDL LIVE for necessária, parar no Human Gate e retornar ao ChatGPT/Owner com a migration preparada, testes e evidências.
+
+
+## 19. NOVOS REQUISITOS DE UX — CEP E ORIGEM/CORRESPONDENTE
+
+### 19.1 Cadastro de cliente — CEP com preenchimento automático
+No cadastro/edição de cliente, ao informar um CEP válido o sistema deve consultar uma fonte de CEP e preencher automaticamente, quando disponíveis:
+- logradouro;
+- bairro;
+- cidade/município;
+- UF;
+- complemento sugerido apenas se a fonte retornar.
+
+O usuário continua responsável por:
+- número;
+- complemento específico do imóvel;
+- corrigir/confirmar o endereço antes de salvar.
+
+Requisitos:
+- aceitar CEP com ou sem máscara;
+- normalizar para 8 dígitos;
+- não bloquear cadastro se a consulta externa estiver indisponível;
+- permitir edição manual após o preenchimento;
+- tratar CEP inexistente/ambíguo com feedback claro;
+- evitar expor segredo no navegador se a fonte exigir chave;
+- preferir fonte sem custo/chave para V0 quando adequada;
+- não sobrescrever silenciosamente endereço que o usuário já corrigiu manualmente.
+
+### 19.2 Produto/Tabela — origem comercial / correspondente
+Ao cadastrar Produto/Tabela, a empresa precisa informar **por qual origem comercial aquela tabela é operada**.
+
+Benchmark funcional observado pelo Owner na 2Tech:
+- EFETIVA+
+- HOPE
+- LEVE
+- NOVA PROMOTORA
+- PRÓPRIO
+
+No Corban OS esse conceito deve aproveitar, quando compatível, a dimensão já existente de **Provedor/Master**, preservando a regra arquitetural de que:
+- Banco/Instituição ≠ Provedor/Master;
+- Provedor/Master representa origem/canal comercial da tabela;
+- a opção **Próprio** representa operação direta/própria da organização, sem confundir com banco.
+
+UX desejada:
+```text
+Origem da tabela / Correspondente
+[ Próprio ]
+[ Lev ]
+[ Efetiva+ ]
+[ outro provedor cadastrado pelo tenant ]
+```
+
+O tenant deve poder cadastrar/editar seus próprios provedores/origens. Não depender do Platform Admin para isso.
+
+**Pendente de definição pelo Owner:** melhoria final de UX/nomenclatura para esse campo além do benchmark da 2Tech. Não implementar uma taxonomia rígida antes dessa definição.
