@@ -1519,3 +1519,31 @@ Leitura somente, sem DDL:
 - portanto a próxima onda deve **reutilizar** rede/split/componentes existentes e adicionar apenas as lacunas, evitando duplicação.
 
 Próximo passo executável sem Claude: desenhar e preparar migration aditiva para cadastro de vendedor/perfil comercial + vínculo de grupos + categoria PF/PJ/SUB e fator versionado. Não aplicar LIVE sem Human Gate explícito.
+
+
+## Human Gate — Seller/Sub + Fatores LIVE
+Preparado e validado rollback-only:
+- `20261007_seller_commercial_profile_v1.sql`
+- `20261008_commercial_factors_v1.sql`
+
+Validação:
+- ambos executaram em transação com seus contratos SQL e ROLLBACK sem erro;
+- nenhum objeto ficou persistido no LIVE;
+- Vercel build dos commits ficou READY;
+- não foi usado Claude.
+
+Onda 20261007:
+- Grupo de Vendedor separado de Grupo de Comissão;
+- vendedor PF/PJ/SUB;
+- SUB com regra econômica versionada e publicada por RPC;
+- leitura de CPF/CNPJ fail-closed para supervisor+.
+
+Onda 20261008:
+- fatores fixos e diários;
+- lotes versionados por data/revisão;
+- faixas de prazo;
+- vínculo opcional ao import_batch para linhagem de PDF/XLSX/CSV;
+- publicação governada;
+- resolver determinístico para CRM/simulação.
+
+Próxima ação exige Human Gate explícito: aplicar as duas migrations LIVE. Depois do apply, executar contratos, advisors, criar UI de Vendedores/Grupos e Fatores e continuar para importação inteligente.
