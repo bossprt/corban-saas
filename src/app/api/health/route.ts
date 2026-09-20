@@ -1,60 +1,48 @@
 import { NextResponse } from 'next/server'
+import { classifyAuthProbe, classifyRestProbe, failureProbe, type Probe } from '@/lib/health'
 
-// Liveness + database reachability for uptime monitors. Deliberately minimal and unauthenticated: no secrets, no configuration,
-// no provider or worker state (that is business readiness and is shown only to signed-in supervisors on /app/integracoes).
+// Liveness + Supabase reachability for uptime monitors. Deliberately minimal and unauthenticated: no secrets, no configuration values, no provider or
+// worker state (business readiness is shown only to signed-in supervisors on /app/integracoes). Probe semantics: see src/lib/health.ts.
 export const dynamic = 'force-dynamic'
 
-type DatabaseProbe = {
-  ok: boolean
-  reason?: 'missing_url' | 'missing_key' | 'timeout' | 'network_error' | 'upstream_error'
-  upstreamStatus?: number
-}
-
-async function databaseReachable(): Promise<DatabaseProbe> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!url) return { ok: false, reason: 'missing_url' }
-  if (!key) return { ok: false, reason: 'missing_key' }
-
+async function probes(): Promise<{ database: Probe; auth: Probe }> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()
+  if (!url) return { database: { ok: false, reason: 'missing_url' }, auth: { ok: false, reason: 'missing_url' } }
+  if (!key) return { database: { ok: false, reason: 'missing_key' }, auth: { ok: false, reason: 'missing_key' } }
+  const base = url.replace(/\/+$/, '')
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), 2500)
+  const init = { headers: { apikey: key }, signal: controller.signal, cache: 'no-store' as const }
   try {
-    const res = await fetch(`${url}/rest/v1/`, {
-      headers: { apikey: key },
-      signal: controller.signal,
-      cache: 'no-store',
-    })
-    if (res.ok) return { ok: true }
-    return { ok: false, reason: 'upstream_error', upstreamStatus: res.status }
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') return { ok: false, reason: 'timeout' }
-    return { ok: false, reason: 'network_error' }
+    const [rest, auth] = await Promise.all([
+      // A table the anon role cannot read: the DATABASE answers 42501 (or 200 with RLS-filtered rows). Reads nothing.
+      fetch(`${base}/rest/v1/organizations?select=id&limit=1`, init).then(async r => classifyRestProbe(r.status, await r.json().catch(() => null)), failureProbe),
+      fetch(`${base}/auth/v1/health`, init).then(r => classifyAuthProbe(r.status), failureProbe),
+    ])
+    return { database: rest, auth }
   } finally {
     clearTimeout(timer)
   }
 }
 
-// A monitor (or an attacker) hammering this endpoint costs at most one upstream probe every 5 seconds per instance.
-let cached: { at: number; probe: DatabaseProbe } | null = null
+// A monitor (or an attacker) hammering this endpoint costs at most one pair of upstream probes every 5 seconds per instance.
+let cached: { at: number; result: Awaited<ReturnType<typeof probes>> } | null = null
 const CACHE_MS = 5000
 
 export async function GET() {
-  if (!cached || Date.now() - cached.at > CACHE_MS) {
-    cached = { at: Date.now(), probe: await databaseReachable() }
-  }
-
-  const database = cached.probe.ok ? 'ok' : 'unavailable'
+  if (!cached || Date.now() - cached.at > CACHE_MS) cached = { at: Date.now(), result: await probes() }
+  const { database, auth } = cached.result
+  const healthy = database.ok && auth.ok
   return NextResponse.json(
     {
-      status: database === 'ok' ? 'ok' : 'degraded',
+      status: healthy ? 'ok' : 'degraded',
       app: 'ok',
-      database,
-      ...(cached.probe.reason ? { databaseReason: cached.probe.reason } : {}),
-      ...(cached.probe.upstreamStatus ? { databaseUpstreamStatus: cached.probe.upstreamStatus } : {}),
+      database: database.ok ? 'ok' : 'unavailable',
+      auth: auth.ok ? 'ok' : 'unavailable',
+      ...(database.reason ? { databaseReason: database.reason } : {}),
+      ...(auth.reason ? { authReason: auth.reason } : {}),
     },
-    {
-      status: database === 'ok' ? 200 : 503,
-      headers: { 'Cache-Control': 'no-store' },
-    },
+    { status: healthy ? 200 : 503, headers: { 'Cache-Control': 'no-store' } },
   )
 }

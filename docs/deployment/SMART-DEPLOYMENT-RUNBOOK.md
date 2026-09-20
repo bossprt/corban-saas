@@ -27,7 +27,7 @@ O agente NÃO executou nenhum passo abaixo. Ordem obrigatória. Marque cada item
 - Detalhes: `docs/deployment/ENVIRONMENT-VARIABLES.md`. Verificação local antes: `npm run preflight -- --production` com as mesmas variáveis num `.env.production.local` (não commitar).
 
 ## 4. Deploy
-- [ ] Disparar o deploy. Abrir `<APP_ORIGIN>/api/health`: deve responder `{"status":"ok","app":"ok","database":"ok"}` (503 `degraded` se o banco não responder). Nenhuma configuração aparece na resposta.
+- [ ] Disparar o deploy. Abrir `<APP_ORIGIN>/api/health`: deve responder `{"status":"ok","app":"ok","database":"ok","auth":"ok"}` (503 `degraded` se o banco não responder). Nenhuma configuração aparece na resposta.
 - [ ] Abrir `<APP_ORIGIN>/login`: a tela de login aparece.
 
 ## 5. Supabase Auth e SMTP
