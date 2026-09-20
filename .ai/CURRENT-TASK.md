@@ -853,3 +853,18 @@ Verified on LIVE:
 Correction for handoff: Action Center verified harness count is 54, not 55.
 
 The next external gates are now Gemini secret + first paid call + pricing/limits. Wave F financial/payout work still requires Owner decisions and a separate DDL gate.
+
+
+## Regra permanente de continuidade entre chats
+
+Decisão do Owner: toda decisão relevante de produto, arquitetura, segurança, operação, Human Gate, migration LIVE e próximo passo deve ser registrada nos arquivos do projeto antes de depender do histórico do chat.
+
+Objetivo: qualquer novo chat/IA deve conseguir retomar o Corban OS lendo o repositório, sem exigir que o Owner reconte o contexto.
+
+Prática obrigatória:
+- requisitos de produto -> documentação funcional/ADR correspondente;
+- estado executável/LIVE -> `CORBAN-CURRENT-STATE.md`;
+- próxima execução -> `.ai/CURRENT-TASK.md`;
+- mudanças arquiteturais/invariantes -> ADR;
+- migrations LIVE devem registrar versão real do Supabase e "DO NOT REAPPLY";
+- nunca considerar uma decisão importante "salva" apenas porque apareceu no chat.
