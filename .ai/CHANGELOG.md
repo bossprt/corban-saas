@@ -295,3 +295,13 @@ Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`)
 - Confirmado reuso possível de commercial_entities/relationships/channels, network_split_rule_versions e commission_rule_components.
 - Lacunas registradas: vendedor/perfil comercial e fatores versionados.
 - Nenhuma DDL aplicada; Claude não utilizado.
+
+
+### Preparado — 20/09/2026 (Seller/SUB + Fatores)
+- `20261007_seller_commercial_profile_v1.sql`: Grupo de Vendedor ≠ Grupo de Comissão, cadastro PF/PJ/SUB e regra SUB versionada.
+- `20261008_commercial_factors_v1.sql`: fatores daily/fixed, batches versionados e resolver para CRM.
+- Dois contratos SQL adicionados.
+- Ambos executados rollback-only sem erro; zero persistência.
+- Publicação financeira/configuração protegida por RPC; inserts autenticados começam em draft.
+- Vercel READY; Claude não utilizado.
+- Aguardando autorização explícita para DDL LIVE.
