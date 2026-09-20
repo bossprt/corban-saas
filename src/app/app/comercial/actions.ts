@@ -12,7 +12,9 @@ import { xlsxRows } from '@/lib/commercial-xlsx'
 import { parseBulkRefusal } from '@/lib/commercial'
 
 const PATH = '/app/comercial'
-const go = (code: FeedbackCode): never => { revalidatePath(PATH); revalidatePath('/app/configuracao'); return redirect(feedbackUrl(PATH, code)) }
+const RETURN_PATHS = new Set([PATH, `${PATH}/instituicoes`, `${PATH}/origens`, `${PATH}/convenios`, `${PATH}/grupos`])
+const returnPath = (f: FormData) => { const p = String(f.get('return_to') ?? '').trim(); return RETURN_PATHS.has(p) ? p : PATH }
+const go = (code: FeedbackCode, path = PATH): never => { revalidatePath(PATH); revalidatePath(path); revalidatePath('/app/configuracao'); return redirect(feedbackUrl(path, code)) }
 const text = (f: FormData, k: string) => String(f.get(k) ?? '').trim()
 // The database authorizes every write (RLS + guard triggers + governed RPC); the role check here only fails early with a clear message.
 const COM_CODES = ['condition_already_exists', 'invalid_shares', 'duplicate_group_share', 'commission_group_not_found', 'production_shares_exceed_received_commission', 'policy_not_found', 'policy_group_inactive', 'policy_group_must_use_received_basis', 'invalid_policy', 'policy_already_exists', 'invalid_term', 'coefficient_or_rate_required', 'invalid_received_commission', 'contract_type_not_found', 'condition_not_found', 'version_not_draft', 'national_template_not_available'] as const
@@ -34,7 +36,7 @@ export async function createBank(f: FormData) {
   const name = text(f, 'name')
   if (!isLabel(name)) return go('erro:nome_invalido')
   const { error } = await ctx.supabase.from('organization_banks').insert({ organization_id: ctx.membership.organization_id, name })
-  return error ? go(comError(error)) : go('ok:banco_cadastrado')
+  return error ? go(comError(error), returnPath(f)) : go('ok:banco_cadastrado', returnPath(f))
 }
 
 export async function createProvider(f: FormData) {
@@ -42,7 +44,7 @@ export async function createProvider(f: FormData) {
   const name = text(f, 'name'), type = text(f, 'provider_type')
   if (!isLabel(name) || !['bank_direct', 'master', 'promotora', 'correspondent', 'partner', 'other'].includes(type)) return go('erro:nome_invalido')
   const { error } = await ctx.supabase.from('organization_providers').insert({ organization_id: ctx.membership.organization_id, name, provider_type: type })
-  return error ? go(comError(error)) : go('ok:provedor_cadastrado')
+  return error ? go(comError(error), returnPath(f)) : go('ok:provedor_cadastrado', returnPath(f))
 }
 
 // Enabling a national template gives the OFFICIAL name (the database forces it); the tenant chooses which ones it works with.
@@ -51,7 +53,7 @@ export async function enableAgreementTemplate(f: FormData) {
   const template_id = text(f, 'template_id')
   if (!isUuid(template_id)) return go('erro:catalogo_invalido')
   const { error } = await ctx.supabase.from('organization_agreements').insert({ organization_id: ctx.membership.organization_id, template_id, name: 'nacional' })
-  return error ? go(comError(error)) : go('ok:convenio_habilitado')
+  return error ? go(comError(error), returnPath(f)) : go('ok:convenio_habilitado', returnPath(f))
 }
 
 export async function createAgreement(f: FormData) {
@@ -59,7 +61,7 @@ export async function createAgreement(f: FormData) {
   const name = text(f, 'name')
   if (!isLabel(name)) return go('erro:nome_invalido')
   const { error } = await ctx.supabase.from('organization_agreements').insert({ organization_id: ctx.membership.organization_id, name })
-  return error ? go(comError(error)) : go('ok:convenio_cadastrado')
+  return error ? go(comError(error), returnPath(f)) : go('ok:convenio_cadastrado', returnPath(f))
 }
 
 export async function createCommissionGroup(f: FormData) {
@@ -68,7 +70,7 @@ export async function createCommissionGroup(f: FormData) {
   const name = text(f, 'name'), kind = text(f, 'kind') || 'other', basis = text(f, 'calculation_basis')
   if (!isLabel(name, 80) || !['broker', 'partner', 'referrer', 'employee', 'sales_team', 'counter', 'supervisor', 'manager', 'other'].includes(kind) || !['percent_of_production', 'percent_of_received_commission'].includes(basis)) return go('erro:catalogo_invalido')
   const { error } = await ctx.supabase.from('commission_groups').insert({ organization_id: ctx.membership.organization_id, name, kind, calculation_basis: basis })
-  return error ? go(comError(error)) : go('ok:grupo_cadastrado')
+  return error ? go(comError(error), returnPath(f)) : go('ok:grupo_cadastrado', returnPath(f))
 }
 
 // Deactivate / reactivate. Nothing is ever deleted: history keeps pointing at the row.
@@ -78,7 +80,7 @@ export async function setActive(f: FormData) {
   const allowed = { bank: 'organization_banks', provider: 'organization_providers', agreement: 'organization_agreements', group: 'commission_groups' } as const
   if (!isUuid(id) || !Object.prototype.hasOwnProperty.call(allowed, table)) return go('erro:catalogo_invalido')
   const { error } = await ctx.supabase.from(allowed[table as keyof typeof allowed]).update({ is_active: active }).eq('id', id)
-  return error ? go(comError(error)) : go('ok:situacao_atualizada')
+  return error ? go(comError(error), returnPath(f)) : go('ok:situacao_atualizada', returnPath(f))
 }
 
 // A commercial table = bank + agreement (+ optional provider). The route and the technical code are generated here; the person only names the table.
