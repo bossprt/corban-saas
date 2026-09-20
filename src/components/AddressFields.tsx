@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { applyLookup, addressSource, EMPTY_ADDRESS, normalizeCep, type AddressFields as Fields, type AddressKey, type CepLookup } from '@/lib/cep'
+import { applyLookup, EMPTY_ADDRESS, normalizeCep, type AddressFields as Fields, type AddressKey, type CepLookup } from '@/lib/cep'
 
 const field = 'rounded-lg border border-slate-700 bg-slate-950 p-2 text-sm'
 const MSG: Record<string, string> = {
@@ -16,14 +16,11 @@ export function AddressFields({ initial }: { initial?: Partial<Fields> }) {
   const [v, setV] = useState<Fields>({ ...EMPTY_ADDRESS, ...initial })
   const [msg, setMsg] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [source, setSource] = useState<'manual' | 'cep_lookup' | 'cep_lookup_edited'>('manual')
   // values that were already saved count as the person's own: a lookup never replaces them silently
   const touched = useRef(new Set<AddressKey>((Object.entries(initial ?? {}) as [AddressKey, string | undefined][]).filter(([, x]) => !!x?.trim()).map(([k]) => k)))
-  const looked = useRef(false)
   const last = useRef<string | null>(null)
 
-  const refreshSource = () => setSource(addressSource(looked.current, touched.current))
-  const set = (k: AddressKey, value: string) => { touched.current.add(k); setV(p => ({ ...p, [k]: value })); refreshSource() }
+  const set = (k: AddressKey, value: string) => { touched.current.add(k); setV(p => ({ ...p, [k]: value })) }
 
   async function lookup(raw: string) {
     const cep = normalizeCep(raw)
@@ -35,10 +32,8 @@ export function AddressFields({ initial }: { initial?: Partial<Fields> }) {
       const res = await fetch(`/api/cep?cep=${cep}`, { cache: 'no-store' })
       const r = (await res.json()) as CepLookup
       if (r.kind === 'found') {
-        looked.current = true
         // the CEP field itself counts as typed: filling the address must not depend on it
         setV(p => applyLookup(p, touched.current, r.address))
-        refreshSource()
       }
       setMsg(MSG[r.kind] ?? MSG.unavailable)
     } catch {
@@ -56,7 +51,6 @@ export function AddressFields({ initial }: { initial?: Partial<Fields> }) {
     <input name="district" placeholder="Bairro" value={v.district} maxLength={120} className={`${field} md:col-span-2`} onChange={e => set('district', e.target.value)} />
     <input name="city" placeholder="Cidade" value={v.city} maxLength={120} className={`${field} md:col-span-2`} onChange={e => set('city', e.target.value)} />
     <input name="state" placeholder="UF" value={v.state} maxLength={2} className={field} onChange={e => set('state', e.target.value.toUpperCase())} />
-    <input type="hidden" name="address_source" value={source} />
     <p aria-live="polite" className="text-xs text-slate-400 md:col-span-6">{busy ? 'Buscando CEP...' : msg ?? 'Digite o CEP para preencher rua, bairro, cidade e UF automaticamente.'}</p>
   </fieldset>
 }

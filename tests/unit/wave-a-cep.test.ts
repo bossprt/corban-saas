@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { addressSource, allowLookup, applyLookup, EMPTY_ADDRESS, formatCep, normalizeCep, parseViaCep, type AddressKey } from '../../src/lib/cep'
 
@@ -55,17 +55,16 @@ test('CEP route and forms: authenticated, key-less, fixed upstream host, timeout
   assert.ok(/https:\/\/viacep\.com\.br\/ws\/\$\{cep\}\/json\//.test(route)) // host is fixed; only the validated 8 digits are interpolated
   assert.ok(/AbortController/.test(route) && !/process\.env/.test(route))
   const act = read('src/app/app/clientes/actions.ts')
-  assert.ok(/ok:cliente_endereco_pendente/.test(act) && /rpc\('save_customer_address'/.test(act))
-  assert.ok(!/organization_id/.test(act.slice(act.indexOf('persistAddress')))) // tenant never comes from the form
+  assert.ok(/ok:cliente_endereco_pendente/.test(act))
+  assert.ok(!/formData\.get\('organization/.test(act)) // tenant never comes from the form
   const comp = read('src/components/AddressFields.tsx')
   assert.ok(/name="number"/.test(comp) && !/required/.test(comp))
 })
-test('migration: address only through the governed RPC, tenant from the customer, RLS on, no definer', () => {
-  const m = read('supabase/migrations/20261003_customer_address_v1.sql')
-  assert.ok(/alter table public\.client_addresses enable row level security/.test(m))
-  assert.ok(!/security\s+definer/i.test(m.split('\n').filter(l => !l.trim().startsWith('--')).join('\n')))
-  assert.ok(/address_write_requires_governed_rpc/.test(m) && /address_tenant_mismatch/.test(m))
-  assert.ok(!/grant[^;]*delete[^;]*client_addresses/i.test(m))
+test('address is stored in the EXISTING customer_addresses table (composite tenant FK + member RLS already LIVE): no new table, no duplicate model', () => {
+  const act = read('src/app/app/clientes/actions.ts')
+  assert.ok(act.includes("from('customer_addresses')") && act.includes('is_primary: true'))
+  assert.ok(!act.includes('client_addresses') && !existsSync(join(process.cwd(), 'supabase/migrations/20261003_customer_address_v1.sql')))
+  assert.ok(act.includes('organization_id: organizationId')) // active tenant from the server context, never from the form
 })
 
 import { onboardingSteps } from '../../src/lib/commercial'

@@ -32,7 +32,7 @@ export async function createCustomer(formData: FormData) {
   if (zip) {
     const { data: created } = await supabase.from('clients').select('id').eq('cpf', cpf).is('deleted_at', null).maybeSingle()
     if (!created) return go('ok:cliente_endereco_pendente')
-    const saved = await persistAddress(supabase, created.id as string, formData)
+    const saved = await persistAddress(supabase, organization.id, created.id as string, formData)
     if (saved) return go('ok:cliente_endereco_pendente')
   }
   return go('ok:cliente_cadastrado')
@@ -40,24 +40,29 @@ export async function createCustomer(formData: FormData) {
 
 type Supa = Awaited<ReturnType<typeof requireAppContext>>['supabase']
 const val = (f: FormData, k: string) => String(f.get(k) ?? '').trim()
-// Returns null on success, or a feedback code. The database validates zip/UF/source again and derives the tenant from the customer.
-async function persistAddress(supabase: Supa, clientId: string, f: FormData): Promise<FeedbackCode | null> {
-  const source = val(f, 'address_source')
-  const { error } = await supabase.rpc('save_customer_address', {
-    p_client: clientId, p_zip: val(f, 'zip'), p_street: val(f, 'street'), p_number: val(f, 'number'), p_complement: val(f, 'complement'),
-    p_district: val(f, 'district'), p_city: val(f, 'city'), p_state: val(f, 'state'), p_source: ['manual', 'cep_lookup', 'cep_lookup_edited'].includes(source) ? source : 'manual',
-  })
+const cap = (v: string, n: number) => (v ? v.slice(0, n) : null)
+// The address is saved in customer_addresses (already LIVE: composite tenant FK to clients + member RLS), as the customer's PRIMARY address: update it if it exists,
+// otherwise insert it. Returns null on success or a feedback code. The tenant is the active organization; the database FK refuses a customer of another tenant.
+async function persistAddress(supabase: Supa, organizationId: string, clientId: string, f: FormData): Promise<FeedbackCode | null> {
+  const zip = normalizeCep(val(f, 'zip'))
+  if (!zip) return 'erro:cep_invalido'
+  const state = val(f, 'state').toUpperCase()
+  if (state && !/^[A-Z]{2}$/.test(state)) return 'erro:estado_invalido'
+  const row = { postal_code: zip, street: cap(val(f, 'street'), 160), number: cap(val(f, 'number'), 20), complement: cap(val(f, 'complement'), 80), neighborhood: cap(val(f, 'district'), 120), city: cap(val(f, 'city'), 120), state: state || null }
+  const { data: existing, error: readError } = await supabase.from('customer_addresses').select('id').eq('customer_id', clientId).eq('is_primary', true).limit(1).maybeSingle()
+  if (readError) return classifyDbFeedback(readError)
+  const { error } = existing
+    ? await supabase.from('customer_addresses').update(row).eq('id', existing.id as string)
+    : await supabase.from('customer_addresses').insert({ organization_id: organizationId, customer_id: clientId, is_primary: true, ...row })
   return error ? classifyDbFeedback(error) : null
 }
 
 export async function saveCustomerAddress(formData: FormData) {
-  const { supabase } = await requireAppContext()
+  const { supabase, organization } = await requireAppContext()
   const id = val(formData, 'client_id')
   const back = (code: FeedbackCode): never => redirect(feedbackUrl(`/app/clientes/${encodeURIComponent(id)}`, code))
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return go('erro:requisicao_invalida')
-  if (!normalizeCep(val(formData, 'zip'))) return back('erro:cep_invalido')
-  if (val(formData, 'state') && !/^[A-Za-z]{2}$/.test(val(formData, 'state'))) return back('erro:estado_invalido')
-  const failure = await persistAddress(supabase, id, formData)
+  const failure = await persistAddress(supabase, organization.id, id, formData)
   if (failure) return back(failure)
   revalidatePath(`/app/clientes/${id}`)
   return back('ok:endereco_salvo')
