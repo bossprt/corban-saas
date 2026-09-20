@@ -950,3 +950,15 @@ Consulta somente ao schema LIVE confirmou que parte importante do modelo já exi
 - componentes de comissão com %/R$;
 - grupos de comissão e condições comerciais.
 Lacunas principais: perfil/cadastro de vendedor com vínculos comerciais, categoria PF/PJ/SUB e domínio versionado de fatores diários/fixos. Nenhuma DDL aplicada nesta auditoria.
+
+
+## Seller/SUB e Fatores — preparados, não LIVE
+As migrations `20261007_seller_commercial_profile_v1` e `20261008_commercial_factors_v1` estão na branch e passaram em harness rollback-only contra o schema LIVE.
+
+Nenhuma das duas está aplicada em produção.
+
+Seller/Sub adicionará: seller_groups, commercial_sellers, seller_sub_rule_versions, publicação/resolução governadas.
+
+Fatores adicionará: commercial_factor_profiles, commercial_factor_batches, commercial_factor_entries, publicação e resolução determinísticas.
+
+Build Vercel atual: READY. Próximo passo bloqueado apenas pelo Human Gate de DDL LIVE.
