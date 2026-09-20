@@ -671,3 +671,21 @@ Worker variables remain intentionally unset. This documentation commit also serv
 ## Vercel Production Branch — 19/09/2026 (Owner)
 Owner changed Vercel Production Branch Tracking from `main` to `architecture/corban-os-master-v2`.
 This commit intentionally triggers a fresh deployment so Vercel can promote/build this branch as Production.
+
+
+## Independent Claude Audit — Health/Supabase production — 20/09/2026
+
+Priority: independently verify the production health failure before any further manual configuration.
+
+Claude executor instructions:
+- Pull latest branch `architecture/corban-os-master-v2`.
+- Read AGENTS.md, .ai/RULES.md, .ai/DECISIONS.md and this CURRENT-TASK first.
+- Inspect `src/app/api/health/route.ts` and every Supabase env/config helper used by the deployed app.
+- Verify whether `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are the correct variables and whether using REST root `/rest/v1/` with only `apikey` is a valid reachability probe for the current Supabase setup.
+- Check for middleware/redirect interference, malformed env names, whitespace/newlines, wrong key format, fetch behavior on Vercel, and any code path that could produce a false degraded result.
+- Reproduce locally only if possible without inventing secrets; never print secrets.
+- Prefer a safer health probe if the current one is semantically wrong. Do not weaken auth/RLS or expose secrets.
+- Run tests/typecheck/build for any change.
+- Do not touch live DB, production settings, secrets, or irreversible external state.
+- Commit and push only reversible code/docs changes to this branch.
+- Report: root cause, evidence, exact fix, tests, and whether any human action is still required.
