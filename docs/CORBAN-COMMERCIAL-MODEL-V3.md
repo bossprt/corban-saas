@@ -1077,3 +1077,65 @@ Do not collapse:
 - production origin.
 
 These are distinct dimensions.
+
+
+## 25. UX DO CATÁLOGO — CADASTRO NÃO DEVE VIRAR LISTA INFINITA
+
+Feedback do Owner após usar a tela LIVE:
+
+### Problema observado
+A tela atual coloca **Bancos** e **Provedores/Masters** no mesmo bloco e exibe os registros cadastrados diretamente acima dos formulários. Isso causa dois problemas:
+1. mistura conceitos diferentes e induz erro de classificação;
+2. conforme o tenant cadastra mais entidades, o bloco cresce indefinidamente e vira uma lista longa, prejudicando o uso diário.
+
+### Decisão de UX
+A tela principal `/app/comercial` deve funcionar como **onboarding/resumo**, não como listagem completa de cadastros.
+
+Não exibir listas crescentes de bancos/provedores diretamente no bloco principal.
+
+Em vez disso, mostrar cards/resumos como:
+
+```text
+Instituições / Origens
+8 cadastradas · 6 ativas
+[Gerenciar] [Cadastrar]
+
+Empresas de origem de terceiros
+4 cadastradas · 3 ativas
+[Gerenciar] [Cadastrar]
+```
+
+### Gerenciamento dedicado
+Cada domínio deve possuir uma área própria de gerenciamento, preferencialmente página dedicada (ou drawer/modal apenas para criação/edição rápida), com:
+- busca;
+- filtro Ativos / Inativos / Todos;
+- paginação ou lista compacta;
+- editar;
+- inativar;
+- reativar/habilitar;
+- visualizar vínculos/uso;
+- excluir apenas quando não houver dependências e houver confirmação explícita.
+
+Sugestão de rotas:
+- `/app/comercial/instituicoes`
+- `/app/comercial/origens`
+
+### Separação visual obrigatória
+Não colocar Banco/Instituição e Provedor/Master no mesmo card de cadastro.
+
+A UI deve deixar claro:
+- **Instituições / Origens** = lado upstream da operação (ex.: Daycoval, NASP, Hope, conforme realidade operacional do tenant);
+- **Empresas de origem de terceiros** = empresa externa usada quando a produção é de terceiro (ex.: Lev, Efetiva Mais, Bevi, conforme a rota).
+
+A relação comercial (Correspondente/Sub/Master/Parceiro) é outra dimensão e não deve ser confundida com o tipo da entidade.
+
+### Padrão de cadastro
+Fluxo recomendado:
+1. usuário clica `Cadastrar`;
+2. formulário curto abre;
+3. salva;
+4. retorna ao resumo/gerenciador;
+5. o registro aparece na área de gerenciamento, não expandindo o bloco da tela principal.
+
+### Regra de escalabilidade de UX
+Nenhum cadastro que possa crescer para dezenas/centenas de registros deve renderizar todos os itens diretamente no onboarding principal.
