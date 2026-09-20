@@ -696,3 +696,8 @@ Claude executor instructions:
 **Fix:** probe = Auth health (200) AND a real PostgREST query on `organizations` (200, or 401/403 carrying a Postgres SQLSTATE such as 42501 = database reachable). Bad/missing key, PostgREST-only codes, 4xx/5xx gateway errors, timeouts remain `degraded` with fixed reason codes (`bad_key`, `upstream_error`, `timeout`, `network_error`, `missing_url`, `missing_key`). Response adds `auth`. No secret, no admin client, RLS untouched, still cached 5 s. Env values are now trimmed (and a trailing slash removed from the URL) in health, server/middleware clients, browser client and admin client.
 **Tests:** unit 234/234 (5 new in `health.test.ts`), tsc and eslint clean, `next build` ok.
 **Human action still required:** none for this bug. After the next deployment, `<APP_ORIGIN>/api/health` should return `{"status":"ok","app":"ok","database":"ok","auth":"ok"}`. If the preview is behind Vercel Deployment Protection the request is blocked before reaching the app (that is not this bug).
+
+
+## Production site origin corrected — 20/09/2026
+Owner confirmed Vercel NEXT_PUBLIC_SITE_URL was changed to https://corban-saas.vercel.app for all environments.
+This commit intentionally triggers a fresh production deployment so auth e-mail redirects use the official origin.
