@@ -74,27 +74,69 @@ export async function addProduct(f: FormData) {
 
 export async function addModality(f: FormData) {
   await gate()
-  const product_id=clean(f.get('product_id')), name=clean(f.get('name')), c=code(clean(f.get('code')))
-  if(!product_id||!name||!c) go('erro','Selecione o produto e informe código/nome.')
-  const {error}=await createAdminClient().from('modalities').insert({product_id,code:c,name,is_active:true})
-  if(error) go('erro', error.code==='23505'?'Modalidade/código já cadastrado para esse produto.':'Não foi possível cadastrar a modalidade.')
-  go('ok','Modalidade cadastrada.')
+  const product_id=clean(f.get('product_id')), name=clean(f.get('name'))
+  if(!product_id||!name) go('erro','Selecione o produto e informe o tipo de contrato.')
+
+  const admin=createAdminClient()
+  const base=code(name) || 'TIPO_CONTRATO'
+  let generated=base
+  let suffix=2
+
+  while (true) {
+    const {data,error}=await admin.from('modalities').select('id').eq('product_id',product_id).eq('code',generated).maybeSingle()
+    if(error) go('erro','Não foi possível validar o identificador do tipo de contrato.')
+    if(!data) break
+    const tail=`_${suffix++}`
+    generated=`${base.slice(0, Math.max(1, 40-tail.length))}${tail}`
+  }
+
+  const {error}=await admin.from('modalities').insert({product_id,code:generated,name,is_active:true})
+  if(error) go('erro','Não foi possível cadastrar o tipo de contrato.')
+  go('ok','Tipo de contrato cadastrado. O identificador técnico foi gerado automaticamente.')
 }
 
 export async function addAgreement(f: FormData) {
   await gate()
-  const bank_id=clean(f.get('bank_id')), name=clean(f.get('name')), c=code(clean(f.get('code')))
-  if(!bank_id||!name||!c) go('erro','Selecione a instituição e informe código/nome do convênio.')
-  const {error}=await createAdminClient().from('agreements').insert({bank_id,code:c,name,is_active:true})
-  if(error) go('erro', error.code==='23505'?'Convênio/código já cadastrado para essa instituição.':'Não foi possível cadastrar o convênio.')
-  go('ok','Convênio cadastrado.')
+  const bank_id=clean(f.get('bank_id')), name=clean(f.get('name'))
+  if(!bank_id||!name) go('erro','Selecione a instituição e informe o convênio.')
+
+  const admin=createAdminClient()
+  const base=code(name) || 'CONVENIO'
+  let generated=base
+  let suffix=2
+
+  while (true) {
+    const {data,error}=await admin.from('agreements').select('id').eq('bank_id',bank_id).eq('code',generated).maybeSingle()
+    if(error) go('erro','Não foi possível validar o identificador do convênio.')
+    if(!data) break
+    const tail=`_${suffix++}`
+    generated=`${base.slice(0, Math.max(1, 40-tail.length))}${tail}`
+  }
+
+  const {error}=await admin.from('agreements').insert({bank_id,code:generated,name,is_active:true})
+  if(error) go('erro','Não foi possível cadastrar o convênio.')
+  go('ok','Convênio cadastrado. O identificador técnico foi gerado automaticamente.')
 }
 
 export async function addDocumentType(f: FormData) {
   await gate()
-  const name=clean(f.get('name')), c=code(clean(f.get('code')))
-  if(!name||!c) go('erro','Informe código e nome do documento.')
-  const {error}=await createAdminClient().from('document_types').insert({code:c,name,is_active:true})
-  if(error) go('erro', error.code==='23505'?'Documento/código já cadastrado.':'Não foi possível cadastrar o documento.')
-  go('ok','Tipo de documento cadastrado.')
+  const name=clean(f.get('name'))
+  if(!name) go('erro','Informe o tipo de documento.')
+
+  const admin=createAdminClient()
+  const base=code(name) || 'DOCUMENTO'
+  let generated=base
+  let suffix=2
+
+  while (true) {
+    const {data,error}=await admin.from('document_types').select('id').eq('code',generated).maybeSingle()
+    if(error) go('erro','Não foi possível validar o identificador do documento.')
+    if(!data) break
+    const tail=`_${suffix++}`
+    generated=`${base.slice(0, Math.max(1, 40-tail.length))}${tail}`
+  }
+
+  const {error}=await admin.from('document_types').insert({code:generated,name,is_active:true})
+  if(error) go('erro','Não foi possível cadastrar o tipo de documento.')
+  go('ok','Tipo de documento cadastrado. O identificador técnico foi gerado automaticamente.')
 }
