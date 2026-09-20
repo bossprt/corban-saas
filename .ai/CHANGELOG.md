@@ -273,3 +273,10 @@ Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`)
 
 ### Seguranca - 25/09/2026 (PREPARADA, NAO APLICADA)
 `20260929_catalog_publish_v1`: publicar tabela/checklist era impossivel sem SQL; INSERT permitia versao ja publicada.
+
+### Adicionado — 20/09/2026 (Next wave V3, preparado)
+
+- CEP automatico no cadastro/edicao de cliente (rota `/api/cep`, ViaCEP, sem chave); passo a passo em `/app/comercial`.
+- Migrations preparadas (nao aplicadas): `20261004_commercial_bulk_import_v1` (importacao atomica), `20261005_ai_import_metering_v1` (memoria de mapeamento + creditos/metering de IA), `20261006_action_center_v1` (Central de atencao); harnesses rollback-only.
+- Biblioteca `src/lib/ai-import` (provider-agnostic, adapter Gemini sem chave) e `src/lib/attention-rules.ts`; pagina `/app/atencao`.
+- Auditoria e desenho da integracao de payout: `docs/audits/AUDIT-2026-09-20-NEXT-WAVE-V3.md`.

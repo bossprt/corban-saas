@@ -801,3 +801,16 @@ Regras:
 - sem mudança financeira irreversível;
 - tudo reversível pode ser preparado/testado/commitado/pushado na branch;
 - parar em Human Gate real com evidências.
+
+## Proxima wave V3 - execucao (Claude) - 20/09/2026
+**Estado:** Waves A-E implementadas/preparadas na branch; F desenhada. V3 LIVE nao foi tocado. Auditoria completa: `docs/audits/AUDIT-2026-09-20-NEXT-WAVE-V3.md`. ADR-0025.
+
+**Feito (commits na branch):** `/app/comercial` guiado; CEP automatico (rota `/api/cep`, sem DDL, usa `customer_addresses`); importacao atomica (migration 20261004 + harness); fundacao IA provider-agnostic + metering (migration 20261005 + harness 62/62, `src/lib/ai-import`); Action Center (migration 20261006 + harness 55/55, `/app/atencao`, `src/lib/attention-rules.ts`); design de payout/snapshot.
+
+**HUMAN GATES (nenhum foi cruzado):**
+1. Aplicar LIVE, nesta ordem: `20261004_commercial_bulk_import_v1`, `20261005_ai_import_metering_v1`, `20261006_action_center_v1` (todas aditivas; harnesses rollback-only verdes; app ja funciona sem elas).
+2. Cadastrar a chave Gemini e ligar `geminiMapper` num modulo servidor.
+3. Autorizar o primeiro gasto/chamada paga e definir tarifa de creditos + tetos (lado plataforma).
+4. Qualquer DDL financeiro/payout (onda F: vinculo usuario-grupo, snapshot V3 no `proposal_commercial_snapshots`, eventos de ledger). Decisoes do Owner pendentes: base da comissao (valor solicitado ou liberado), divisao em duas pernas, atribuicao usuario->grupo, empilhamento de gerente/supervisor.
+
+**Nao feito de proposito:** UI de atribuicao de alerta (RPC pronta), sync agendado do Action Center, UI de revisao do mapeamento de IA (a biblioteca ja devolve o `ValidatedMapping`), indice unico do endereco primario.

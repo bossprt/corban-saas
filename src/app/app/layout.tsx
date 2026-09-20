@@ -14,6 +14,7 @@ const nav: { href: string; label: string; icon: typeof Users; show?: (role: stri
   { href: '/app/clientes', label: 'Clientes', icon: Users },
   { href: '/app/comercial', label: 'Modelo comercial', icon: Library, show: r => atLeast(r, 'supervisor') },
   { href: '/app/catalogo', label: 'Catálogo (anterior)', icon: Library, show: r => atLeast(r, 'supervisor') },
+  { href: '/app/atencao', label: 'Central de atenção', icon: ShieldCheck, show: r => atLeast(r, 'supervisor') },
   { href: '/app/simulacoes', label: 'Simulações', icon: Calculator },
   { href: '/app/propostas', label: 'Propostas', icon: FileText },
   { href: '/app/documentos', label: 'Documentos', icon: FolderLock },

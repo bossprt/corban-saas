@@ -278,3 +278,8 @@ Owner confirmed Vercel environment variables for Supabase URL, publishable/anon 
 - No synthetic tenant/commercial V3 data persisted.
 - Performance Advisor reports INFO only, including 11 unindexed FK candidates on new V3 tables; review after real workloads, not a blocker.
 - Remaining roadmap: Smart real configuration, CEP autofill, adaptive Gemini-first import agent + metering, operational monitoring agent, payout/proposal snapshot integration and atomic bulk import.
+
+## 28. Next wave V3 preparada na branch — 20/09/2026
+- CEP automatico e guia do `/app/comercial` ja no app (sem DDL). Tres migrations PREPARADAS e NAO aplicadas: importacao atomica (20261004), fundacao IA + metering (20261005), Action Center (20261006); harnesses rollback-only ALL PASS. Unit 302/302, tsc, eslint, build verdes.
+- LIVE continua so com o Commercial Model V3 (20260920133017). Nenhuma chave Gemini, nenhum gasto, nenhuma mudanca financeira.
+- Auditoria: `docs/audits/AUDIT-2026-09-20-NEXT-WAVE-V3.md`; onda F (payout/snapshot/ledger) apenas desenhada.
