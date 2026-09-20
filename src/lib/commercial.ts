@@ -185,6 +185,21 @@ export function mapConditionRows(rows: readonly (readonly unknown[])[], ctx: { g
   return { conditions: issues.length ? [] : conditions, issues }
 }
 
+// Guided onboarding shown at the top of /app/comercial: what is done, and the ONE next thing to do. Pure and computed from real counts only.
+export type OnboardingInput = { banks: number; agreements: number; groups: number; tables: number; draftConditions: number; publishedVersions: number }
+export type OnboardingStep = { key: string; label: string; done: boolean; hint: string; anchor: string }
+export function onboardingSteps(i: OnboardingInput): { steps: OnboardingStep[]; next: OnboardingStep | null } {
+  const steps: OnboardingStep[] = [
+    { key: 'bank', label: 'Cadastrar o banco', done: i.banks > 0, hint: 'Digite só o nome. O sistema cuida dos códigos.', anchor: 'passo-bancos' },
+    { key: 'agreement', label: 'Habilitar o convênio', done: i.agreements > 0, hint: 'Escolha um governo ou prefeitura da lista, ou cadastre o seu.', anchor: 'passo-convenios' },
+    { key: 'group', label: 'Criar os grupos de comissão', done: i.groups > 0, hint: 'Ex.: Corretor, Parceiro, Balcão. Diga sobre o que o percentual incide.', anchor: 'passo-grupos' },
+    { key: 'table', label: 'Criar a tabela', done: i.tables > 0, hint: 'Banco + convênio + origem da produção (Própria ou Terceiro).', anchor: 'passo-tabelas' },
+    { key: 'condition', label: 'Cadastrar as condições', done: i.draftConditions > 0 || i.publishedVersions > 0, hint: 'Tipo de Contrato, prazo, coeficiente/taxa, comissão recebida e os grupos, numa linha só.', anchor: 'passo-tabelas' },
+    { key: 'publish', label: 'Publicar a versão', done: i.publishedVersions > 0, hint: 'Só versões publicadas entram nas simulações.', anchor: 'passo-tabelas' },
+  ]
+  return { steps, next: steps.find(s => !s.done) ?? null }
+}
+
 // Whole-file import is all-or-nothing at the validation step: one bad line refuses the file (the operator fixes it and sends again).
 export const IMPORT_ISSUE_TEXT: Record<string, string> = {
   file_without_rows: 'O arquivo não tem linhas de dados.',

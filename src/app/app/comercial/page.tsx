@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast, canViewCommission } from '@/lib/rbac'
 import { SubmitButton } from '@/components/SubmitButton'
-import { IMPORT_ISSUE_TEXT } from '@/lib/commercial'
+import { IMPORT_ISSUE_TEXT, onboardingSteps } from '@/lib/commercial'
 import { createAgreement, createBank, createCommercialTable, createCommissionGroup, createProvider, enableAgreementTemplate, importConditions, newDraftVersion, publishCommercialVersion, saveCondition, savePayoutPolicy, setActive } from './actions'
 
 const field = 'rounded-lg border border-slate-700 bg-slate-950 p-2 text-sm'
@@ -93,6 +93,10 @@ export default async function CommercialPage({ searchParams }: { searchParams: P
   const importIssue = typeof sp.c === 'string' && Object.prototype.hasOwnProperty.call(IMPORT_ISSUE_TEXT, sp.c) ? IMPORT_ISSUE_TEXT[sp.c] : null
   const importLine = typeof sp.l === 'string' && /^\d{1,5}$/.test(sp.l) ? sp.l : null
 
+  const publishedCount = (versions.data ?? []).filter(v => v.status === 'published').length
+  const draftIds = new Set((versions.data ?? []).filter(v => v.status === 'draft').map(v => v.id))
+  const onboarding = onboardingSteps({ banks: (banks.data ?? []).length, agreements: (agreements.data ?? []).length, groups: (groups.data ?? []).length, tables: v3Tables.length, draftConditions: (conditions.data ?? []).filter(c => draftIds.has(c.product_table_version_id)).length, publishedVersions: publishedCount })
+
   return <section>
     <h1 className="text-3xl font-semibold">Modelo comercial</h1>
     <p className="mt-2 text-sm text-slate-400">Banco → Convênio → Tabela → Tipo de Contrato → Prazo → Coeficiente/Taxa → Comissão recebida → Grupos de comissão. Tudo é da sua organização; os códigos técnicos são gerados pelo sistema.</p>
@@ -100,7 +104,14 @@ export default async function CommercialPage({ searchParams }: { searchParams: P
     {sp.f === 'ok:previa_validada' && typeof sp.n === 'string' && /^\d{1,5}$/.test(sp.n) && <p className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm text-emerald-200">Prévia: {sp.n} condição(ões) válida(s){typeof sp.u === 'string' && /^\d{1,5}$/.test(sp.u) && Number(sp.u) > 0 ? `, ${sp.u} já existem e serão atualizadas` : ''}. Nada foi gravado.</p>}
     {importIssue && <p role="alert" className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-200">Importação recusada{importLine ? ` — linha ${importLine}` : ''}: {importIssue}{typeof sp.n === 'string' && /^\d{1,5}$/.test(sp.n) && Number(sp.n) > 1 ? ` (${sp.n} problemas no total; corrija e envie de novo)` : ''}</p>}
 
-    <h2 className="mt-8 text-xl font-semibold">1. Bancos e provedores</h2>
+    <nav aria-label="Passo a passo" className={`${card} mt-4`}>
+      <div className="flex items-center justify-between text-sm"><strong>Passo a passo</strong><span className="text-slate-400">{onboarding.steps.filter(s => s.done).length} de {onboarding.steps.length}</span></div>
+      <ol className="mt-3 grid gap-2 md:grid-cols-3">{onboarding.steps.map((s, n) => <li key={s.key}><a href={`#${s.anchor}`} className={`block rounded-lg border p-3 text-sm ${s.done ? 'border-emerald-500/30 text-emerald-300' : s === onboarding.next ? 'border-amber-500/50 text-amber-200' : 'border-slate-800 text-slate-400'}`}>
+        <span className="font-medium">{s.done ? '✓' : n + 1}. {s.label}</span><span className="mt-1 block text-xs opacity-80">{s.done ? 'Pronto' : s.hint}</span></a></li>)}</ol>
+      {onboarding.next ? <p className="mt-3 text-xs text-amber-200">Próximo: {onboarding.next.label}.</p> : <p className="mt-3 text-xs text-emerald-300">Tudo pronto: as simulações já usam a versão publicada.</p>}
+    </nav>
+
+    <h2 id="passo-bancos" className="mt-8 scroll-mt-4 text-xl font-semibold">1. Bancos e provedores</h2>
     <div className={`${card} mt-3 space-y-3 text-sm`}>
       <div><strong>Bancos</strong>{!banks.data?.length ? <p className="text-slate-400">Nenhum banco ainda.</p> : <ul className="mt-1 space-y-1">{banks.data.map(b => <li key={b.id}>{b.name} {!b.is_active && <span className="text-xs text-slate-500">(inativo)</span>} {canEdit && <ActiveToggle kind="bank" id={b.id} active={b.is_active} />}</li>)}</ul>}
         {canEdit && <form action={createBank} className="mt-2 flex flex-wrap gap-2"><input required name="name" maxLength={120} placeholder="Nome do banco" className={field} /><SubmitButton className={btn}>Cadastrar banco</SubmitButton></form>}</div>
@@ -109,7 +120,7 @@ export default async function CommercialPage({ searchParams }: { searchParams: P
           <select name="provider_type" defaultValue="master" className={field}>{Object.entries(PROVIDER_TYPE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select><SubmitButton className={btn}>Cadastrar provedor</SubmitButton></form>}</div>
     </div>
 
-    <h2 className="mt-8 text-xl font-semibold">2. Convênios</h2>
+    <h2 id="passo-convenios" className="mt-8 scroll-mt-4 text-xl font-semibold">2. Convênios</h2>
     <div className={`${card} mt-3 space-y-3 text-sm`}>
       <p className="text-xs text-slate-500">Convênios nacionais (governos e prefeituras de capitais) não pertencem a nenhum banco: habilite os que a sua organização trabalha.</p>
       {!agreements.data?.length ? <p className="text-slate-400">Nenhum convênio habilitado.</p> : <ul className="space-y-1">{agreements.data.map(a => <li key={a.id}>{a.name} <span className="text-xs text-slate-500">· {a.template_id ? 'nacional' : 'próprio'}{!a.is_active ? ' · inativo' : ''}</span> {canEdit && <ActiveToggle kind="agreement" id={a.id} active={a.is_active} />}</li>)}</ul>}
@@ -120,7 +131,7 @@ export default async function CommercialPage({ searchParams }: { searchParams: P
       </div>}
     </div>
 
-    <h2 className="mt-8 text-xl font-semibold">3. Grupos de comissão</h2>
+    <h2 id="passo-grupos" className="mt-8 scroll-mt-4 text-xl font-semibold">3. Grupos de comissão</h2>
     <div className={`${card} mt-3 space-y-3 text-sm`}>
       <p className="text-xs text-slate-500">Cada grupo diz como o percentual da condição é lido: sobre a produção ou sobre a comissão que a empresa recebe. Gerente e supervisor são grupos opcionais.</p>
       {!groups.data?.length ? <p className="text-slate-400">Nenhum grupo ainda.</p> : <ul className="space-y-1">{groups.data.map(g => <li key={g.id}>{g.name} <span className="text-xs text-slate-500">· {GROUP_KIND[g.kind] ?? g.kind} · {BASIS[g.calculation_basis] ?? g.calculation_basis}{!g.is_active ? ' · inativo' : ''}</span> {canEdit && <ActiveToggle kind="group" id={g.id} active={g.is_active} />}</li>)}</ul>}
@@ -143,7 +154,7 @@ export default async function CommercialPage({ searchParams }: { searchParams: P
       </form> : <p className="text-xs text-amber-200">Cadastre pelo menos um grupo calculado sobre a comissão recebida para criar uma política.</p>)}
     </div>
 
-    <h2 className="mt-8 text-xl font-semibold">5. Tabelas e condições</h2>
+    <h2 id="passo-tabelas" className="mt-8 scroll-mt-4 text-xl font-semibold">5. Tabelas e condições</h2>
     <div className="mt-3 space-y-3">
       {!v3Tables.length && <p className={`${card} text-sm text-slate-400`}>Nenhuma tabela ainda. Escolha banco e convênio, dê um nome e crie a tabela.</p>}
       {v3Tables.map(t => <div key={t.id} className={card}>
@@ -170,7 +181,8 @@ export default async function CommercialPage({ searchParams }: { searchParams: P
         })}
         {canEdit && <form action={newDraftVersion} className="mt-3"><input type="hidden" name="table_id" value={t.id} /><SubmitButton className={ghost}>Nova versão (rascunho)</SubmitButton></form>}
       </div>)}
-      {canEdit && <form action={createCommercialTable} className={`${card} grid gap-2 md:grid-cols-4`}>
+      {canEdit && (!(banks.data ?? []).some(b => b.is_active) || !(agreements.data ?? []).some(a => a.is_active)) && <p className={`${card} text-sm text-amber-200`}>Para criar uma tabela, cadastre primeiro um banco (passo 1) e habilite um convênio (passo 2).</p>}
+      {canEdit && (banks.data ?? []).some(b => b.is_active) && (agreements.data ?? []).some(a => a.is_active) && <form action={createCommercialTable} className={`${card} grid gap-2 md:grid-cols-4`}>
         <select required name="bank_id" defaultValue="" className={field}><option value="" disabled>Banco</option>{(banks.data ?? []).filter(b => b.is_active).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select>
         <select required name="agreement_id" defaultValue="" className={field}><option value="" disabled>Convênio</option>{(agreements.data ?? []).filter(a => a.is_active).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select>
         <select required name="production_origin" defaultValue="" className={field}><option value="" disabled>Origem da produção</option><option value="own">Própria</option><option value="third_party">Terceiro</option></select>

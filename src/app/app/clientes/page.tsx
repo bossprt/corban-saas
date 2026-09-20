@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createCustomer } from './actions'
+import { AddressFields } from '@/components/AddressFields'
 import { requireAppContext } from '@/lib/appContext'
 import { SubmitButton } from '@/components/SubmitButton'
 import { digitsOnly, searchTerm } from '@/lib/search'
@@ -25,6 +26,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
       <input required name="cpf" inputMode="numeric" autoComplete="off" placeholder="CPF" className="field"/>
       <input name="phone" placeholder="Telefone" className="field"/>
       <input name="email" type="email" placeholder="E-mail" className="field"/>
+      <AddressFields />
       <SubmitButton className="rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-slate-950 md:col-span-5 md:justify-self-end">Cadastrar cliente</SubmitButton>
     </form>
     <form className="mb-4 flex gap-2" role="search"><input name="q" defaultValue={q ?? ''} placeholder="Buscar por nome ou telefone" className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950 p-2 text-sm" /><button className="rounded-lg border border-slate-700 px-3 text-sm">Buscar</button></form>
