@@ -1164,3 +1164,87 @@ Tela com:
 - visualizar/editar.
 
 Essa decisão substitui a visão anterior de que bastaria manter somente quatro tipos comuns fixos e sem gerenciamento visível.
+
+
+## Sincronização entre correspondentes / upstream-downstream
+Requisito do Owner inspirado no funcionamento interno da 2Tech entre empresas que usam a mesma plataforma.
+
+### Cenário real
+Exemplo:
+- Smart Promotora usa 2Tech;
+- Hope usa 2Tech;
+- Efetiva Mais usa 2Tech.
+
+Como todas operam dentro da mesma plataforma, a 2Tech consegue associar cada empresa por identificador/chave interna e sincronizar dados entre a empresa que origina/repassa a produção e a empresa que recebe.
+
+Exemplo de relação:
+`Efetiva Mais -> repassa produção para Smart Promotora`
+
+Quando a Efetiva atualiza a esteira/contrato, a Smart recebe a atualização correspondente sem trabalho manual.
+
+### Escopo prioritário: esteira
+A sincronização de esteira é considerada pelo Owner o caso mais simples e prioritário.
+
+Modelo desejado:
+- cada organização mantém sua própria visão/tenant;
+- uma relação comercial upstream/downstream é cadastrada explicitamente;
+- contratos/propostas compartilhados recebem um identificador de correlação entre as duas organizações;
+- alterações de status relevantes no upstream propagam eventos para o downstream;
+- o downstream vê a atualização em sua própria esteira;
+- preservar origem, timestamps, evidência e histórico de cada atualização;
+- não permitir que uma organização veja dados de outra fora das relações explicitamente autorizadas.
+
+Possível fluxo:
+`Upstream contract event -> correlation/external id -> integration event -> downstream proposal mirror/update -> audit trail`
+
+### Tabelas de comissão vindas do upstream
+Quando a empresa upstream repassa uma tabela comercial, o downstream deve receber apenas a **condição econômica que o upstream paga/repassa**.
+
+Exemplo:
+Efetiva Mais disponibiliza para Smart:
+- contrato/tabela elegível;
+- prazo/tipo;
+- comissão que Efetiva paga à Smart;
+- vigência e demais condições recebidas.
+
+Isso **não deve sobrescrever nem transportar automaticamente**:
+- grupos de comissão internos da Smart;
+- regras de vendedor da Smart;
+- percentuais pagos pela Smart a corretores/parceiros;
+- política de repasse interna da Smart.
+
+Portanto existem duas camadas:
+1. **Condição upstream recebida** = quanto o fornecedor/master/correspondente paga para a Smart.
+2. **Distribuição interna Smart** = quanto a Smart paga para seus grupos/vendedores, calculado localmente.
+
+### Arquitetura conceitual
+Separar:
+- `ExternalOrganizationLink` / vínculo entre organizações;
+- `ExternalContractReference` / correlação de proposta/contrato;
+- `UpstreamCommercialOffer` / condição/tabela recebida;
+- `LocalPayoutPolicy` / regras internas do tenant.
+
+A condição upstream pode alimentar o cálculo da receita esperada da Smart, mas nunca deve ser confundida com a política interna de comissão.
+
+### Quando as empresas não usam a mesma plataforma
+O mesmo conceito deve funcionar por integração externa:
+- API;
+- webhook;
+- importação;
+- arquivo;
+- conector específico.
+
+A sincronização interna tenant-to-tenant é apenas o caso mais eficiente, não uma dependência estrutural.
+
+### Regra de segurança
+- vínculo sempre explícito e tenant-scoped;
+- IDs externos não autorizam acesso por si só;
+- mínimo compartilhamento necessário;
+- eventos idempotentes;
+- sem update destrutivo silencioso;
+- divergências devem gerar caso de reconciliação/atenção.
+
+### Prioridade
+1. sincronização de esteira/status de contratos;
+2. sincronização de condições/tabelas upstream;
+3. apenas depois estudar automação mais profunda de comissionamento entre empresas.
