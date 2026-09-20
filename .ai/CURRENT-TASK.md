@@ -666,3 +666,8 @@ Owner confirmed the following Vercel environment variables were configured for t
 - SUPABASE_SERVICE_ROLE_KEY
 
 Worker variables remain intentionally unset. This documentation commit also serves to trigger a fresh preview deployment so the new environment configuration is picked up.
+
+
+## Vercel Production Branch — 19/09/2026 (Owner)
+Owner changed Vercel Production Branch Tracking from `main` to `architecture/corban-os-master-v2`.
+This commit intentionally triggers a fresh deployment so Vercel can promote/build this branch as Production.
