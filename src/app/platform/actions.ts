@@ -6,7 +6,7 @@ import { createAdminClient } from '@/lib/supabaseAdmin'
 import { requirePlatformAdmin } from '@/lib/platform.server'
 
 const clean = (v: FormDataEntryValue | null) => String(v ?? '').trim()
-const code = (v: string) => v.toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 40)
+const code = (v: string) => v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40)
 const go = (kind: 'ok'|'erro', msg: string): never => {
   revalidatePath('/platform')
   redirect(`/platform?${kind}=${encodeURIComponent(msg)}`)
@@ -51,11 +51,25 @@ export async function addProvider(f: FormData) {
 
 export async function addProduct(f: FormData) {
   await gate()
-  const name=clean(f.get('name')), c=code(clean(f.get('code')))
-  if(!name||!c) go('erro','Informe código e nome do produto.')
-  const {error}=await createAdminClient().from('products').insert({code:c,name,is_active:true})
-  if(error) go('erro', error.code==='23505'?'Produto/código já cadastrado.':'Não foi possível cadastrar o produto.')
-  go('ok','Produto cadastrado.')
+  const name=clean(f.get('name'))
+  if(!name) go('erro','Informe o nome do produto.')
+
+  const admin=createAdminClient()
+  const base=code(name) || 'PRODUTO'
+  let generated=base
+  let suffix=2
+
+  while (true) {
+    const {data,error}=await admin.from('products').select('id').eq('code',generated).maybeSingle()
+    if(error) go('erro','Não foi possível validar o identificador do produto.')
+    if(!data) break
+    const tail=`_${suffix++}`
+    generated=`${base.slice(0, Math.max(1, 40-tail.length))}${tail}`
+  }
+
+  const {error}=await admin.from('products').insert({code:generated,name,is_active:true})
+  if(error) go('erro','Não foi possível cadastrar o produto.')
+  go('ok','Produto cadastrado. O identificador técnico foi gerado automaticamente.')
 }
 
 export async function addModality(f: FormData) {
