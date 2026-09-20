@@ -891,3 +891,11 @@ Sem uso de Claude, foram preparados/implementados na branch:
 - importação CSV/XLSX das condições ganhou destaque como ação principal; modo manual ficou secundário;
 - ações de cadastro/edição permanecem na página gerenciadora após salvar;
 - nenhuma DDL nova e nenhum uso do Claude.
+
+
+## Commercial UX consolidation — tables manager
+- `/app/comercial` is now a compact dashboard instead of a long CRUD/list page.
+- Product/Tables/Conditions moved to dedicated `/app/comercial/tabelas`.
+- The table manager shows conditions in a compact grid and makes **Importar planilha** the primary path; manual condition entry is secondary/collapsible.
+- CSV/XLSX bulk import remains atomic and uses the LIVE `import_commercial_conditions` RPC.
+- No new DDL and no Claude usage.
