@@ -327,3 +327,11 @@ Implementado diretamente pelo ChatGPT na branch `architecture/corban-os-master-v
 - Importação em massa CSV/XLSX foi promovida como caminho principal das condições de tabela; cadastro manual permanece disponível.
 - Nenhum registro real foi reclassificado/apagado automaticamente.
 - Hope cadastrada incorretamente como provider permanece inativa até autorização explícita para exclusão.
+
+
+## Commercial UX consolidation — tables manager
+- `/app/comercial` is now a compact dashboard instead of a long CRUD/list page.
+- Product/Tables/Conditions moved to dedicated `/app/comercial/tabelas`.
+- The table manager shows conditions in a compact grid and makes **Importar planilha** the primary path; manual condition entry is secondary/collapsible.
+- CSV/XLSX bulk import remains atomic and uses the LIVE `import_commercial_conditions` RPC.
+- No new DDL and no Claude usage.
