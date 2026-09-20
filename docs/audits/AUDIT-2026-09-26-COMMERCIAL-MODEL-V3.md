@@ -84,3 +84,31 @@ The doc grew by 604 lines (commits `019ac1a`…`58a23d1`) before the Human Gate.
 ## 7. Human Gate
 
 Applying `20261002_commercial_model_v3_foundation_v1` LIVE is DDL on production (12 new tables — including the payout policy tables —, altered `organization_product_routes`, replaced `publish_product_table_version`). It needs explicit authorization. Evidence above (harness ALL PASS 139 checks, zero residue, unit/tsc/eslint/build green). After authorization: apply via the reviewed path, re-run the harness read-only, confirm advisors (RLS on every new table) and the DEFINER inventory.
+
+
+## 8. LIVE apply — 20/09/2026
+
+Owner explicitly authorized the Human Gate. Migration `20261002_commercial_model_v3_foundation_v1.sql` was applied successfully to the production Supabase project and registered as:
+
+- `20260920133017 commercial_model_v3_foundation_v1`
+
+Post-apply verification:
+
+- migration present in `list_migrations`;
+- rollback-only harness re-run against LIVE: **RESULTS: ALL PASS (139 checks)**; the final exception is the harness rollback sentinel and no synthetic residue persisted;
+- all 12 V3 tables have RLS enabled;
+- seeded global data: 4 contract types and 53 national agreement templates (27 governments/GDF + 26 capital city halls);
+- tenant/business V3 tables remain empty immediately after apply (zero synthetic data);
+- SECURITY DEFINER inventory remains 8 application functions total: 6 in `private` + 2 in `public`; no V3 function introduced SECURITY DEFINER;
+- Security Advisor: no WARN/ERROR; only the two pre-existing intentional INFO findings for closed platform-admin tables;
+- Performance Advisor: INFO only. It reports 11 unindexed foreign-key candidates on new V3 tables plus existing unused-index/Auth allocation INFO. No performance WARN/ERROR was introduced.
+
+Do not reapply this migration.
+
+Follow-ups remain:
+- assess whether the 11 V3 foreign-key INFO findings merit indexes after real usage/query patterns;
+- CEP autofill;
+- AI import/PDF/metering;
+- operational AI agent;
+- proposal snapshot / payout execution linkage;
+- single-transaction bulk condition import.
