@@ -535,3 +535,109 @@ Observação arquitetural:
 - não confundir “Própria” com Banco;
 - não confundir “Terceiro” com Provedor técnico;
 - o executor deve revisar se a entidade atual `providers` pode representar essa empresa de origem sem perda semântica. Se não puder, criar camada compatível em vez de deformar o conceito existente.
+
+
+## 20. IMPORTAÇÃO INTELIGENTE DE TABELAS E REPASSE POR GRUPO
+
+### 20.1 Dor de negócio
+Bancos, promotoras, correspondentes e parceiros normalmente fornecem suas condições comerciais por **Excel/XLSX** ou **PDF**. O objetivo do Corban OS é eliminar o retrabalho de cadastrar manualmente cada produto/tabela, prazo e comissão.
+
+Fluxo desejado:
+1. usuário envia Excel/XLSX ou PDF da origem;
+2. sistema lê e normaliza as condições comerciais;
+3. sistema identifica, quando possível: banco/instituição, convênio, produto/tabela, tipo de contrato, prazo, coeficiente/taxa, comissão recebida, vigência e origem da produção;
+4. mostra uma prévia/dry-run para confirmação;
+5. usuário informa ou reutiliza a política de repasse por Grupo de Comissão;
+6. sistema calcula automaticamente quanto cada grupo recebe para cada linha;
+7. usuário aprova e publica/importa.
+
+Não publicar silenciosamente dados extraídos de PDF/Excel. Sempre existir etapa de revisão/confirmação antes da efetivação.
+
+### 20.2 Política de repasse por grupo
+O Owner quer definir o repasse como **percentual da comissão efetivamente recebida pela empresa**, e não repetir um percentual absoluto manualmente em cada produto.
+
+Exemplo de política:
+- Corretor = 65% da comissão recebida;
+- Parceiro = 80% da comissão recebida;
+- Balcão = 50% da comissão recebida;
+- Indicador = 25% da comissão recebida.
+
+Se a comissão recebida pela empresa for **10%** e não houver imposto/desconto aplicável à base:
+- Corretor recebe 6,50%;
+- Parceiro recebe 8,00%;
+- Balcão recebe 5,00%;
+- Indicador recebe 2,50%.
+
+Fórmula conceitual:
+```text
+comissao_grupo = comissao_base_liquida × percentual_de_repasse_do_grupo
+```
+
+Exemplo:
+```text
+10,00% × 65% = 6,50%
+10,00% × 80% = 8,00%
+10,00% × 50% = 5,00%
+10,00% × 25% = 2,50%
+```
+
+### 20.3 Base bruta x base líquida
+O sistema deve separar explicitamente:
+- **Comissão recebida bruta**;
+- impostos/descontos aplicáveis, se configurados;
+- **Comissão base líquida para repasse**;
+- percentual de repasse do grupo;
+- comissão efetiva do grupo.
+
+Se não houver imposto/desconto:
+```text
+comissão bruta = comissão base líquida
+```
+
+Não assumir que imposto é sempre zero. A empresa deve poder configurar se o repasse usa:
+- comissão bruta; ou
+- comissão líquida após tributos/descontos.
+
+Essa regra precisa ser versionada e auditável.
+
+### 20.4 Reuso da política
+A empresa não deve informar 65%, 80%, 50%, 25% em todas as linhas da planilha.
+
+Deve ser possível salvar uma **Política/Grupo de Repasse** e aplicar em lote:
+```text
+Política: Smart Padrão 2026
+Corretor 65%
+Parceiro 80%
+Balcão 50%
+Indicador 25%
+```
+
+Ao importar uma planilha com centenas de condições, o usuário escolhe a política e o sistema calcula todas as comissões derivadas automaticamente.
+
+Também deve ser possível sobrescrever uma condição específica quando necessário, com rastreabilidade.
+
+### 20.5 Importação Excel/XLSX
+Prioridade operacional para V1:
+- upload XLSX/CSV;
+- detecção/mapeamento de colunas;
+- prévia antes de gravar;
+- identificação de duplicidade/conflitos;
+- cálculo automático por grupos;
+- importação em lote;
+- relatório de linhas aceitas/rejeitadas;
+- preservação do arquivo/raw source e lineage conforme governança já existente.
+
+### 20.6 Importação PDF
+PDF deve entrar como segunda etapa do mesmo pipeline:
+- extrair tabelas/condições;
+- atribuir nível de confiança;
+- nunca publicar automaticamente linha ambígua;
+- exigir revisão quando banco/convênio/produto/prazo/comissão não forem determinísticos.
+
+### 20.7 Regras financeiras
+- nunca Float;
+- usar NUMERIC/inteiro escalado;
+- preservar comissão original da fonte;
+- comissão calculada para grupos deve ser derivada/versionada;
+- alteração futura na política de repasse não deve reescrever contratos/histórico já fechado;
+- propostas/contratos devem manter snapshot da regra aplicada.
