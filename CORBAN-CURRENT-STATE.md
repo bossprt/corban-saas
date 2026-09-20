@@ -941,3 +941,12 @@ Implementação V1, reversível e sem DDL:
 - módulos antigos não são removidos; ficam acessíveis pelos hubs;
 - autorização continua nas páginas/actions/RLS; esconder/exibir link é somente UX;
 - objetivo: abandonar navegação "robótica" por entidades técnicas e aproximar o fluxo do trabalho real.
+
+
+## Auditoria estrutural para próximas ondas — 20/09/2026
+Consulta somente ao schema LIVE confirmou que parte importante do modelo já existe e deve ser reaproveitada:
+- rede comercial e relações upstream/downstream;
+- regras de split versionadas;
+- componentes de comissão com %/R$;
+- grupos de comissão e condições comerciais.
+Lacunas principais: perfil/cadastro de vendedor com vínculos comerciais, categoria PF/PJ/SUB e domínio versionado de fatores diários/fixos. Nenhuma DDL aplicada nesta auditoria.

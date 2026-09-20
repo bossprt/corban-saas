@@ -1506,3 +1506,16 @@ Owner reafirmou:
 - Claude somente quando necessário, sempre com fila longa e instrução explícita de economia de tokens/ferramentas locais.
 
 Primeira onda escolhida após tripla revisão: reorganização de navegação/UX sem DDL e sem alteração de dados.
+
+
+## Auditoria pré-Wave B — schema LIVE
+Leitura somente, sem DDL:
+- já existem `commercial_entities`, `commercial_relationships`, `commercial_channels`, `network_split_rule_versions`, `channel_commission_rule_versions` e `commission_rule_components`;
+- `commission_rule_components` já suporta percentual, valor fixo e fator de antecipação;
+- `network_split_rule_versions` já suporta splits como 100/0 e 90/10 por relação/banco/tabela/componente;
+- `commission_groups` e V3 comercial já existem;
+- não foi encontrada uma entidade explícita de vendedor/perfil comercial vinculando vendedor -> grupo de vendedor -> grupo de comissão;
+- não foi encontrada estrutura dedicada de fatores diários/fixos versionados;
+- portanto a próxima onda deve **reutilizar** rede/split/componentes existentes e adicionar apenas as lacunas, evitando duplicação.
+
+Próximo passo executável sem Claude: desenhar e preparar migration aditiva para cadastro de vendedor/perfil comercial + vínculo de grupos + categoria PF/PJ/SUB e fator versionado. Não aplicar LIVE sem Human Gate explícito.

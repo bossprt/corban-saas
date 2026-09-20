@@ -288,3 +288,10 @@ Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`)
 - Nenhum DDL, dado real, secret ou regra financeira alterados.
 - Protocolo de tripla revisão e economia de Claude registrado em RULES/CLAUDE-LONG-RUN.
 - Roadmap consolidado em `docs/PRODUCT-UX-RESTRUCTURE-V1.md`.
+
+
+### Auditado — 20/09/2026 (pré-Wave B)
+- Schema LIVE revisado em modo somente leitura.
+- Confirmado reuso possível de commercial_entities/relationships/channels, network_split_rule_versions e commission_rule_components.
+- Lacunas registradas: vendedor/perfil comercial e fatores versionados.
+- Nenhuma DDL aplicada; Claude não utilizado.
