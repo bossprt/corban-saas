@@ -200,6 +200,17 @@ export function onboardingSteps(i: OnboardingInput): { steps: OnboardingStep[]; 
   return { steps, next: steps.find(s => !s.done) ?? null }
 }
 
+// The bulk RPC refuses the whole call with message "bulk_import_rejected" and a DETAIL that is a JSON list of {line, code}. Anything else is not a refusal list.
+export function parseBulkRefusal(err: { message?: string; details?: string | null }): { line: number; code: string }[] | null {
+  if (!/bulk_import_rejected/.test(String(err.message ?? ''))) return null
+  try {
+    const list = JSON.parse(String(err.details ?? '')) as unknown
+    if (!Array.isArray(list) || !list.length) return null
+    const out = list.filter((x): x is { line: number; code: string } => typeof x === 'object' && x !== null && Number.isInteger((x as { line?: unknown }).line) && typeof (x as { code?: unknown }).code === 'string')
+    return out.length ? out : null
+  } catch { return null }
+}
+
 // Whole-file import is all-or-nothing at the validation step: one bad line refuses the file (the operator fixes it and sends again).
 export const IMPORT_ISSUE_TEXT: Record<string, string> = {
   file_without_rows: 'O arquivo não tem linhas de dados.',
@@ -222,4 +233,10 @@ export const IMPORT_ISSUE_TEXT: Record<string, string> = {
   production_shares_exceed_received_commission: 'Um grupo recebe mais do que a comissão recebida pela empresa.',
   policy_group_inactive: 'Um grupo da política de repasse está inativo.',
   duplicate_row: 'Mesmo Tipo de Contrato e prazo repetidos no arquivo.',
+  policy_not_found: 'Política de repasse não encontrada ou inativa.',
+  contract_type_not_found: 'Tipo de Contrato não encontrado.',
+  invalid_row: 'Linha malformada.',
+  invalid_rows: 'O arquivo não tem linhas válidas.',
+  version_not_draft: 'A versão já foi publicada.',
+  unexpected: 'Linha recusada pelo banco de dados.',
 }

@@ -9,6 +9,7 @@ import { isLabel } from '@/lib/catalog'
 import { isUuid } from '@/lib/team'
 import { IMPORT_ISSUE_TEXT, mapConditionRows, parseCoefficient, parseDelimited, parsePercent, parseRate, parseTerm, resolveShares, type Basis, type PolicyRef, type ShareInput } from '@/lib/commercial'
 import { xlsxRows } from '@/lib/commercial-xlsx'
+import { parseBulkRefusal } from '@/lib/commercial'
 
 const PATH = '/app/comercial'
 const go = (code: FeedbackCode): never => { revalidatePath(PATH); revalidatePath('/app/configuracao'); return redirect(feedbackUrl(PATH, code)) }
@@ -228,6 +229,18 @@ export async function importConditions(f: FormData) {
     revalidatePath(PATH)
     return redirect(`${feedbackUrl(PATH, 'ok:previa_validada')}&n=${conditions.length}&u=${updates}`)
   }
+  // Atomic path: ONE database call = one transaction (all lines or none). Numbers travel as strings, never floats.
+  const payload = conditions.map(c => ({ line: c.line, contract_type_id: c.contractTypeId, term: c.term, coefficient: c.coefficient, rate: c.rate, received: c.received, shares: c.shares }))
+  const bulk = await ctx.supabase.rpc('import_commercial_conditions', { p_version: version, p_rows: payload, p_policy_version: policyVersion || null })
+  if (!bulk.error) return go('ok:condicoes_importadas')
+  const refused = parseBulkRefusal(bulk.error)
+  if (refused) {
+    revalidatePath(PATH)
+    const code = Object.prototype.hasOwnProperty.call(IMPORT_ISSUE_TEXT, refused[0].code) ? refused[0].code : 'unexpected'
+    return redirect(`${feedbackUrl(PATH, 'erro:import_invalido')}&l=${refused[0].line}&c=${code}&n=${refused.length}`)
+  }
+  // Until the bulk migration is applied the RPC does not exist: keep working with the previous line-by-line path (NOT atomic; re-sending the file is safe).
+  if (bulk.error.code !== 'PGRST202') return go(comError(bulk.error))
   for (const c of conditions) {
     const { error } = await ctx.supabase.rpc('save_commercial_condition', {
       p_version: version, p_contract_type: c.contractTypeId, p_term: c.term, p_coefficient: c.coefficient, p_rate: c.rate, p_received: c.received, p_shares: c.shares,
