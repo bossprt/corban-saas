@@ -64,3 +64,33 @@ Results:
 The final exception in each harness is the intentional rollback sentinel. No migration was applied LIVE and no synthetic test data persisted.
 
 Human Gate remains unchanged: explicit Owner authorization is still required before applying 20261004, 20261005 and 20261006 LIVE.
+
+
+## 5. LIVE apply — 20/09/2026
+
+Owner explicitly authorized the three pending DDL gates. ChatGPT applied the migrations LIVE in the required order:
+
+- `20260920173825 commercial_bulk_import_v1`
+- `20260920173830 ai_import_metering_v1`
+- `20260920173835 action_center_v1`
+
+**Do not reapply.**
+
+Post-apply validation against LIVE:
+- Commercial bulk import harness: **ALL PASS (22 checks)**.
+- AI import + metering harness: **ALL PASS (62 checks)**.
+- Action Center harness: **ALL PASS (54 checks)**.
+- The final exception in each harness is the intentional rollback sentinel; no synthetic test data persisted.
+- All seven new persisted AI/Action Center tables checked have RLS enabled.
+- Application SECURITY DEFINER inventory remains unchanged at 8 functions (6 private + 2 public); these migrations introduced no new SECURITY DEFINER functions.
+- Security Advisor: no WARN/ERROR; only the same two intentional INFO entries for closed platform-admin tables.
+- Performance Advisor: INFO only. Current unindexed-FK inventory is 19, including new AI/Action Center FKs and prior V3 findings; no performance WARN/ERROR.
+- Immediately after apply: import mapping, AI limits/jobs/credit ledger/events, attention items/events all contain zero rows.
+
+Note on evidence count: the current Action Center harness contains **54** assertions. Earlier execution notes said 55; the verified LIVE run is 54/54 and the repository harness is the authority.
+
+Human Gates still pending:
+1. Gemini API secret registration / server wiring.
+2. First paid Gemini call.
+3. Credit tariff and tenant monthly limits.
+4. Any payout/financial DDL from Wave F.
