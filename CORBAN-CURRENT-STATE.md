@@ -266,3 +266,15 @@ Owner confirmed Vercel environment variables for Supabase URL, publishable/anon 
 - Migration `20261002_commercial_model_v3_foundation_v1` PREPARADA (NÃO aplicada LIVE). Harness rollback-only: ALL PASS (139 checks), sem resíduo. Unit 263/263, tsc, eslint, build verdes. Inclui política de repasse versionada (base bruta/líquida) e Origem da Produção Própria/Terceiro (doc V3 §19–§20).
 - App: `/app/comercial` (bancos, provedores, convênios nacionais 27+26 e próprios, grupos de comissão dinâmicos, tabelas, condição única com todos os grupos, importação CSV/XLSX com uma coluna por grupo, publicação); simulação por condição; configuração V3.
 - LIVE continua no modelo antigo até o Human Gate de aplicação. Grupos ainda não alimentam snapshot/split/repasse.
+
+
+## 27. Commercial Model V3 LIVE — 20/09/2026
+- Owner authorized and migration `commercial_model_v3_foundation_v1` was applied LIVE, registered by Supabase as `20260920133017`. Do not reapply.
+- Live harness after apply: 139/139 PASS rollback-only.
+- V3 is now present in production: independent contract types, national agreement templates, tenant-owned banks/providers/agreements/groups, payout policies, V3 routes and commercial conditions.
+- Seeds: 4 contract types; 53 national templates (27 governments/GDF + 26 capital city halls).
+- RLS enabled on all 12 new V3 tables; Security Advisor has no WARN/ERROR.
+- SECURITY DEFINER application inventory remains unchanged at 8 total (6 private + 2 public).
+- No synthetic tenant/commercial V3 data persisted.
+- Performance Advisor reports INFO only, including 11 unindexed FK candidates on new V3 tables; review after real workloads, not a blocker.
+- Remaining roadmap: Smart real configuration, CEP autofill, adaptive Gemini-first import agent + metering, operational monitoring agent, payout/proposal snapshot integration and atomic bulk import.
