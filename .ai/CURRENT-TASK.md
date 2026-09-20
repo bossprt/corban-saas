@@ -701,3 +701,44 @@ Claude executor instructions:
 ## Production site origin corrected — 20/09/2026
 Owner confirmed Vercel NEXT_PUBLIC_SITE_URL was changed to https://corban-saas.vercel.app for all environments.
 This commit intentionally triggers a fresh production deployment so auth e-mail redirects use the official origin.
+
+
+## Commercial Model V3 — Owner decision 19/09/2026
+
+**Fonte de verdade funcional:** `docs/CORBAN-COMMERCIAL-MODEL-V3.md`.
+
+O Owner validou, após teste real como Smart Promotora, que o tenant precisa ter autonomia comercial. A modelagem anterior causava dependência indevida do Platform Admin.
+
+### Decisões aprovadas
+- Platform Admin = estrutura padrão, templates e dados realmente universais.
+- Tenant Admin = bancos/instituições, provedores/masters, convênios habilitados/próprios, Produto/Tabela comercial, prazos, coeficientes, comissão recebida, grupos e repasses.
+- Vocabulário operacional: `Banco → Convênio → Produto (Tabela) → Tipo de Contrato → Prazo → Coeficiente/Taxa → Comissão recebida → Grupos de Comissão`.
+- “Modalidade” deve aparecer ao usuário como **Tipo de Contrato**.
+- Tipo de Contrato NÃO deve depender de Produto.
+- Produto operacional do Owner = **Tabela comercial**, não categoria genérica global.
+- Convênio nacional não deve nascer preso a banco.
+- Pré-carregar templates: 27 governos estaduais/GDF + 26 prefeituras de capitais; tenant habilita/desabilita, pode editar dados permitidos e cadastrar adicionais.
+- Códigos técnicos são internos/automáticos e não devem aparecer como campo obrigatório.
+- Grupos de comissão são dinâmicos e tenant-owned; uma única condição comercial deve permitir cadastrar a distribuição de todos os grupos, inclusive importação com coluna por grupo.
+- Comissão recebida pela empresa é separada de regra de repasse.
+- Gerente/supervisor são opcionais e configuráveis por regra/base de cálculo.
+- Manual, CSV/XLSX e API futura convergem para o mesmo modelo interno.
+
+### Estado técnico atual relevante
+- UI já renomeou “Modalidades” para “Tipos de Contrato”.
+- Produto, Tipo de Contrato, Convênio e Tipo de Documento já passaram a gerar código técnico automaticamente na UI atual; porém a modelagem relacional ainda é antiga.
+- `products` global genérico, `modalities.product_id` e `agreements.bank_id` entram em conflito com o modelo aprovado.
+- NÃO corrigir isso com renome destrutivo. Auditar dependências e preparar migração compatível.
+- `ProductTable/ProductTableVersion` deve ser avaliado como possível fonte de verdade do Produto/Tabela operacional.
+
+### Próxima execução
+Claude deve:
+1. ler AGENTS/RULES/DECISIONS/CLAUDE-LONG-RUN + `docs/CORBAN-COMMERCIAL-MODEL-V3.md`;
+2. auditar schema/migrations/RLS/RPC/UI/testes de catálogo, comissões e proposals;
+3. produzir plano de migração mínimo e seguro;
+4. implementar tudo reversível na branch `architecture/corban-os-master-v2`;
+5. testar unit/tsc/eslint/build + SQL rollback-only/adversarial;
+6. atualizar docs e handoff;
+7. parar antes de DDL LIVE e pedir Human Gate com evidências.
+
+**Não trabalhar na main. Não aplicar DDL LIVE sem autorização explícita.**
