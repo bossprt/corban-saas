@@ -828,3 +828,28 @@ Results:
 The final exception in each harness is the intentional rollback sentinel. No migration was applied LIVE and no synthetic test data persisted.
 
 Human Gate remains unchanged: explicit Owner authorization is still required before applying 20261004, 20261005 and 20261006 LIVE.
+
+
+## Next Wave V3 LIVE — 20/09/2026
+
+Owner authorized and ChatGPT applied all three prepared migrations LIVE, in order:
+
+- `20260920173825 commercial_bulk_import_v1`
+- `20260920173830 ai_import_metering_v1`
+- `20260920173835 action_center_v1`
+
+**DO NOT REAPPLY.**
+
+Verified on LIVE:
+- bulk commercial import: 22/22 PASS rollback-only;
+- AI import/metering: 62/62 PASS rollback-only;
+- Action Center: 54/54 PASS rollback-only;
+- 7 new persistent AI/attention tables checked with RLS=true;
+- application SECURITY DEFINER inventory unchanged: 8 total (6 private + 2 public);
+- Security Advisor: no WARN/ERROR, only 2 known platform-admin INFO;
+- no synthetic rows persisted in mappings, AI limits/jobs/ledger/events, attention items/events;
+- Performance Advisor has INFO only, currently 19 unindexed-FK candidates overall.
+
+Correction for handoff: Action Center verified harness count is 54, not 55.
+
+The next external gates are now Gemini secret + first paid call + pricing/limits. Wave F financial/payout work still requires Owner decisions and a separate DDL gate.
