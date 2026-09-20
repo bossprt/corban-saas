@@ -1192,3 +1192,119 @@ Aplicar este padrão de gerenciamento também aos demais cadastros que crescem:
 - produtos/tabelas.
 
 A tela principal de Comercial deve ser um painel de progresso e resumo, não um CRUD longo.
+
+
+## 27. UX DE COMISSÕES — ALINHAMENTO COM 2TECH E IMPORTAÇÃO EM MASSA
+
+Feedback do Owner após usar a tela LIVE e comparar com o material já fornecido da 2Tech.
+
+### 27.1 Problema atual — Grupo de Comissão
+A tela atual pede:
+- Nome do grupo;
+- Tipo do grupo (Corretor, Parceiro, Indicador etc.);
+- Base fixa de cálculo (% sobre produção ou % sobre comissão recebida).
+
+Isso ficou confuso para o Owner e não representa bem o benchmark funcional da 2Tech.
+
+No material 2Tech, o conceito relevante do Grupo de Comissão é:
+- Nome;
+- Regra;
+- componentes de comissão/referência (ex.: À Vista/Diferido, Bônus, Fixos);
+- coluna/campo de referência;
+- percentual distribuído;
+- regras opcionais de gerente/supervisor e respectivas bases.
+
+### 27.2 Decisão de UX
+**Tipo do grupo não deve ser uma escolha obrigatória do usuário.**
+
+O nome do grupo já expressa a finalidade operacional:
+- Corretor;
+- Parceiro;
+- Balcão;
+- Indicador;
+- Funcionário;
+- Time de Vendas;
+- outro criado pelo tenant.
+
+Se uma classificação técnica for necessária internamente, ela deve ser opcional/automática e não bloquear o cadastro.
+
+A **base de cálculo também não deve ficar rigidamente presa ao grupo inteiro**. Ela pertence à regra/componente de comissão aplicável.
+
+Exemplo:
+```text
+Grupo: Corretores
+
+Regra:
+Comissão à vista
+Campo de referência: Comissão recebida
+Distribuição: 65%
+
+Bônus
+Campo de referência: Bônus recebido
+Distribuição: 50%
+```
+
+Assim um mesmo grupo pode ter regras distintas por componente, sem deformar a identidade do grupo.
+
+### 27.3 Política de Repasse
+A tela separada atual "Política de repasse" ficou abstrata para o Owner.
+
+Ela deve ser apresentada como **regra padrão de comissão/repasse**, reutilizável, mas não como etapa conceitual obrigatória antes de cadastrar tabela.
+
+UX preferida:
+- o usuário cria o grupo;
+- define sua regra padrão quando quiser;
+- ao cadastrar/importar uma tabela, o sistema pode aplicar essa regra automaticamente;
+- também pode sobrescrever a regra em uma condição específica, com auditoria.
+
+Evitar obrigar o usuário a entender termos internos como:
+- base bruta;
+- base líquida;
+- tipo técnico do grupo;
+- policy version;
+quando isso não for necessário à operação normal.
+
+Esses detalhes podem ficar em "Configuração avançada".
+
+### 27.4 Onde informar os percentuais da tabela
+Os percentuais devem estar visíveis no contexto da **Tabela de Condições**, não escondidos em outra etapa.
+
+Ao abrir uma tabela/versão, o usuário deve enxergar uma grade equivalente a:
+
+| Tipo Contrato | Prazo | Coeficiente | Taxa | Comissão recebida | Corretor | Parceiro | Balcão | Indicador |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+
+Cada Grupo de Comissão ativo vira uma coluna dinâmica.
+
+O usuário pode:
+- editar manualmente uma célula;
+- aplicar regra padrão;
+- importar várias linhas;
+- revisar antes de publicar.
+
+### 27.5 Importação em massa
+O Corban OS **já possui backend para importação CSV/XLSX em lote e RPC atômica LIVE**, porém a UI atual deixa isso escondido dentro da versão rascunho da tabela, o que faz parecer que só existe cadastro manual.
+
+Decisão:
+- tornar a importação uma ação principal e visível da Tabela de Condições;
+- botões claros:
+  - `Importar planilha`
+  - `Adicionar condição manualmente`
+- após upload:
+  - prévia;
+  - mapeamento de colunas;
+  - aplicação das regras dos grupos;
+  - validação;
+  - importar em lote;
+  - relatório de aceitas/rejeitadas.
+
+A importação deve suportar CSV/XLSX agora; PDF entrará pelo Agente de Importação IA.
+
+### 27.6 Benchmark 2Tech — princípio a preservar
+Não copiar a interface da 2Tech literalmente, mas preservar o princípio observado:
+- grupo guarda regra de distribuição;
+- regras podem ter múltiplos componentes/referências;
+- tabela é cadastrada/importada uma vez;
+- grupos aparecem como colunas/saídas da mesma condição;
+- não repetir a tabela uma vez por grupo;
+- cadastro em massa deve ser caminho de primeira classe, não recurso escondido.
