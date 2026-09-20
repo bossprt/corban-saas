@@ -26,7 +26,7 @@ export default async function CatalogPage() {
   ])
   const name = (rows: { id: string; name: string }[] | null) => new Map((rows ?? []).map(r => [r.id, r.name]))
   const bankN = name(banks.data), provN = name(providers.data), agrN = name(agreements.data), prodN = name(products.data), modN = name(modalities.data), docN = name(docTypes.data)
-  const routeLabel = (r: { bank_id: string; agreement_id: string; product_id: string; modality_id: string }) => `${bankN.get(r.bank_id) ?? 'Banco'} · ${agrN.get(r.agreement_id) ?? 'Convênio'} · ${prodN.get(r.product_id) ?? 'Produto'} · ${modN.get(r.modality_id) ?? 'Modalidade'}`
+  const routeLabel = (r: { bank_id: string; agreement_id: string; product_id: string; modality_id: string }) => `${bankN.get(r.bank_id) ?? 'Banco'} · ${agrN.get(r.agreement_id) ?? 'Convênio'} · ${prodN.get(r.product_id) ?? 'Produto'} · ${modN.get(r.modality_id) ?? 'Tipo de Contrato'}`
   const routeName = new Map((routes.data ?? []).map(r => [r.id, routeLabel(r)]))
   const referenceReady = !!(banks.data?.length && providers.data?.length && agreements.data?.length && products.data?.length && modalities.data?.length)
   const activeStageStates = (stages.data ?? []).filter(s => s.is_active).map(s => s.canonical_state)
@@ -36,7 +36,7 @@ export default async function CatalogPage() {
     <h1 className="text-3xl font-semibold">Catálogo comercial</h1>
     <p className="mt-2 text-sm text-slate-400">Rotas, tabelas, checklist de documentos e etapas da operação da sua organização. Isto é o <strong>cadastro comercial</strong> usado nas simulações; não liga nenhum banco automaticamente.</p>
     {!canCatalog && <p className="mt-3 rounded-xl border border-slate-800 p-3 text-xs text-slate-400">Seu perfil só consulta o catálogo{canChecklist ? ' e edita checklists' : ''}. Rotas, tabelas e etapas são de gerente/administrador.</p>}
-    {!referenceReady && <p role="alert" className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-200">O catálogo de referência (bancos, convênios, produtos, modalidades, tipos de documento) ainda não foi carregado pelo administrador da plataforma. Sem ele não é possível criar rotas nem checklists.</p>}
+    {!referenceReady && <p role="alert" className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-200">O catálogo de referência (bancos, convênios, produtos, tipos de contrato, tipos de documento) ainda não foi carregado pelo administrador da plataforma. Sem ele não é possível criar rotas nem checklists.</p>}
 
     <h2 className="mt-8 text-xl font-semibold">1. Etapas da operação</h2>
     <div className={`${card} mt-3 text-sm`}>
@@ -47,13 +47,13 @@ export default async function CatalogPage() {
 
     <h2 className="mt-8 text-xl font-semibold">2. Rotas comerciais</h2>
     <div className={`${card} mt-3`}>
-      {!routes.data?.length ? <p className="text-sm text-slate-400">Nenhuma rota ainda. Uma rota combina banco, provedor, convênio, produto e modalidade.</p> : <ul className="space-y-1 text-sm">{routes.data.map(r => <li key={r.id}>{routeLabel(r)} <span className="text-xs text-slate-500">· {provN.get(r.provider_id) ?? 'Provedor'} · {r.status === 'active' ? 'ativa' : 'inativa'}</span></li>)}</ul>}
+      {!routes.data?.length ? <p className="text-sm text-slate-400">Nenhuma rota ainda. Uma rota combina banco, provedor, convênio, produto e tipo de contrato.</p> : <ul className="space-y-1 text-sm">{routes.data.map(r => <li key={r.id}>{routeLabel(r)} <span className="text-xs text-slate-500">· {provN.get(r.provider_id) ?? 'Provedor'} · {r.status === 'active' ? 'ativa' : 'inativa'}</span></li>)}</ul>}
       {canCatalog && referenceReady && <form action={createRoute} className="mt-4 grid gap-2 md:grid-cols-3">
         <select required name="bank_id" defaultValue="" className={field}><option value="" disabled>Banco</option>{banks.data?.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select>
         <select required name="provider_id" defaultValue="" className={field}><option value="" disabled>Provedor / master</option>{providers.data?.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select>
         <select required name="agreement_id" defaultValue="" className={field}><option value="" disabled>Convênio</option>{agreements.data?.map(a => <option key={a.id} value={a.id}>{bankN.get(a.bank_id) ?? 'Banco'} — {a.name}</option>)}</select>
         <select required name="product_id" defaultValue="" className={field}><option value="" disabled>Produto</option>{products.data?.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select>
-        <select required name="modality_id" defaultValue="" className={field}><option value="" disabled>Modalidade</option>{modalities.data?.map(m => <option key={m.id} value={m.id}>{prodN.get(m.product_id) ?? 'Produto'} — {m.name}</option>)}</select>
+        <select required name="modality_id" defaultValue="" className={field}><option value="" disabled>Tipo de Contrato</option>{modalities.data?.map(m => <option key={m.id} value={m.id}>{prodN.get(m.product_id) ?? 'Produto'} — {m.name}</option>)}</select>
         <SubmitButton className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950">Criar rota</SubmitButton>
       </form>}
     </div>
