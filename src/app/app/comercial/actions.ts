@@ -93,6 +93,15 @@ export async function renameCatalogItem(f: FormData) {
   return error ? go(comError(error), returnPath(f)) : go('ok:situacao_atualizada', returnPath(f))
 }
 
+
+export async function updateProvider(f: FormData) {
+  const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')
+  const id = text(f, 'id'), name = text(f, 'name'), type = text(f, 'provider_type')
+  if (!isUuid(id) || !isLabel(name) || !['bank_direct', 'master', 'promotora', 'correspondent', 'partner', 'other'].includes(type)) return go('erro:catalogo_invalido', returnPath(f))
+  const { error } = await ctx.supabase.from('organization_providers').update({ name, provider_type: type }).eq('id', id)
+  return error ? go(comError(error), returnPath(f)) : go('ok:situacao_atualizada', returnPath(f))
+}
+
 // A commercial table = bank + agreement (+ optional provider). The route and the technical code are generated here; the person only names the table.
 export async function createCommercialTable(f: FormData) {
   const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')
