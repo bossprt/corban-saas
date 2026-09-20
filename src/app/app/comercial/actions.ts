@@ -83,6 +83,16 @@ export async function setActive(f: FormData) {
   return error ? go(comError(error), returnPath(f)) : go('ok:situacao_atualizada', returnPath(f))
 }
 
+
+export async function renameCatalogItem(f: FormData) {
+  const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')
+  const table = text(f, 'kind'), id = text(f, 'id'), name = text(f, 'name')
+  const allowed = { bank: 'organization_banks', provider: 'organization_providers', agreement: 'organization_agreements', group: 'commission_groups' } as const
+  if (!isUuid(id) || !Object.prototype.hasOwnProperty.call(allowed, table) || !isLabel(name, table === 'group' ? 80 : 120)) return go('erro:nome_invalido', returnPath(f))
+  const { error } = await ctx.supabase.from(allowed[table as keyof typeof allowed]).update({ name }).eq('id', id)
+  return error ? go(comError(error), returnPath(f)) : go('ok:situacao_atualizada', returnPath(f))
+}
+
 // A commercial table = bank + agreement (+ optional provider). The route and the technical code are generated here; the person only names the table.
 export async function createCommercialTable(f: FormData) {
   const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')
