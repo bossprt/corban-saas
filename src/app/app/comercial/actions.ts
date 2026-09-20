@@ -34,7 +34,7 @@ const manager = async () => {
 export async function createBank(f: FormData) {
   const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')
   const name = text(f, 'name')
-  if (!isLabel(name)) return go('erro:nome_invalido')
+  if (!isLabel(name)) return go('erro:nome_invalido', returnPath(f))
   const { error } = await ctx.supabase.from('organization_banks').insert({ organization_id: ctx.membership.organization_id, name })
   return error ? go(comError(error), returnPath(f)) : go('ok:banco_cadastrado', returnPath(f))
 }
@@ -42,7 +42,7 @@ export async function createBank(f: FormData) {
 export async function createProvider(f: FormData) {
   const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')
   const name = text(f, 'name'), type = text(f, 'provider_type')
-  if (!isLabel(name) || !['bank_direct', 'master', 'promotora', 'correspondent', 'partner', 'other'].includes(type)) return go('erro:nome_invalido')
+  if (!isLabel(name) || !['bank_direct', 'master', 'promotora', 'correspondent', 'partner', 'other'].includes(type)) return go('erro:nome_invalido', returnPath(f))
   const { error } = await ctx.supabase.from('organization_providers').insert({ organization_id: ctx.membership.organization_id, name, provider_type: type })
   return error ? go(comError(error), returnPath(f)) : go('ok:provedor_cadastrado', returnPath(f))
 }
@@ -51,7 +51,7 @@ export async function createProvider(f: FormData) {
 export async function enableAgreementTemplate(f: FormData) {
   const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')
   const template_id = text(f, 'template_id')
-  if (!isUuid(template_id)) return go('erro:catalogo_invalido')
+  if (!isUuid(template_id)) return go('erro:catalogo_invalido', returnPath(f))
   const { error } = await ctx.supabase.from('organization_agreements').insert({ organization_id: ctx.membership.organization_id, template_id, name: 'nacional' })
   return error ? go(comError(error), returnPath(f)) : go('ok:convenio_habilitado', returnPath(f))
 }
@@ -68,7 +68,7 @@ export async function createCommissionGroup(f: FormData) {
   const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')
   // "kind" is a technical classification, not a required business decision. The UI now only asks the user for the group name and calculation basis.
   const name = text(f, 'name'), kind = text(f, 'kind') || 'other', basis = text(f, 'calculation_basis')
-  if (!isLabel(name, 80) || !['broker', 'partner', 'referrer', 'employee', 'sales_team', 'counter', 'supervisor', 'manager', 'other'].includes(kind) || !['percent_of_production', 'percent_of_received_commission'].includes(basis)) return go('erro:catalogo_invalido')
+  if (!isLabel(name, 80) || !['broker', 'partner', 'referrer', 'employee', 'sales_team', 'counter', 'supervisor', 'manager', 'other'].includes(kind) || !['percent_of_production', 'percent_of_received_commission'].includes(basis)) return go('erro:catalogo_invalido', returnPath(f))
   const { error } = await ctx.supabase.from('commission_groups').insert({ organization_id: ctx.membership.organization_id, name, kind, calculation_basis: basis })
   return error ? go(comError(error), returnPath(f)) : go('ok:grupo_cadastrado', returnPath(f))
 }
@@ -78,7 +78,7 @@ export async function setActive(f: FormData) {
   const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')
   const table = text(f, 'kind'), id = text(f, 'id'), active = text(f, 'active') === 'true'
   const allowed = { bank: 'organization_banks', provider: 'organization_providers', agreement: 'organization_agreements', group: 'commission_groups' } as const
-  if (!isUuid(id) || !Object.prototype.hasOwnProperty.call(allowed, table)) return go('erro:catalogo_invalido')
+  if (!isUuid(id) || !Object.prototype.hasOwnProperty.call(allowed, table)) return go('erro:catalogo_invalido', returnPath(f))
   const { error } = await ctx.supabase.from(allowed[table as keyof typeof allowed]).update({ is_active: active }).eq('id', id)
   return error ? go(comError(error), returnPath(f)) : go('ok:situacao_atualizada', returnPath(f))
 }
