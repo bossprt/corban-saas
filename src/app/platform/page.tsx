@@ -3,7 +3,7 @@ import { Building2, Landmark, Network, Package, Files, Layers3, LogOut } from 'l
 import { requirePlatformAdmin } from '@/lib/platform.server'
 import { createAdminClient } from '@/lib/supabaseAdmin'
 import { signOut } from '@/app/app/actions'
-import { addAgreement, addBank, addDocumentType, addModality, addProduct, addProvider } from './actions'
+import { addAgreement, addBank, addDocumentType, addModality, addProduct, addProvider, updateBank } from './actions'
 
 const field='rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white'
 const card='rounded-2xl border border-slate-800 bg-slate-900 p-5'
@@ -50,7 +50,12 @@ export default async function PlatformPage({searchParams}:{searchParams:Promise<
 
           <div className={card}><h3 className="flex items-center gap-2 font-semibold"><Landmark size={18}/> Instituições / bancos</h3>
             <form action={addBank} className="mt-4 grid grid-cols-3 gap-2"><input name="code" placeholder="Código (opcional)" className={field}/><input name="name" required placeholder="Nome da instituição" className={field+" col-span-2"}/><button className={button+" col-span-3"}>Cadastrar instituição</button></form>
-            <div className="mt-4 flex flex-wrap gap-2">{banks.data?.map(x=><span key={x.id} className="rounded-full border border-slate-700 px-3 py-1 text-xs">{x.name}{x.code ? ` · ${x.code}` : ' · sem código'}</span>)}</div>
+            <div className="mt-4 space-y-2">{banks.data?.map(x=><form action={updateBank} key={x.id} className="grid grid-cols-1 gap-2 rounded-xl border border-slate-800 p-3 md:grid-cols-[1fr_180px_auto]">
+              <input type="hidden" name="id" value={x.id}/>
+              <input name="name" required defaultValue={x.name} className={field} aria-label="Nome da instituição"/>
+              <input name="code" defaultValue={x.code ?? ''} placeholder="Código opcional" className={field} aria-label="Código da instituição"/>
+              <button className="rounded-lg border border-slate-600 px-3 py-2 text-xs font-semibold text-slate-200 hover:bg-slate-800">Salvar edição</button>
+            </form>)}</div>
           </div>
 
           <div className={card}><h3 className="flex items-center gap-2 font-semibold"><Network size={18}/> Provedores / masters</h3>
