@@ -1118,3 +1118,49 @@ Com duas ações claras:
 - importação deve ter prévia;
 - alterações em massa devem ser atômicas;
 - arquivo de origem deve permanecer vinculado à versão publicada.
+
+
+## Tipo de Contrato como cadastro gerenciado em Produtos
+Clarificação do Owner a partir da tela real da 2Tech.
+
+Na arquitetura funcional de referência, **Tipo de Contrato** fica dentro do domínio de **Produtos** e possui gerenciamento próprio.
+
+Exemplos mostrados:
+- Antecipação de benefício;
+- Ativação;
+- Cartão C/ Saque;
+- Cartão S/ Saque;
+- Compra de Dívida;
+- Conta Simples;
+- Contrato Novo;
+- Novo - Aumento Salarial;
+- Portabilidade;
+- Refin + Margem;
+- e outros.
+
+O cadastro não é apenas um nome. O tipo de contrato pode carregar flags funcionais como:
+- habilitar na esteira de solicitação/digitação;
+- habilitar para cadastro/busca de comissão;
+- status ativo/inativo.
+
+### Decisão para Corban OS
+- **Tipo de Contrato** deve continuar sendo um catálogo reutilizável e independente de uma tabela específica.
+- Porém, não deve ser tratado como lista fixa e invisível para sempre.
+- Deve existir uma área de gerenciamento dentro de **Cadastros/Produtos**, onde perfis autorizados possam visualizar, habilitar/inativar e, conforme governança definida, criar/editar tipos.
+- O tipo de contrato pode possuir capacidades/flags operacionais que controlam onde ele aparece no sistema.
+- Não duplicar Tipo de Contrato em cada Produto/Tabela.
+- Produto/Tabela referencia um Tipo de Contrato já cadastrado ao definir suas condições.
+
+### UX sugerida
+`Cadastros -> Produtos -> Tipos de Contrato`
+
+Tela com:
+- pesquisa;
+- paginação;
+- nome;
+- uso na esteira;
+- uso em comissão;
+- status;
+- visualizar/editar.
+
+Essa decisão substitui a visão anterior de que bastaria manter somente quatro tipos comuns fixos e sem gerenciamento visível.
