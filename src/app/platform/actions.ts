@@ -19,11 +19,13 @@ async function gate() {
 
 export async function addBank(f: FormData) {
   await gate()
-  const name=clean(f.get('name')), c=code(clean(f.get('code')))
-  if(!name||!c) go('erro','Informe código e nome do banco.')
+  const name=clean(f.get('name'))
+  const rawCode=clean(f.get('code'))
+  const c=rawCode ? code(rawCode) : null
+  if(!name) go('erro','Informe o nome da instituição.')
   const {error}=await createAdminClient().from('banks').insert({code:c,name,is_active:true})
-  if(error) go('erro', error.code==='23505'?'Banco/código já cadastrado.':'Não foi possível cadastrar o banco.')
-  go('ok','Banco cadastrado.')
+  if(error) go('erro', error.code==='23505'?'Código já cadastrado.':'Não foi possível cadastrar a instituição.')
+  go('ok','Instituição cadastrada.')
 }
 
 export async function addProvider(f: FormData) {
@@ -56,9 +58,9 @@ export async function addModality(f: FormData) {
 export async function addAgreement(f: FormData) {
   await gate()
   const bank_id=clean(f.get('bank_id')), name=clean(f.get('name')), c=code(clean(f.get('code')))
-  if(!bank_id||!name||!c) go('erro','Selecione o banco e informe código/nome do convênio.')
+  if(!bank_id||!name||!c) go('erro','Selecione a instituição e informe código/nome do convênio.')
   const {error}=await createAdminClient().from('agreements').insert({bank_id,code:c,name,is_active:true})
-  if(error) go('erro', error.code==='23505'?'Convênio/código já cadastrado para esse banco.':'Não foi possível cadastrar o convênio.')
+  if(error) go('erro', error.code==='23505'?'Convênio/código já cadastrado para essa instituição.':'Não foi possível cadastrar o convênio.')
   go('ok','Convênio cadastrado.')
 }
 
