@@ -813,3 +813,22 @@ Exemplo:
 - usuário pode optar por não usar IA e fazer mapeamento manual quando disponível.
 
 A precificação final ainda é decisão comercial futura; não hardcodar valores no produto.
+
+
+### 22.7 Provedor preferencial inicial — Gemini
+
+Decisão de produto do Owner:
+- Para o Agente de Importação Comercial, **Gemini deve ser o provedor preferencial inicial** devido à boa experiência prática do Owner com interpretação de dados e ao custo competitivo da API paga.
+- Esta preferência **não deve criar lock-in arquitetural**.
+
+Implementação esperada:
+- camada de abstração de modelos/provedores;
+- Gemini como default inicial para análise semântica de XLSX/CSV/PDF quando IA for necessária;
+- fallback configurável para outros modelos/provedores;
+- roteamento por custo, qualidade, tamanho de contexto e confiança;
+- metering por job/tenant;
+- custo do provedor separado do preço em créditos cobrado do cliente;
+- possibilidade futura de trocar o modelo default sem migrar regras de negócio.
+
+Regra:
+> O Corban OS escolhe o melhor motor disponível; o domínio comercial nunca depende diretamente de um único fornecedor de IA.
