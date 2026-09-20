@@ -1139,3 +1139,56 @@ Fluxo recomendado:
 
 ### Regra de escalabilidade de UX
 Nenhum cadastro que possa crescer para dezenas/centenas de registros deve renderizar todos os itens diretamente no onboarding principal.
+
+
+## 26. UX DO CATÁLOGO — CONVÊNIOS
+
+Feedback do Owner após uso da tela LIVE:
+
+### Problemas observados
+1. O botão para cadastrar/habilitar outro convênio não está visualmente sugestivo; parece apagado/desabilitado mesmo quando deveria representar uma ação disponível.
+2. O bloco segue a mesma lógica ruim observada em bancos/origens: cada novo convênio aparece diretamente na tela principal, fazendo a lista crescer indefinidamente.
+
+### Decisão de UX
+Aplicar aos Convênios o mesmo padrão de gerenciamento adotado para Instituições/Origens.
+
+Na tela principal `/app/comercial`:
+- não listar todos os convênios;
+- mostrar apenas resumo, por exemplo:
+  - `12 convênios cadastrados · 8 ativos`;
+- botões de ação visualmente claros:
+  - `Cadastrar convênio`
+  - `Gerenciar convênios`
+  - opcionalmente `Habilitar da base nacional`.
+
+### Área dedicada
+Criar uma tela dedicada, por exemplo:
+- `/app/comercial/convenios`
+
+Ela deve permitir:
+- busca;
+- filtro Ativos / Inativos / Todos;
+- origem: Nacional / Próprio;
+- habilitar convênio da base nacional;
+- cadastrar convênio próprio;
+- editar dados permitidos;
+- inativar;
+- reativar;
+- visualizar vínculos com tabelas/rotas;
+- excluir somente quando não houver dependências e com confirmação explícita.
+
+### Ação visual
+Botões primários de cadastro/habilitação não podem parecer desabilitados.
+Devem ter contraste, rótulo inequívoco e estado hover/focus claro.
+
+Evitar ação genérica como `+` ou texto apagado quando a intenção é `Cadastrar outro convênio`.
+
+### Regra geral
+Aplicar este padrão de gerenciamento também aos demais cadastros que crescem:
+- instituições/origens;
+- empresas de origem de terceiros;
+- convênios;
+- grupos de comissão;
+- produtos/tabelas.
+
+A tela principal de Comercial deve ser um painel de progresso e resumo, não um CRUD longo.
