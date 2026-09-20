@@ -70,17 +70,20 @@ export default async function PlatformPage({searchParams}:{searchParams:Promise<
           </div>
 
           <div className={card}><h3 className="flex items-center gap-2 font-semibold"><Layers3 size={18}/> Tipos de Contrato</h3>
-            <form action={addModality} className="mt-4 grid grid-cols-2 gap-2"><select name="product_id" required defaultValue="" className={field}><option value="" disabled>Produto</option>{products.data?.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><input name="code" required placeholder="Código" className={field}/><input name="name" required placeholder="Nome da tipo de contrato" className={field}/><button className={button}>Cadastrar tipo de contrato</button></form>
+            <form action={addModality} className="mt-4 grid gap-2"><select name="product_id" required defaultValue="" className={field}><option value="" disabled>Produto</option>{products.data?.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><input name="name" required placeholder="Tipo de contrato (ex.: Novo, Refinanciamento, Portabilidade)" className={field}/><button className={button}>Cadastrar tipo de contrato</button></form>
+            <p className="mt-2 text-xs text-slate-500">O identificador técnico é gerado automaticamente.</p>
             <div className="mt-4 space-y-1 text-xs text-slate-300">{modalities.data?.map(x=><div key={x.id}>{productNames.get(x.product_id)??'Produto'} → {x.name}</div>)}</div>
           </div>
 
           <div className={card}><h3 className="flex items-center gap-2 font-semibold"><Network size={18}/> Convênios por instituição</h3>
-            <form action={addAgreement} className="mt-4 grid grid-cols-2 gap-2"><select name="bank_id" required defaultValue="" className={field}><option value="" disabled>Instituição / banco</option>{banks.data?.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><input name="code" required placeholder="Código" className={field}/><input name="name" required placeholder="Convênio: Governo do Acre" className={field}/><button className={button}>Cadastrar convênio</button></form>
-            <div className="mt-4 space-y-1 text-xs text-slate-300">{agreements.data?.map(x=><div key={x.id}>{bankNames.get(x.bank_id)??'Banco'} → {x.name}</div>)}</div>
+            <form action={addAgreement} className="mt-4 grid gap-2"><select name="bank_id" required defaultValue="" className={field}><option value="" disabled>Instituição / banco</option>{banks.data?.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><input name="name" required placeholder="Convênio (ex.: Governo do Acre)" className={field}/><button className={button}>Cadastrar convênio</button></form>
+            <p className="mt-2 text-xs text-slate-500">O identificador técnico é gerado automaticamente dentro da instituição.</p>
+            <div className="mt-4 space-y-1 text-xs text-slate-300">{agreements.data?.map(x=><div key={x.id}>{bankNames.get(x.bank_id)??'Instituição'} → {x.name}</div>)}</div>
           </div>
 
           <div className={card}><h3 className="flex items-center gap-2 font-semibold"><Files size={18}/> Tipos de documento</h3>
-            <form action={addDocumentType} className="mt-4 grid grid-cols-3 gap-2"><input name="code" required placeholder="Código" className={field}/><input name="name" required placeholder="Documento" className={field+" col-span-2"}/><button className={button+" col-span-3"}>Cadastrar documento</button></form>
+            <form action={addDocumentType} className="mt-4 grid gap-2"><input name="name" required placeholder="Tipo de documento (ex.: Contracheque)" className={field}/><button className={button}>Cadastrar documento</button></form>
+            <p className="mt-2 text-xs text-slate-500">O identificador técnico é gerado automaticamente.</p>
             <div className="mt-4 flex flex-wrap gap-2">{docs.data?.map(x=><span key={x.id} className="rounded-full border border-slate-700 px-3 py-1 text-xs">{x.name}</span>)}</div>
           </div>
         </div>
