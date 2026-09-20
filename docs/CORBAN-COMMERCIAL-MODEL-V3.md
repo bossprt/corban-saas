@@ -832,3 +832,203 @@ Implementação esperada:
 
 Regra:
 > O Corban OS escolhe o melhor motor disponível; o domínio comercial nunca depende diretamente de um único fornecedor de IA.
+
+
+## 23. AGENTE OPERACIONAL DE IA — MONITORAMENTO CONTÍNUO
+
+### 23.1 Visão
+Além do Agente de Importação Comercial, o Corban OS deve ter um **Agente Operacional de IA** responsável por observar continuamente a operação do tenant e identificar situações que exigem atenção.
+
+O agente não substitui as regras determinísticas do sistema. Ele atua sobre eventos, métricas, SLAs e contexto operacional para:
+- detectar;
+- priorizar;
+- explicar;
+- recomendar;
+- notificar;
+- e, quando autorizado, executar ações reversíveis de baixo risco.
+
+### 23.2 Áreas de monitoramento
+
+#### Esteira / propostas
+Detectar:
+- proposta parada acima do SLA;
+- etapa sem movimentação;
+- proposta aguardando documento;
+- proposta aguardando retorno do banco/provedor;
+- proposta aprovada sem continuidade;
+- proposta paga sem conciliação/comissão esperada;
+- proposta com status conflitante entre banco, cliente e empresa;
+- concentração anormal de propostas em uma etapa.
+
+Exemplo:
+```text
+"A proposta 123 está há 19h em Aguardando Documento.
+SLA esperado: 4h.
+Última ação: solicitação de contracheque.
+Responsável: operador X."
+```
+
+#### Ociosidade comercial
+Detectar:
+- lead sem contato;
+- cliente sem follow-up;
+- operador sem atividade relevante;
+- fila sem responsável;
+- carteira parada;
+- queda abrupta de conversão;
+- oportunidade sem retorno dentro da janela definida.
+
+Ociosidade deve ser baseada em métricas operacionais configuráveis, não em inferências subjetivas sobre capacidade ou desempenho pessoal.
+
+#### Documentos
+Detectar:
+- checklist incompleto;
+- documento vencido;
+- arquivo ilegível ou inconsistente;
+- ausência de documento obrigatório;
+- documentos enviados sem vínculo com proposta/cliente.
+
+#### Comissões
+Detectar:
+- comissão esperada sem recebimento;
+- valor recebido divergente da condição comercial;
+- repasse acima da comissão disponível;
+- regra de grupo ausente;
+- comissão sem grupo vinculado;
+- divergência entre tabela publicada e evento financeiro;
+- possível clawback/reversão sem tratamento.
+
+O agente nunca inventa valor de comissão; toda conclusão deve partir de fonte de verdade e evidência financeira.
+
+#### Integrações / workers
+Detectar:
+- job falhando repetidamente;
+- integração sem resposta;
+- fila crescente;
+- webhook órfão;
+- credencial/provider indisponível;
+- importação travada;
+- erro recorrente por fornecedor.
+
+#### Catálogo comercial
+Detectar:
+- tabela vencendo;
+- tabela vencida ainda ativa;
+- prazo sem coeficiente;
+- comissão ausente;
+- origem da produção não definida;
+- tipo de contrato sem condição comercial;
+- tabela duplicada ou muito semelhante;
+- mudança relevante em arquivo importado em relação ao padrão anterior.
+
+#### Equipe / operação
+Detectar:
+- tarefas sem dono;
+- excesso de itens numa mesma carteira;
+- supervisor/gerente sem regra aplicável quando exigida;
+- usuário revogado ainda referenciado em fluxo;
+- fila operacional desbalanceada.
+
+### 23.3 Arquitetura recomendada
+
+```text
+Eventos do sistema
+        ↓
+Motor determinístico de regras/SLA
+        ↓
+Agregador operacional
+        ↓
+Agente IA
+        ↓
+Classificação + prioridade + explicação
+        ↓
+Action Center
+        ↓
+Notificação / sugestão / ação permitida
+```
+
+A IA interpreta contexto e prioriza. Regras críticas continuam determinísticas.
+
+### 23.4 Níveis de autonomia
+
+#### Nível 1 — Observar
+Somente detectar e registrar.
+
+#### Nível 2 — Recomendar
+Sugere a próxima ação:
+- cobrar documento;
+- reatribuir fila;
+- revisar tabela;
+- confirmar comissão;
+- reprocessar integração.
+
+#### Nível 3 — Executar ação reversível
+Quando autorizado pelo tenant:
+- criar tarefa;
+- enviar lembrete interno;
+- reabrir item;
+- reatribuir responsável;
+- agendar follow-up;
+- reprocessar job idempotente.
+
+#### Nível 4 — Human Gate obrigatório
+Sempre exigir humano para:
+- alterar comissão;
+- publicar tabela;
+- aprovar condição financeira;
+- enviar comunicação externa sensível;
+- excluir dados;
+- alterar regra de repasse;
+- movimentar dinheiro;
+- executar ação irreversível.
+
+### 23.5 Action Center
+O agente deve alimentar uma central única de atenção, por exemplo:
+
+```text
+CRÍTICO
+- 3 propostas pagas sem comissão reconciliada
+
+ALTO
+- 12 propostas acima do SLA
+- integração 2Tech falhou 4 vezes
+
+MÉDIO
+- 8 clientes sem follow-up há 24h
+
+BAIXO
+- tabela do Banco X vence em 5 dias
+```
+
+Cada alerta deve mostrar:
+- por que foi criado;
+- evidências;
+- impacto;
+- responsável;
+- ação recomendada;
+- opção de resolver/ignorar/adiar;
+- histórico de decisões.
+
+### 23.6 Custo de IA
+Aplicar a mesma política de metering:
+- tarefas simples e recorrentes devem usar regras determinísticas sem custo de LLM;
+- IA só entra quando contexto/semântica agregam valor;
+- processamentos podem consumir créditos do tenant;
+- evitar analisar o mesmo evento repetidamente;
+- usar cache, sumarização incremental e roteamento de modelo.
+
+Gemini pode ser o provedor inicial preferencial também aqui, sem lock-in.
+
+### 23.7 Guardrails
+O agente operacional não deve:
+- decidir aprovação de crédito;
+- inferir atributos sensíveis de clientes;
+- discriminar ou priorizar clientes com base em características protegidas;
+- inventar dados;
+- alterar histórico financeiro;
+- publicar tabela/comissão sem gate;
+- substituir controles transacionais;
+- agir sem trilha de auditoria.
+
+### 23.8 Objetivo de produto
+Transformar o Corban OS de um sistema passivo, que apenas armazena dados, em um **sistema operacional ativo**, capaz de perceber gargalos e chamar atenção para o que precisa ser resolvido antes que vire perda de receita.
