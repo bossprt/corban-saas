@@ -349,3 +349,33 @@ Regra de UX:
 - classificações atuais: Banco direto, Master, Promotora, Correspondente, Parceiro, Outro;
 - editar a classificação não muda automaticamente a direção da relação comercial nem a origem da produção das tabelas;
 - alterações históricas sensíveis devem continuar auditáveis quando houver vínculo financeiro/contratual.
+
+
+## Grupo de vendedor como perfil comercial herdável
+Correção conceitual do Owner a partir da operação real e do material 2Tech:
+
+- **Grupo de vendedor** não é uma classificação de qualidade como Bronze/Prata/Ouro por padrão.
+- No Corban OS, ele deve representar o **perfil comercial do vendedor/canal**, por exemplo:
+  - Corretor;
+  - Parceiro;
+  - Afiliado;
+  - Indicador;
+  - outros grupos criados pelo tenant.
+- No cadastro do vendedor deve existir um campo explícito para selecionar o grupo comercial ao qual ele pertence.
+- Ao selecionar o grupo, o vendedor **herda automaticamente a regra de comissão configurada para aquele grupo**.
+- A comissão padrão vem do grupo; exceções específicas podem existir, mas devem ser explícitas e auditáveis.
+- O sistema não deve exigir que o usuário escolha novamente a mesma classificação em vários lugares.
+
+Modelo funcional:
+`Vendedor -> Grupo de Vendedor -> Regra de Comissão do Grupo -> Comissão efetiva conforme a tabela/condição`
+
+Exemplo:
+- Grupo: Corretor
+- Regra do grupo: 65% da comissão recebida
+- Vendedor João pertence ao grupo Corretor
+- João herda automaticamente os 65%, salvo override explícito permitido pela política.
+
+Distinção:
+- Grupo de vendedor = perfil/canal comercial do vendedor;
+- Regra de comissão = como esse grupo é remunerado;
+- classificação adicional de performance (Bronze/Prata/Ouro etc.) pode existir futuramente como outra dimensão, mas não deve ser confundida com o grupo comercial principal.
