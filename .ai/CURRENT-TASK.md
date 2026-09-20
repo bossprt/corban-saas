@@ -1496,3 +1496,13 @@ Também faz parte da estrutura maior do Corban como frente/módulo de CRM e comu
 - SmartMatch e DeskcommCRM não devem ser tratados como projetos totalmente desconectados do ponto de vista de produto.
 - Integrações entre eles devem ser feitas por contratos claros (APIs/eventos/identidades), sem acoplamento inseguro de banco ou secrets.
 - Cada componente pode manter infraestrutura/repositório independente enquanto a arquitetura de produto converge sob Corban.
+
+
+## Execução protocolada — 20/09/2026
+Owner reafirmou:
+- tripla revisão obrigatória antes de execução relevante;
+- manter handoff atualizado para qualquer novo chat/IA;
+- ChatGPT executa diretamente tudo que puder;
+- Claude somente quando necessário, sempre com fila longa e instrução explícita de economia de tokens/ferramentas locais.
+
+Primeira onda escolhida após tripla revisão: reorganização de navegação/UX sem DDL e sem alteração de dados.

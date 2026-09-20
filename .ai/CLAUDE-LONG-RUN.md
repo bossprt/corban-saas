@@ -56,3 +56,18 @@ Add/extend unit/contract/adversarial tests for: tenant A/B isolation; immutable 
 - State/decision/changelog docs are updated.
 - Changes are committed and pushed to `architecture/corban-os-master-v2`.
 - Final handoff is written into `.ai/CURRENT-TASK.md` with exact completed work, failures, remaining gates and next executable task.
+
+
+## Invocation policy — save weekly Claude quota
+Claude is NOT the default executor. ChatGPT executes everything it can through connected GitHub/Supabase/Vercel tools first.
+
+Invoke Claude only when the task genuinely requires local execution, installed local tooling/plugins, deep repository-wide local analysis, or a capability unavailable to ChatGPT.
+
+When invoked:
+- receive one long coherent queue instead of microtasks;
+- inspect installed tools first and use the cheapest relevant capability;
+- prefer Graphify/Caveman/Superpowers/context-mode/Context7 when installed and appropriate;
+- reuse indexes/caches and symbol/range reads;
+- avoid repeated full-file dumps;
+- continue autonomously through implement -> test -> adversarial review -> fix -> retest -> docs -> commit/push;
+- stop only at a true Human Gate.

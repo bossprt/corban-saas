@@ -932,3 +932,12 @@ Também faz parte da estrutura maior do Corban como frente/módulo de CRM e comu
 - SmartMatch e DeskcommCRM não devem ser tratados como projetos totalmente desconectados do ponto de vista de produto.
 - Integrações entre eles devem ser feitas por contratos claros (APIs/eventos/identidades), sem acoplamento inseguro de banco ou secrets.
 - Cada componente pode manter infraestrutura/repositório independente enquanto a arquitetura de produto converge sob Corban.
+
+
+## Reestruturação de navegação por domínio — 20/09/2026
+Implementação V1, reversível e sem DDL:
+- menu principal passa a representar áreas de negócio: Visão geral, CRM, Operacional, Financeiro, Cadastros, Relatórios e Configuração;
+- novos hubs `/app/crm`, `/app/operacional`, `/app/cadastros`, `/app/relatorios`;
+- módulos antigos não são removidos; ficam acessíveis pelos hubs;
+- autorização continua nas páginas/actions/RLS; esconder/exibir link é somente UX;
+- objetivo: abandonar navegação "robótica" por entidades técnicas e aproximar o fluxo do trabalho real.

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { LayoutDashboard, Users, UserPlus, FileText, Workflow, Landmark, Library, LogOut, Calculator, FolderLock, Network, Plug, Upload, WalletCards, Settings, ShieldCheck } from 'lucide-react'
+import { LayoutDashboard, Users, Workflow, Landmark, LogOut, WalletCards, Settings, Library, BarChart3 } from 'lucide-react'
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast, canManageTeam, canViewCommission } from '@/lib/rbac'
 import { ROLE_LABEL } from '@/lib/team'
@@ -10,20 +10,11 @@ import { signOut } from './actions'
 // `show` only decides what is offered in the menu; every page, action and RPC enforces the role again (a hidden link is not authorization).
 const nav: { href: string; label: string; icon: typeof Users; show?: (role: string) => boolean }[] = [
   { href: '/app', label: 'Visão geral', icon: LayoutDashboard },
-  { href: '/app/leads', label: 'Leads', icon: UserPlus },
-  { href: '/app/clientes', label: 'Clientes', icon: Users },
-  { href: '/app/comercial', label: 'Modelo comercial', icon: Library, show: r => atLeast(r, 'supervisor') },
-  { href: '/app/catalogo', label: 'Catálogo (anterior)', icon: Library, show: r => atLeast(r, 'supervisor') },
-  { href: '/app/atencao', label: 'Central de atenção', icon: ShieldCheck, show: r => atLeast(r, 'supervisor') },
-  { href: '/app/simulacoes', label: 'Simulações', icon: Calculator },
-  { href: '/app/propostas', label: 'Propostas', icon: FileText },
-  { href: '/app/documentos', label: 'Documentos', icon: FolderLock },
-  { href: '/app/operacao', label: 'Operação', icon: Workflow },
-  { href: '/app/rede', label: 'Rede comercial', icon: Network, show: canManageTeam },
-  { href: '/app/importacoes', label: 'Importações', icon: Upload, show: r => atLeast(r, 'supervisor') },
-  { href: '/app/integracoes', label: 'Integrações', icon: Plug, show: r => atLeast(r, 'supervisor') },
-  { href: '/app/financeiro', label: 'Financeiro e conciliação', icon: WalletCards, show: canViewCommission },
-  { href: '/app/equipe', label: 'Equipe', icon: ShieldCheck, show: canManageTeam },
+  { href: '/app/crm', label: 'CRM', icon: Users },
+  { href: '/app/operacional', label: 'Operacional', icon: Workflow },
+  { href: '/app/financeiro', label: 'Financeiro', icon: WalletCards, show: canViewCommission },
+  { href: '/app/cadastros', label: 'Cadastros', icon: Library, show: r => atLeast(r, 'supervisor') },
+  { href: '/app/relatorios', label: 'Relatórios', icon: BarChart3 },
   { href: '/app/configuracao', label: 'Configuração', icon: Settings, show: canManageTeam },
 ]
 

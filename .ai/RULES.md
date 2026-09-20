@@ -245,3 +245,24 @@ Ao passar o projeto para outra IA:
 ---
 
 # FIM
+
+# 13. PROTOCOLO DE TRIPLA REVISÃO
+
+Antes de executar qualquer mudança relevante, fazer três gates:
+
+1. **Completude:** escopo, dependências, tenant/RBAC, dados, rollback, histórico e Definition of Done.
+2. **Adversarial:** tentar quebrar/refutar a solução, buscar alternativa mais simples/segura/barata, procurar regressões de segurança, finanças, idempotência e UX.
+3. **Execução/validação:** confrontar código/schema real, executar somente o autorizado, testar/buildar, revisar o resultado e atualizar os arquivos de estado.
+
+Trabalho reversível, sem custo e sem impacto externo irreversível pode ser executado autonomamente na branch autorizada. DDL LIVE, secrets, gasto, publicação financeira, dados destrutivos e decisões de negócio não resolvidas continuam Human Gate.
+
+# 14. ECONOMIA DE CLAUDE
+
+ChatGPT deve executar diretamente tudo que conseguir com GitHub, Supabase, Vercel e demais ferramentas conectadas.
+
+Claude Code só deve ser acionado quando houver uma necessidade real de ambiente local ou capacidade ausente. Quando necessário:
+- enviar uma **tarefa longa/coerente**, não várias microtarefas;
+- lembrar Claude de usar ferramentas/plugins/skills já instalados, índices e caches;
+- evitar releitura de arquivos grandes e dumps repetidos;
+- trabalhar na branch, nunca na main;
+- atualizar docs/handoff e continuar até Human Gate real.

@@ -329,3 +329,12 @@
 - **Decisao 5:** Action Center deterministico primeiro: regras puras no app (com evidencia), ciclo de vida e historico no banco (um item ativo por chave; ignorar exige motivo; resolvido e final; historico append-only); regra cujo dado nao pôde ser lido NAO e avaliada (indisponivel != zero); nenhum alerta altera dado de negocio; sinais so por eventos/SLA objetivos, nunca desempenho subjetivo.
 - **Decisao 6:** CEP: consulta autenticada, sem chave, ao ViaCEP; so sugere; nunca sobrescreve o que a pessoa digitou/salvou; falha nao bloqueia; endereco no `customer_addresses` ja existente (auditar as tabelas LIVE antes de desenhar DDL).
 - **Decisao 7:** payout/snapshot (onda F) so DESENHADO em `docs/audits/AUDIT-2026-09-20-NEXT-WAVE-V3.md`: falta vincular usuarios a grupos; snapshot V3 vai em `proposal_commercial_snapshots` (nao em `proposals_v2.commercial_snapshot`, legivel por operador); ledger so a partir do snapshot congelado; base da comissao e decisao do Owner.
+
+
+## ADR-0026 - Product navigation by business domain + triple-review execution protocol
+- **Data:** 20/09/2026 - **Status:** aceita.
+- **Decisão 1:** navegação principal do Corban OS é por domínio de trabalho: Visão geral, CRM, Operacional, Financeiro, Cadastros, Relatórios, Configuração.
+- **Decisão 2:** cadastros e módulos detalhados ficam atrás de hubs; a página principal não vira lista infinita.
+- **Decisão 3:** páginas antigas continuam acessíveis; esta onda não migra nem apaga dados e não altera RLS.
+- **Decisão 4:** toda execução relevante passa por revisão de completude, adversarial e validação real antes de ser aceita.
+- **Decisão 5:** Claude não é executor padrão; só entra quando houver capacidade local necessária, sempre com fila longa e disciplina de contexto.

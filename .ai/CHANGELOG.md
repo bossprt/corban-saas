@@ -280,3 +280,11 @@ Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`)
 - Migrations preparadas (nao aplicadas): `20261004_commercial_bulk_import_v1` (importacao atomica), `20261005_ai_import_metering_v1` (memoria de mapeamento + creditos/metering de IA), `20261006_action_center_v1` (Central de atencao); harnesses rollback-only.
 - Biblioteca `src/lib/ai-import` (provider-agnostic, adapter Gemini sem chave) e `src/lib/attention-rules.ts`; pagina `/app/atencao`.
 - Auditoria e desenho da integracao de payout: `docs/audits/AUDIT-2026-09-20-NEXT-WAVE-V3.md`.
+
+
+### Alterado — 20/09/2026 (reestruturação de produto V1)
+- Menu principal reorganizado por áreas de negócio.
+- Adicionados hubs CRM, Operacional, Cadastros e Relatórios usando módulos já existentes.
+- Nenhum DDL, dado real, secret ou regra financeira alterados.
+- Protocolo de tripla revisão e economia de Claude registrado em RULES/CLAUDE-LONG-RUN.
+- Roadmap consolidado em `docs/PRODUCT-UX-RESTRUCTURE-V1.md`.
