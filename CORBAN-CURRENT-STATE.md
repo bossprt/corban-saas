@@ -283,3 +283,15 @@ Owner confirmed Vercel environment variables for Supabase URL, publishable/anon 
 - CEP automatico e guia do `/app/comercial` ja no app (sem DDL). Tres migrations PREPARADAS e NAO aplicadas: importacao atomica (20261004), fundacao IA + metering (20261005), Action Center (20261006); harnesses rollback-only ALL PASS. Unit 302/302, tsc, eslint, build verdes.
 - LIVE continua so com o Commercial Model V3 (20260920133017). Nenhuma chave Gemini, nenhum gasto, nenhuma mudanca financeira.
 - Auditoria: `docs/audits/AUDIT-2026-09-20-NEXT-WAVE-V3.md`; onda F (payout/snapshot/ledger) apenas desenhada.
+
+
+## 28. Next Wave V3 LIVE — 20/09/2026
+- LIVE migrations: `commercial_bulk_import_v1` = 20260920173825; `ai_import_metering_v1` = 20260920173830; `action_center_v1` = 20260920173835. Do not reapply.
+- Atomic commercial bulk import is live.
+- AI import mapping memory + metering/credits foundation are live, but AI remains OFF until configured; no Gemini secret has been registered and no paid call has been made.
+- Action Center persistence/governance is live.
+- Post-apply rollback harnesses: 22/22 bulk, 62/62 AI/metering, 54/54 Action Center.
+- RLS enabled on all newly checked AI/Action Center tables; SECURITY DEFINER inventory unchanged at 8 app functions.
+- Security Advisor has no WARN/ERROR; only known INFO for closed platform-admin tables.
+- Zero synthetic AI/attention data persisted after verification.
+- Remaining gates: Gemini secret, first paid call, credit tariff/monthly limits, and all Wave F financial/payout DDL.
