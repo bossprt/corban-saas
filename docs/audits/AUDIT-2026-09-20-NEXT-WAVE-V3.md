@@ -50,3 +50,17 @@
 2. Register the Gemini API key (secret) and wire `geminiMapper` in a server module.
 3. Authorize the first paid call and set the credit rate card + monthly ceilings (platform side).
 4. Any financial/payout DDL (wave F steps 1–3).
+
+
+## Independent ChatGPT verification — 20/09/2026
+
+After Claude's report, ChatGPT independently reran all three rollback-only migration harnesses against the LIVE schema without persisting DDL or test data.
+
+Results:
+- `20261004_commercial_bulk_import_v1`: initially reproduced 1 failing harness assertion. Root cause was a **same-statement snapshot visibility artifact in the test**, not a migration defect: the assertion called the mutating RPC and selected its newly written row inside the same SQL statement. The production behavior was debugged and confirmed correct (`ok`, 1 row created, tenant organization correct). The harness was fixed by splitting the call and read into separate statements, commit `b2d5253a9439326b2f1ed4e31390b1519ae5977a`. Re-run: **ALL PASS (22 checks)**.
+- `20261005_ai_import_metering_v1`: independent rollback-only re-run: **ALL PASS (62 checks)**.
+- `20261006_action_center_v1`: independent rollback-only re-run: **ALL PASS (54 checks)**.
+
+The final exception in each harness is the intentional rollback sentinel. No migration was applied LIVE and no synthetic test data persisted.
+
+Human Gate remains unchanged: explicit Owner authorization is still required before applying 20261004, 20261005 and 20261006 LIVE.
