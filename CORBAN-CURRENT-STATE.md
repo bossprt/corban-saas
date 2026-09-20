@@ -310,3 +310,20 @@ Prática obrigatória:
 - mudanças arquiteturais/invariantes -> ADR;
 - migrations LIVE devem registrar versão real do Supabase e "DO NOT REAPPLY";
 - nunca considerar uma decisão importante "salva" apenas porque apareceu no chat.
+
+
+## 29. UX Comercial reorganizada — 20/09/2026
+Implementado diretamente pelo ChatGPT na branch `architecture/corban-os-master-v2`, sem Claude e sem DDL:
+- Comercial principal usa cards/resumos para cadastros-base em vez de listas crescentes.
+- Novos gerenciadores dedicados:
+  - `/app/comercial/instituicoes`
+  - `/app/comercial/origens`
+  - `/app/comercial/convenios`
+  - `/app/comercial/grupos`
+- Gerenciadores têm cadastro, edição de nome e inativação/reativação.
+- Instituição/Origem fica separada visualmente de empresas de origem de terceiros.
+- Grupo de comissão: usuário informa nome + como o percentual é lido; classificação técnica `kind` não é mais decisão obrigatória de UX.
+- Política de repasse foi simplificada na UI para “Regra padrão de comissão (opcional)”.
+- Importação em massa CSV/XLSX foi promovida como caminho principal das condições de tabela; cadastro manual permanece disponível.
+- Nenhum registro real foi reclassificado/apagado automaticamente.
+- Hope cadastrada incorretamente como provider permanece inativa até autorização explícita para exclusão.
