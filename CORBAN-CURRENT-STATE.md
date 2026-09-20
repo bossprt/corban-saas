@@ -263,6 +263,6 @@ Owner confirmed Vercel environment variables for Supabase URL, publishable/anon 
 - Próxima onda deve começar por auditoria de impacto e migration plan. Nenhuma DDL LIVE autorizada por esta decisão.
 
 ## 27. Commercial Model V3 implementado na branch — 26/09/2026
-- Migration `20261002_commercial_model_v3_foundation_v1` PREPARADA (NÃO aplicada LIVE). Harness rollback-only: ALL PASS (100 checks), sem resíduo. Unit 257/257, tsc, eslint, build verdes.
+- Migration `20261002_commercial_model_v3_foundation_v1` PREPARADA (NÃO aplicada LIVE). Harness rollback-only: ALL PASS (139 checks), sem resíduo. Unit 263/263, tsc, eslint, build verdes. Inclui política de repasse versionada (base bruta/líquida) e Origem da Produção Própria/Terceiro (doc V3 §19–§20).
 - App: `/app/comercial` (bancos, provedores, convênios nacionais 27+26 e próprios, grupos de comissão dinâmicos, tabelas, condição única com todos os grupos, importação CSV/XLSX com uma coluna por grupo, publicação); simulação por condição; configuração V3.
 - LIVE continua no modelo antigo até o Human Gate de aplicação. Grupos ainda não alimentam snapshot/split/repasse.

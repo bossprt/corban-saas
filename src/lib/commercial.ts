@@ -37,28 +37,52 @@ export function scaled(dec: string): bigint {
   return BigInt(i) * FACTOR + BigInt((f + '000000').slice(0, 6))
 }
 const HUNDRED = BigInt(100) * FACTOR
+export function fromScaled(v: bigint): string {
+  const i = v / FACTOR, f = String(v % FACTOR).padStart(6, '0').replace(/0+$/, '')
+  return f ? `${i}.${f}` : String(i)
+}
 
-export type ShareError = 'invalid_shares' | 'duplicate_group_share' | 'commission_group_not_found' | 'production_shares_exceed_received_commission' | 'received_commission_shares_exceed_100'
-// Mirrors the RPC: each calculation basis is validated on its own, never added to the other.
-export function validateShares(groups: readonly GroupRef[], shares: readonly ShareInput[], received: string): ShareError | null {
+export type ShareError = 'invalid_shares' | 'duplicate_group_share' | 'commission_group_not_found' | 'production_shares_exceed_received_commission' | 'policy_group_inactive'
+export type ShareSource = 'manual' | 'policy' | 'override'
+export type PolicyRef = { baseKind: 'gross' | 'net'; discountPct: string; items: readonly ShareInput[] }
+export type ResolvedShare = { group_id: string; pct: string; source: ShareSource; effective: string }
+
+// Base for the received-basis groups: the gross received commission, or the net base after the policy's tax/discount (net = received x (1 - discount/100), half-up at 6 places).
+export function netBase(received: string, policy?: Pick<PolicyRef, 'baseKind' | 'discountPct'>): bigint {
+  const r = scaled(received)
+  if (!policy || policy.baseKind !== 'net') return r
+  return (r * (HUNDRED - scaled(policy.discountPct)) + HUNDRED / BigInt(2)) / HUNDRED
+}
+// What a received-basis group really gets as a share of the production: base x pct / 100, half-up at 6 places (identical to round(numeric, 6) in the database).
+export const effectiveOf = (base: bigint, pct: string): bigint => (base * scaled(pct) + HUNDRED / BigInt(2)) / HUNDRED
+
+// Mirror of save_commercial_condition. Groups are ALTERNATIVE sellers of the same operation (Corretor OR Parceiro OR Balcao), so the cap is PER GROUP:
+// a production-basis percentage cannot exceed the commission the company received; a received-basis percentage is 0..100 of the base. Nothing is summed across groups.
+export function resolveShares(groups: readonly (GroupRef & { active?: boolean })[], explicit: readonly ShareInput[], received: string, policy?: PolicyRef): { rows: ResolvedShare[]; error: ShareError | null } {
   const byId = new Map(groups.map(g => [g.id, g]))
   const seen = new Set<string>()
-  let prod = BigInt(0), rc = BigInt(0)
-  for (const s of shares) {
+  const rows: { group_id: string; pct: string; source: ShareSource }[] = []
+  const inPolicy = new Set((policy?.items ?? []).map(i => i.group_id))
+  for (const s of explicit) {
     const pct = parsePercent(s.pct)
-    if (pct === null) return 'invalid_shares'
-    if (seen.has(s.group_id)) return 'duplicate_group_share'
+    if (pct === null || scaled(pct) > HUNDRED) return { rows: [], error: 'invalid_shares' }
+    if (seen.has(s.group_id)) return { rows: [], error: 'duplicate_group_share' }
     seen.add(s.group_id)
-    const g = byId.get(s.group_id)
-    if (!g) return 'commission_group_not_found'
-    const v = scaled(pct)
-    if (v > HUNDRED) return 'invalid_shares'
-    if (g.basis === 'percent_of_production') prod += v; else rc += v
+    rows.push({ group_id: s.group_id, pct, source: policy && inPolicy.has(s.group_id) ? 'override' : 'manual' })
   }
-  if (prod > scaled(received)) return 'production_shares_exceed_received_commission'
-  if (rc > HUNDRED) return 'received_commission_shares_exceed_100'
-  return null
+  for (const i of policy?.items ?? []) if (!seen.has(i.group_id)) { seen.add(i.group_id); rows.push({ group_id: i.group_id, pct: i.pct, source: 'policy' }) }
+  const base = netBase(received, policy)
+  const out: ResolvedShare[] = []
+  for (const r of rows) {
+    const g = byId.get(r.group_id)
+    if (!g || g.active === false) return { rows: [], error: r.source === 'policy' ? 'policy_group_inactive' : 'commission_group_not_found' }
+    const eff = g.basis === 'percent_of_production' ? scaled(r.pct) : effectiveOf(base, r.pct)
+    if (g.basis === 'percent_of_production' && scaled(r.pct) > scaled(received)) return { rows: [], error: 'production_shares_exceed_received_commission' }
+    out.push({ group_id: r.group_id, pct: r.pct, source: r.source, effective: fromScaled(eff) })
+  }
+  return { rows: out, error: null }
 }
+export const validateShares = (groups: readonly GroupRef[], shares: readonly ShareInput[], received: string, policy?: PolicyRef): ShareError | null => resolveShares(groups, shares, received, policy).error
 
 // ---------------------------------------------------------------- file import (CSV / XLSX rows) with ONE COLUMN PER COMMISSION GROUP
 export const normalizeHeader = (s: unknown) => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
@@ -84,7 +108,7 @@ export function parseDelimited(text: string): string[][] {
   return rows.filter(r => r.some(x => x.trim() !== ''))
 }
 
-export type ParsedCondition = { line: number; contractTypeId: string; term: number; coefficient: string | null; rate: string | null; received: string; shares: ShareInput[] }
+export type ParsedCondition = { line: number; contractTypeId: string; term: number; coefficient: string | null; rate: string | null; received: string; shares: ShareInput[]; resolved: ResolvedShare[] }
 export type ImportIssue = { line: number; code: string; detail?: string }
 export const IMPORT_MAX_ROWS = 500
 
@@ -96,7 +120,7 @@ const ALIASES = {
   received: ['comissao_recebida', 'comissao', 'comissao_do_banco'],
 } as const
 
-export function mapConditionRows(rows: readonly (readonly unknown[])[], ctx: { groups: readonly GroupRef[]; contractTypes: readonly ContractTypeRef[] }): { conditions: ParsedCondition[]; issues: ImportIssue[] } {
+export function mapConditionRows(rows: readonly (readonly unknown[])[], ctx: { groups: readonly GroupRef[]; contractTypes: readonly ContractTypeRef[]; policy?: PolicyRef }): { conditions: ParsedCondition[]; issues: ImportIssue[] } {
   const issues: ImportIssue[] = []
   const fail = (line: number, code: string, detail?: string) => { issues.push({ line, code, detail }) }
   if (rows.length < 2) { fail(1, 'file_without_rows'); return { conditions: [], issues } }
@@ -151,12 +175,12 @@ export function mapConditionRows(rows: readonly (readonly unknown[])[], ctx: { g
       if (pct === null) return fail(line, 'invalid_shares', g.name)
       shares.push({ group_id: g.id, pct })
     }
-    const err = validateShares(ctx.groups, shares, received)
-    if (err) return fail(line, err)
+    const res = resolveShares(ctx.groups, shares, received, ctx.policy)
+    if (res.error) return fail(line, res.error)
     const key = `${type.id}|${term}`
     if (seen.has(key)) return fail(line, 'duplicate_row')
     seen.add(key)
-    conditions.push({ line, contractTypeId: type.id, term, coefficient, rate, received, shares })
+    conditions.push({ line, contractTypeId: type.id, term, coefficient, rate, received, shares, resolved: res.rows })
   })
   return { conditions: issues.length ? [] : conditions, issues }
 }
@@ -180,7 +204,7 @@ export const IMPORT_ISSUE_TEXT: Record<string, string> = {
   invalid_shares: 'Percentual de grupo inválido.',
   duplicate_group_share: 'Grupo repetido.',
   commission_group_not_found: 'Grupo de comissão não encontrado ou inativo.',
-  production_shares_exceed_received_commission: 'A soma dos grupos sobre produção passa da comissão recebida.',
-  received_commission_shares_exceed_100: 'A soma dos grupos sobre a comissão recebida passa de 100%.',
+  production_shares_exceed_received_commission: 'Um grupo recebe mais do que a comissão recebida pela empresa.',
+  policy_group_inactive: 'Um grupo da política de repasse está inativo.',
   duplicate_row: 'Mesmo Tipo de Contrato e prazo repetidos no arquivo.',
 }

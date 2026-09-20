@@ -3,19 +3,21 @@ import { requireAppContext } from '@/lib/appContext'
 import { atLeast, canViewCommission } from '@/lib/rbac'
 import { SubmitButton } from '@/components/SubmitButton'
 import { IMPORT_ISSUE_TEXT } from '@/lib/commercial'
-import { createAgreement, createBank, createCommercialTable, createCommissionGroup, createProvider, enableAgreementTemplate, importConditions, newDraftVersion, publishCommercialVersion, saveCondition, setActive } from './actions'
+import { createAgreement, createBank, createCommercialTable, createCommissionGroup, createProvider, enableAgreementTemplate, importConditions, newDraftVersion, publishCommercialVersion, saveCondition, savePayoutPolicy, setActive } from './actions'
 
 const field = 'rounded-lg border border-slate-700 bg-slate-950 p-2 text-sm'
 const card = 'rounded-2xl border border-slate-800 bg-slate-900 p-5'
 const btn = 'rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950'
 const ghost = 'rounded-lg border border-slate-700 px-3 py-2 text-sm'
 const VSTATUS: Record<string, string> = { draft: 'Rascunho', published: 'Publicada', superseded: 'Substituída', expired: 'Expirada' }
-const PROVIDER_TYPE: Record<string, string> = { bank_direct: 'Banco direto', master: 'Master', promotora: 'Promotora', other: 'Outro' }
+const PROVIDER_TYPE: Record<string, string> = { bank_direct: 'Banco direto', master: 'Master', promotora: 'Promotora', correspondent: 'Correspondente', partner: 'Parceiro', other: 'Outro' }
+const SOURCE: Record<string, string> = { manual: 'manual', policy: 'política', override: 'ajuste sobre a política' }
 const GROUP_KIND: Record<string, string> = { broker: 'Corretor', partner: 'Parceiro', referrer: 'Indicador', employee: 'Funcionário', sales_team: 'Equipe de vendas', counter: 'Balcão', supervisor: 'Supervisor', manager: 'Gerente', other: 'Outro' }
 const BASIS: Record<string, string> = { percent_of_production: '% sobre a produção', percent_of_received_commission: '% sobre a comissão recebida' }
 const show = (v: number | string | null | undefined) => (v === null || v === undefined ? '—' : String(v))
 
 type Group = { id: string; name: string; calculation_basis: string }
+type PolicyOpt = { versionId: string; name: string }
 type Condition = { id: string; contract_type_id: string; term: number; coefficient: number | null; rate: number | null }
 
 function ActiveToggle({ kind, id, active }: { kind: string; id: string; active: boolean }) {
@@ -23,8 +25,8 @@ function ActiveToggle({ kind, id, active }: { kind: string; id: string; active: 
     <button className="text-xs text-slate-400 underline">{active ? 'Desativar' : 'Reativar'}</button></form>
 }
 
-function ConditionForm({ versionId, contractTypes, groups, cond, received, shares }: {
-  versionId: string; contractTypes: { id: string; name: string }[]; groups: Group[]; cond?: Condition; received?: number | null; shares?: Map<string, number>
+function ConditionForm({ versionId, contractTypes, groups, policies, cond, received, shares, policyVersion }: {
+  versionId: string; contractTypes: { id: string; name: string }[]; groups: Group[]; policies: PolicyOpt[]; cond?: Condition; received?: number | null; shares?: Map<string, number>; policyVersion?: string | null
 }) {
   return <form action={saveCondition} className="grid gap-2 md:grid-cols-4">
     <input type="hidden" name="version_id" value={versionId} />{cond && <input type="hidden" name="condition_id" value={cond.id} />}
@@ -32,9 +34,10 @@ function ConditionForm({ versionId, contractTypes, groups, cond, received, share
     <input required name="term" inputMode="numeric" defaultValue={cond?.term ?? ''} placeholder="Prazo (meses)" className={field} />
     <input name="coefficient" inputMode="decimal" defaultValue={cond?.coefficient ?? ''} placeholder="Coeficiente" className={field} />
     <input name="rate" inputMode="decimal" defaultValue={cond?.rate ?? ''} placeholder="Taxa (%)" className={field} />
-    <input required name="received" inputMode="decimal" defaultValue={received ?? ''} placeholder="Comissão recebida (%)" className={`${field} md:col-span-4`} />
+    <input required name="received" inputMode="decimal" defaultValue={received ?? ''} placeholder="Comissão recebida (%)" className={`${field} md:col-span-2`} />
+    <select name="policy_version_id" defaultValue={policyVersion ?? ''} className={`${field} md:col-span-2`}><option value="">Sem política de repasse</option>{policies.map(p => <option key={p.versionId} value={p.versionId}>Política: {p.name}</option>)}</select>
     {groups.map(g => <label key={g.id} className="text-xs text-slate-400">{g.name} <span className="text-slate-500">({BASIS[g.calculation_basis] ?? g.calculation_basis})</span>
-      <input name={`g_${g.id}`} inputMode="decimal" defaultValue={shares?.get(g.id) ?? ''} placeholder="% (vazio = não participa)" className={`${field} mt-1 w-full`} /></label>)}
+      <input name={`g_${g.id}`} inputMode="decimal" defaultValue={shares?.get(g.id) ?? ''} placeholder={policies.length ? '% (vazio = política / não participa)' : '% (vazio = não participa)'} className={`${field} mt-1 w-full`} /></label>)}
     <SubmitButton className={`${ghost} md:col-span-4 md:justify-self-end`} pendingText="Salvando...">{cond ? 'Salvar alterações' : 'Adicionar condição'}</SubmitButton>
   </form>
 }
@@ -47,7 +50,7 @@ export default async function CommercialPage({ searchParams }: { searchParams: P
   if (!atLeast(membership.role, 'supervisor')) return <section><h1 className="text-3xl font-semibold">Modelo comercial</h1>
     <p role="alert" className="mt-3 rounded-xl border border-slate-800 p-5 text-sm text-slate-300">O modelo comercial é restrito a supervisor, gerente e administrador.</p></section>
 
-  const [banks, providers, agreements, templates, groups, contractTypes, routes, tables, versions, conditions, commissions, shares] = await Promise.all([
+  const [banks, providers, agreements, templates, groups, contractTypes, routes, tables, versions, conditions, commissions, shares, polRows, polVersions, polItems] = await Promise.all([
     supabase.from('organization_banks').select('id,name,is_active').order('name'),
     supabase.from('organization_providers').select('id,name,provider_type,is_active').order('name'),
     supabase.from('organization_agreements').select('id,name,template_id,is_active').order('name'),
@@ -58,8 +61,11 @@ export default async function CommercialPage({ searchParams }: { searchParams: P
     supabase.from('product_tables').select('id,route_id,name,status').order('name'),
     supabase.from('product_table_versions').select('id,product_table_id,version,status').order('version', { ascending: false }),
     supabase.from('commercial_conditions').select('id,product_table_version_id,contract_type_id,term,coefficient,rate').order('term'),
-    seeCommission ? supabase.from('commercial_condition_commissions').select('condition_id,received_commission_pct') : Promise.resolve({ data: [] as { condition_id: string; received_commission_pct: number }[] }),
-    seeCommission ? supabase.from('commercial_condition_shares').select('condition_id,group_id,share_pct') : Promise.resolve({ data: [] as { condition_id: string; group_id: string; share_pct: number }[] }),
+    seeCommission ? supabase.from('commercial_condition_commissions').select('condition_id,received_commission_pct,net_base_pct,policy_version_id') : Promise.resolve({ data: [] as { condition_id: string; received_commission_pct: number; net_base_pct: number; policy_version_id: string | null }[] }),
+    seeCommission ? supabase.from('commercial_condition_shares').select('condition_id,group_id,share_pct,effective_pct,source') : Promise.resolve({ data: [] as { condition_id: string; group_id: string; share_pct: number; effective_pct: number; source: string }[] }),
+    supabase.from('payout_policies').select('id,name,is_active').order('name'),
+    supabase.from('payout_policy_versions').select('id,policy_id,version,base_kind,discount_pct').order('version', { ascending: false }),
+    supabase.from('payout_policy_items').select('version_id,group_id,pct'),
   ])
   const nameOf = (rows: { id: string; name: string }[] | null) => new Map((rows ?? []).map(r => [r.id, r.name]))
   const bankN = nameOf(banks.data), provN = nameOf(providers.data), agrN = nameOf(agreements.data), typeN = nameOf(contractTypes.data), groupN = nameOf(groups.data)
@@ -70,8 +76,20 @@ export default async function CommercialPage({ searchParams }: { searchParams: P
   const routeLabel = new Map((routes.data ?? []).map(r => [r.id, `${bankN.get(r.org_bank_id) ?? 'Banco'} · ${agrN.get(r.org_agreement_id) ?? 'Convênio'}${r.org_provider_id ? ` · ${provN.get(r.org_provider_id) ?? 'Provedor'}` : ''}`]))
   const v3Tables = (tables.data ?? []).filter(t => routeLabel.has(t.route_id))
   const receivedBy = new Map((commissions.data ?? []).map(c => [c.condition_id, c.received_commission_pct]))
+  const policyOf = new Map((commissions.data ?? []).map(c => [c.condition_id, c.policy_version_id]))
+  // what the FORM pre-fills (only typed values; a policy-derived share stays blank so re-saving keeps following the policy) and what the list SHOWS (with the effective value)
   const sharesBy = new Map<string, Map<string, number>>()
-  for (const s of shares.data ?? []) { if (!sharesBy.has(s.condition_id)) sharesBy.set(s.condition_id, new Map()); sharesBy.get(s.condition_id)!.set(s.group_id, s.share_pct) }
+  const shownBy = new Map<string, { group_id: string; share_pct: number; effective_pct: number; source: string }[]>()
+  for (const s of shares.data ?? []) {
+    if (s.source !== 'policy') { if (!sharesBy.has(s.condition_id)) sharesBy.set(s.condition_id, new Map()); sharesBy.get(s.condition_id)!.set(s.group_id, s.share_pct) }
+    shownBy.set(s.condition_id, [...(shownBy.get(s.condition_id) ?? []), s])
+  }
+  const receivedGroups = activeGroups.filter(g => g.calculation_basis === 'percent_of_received_commission')
+  const policies = (polRows.data ?? []).map(p => {
+    const latest = (polVersions.data ?? []).find(v => v.policy_id === p.id)
+    return { ...p, latest, items: latest ? (polItems.data ?? []).filter(i => i.version_id === latest.id) : [] }
+  })
+  const policyOpts: PolicyOpt[] = policies.filter(p => p.is_active && p.latest).map(p => ({ versionId: p.latest!.id, name: p.name }))
   const importIssue = typeof sp.c === 'string' && Object.prototype.hasOwnProperty.call(IMPORT_ISSUE_TEXT, sp.c) ? IMPORT_ISSUE_TEXT[sp.c] : null
   const importLine = typeof sp.l === 'string' && /^\d{1,5}$/.test(sp.l) ? sp.l : null
 
@@ -79,6 +97,7 @@ export default async function CommercialPage({ searchParams }: { searchParams: P
     <h1 className="text-3xl font-semibold">Modelo comercial</h1>
     <p className="mt-2 text-sm text-slate-400">Banco → Convênio → Tabela → Tipo de Contrato → Prazo → Coeficiente/Taxa → Comissão recebida → Grupos de comissão. Tudo é da sua organização; os códigos técnicos são gerados pelo sistema.</p>
     {!canEdit && <p className="mt-3 rounded-xl border border-slate-800 p-3 text-xs text-slate-400">Seu perfil só consulta. Cadastros e condições são de gerente/administrador.</p>}
+    {sp.f === 'ok:previa_validada' && typeof sp.n === 'string' && /^\d{1,5}$/.test(sp.n) && <p className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm text-emerald-200">Prévia: {sp.n} condição(ões) válida(s){typeof sp.u === 'string' && /^\d{1,5}$/.test(sp.u) && Number(sp.u) > 0 ? `, ${sp.u} já existem e serão atualizadas` : ''}. Nada foi gravado.</p>}
     {importIssue && <p role="alert" className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-200">Importação recusada{importLine ? ` — linha ${importLine}` : ''}: {importIssue}{typeof sp.n === 'string' && /^\d{1,5}$/.test(sp.n) && Number(sp.n) > 1 ? ` (${sp.n} problemas no total; corrija e envie de novo)` : ''}</p>}
 
     <h2 className="mt-8 text-xl font-semibold">1. Bancos e provedores</h2>
@@ -110,7 +129,21 @@ export default async function CommercialPage({ searchParams }: { searchParams: P
         <select name="calculation_basis" defaultValue="percent_of_production" className={field}>{Object.entries(BASIS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select><SubmitButton className={btn}>Cadastrar grupo</SubmitButton></form>}
     </div>
 
-    <h2 className="mt-8 text-xl font-semibold">4. Tabelas e condições</h2>
+    <h2 className="mt-8 text-xl font-semibold">4. Política de repasse</h2>
+    <div className={`${card} mt-3 space-y-3 text-sm`}>
+      <p className="text-xs text-slate-500">Quanto de cada comissão recebida vai para cada grupo (ex.: Parceiro 80%, Balcão 50%). Cada grupo é uma alternativa de venda, por isso os percentuais não somam 100%. Uma política salva vale para muitas condições; salvar de novo cria uma nova versão e nada do que já foi cadastrado muda.</p>
+      {!policies.length ? <p className="text-slate-400">Nenhuma política ainda.</p> : <ul className="space-y-1">{policies.map(p => <li key={p.id}><strong>{p.name}</strong> <span className="text-xs text-slate-500">· v{p.latest?.version ?? '—'} · {p.latest?.base_kind === 'net' ? `base líquida (desconto ${p.latest.discount_pct}%)` : 'base bruta'}{!p.is_active ? ' · inativa' : ''} · {(p.items ?? []).map(i => `${groupN.get(i.group_id) ?? 'grupo'} ${i.pct}%`).join(', ') || 'sem grupos'}</span></li>)}</ul>}
+      {canEdit && (receivedGroups.length ? <form action={savePayoutPolicy} className="grid gap-2 md:grid-cols-4">
+        <select name="policy_id" defaultValue="" className={`${field} md:col-span-2`}><option value="">Nova política</option>{policies.filter(p => p.is_active).map(p => <option key={p.id} value={p.id}>Nova versão de: {p.name}</option>)}</select>
+        <input name="name" maxLength={80} placeholder="Nome (só para política nova)" className={`${field} md:col-span-2`} />
+        <select name="base_kind" defaultValue="gross" className={field}><option value="gross">Base bruta</option><option value="net">Base líquida (após imposto/desconto)</option></select>
+        <input name="discount" inputMode="decimal" placeholder="Imposto/desconto (%) se líquida" className={field} />
+        {receivedGroups.map(g => <label key={g.id} className="text-xs text-slate-400">{g.name}<input name={`p_${g.id}`} inputMode="decimal" placeholder="% da comissão recebida" className={`${field} mt-1 w-full`} /></label>)}
+        <SubmitButton className={`${btn} md:col-span-4 md:justify-self-end`} pendingText="Salvando...">Salvar política</SubmitButton>
+      </form> : <p className="text-xs text-amber-200">Cadastre pelo menos um grupo calculado sobre a comissão recebida para criar uma política.</p>)}
+    </div>
+
+    <h2 className="mt-8 text-xl font-semibold">5. Tabelas e condições</h2>
     <div className="mt-3 space-y-3">
       {!v3Tables.length && <p className={`${card} text-sm text-slate-400`}>Nenhuma tabela ainda. Escolha banco e convênio, dê um nome e crie a tabela.</p>}
       {v3Tables.map(t => <div key={t.id} className={card}>
@@ -122,15 +155,17 @@ export default async function CommercialPage({ searchParams }: { searchParams: P
               {v.status === 'draft' && canEdit && <form action={publishCommercialVersion}><input type="hidden" name="version_id" value={v.id} /><SubmitButton className="rounded border border-emerald-500/60 px-2 py-1 text-xs text-emerald-300" pendingText="Publicando...">Publicar</SubmitButton></form>}</div>
             <ul className="mt-2 space-y-2 text-sm">{conds.map(c => <li key={c.id}>
               <span>{typeN.get(c.contract_type_id) ?? 'Tipo'} · {c.term} meses · coeficiente {show(c.coefficient)} · taxa {show(c.rate)}
-                {seeCommission && <> · comissão recebida {show(receivedBy.get(c.id))}%{[...(sharesBy.get(c.id) ?? [])].map(([gid, pct]) => <span key={gid} className="ml-2 text-xs text-slate-400">{groupN.get(gid) ?? 'grupo'} {pct}%</span>)}</>}</span>
-              {v.status === 'draft' && canEdit && <details className="mt-1"><summary className="cursor-pointer text-xs text-slate-400">Editar</summary><div className="mt-2"><ConditionForm versionId={v.id} contractTypes={contractTypes.data ?? []} groups={activeGroups} cond={c} received={receivedBy.get(c.id)} shares={sharesBy.get(c.id)} /></div></details>}
+                {seeCommission && <> · comissão recebida {show(receivedBy.get(c.id))}%{(shownBy.get(c.id) ?? []).map(s => <span key={s.group_id} className="ml-2 text-xs text-slate-400">{groupN.get(s.group_id) ?? 'grupo'} {s.share_pct}% (= {s.effective_pct}% da produção · {SOURCE[s.source] ?? s.source})</span>)}</>}</span>
+              {v.status === 'draft' && canEdit && <details className="mt-1"><summary className="cursor-pointer text-xs text-slate-400">Editar</summary><div className="mt-2"><ConditionForm versionId={v.id} contractTypes={contractTypes.data ?? []} groups={activeGroups} policies={policyOpts} cond={c} received={receivedBy.get(c.id)} shares={sharesBy.get(c.id)} policyVersion={policyOf.get(c.id)} /></div></details>}
             </li>)}</ul>
             {v.status === 'draft' && canEdit && <div className="mt-3 space-y-3">
               {!activeGroups.length && <p className="text-xs text-amber-200">Cadastre pelo menos um grupo de comissão para registrar as participações.</p>}
-              <ConditionForm versionId={v.id} contractTypes={contractTypes.data ?? []} groups={activeGroups} />
+              <ConditionForm versionId={v.id} contractTypes={contractTypes.data ?? []} groups={activeGroups} policies={policyOpts} />
               <form action={importConditions} className="flex flex-wrap items-center gap-2 text-xs text-slate-400"><input type="hidden" name="version_id" value={v.id} /><input required type="file" name="file" accept=".csv,.xlsx,text/csv" className="text-xs" />
-                <SubmitButton className={ghost} pendingText="Importando...">Importar CSV/XLSX</SubmitButton>
-                <span>Colunas: Tipo de Contrato, Prazo, Coeficiente, Taxa, Comissão recebida e uma coluna por grupo ({activeGroups.map(g => g.name).join(', ') || 'nenhum grupo'}).</span></form></div>}
+                <select name="policy_version_id" defaultValue="" className={field}><option value="">Sem política de repasse</option>{policyOpts.map(p => <option key={p.versionId} value={p.versionId}>Política: {p.name}</option>)}</select>
+                <button name="mode" value="preview" className={ghost}>Validar (prévia, não grava)</button>
+                <button name="mode" value="apply" className={ghost}>Importar</button>
+                <span>Colunas: Tipo de Contrato, Prazo, Coeficiente, Taxa, Comissão recebida e, se quiser, uma coluna por grupo ({activeGroups.map(g => g.name).join(', ') || 'nenhum grupo'}). Uma política escolhida preenche os grupos que o arquivo deixar vazios.</span></form></div>}
           </div>
         })}
         {canEdit && <form action={newDraftVersion} className="mt-3"><input type="hidden" name="table_id" value={t.id} /><SubmitButton className={ghost}>Nova versão (rascunho)</SubmitButton></form>}
@@ -138,8 +173,9 @@ export default async function CommercialPage({ searchParams }: { searchParams: P
       {canEdit && <form action={createCommercialTable} className={`${card} grid gap-2 md:grid-cols-4`}>
         <select required name="bank_id" defaultValue="" className={field}><option value="" disabled>Banco</option>{(banks.data ?? []).filter(b => b.is_active).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select>
         <select required name="agreement_id" defaultValue="" className={field}><option value="" disabled>Convênio</option>{(agreements.data ?? []).filter(a => a.is_active).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select>
-        <select name="provider_id" defaultValue="" className={field}><option value="">Sem provedor</option>{(providers.data ?? []).filter(p => p.is_active).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
-        <input required name="name" maxLength={120} placeholder="Nome da tabela" className={field} />
+        <select required name="production_origin" defaultValue="" className={field}><option value="" disabled>Origem da produção</option><option value="own">Própria</option><option value="third_party">Terceiro</option></select>
+        <select name="provider_id" defaultValue="" className={field}><option value="">Empresa de origem (se Terceiro)</option>{(providers.data ?? []).filter(p => p.is_active).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
+        <input required name="name" maxLength={120} placeholder="Nome da tabela" className={`${field} md:col-span-2`} />
         <SubmitButton className={`${btn} md:col-span-4 md:justify-self-end`}>Criar tabela</SubmitButton>
         <p className="text-xs text-slate-500 md:col-span-4">A simulação usa a versão PUBLICADA: valor × coeficiente = parcela. Comissão nunca aparece para o operador.</p>
       </form>}

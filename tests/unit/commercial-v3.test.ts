@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { IMPORT_ISSUE_TEXT, IMPORT_MAX_ROWS, mapConditionRows, normalizeHeader, parseCoefficient, parseDecimal, parseDelimited, parsePercent, parseRate, parseTerm, scaled, validateShares, type GroupRef } from '../../src/lib/commercial'
+import { IMPORT_ISSUE_TEXT, IMPORT_MAX_ROWS, effectiveOf, fromScaled, mapConditionRows, netBase, normalizeHeader, parseCoefficient, parseDecimal, parseDelimited, parsePercent, parseRate, parseTerm, resolveShares, scaled, validateShares, type GroupRef, type PolicyRef } from '../../src/lib/commercial'
 import { FEEDBACK, isFeedbackCode } from '../../src/lib/feedback'
 import { setupItems, STANDARD_STAGES } from '../../src/lib/catalog'
 import { TENANT_FREE_TABLES } from '../../src/lib/tenant'
@@ -38,17 +38,57 @@ test('term is an integer 1..600', () => {
   for (const [v, want] of [['84', 84], ['1', 1], ['600', 600], ['0', null], ['601', null], ['12.5', null], ['-3', null], ['abc', null], ['', null]] as const) assert.equal(parseTerm(v), want, v)
 })
 
-// ---- share semantics: each basis on its own (mirror of save_commercial_condition)
-test('shares: production shares are capped by the received commission; received-commission shares by 100; never mixed', () => {
+// ---- share semantics: groups are ALTERNATIVE sellers (mirror of save_commercial_condition); the cap is per group, never a sum
+const R: GroupRef[] = [...G, { id: 'g-balcao', name: 'Balcão', basis: 'percent_of_received_commission' }, { id: 'g-indicador', name: 'Indicador', basis: 'percent_of_received_commission' }]
+test('shares: each group is capped on its own (production % <= commission received; received % <= 100); nothing is summed across groups', () => {
   assert.equal(validateShares(G, [{ group_id: 'g-corretor', pct: '4' }, { group_id: 'g-parceiro', pct: '45.5' }, { group_id: 'g-gerente', pct: '0.2' }], '7'), null)
-  assert.equal(validateShares(G, [{ group_id: 'g-corretor', pct: '4' }, { group_id: 'g-gerente', pct: '3.5' }], '7'), 'production_shares_exceed_received_commission')
-  assert.equal(validateShares(G, [{ group_id: 'g-corretor', pct: '4' }, { group_id: 'g-gerente', pct: '3' }], '7'), null) // exactly equal is fine
-  assert.equal(validateShares(G, [{ group_id: 'g-parceiro', pct: '100' }], '0'), null) // 100% of the commission received with zero production shares
+  // the V3 document row pays 4 + 3.5 + 1 + 2 + 0.3 + 0.2 = 11% against 7% received: legitimate, they are alternatives
+  assert.equal(validateShares(G, [{ group_id: 'g-corretor', pct: '4' }, { group_id: 'g-gerente', pct: '3.5' }], '7'), null)
+  assert.equal(validateShares(G, [{ group_id: 'g-corretor', pct: '7' }], '7'), null) // exactly the commission received is fine
+  assert.equal(validateShares(G, [{ group_id: 'g-corretor', pct: '7.000001' }], '7'), 'production_shares_exceed_received_commission')
+  assert.equal(validateShares(G, [{ group_id: 'g-parceiro', pct: '100' }], '0'), null)
   assert.equal(validateShares(G, [{ group_id: 'g-parceiro', pct: '101' }], '7'), 'invalid_shares')
   assert.equal(validateShares(G, [{ group_id: 'g-parceiro', pct: '60' }, { group_id: 'g-parceiro', pct: '10' }], '7'), 'duplicate_group_share')
   assert.equal(validateShares(G, [{ group_id: 'nope', pct: '1' }], '7'), 'commission_group_not_found')
   assert.equal(validateShares(G, [{ group_id: 'g-corretor', pct: 'x' }], '7'), 'invalid_shares')
   assert.equal(validateShares(G, [], '7'), null)
+})
+test('payout policy: group commission = base x percentage of the RECEIVED commission (Owner example: 10% received)', () => {
+  const policy: PolicyRef = { baseKind: 'gross', discountPct: '0', items: [{ group_id: 'g-balcao', pct: '50' }, { group_id: 'g-indicador', pct: '25' }, { group_id: 'g-parceiro', pct: '80' }] }
+  const r = resolveShares(R, [], '10', policy)
+  assert.equal(r.error, null)
+  const eff = Object.fromEntries(r.rows.map(x => [x.group_id, x.effective]))
+  assert.deepEqual(eff, { 'g-balcao': '5', 'g-indicador': '2.5', 'g-parceiro': '8' })
+  assert.ok(r.rows.every(x => x.source === 'policy'))
+  // 65% Corretor is 6.5% of the production when the company received 10% (Corretor read on the received commission)
+  const corretorRc: GroupRef[] = [{ id: 'c', name: 'Corretor RC', basis: 'percent_of_received_commission' }]
+  assert.equal(resolveShares(corretorRc, [{ group_id: 'c', pct: '65' }], '10').rows[0].effective, '6.5')
+})
+test('payout policy: net base applies the tax/discount first (10% received, 10% tax -> 9% base; 65% of it = 5.85%); gross and net are never mixed', () => {
+  assert.equal(fromScaled(netBase('10', { baseKind: 'net', discountPct: '10' })), '9')
+  assert.equal(fromScaled(netBase('10', { baseKind: 'gross', discountPct: '10' })), '10') // a gross policy ignores any discount
+  const net: PolicyRef = { baseKind: 'net', discountPct: '10', items: [{ group_id: 'g-parceiro', pct: '80' }] }
+  assert.equal(resolveShares(R, [], '10', net).rows[0].effective, '7.2')
+  const c: GroupRef[] = [{ id: 'c', name: 'C', basis: 'percent_of_received_commission' }]
+  assert.equal(resolveShares(c, [], '10', { baseKind: 'net', discountPct: '10', items: [{ group_id: 'c', pct: '65' }] }).rows[0].effective, '5.85')
+})
+test('payout policy: rounding is half-up at 6 places, identical to round(numeric, 6) in the database; sums are exact', () => {
+  assert.equal(fromScaled(effectiveOf(scaled('7'), '45.5')), '3.185')
+  assert.equal(fromScaled(effectiveOf(scaled('0.000001'), '50')), '0.000001') // 0.0000005 rounds half up
+  assert.equal(fromScaled(effectiveOf(scaled('0.000001'), '49.9')), '0')
+  assert.equal(fromScaled(scaled('12.345678')), '12.345678')
+  assert.equal(fromScaled(scaled('7.500000')), '7.5')
+})
+test('payout policy: an explicit value overrides the policy for that group only (traceable), a production group stays manual, an inactive policy group is refused', () => {
+  const policy: PolicyRef = { baseKind: 'gross', discountPct: '0', items: [{ group_id: 'g-parceiro', pct: '80' }, { group_id: 'g-balcao', pct: '50' }] }
+  const r = resolveShares(R, [{ group_id: 'g-parceiro', pct: '70' }, { group_id: 'g-corretor', pct: '4' }], '10', policy)
+  assert.equal(r.error, null)
+  const by = Object.fromEntries(r.rows.map(x => [x.group_id, x]))
+  assert.deepEqual([by['g-parceiro'].source, by['g-parceiro'].effective], ['override', '7'])
+  assert.deepEqual([by['g-corretor'].source, by['g-corretor'].effective], ['manual', '4'])
+  assert.deepEqual([by['g-balcao'].source, by['g-balcao'].effective], ['policy', '5'])
+  const inactive = R.filter(g => g.id !== 'g-balcao')
+  assert.equal(resolveShares(inactive, [], '10', policy).error, 'policy_group_inactive')
 })
 
 // ---- CSV
@@ -69,7 +109,9 @@ test('import: one row carries the received commission and every group at once (t
   const r = mapConditionRows([HEAD, ['Novo', '84', '0,01234567', '1,85', '7', '4', '45,5', '0,2'], ['Portabilidade', '96', '', '1,5', '5', '', '', '']], ctx)
   assert.deepEqual(r.issues, [])
   assert.equal(r.conditions.length, 2)
-  assert.deepEqual(r.conditions[0], { line: 2, contractTypeId: 't-novo', term: 84, coefficient: '0.01234567', rate: '1.85', received: '7', shares: [{ group_id: 'g-corretor', pct: '4' }, { group_id: 'g-parceiro', pct: '45.5' }, { group_id: 'g-gerente', pct: '0.2' }] })
+  const { resolved, ...first } = r.conditions[0]
+  assert.deepEqual(first, { line: 2, contractTypeId: 't-novo', term: 84, coefficient: '0.01234567', rate: '1.85', received: '7', shares: [{ group_id: 'g-corretor', pct: '4' }, { group_id: 'g-parceiro', pct: '45.5' }, { group_id: 'g-gerente', pct: '0.2' }] })
+  assert.deepEqual(resolved.map(x => [x.group_id, x.effective]), [['g-corretor', '4'], ['g-parceiro', '3.185'], ['g-gerente', '0.2']]) // 7% x 45.5% = 3.185%
   assert.deepEqual(r.conditions[1].shares, []) // blank group cell = not part of the condition, NOT zero
   assert.equal(r.conditions[1].coefficient, null)
 })
@@ -105,7 +147,7 @@ test('import: size limit and empty file', () => {
   assert.equal(mapConditionRows([HEAD], ctx).issues[0].code, 'file_without_rows')
 })
 test('every import issue code has operator text', () => {
-  const codes = ['file_without_rows', 'too_many_rows', 'ambiguous_group_names', 'duplicate_column', 'unknown_column', 'missing_column_contract', 'missing_column_term', 'missing_column_received', 'missing_column_coefficient_or_rate', 'unknown_contract_type', 'invalid_term', 'invalid_number', 'coefficient_or_rate_required', 'invalid_received_commission', 'invalid_shares', 'duplicate_group_share', 'commission_group_not_found', 'production_shares_exceed_received_commission', 'received_commission_shares_exceed_100', 'duplicate_row']
+  const codes = ['file_without_rows', 'too_many_rows', 'ambiguous_group_names', 'duplicate_column', 'unknown_column', 'missing_column_contract', 'missing_column_term', 'missing_column_received', 'missing_column_coefficient_or_rate', 'unknown_contract_type', 'invalid_term', 'invalid_number', 'coefficient_or_rate_required', 'invalid_received_commission', 'invalid_shares', 'duplicate_group_share', 'commission_group_not_found', 'production_shares_exceed_received_commission', 'policy_group_inactive', 'duplicate_row']
   for (const c of codes) assert.ok(IMPORT_ISSUE_TEXT[c], c)
 })
 
@@ -143,7 +185,7 @@ test('the rollback harness covers the adversarial surface and ends with RAISE (n
 
 // ---- application wiring
 test('feedback: every database code the actions can surface has an operator message, and import/whitelist codes exist', () => {
-  for (const c of ['condition_already_exists', 'invalid_shares', 'duplicate_group_share', 'commission_group_not_found', 'production_shares_exceed_received_commission', 'received_commission_shares_exceed_100', 'invalid_term', 'coefficient_or_rate_required', 'invalid_received_commission', 'contract_type_not_found', 'condition_not_found', 'version_not_draft', 'national_template_not_available']) assert.ok(isFeedbackCode(`erro:com_${c}`), c)
+  for (const c of ['condition_already_exists', 'invalid_shares', 'duplicate_group_share', 'commission_group_not_found', 'production_shares_exceed_received_commission', 'policy_not_found', 'policy_group_inactive', 'policy_group_must_use_received_basis', 'invalid_policy', 'policy_already_exists', 'invalid_term', 'coefficient_or_rate_required', 'invalid_received_commission', 'contract_type_not_found', 'condition_not_found', 'version_not_draft', 'national_template_not_available']) assert.ok(isFeedbackCode(`erro:com_${c}`), c)
   for (const c of ['ok:banco_cadastrado', 'ok:provedor_cadastrado', 'ok:convenio_habilitado', 'ok:convenio_cadastrado', 'ok:grupo_cadastrado', 'ok:condicao_salva', 'ok:condicoes_importadas', 'erro:import_invalido', 'erro:import_arquivo']) assert.ok(isFeedbackCode(c), c)
   for (const v of Object.values(FEEDBACK)) assert.ok(!/[a-z]+_[a-z]+_[a-z]+/.test(v.replace(/https?:\S+/g, '')), `technical text leaked: ${v}`)
 })
@@ -185,4 +227,25 @@ test('simulation on a condition: governed RPC, amount as decimal string, conditi
   const p = read('src/app/app/simulacoes/page.tsx')
   assert.ok(!/commission|comiss/i.test(code(p)) || /Não calculado/.test(p))
   assert.ok(!/commercial_condition_(commissions|shares)/.test(p)) // the operator screen never reads commission or shares
+})
+test('import: a chosen payout policy fills the groups the file leaves blank; a typed column overrides it; nothing is typed per line', () => {
+  const policy: PolicyRef = { baseKind: 'gross', discountPct: '0', items: [{ group_id: 'g-parceiro', pct: '80' }] }
+  const r = mapConditionRows([['Tipo de Contrato', 'Prazo', 'Coeficiente', 'Comissão recebida', 'Parceiro'], ['Novo', '84', '0.02', '10', ''], ['Novo', '60', '0.02', '10', '70']], { groups: G, contractTypes: T, policy })
+  assert.deepEqual(r.issues, [])
+  assert.deepEqual(r.conditions[0].shares, []) // the file typed nothing: the database applies the policy
+  assert.deepEqual(r.conditions[0].resolved.map(x => [x.group_id, x.effective, x.source]), [['g-parceiro', '8', 'policy']])
+  assert.deepEqual(r.conditions[1].resolved.map(x => [x.group_id, x.effective, x.source]), [['g-parceiro', '7', 'override']])
+})
+test('production origin and payout policy are enforced by the database and offered by the app', () => {
+  const m = read(MIG)
+  assert.ok(/production_origin text check \(production_origin in \('own','third_party'\)\)/.test(m))
+  assert.ok(/production_origin is not null and \(\(production_origin='own' and org_provider_id is null\) or \(production_origin='third_party' and org_provider_id is not null\)\)/.test(m)) // NULL must not slip through the CHECK
+  assert.ok(/provider_type in \('bank_direct','master','promotora','correspondent','partner','other'\)/.test(m))
+  assert.ok(/payout_policy_versions_are_immutable/.test(m) && /create table public\.payout_policy_versions/.test(m) && /create table public\.payout_policy_items/.test(m))
+  for (const t of ['payout_policies', 'payout_policy_versions', 'payout_policy_items']) assert.ok(new RegExp(`alter table public\.${t} enable row level security`).test(m), t)
+  assert.ok(!/numeric\(\d+,\d+\)\s*\)?\s*check[^;]*float/i.test(m))
+  const a = read('src/app/app/comercial/actions.ts'), p = read('src/app/app/comercial/page.tsx')
+  assert.ok(/production_origin: origin/.test(a) && /rpc\('save_payout_policy'/.test(a) && /p_policy_version/.test(a) && /mode'\) === 'preview'/.test(a))
+  assert.ok(/name="production_origin"/.test(p) && /Própria/.test(p) && /Terceiro/.test(p) && /name="mode" value="preview"/.test(p))
+  assert.ok(!/from\('payout_polic[a-z_]*'\)\.(insert|update|delete)/.test(a)) // policies only through the governed RPC
 })
