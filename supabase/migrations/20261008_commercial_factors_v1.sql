@@ -103,6 +103,7 @@ begin
   if v_org is distinct from coalesce(new.organization_id,old.organization_id) then raise exception 'factor_profile_cross_tenant'; end if;
 
   if tg_op='INSERT' then
+    if current_user in ('authenticated','anon') and new.status<>'draft' then raise exception 'factor_batch_must_start_draft'; end if;
     if new.import_batch_id is not null then
       select organization_id into v_org from public.import_batches where id=new.import_batch_id;
       if v_org is distinct from new.organization_id then raise exception 'factor_import_batch_cross_tenant'; end if;
@@ -128,6 +129,9 @@ begin
      or new.created_at is distinct from old.created_at
   then raise exception 'factor_batch_identity_is_immutable'; end if;
   if old.status='draft' and new.status='published' then
+    if current_user in ('authenticated','anon') and current_setting('corban.factor_publish',true) is distinct from 'on' then
+      raise exception 'factor_publish_requires_governed_rpc';
+    end if;
     new.published_at:=coalesce(new.published_at,now());
   elsif new.status is distinct from old.status then
     raise exception 'invalid_factor_batch_transition';
@@ -179,7 +183,9 @@ begin
   ) into v_overlap;
   if v_overlap then raise exception 'factor_term_ranges_overlap'; end if;
 
+  perform set_config('corban.factor_publish','on',true);
   update public.commercial_factor_batches set status='published',published_at=now() where id=b.id;
+  perform set_config('corban.factor_publish','off',true);
   return b.id;
 end $$;
 
