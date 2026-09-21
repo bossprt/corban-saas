@@ -6,7 +6,7 @@ import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
 import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedback'
 import { normalizeEmail } from '@/lib/team'
-import { sendInvitationEmail } from '@/lib/team.server'
+import { createPasswordAccess, sendInvitationEmail } from '@/lib/team.server'
 
 const PATH='/app/cadastros/vendedores'
 const text=(f:FormData,k:string)=>String(f.get(k)??'').trim()
@@ -27,12 +27,17 @@ export async function createSellerGroup(f:FormData){
 export async function createSeller(f:FormData){
   const ctx=await manager(); if(!ctx)return go('erro:sem_permissao')
   const name=text(f,'name'),category=text(f,'seller_category'),sellerGroup=text(f,'seller_group_id'),commissionGroup=text(f,'commission_group_id')
+  const branchId=text(f,'branch_id'),frequency=text(f,'commission_payment_frequency')||'monthly'
   const taxId=tax(text(f,'tax_id'))
   const createAccess=text(f,'create_access')==='on'
-  const rawEmail=text(f,'email')
-  const email=createAccess?normalizeEmail(rawEmail):null
-  if(name.length<1||name.length>160||!['pf','pj','sub'].includes(category)||!uuid(sellerGroup)||!uuid(commissionGroup)||taxId===undefined)return go('erro:vendedor_invalido')
+  const email=createAccess?normalizeEmail(text(f,'email')):null
+  const password=text(f,'password')
+  const sourceKey=text(f,'bank_source_key').toLowerCase()
+  const externalUser=text(f,'bank_external_user')
+  if(name.length<1||name.length>160||!['pf','pj','sub'].includes(category)||!uuid(sellerGroup)||!uuid(commissionGroup)||!uuid(branchId)||taxId===undefined||!['daily','weekly','monthly'].includes(frequency))return go('erro:vendedor_invalido')
   if(createAccess&&!email)return go('erro:vendedor_acesso_email')
+  if(createAccess&&!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{12,}$/.test(password))return go('erro:vendedor_senha')
+  if((sourceKey&&!externalUser)||(!sourceKey&&externalUser))return go('erro:vendedor_alias')
 
   const {data,error}=await ctx.supabase.rpc('create_seller_with_access',{
     p_org:ctx.membership.organization_id,
@@ -47,22 +52,47 @@ export async function createSeller(f:FormData){
 
   const row=Array.isArray(data)?data[0]:null
   if(!row?.seller_id)return go('erro:inesperado')
+  const sellerId=String(row.seller_id)
+
+  const op=await ctx.supabase.from('commercial_sellers').update({
+    branch_id:branchId,
+    commission_payment_frequency:frequency,
+  }).eq('id',sellerId)
+  if(op.error)return sellerGo(sellerId,'erro:vendedor_operacao')
+
+  if(sourceKey&&externalUser){
+    const alias=await ctx.supabase.from('seller_bank_aliases').insert({
+      organization_id:ctx.membership.organization_id,
+      seller_id:sellerId,
+      source_key:sourceKey,
+      external_user:externalUser,
+      external_user_normalized:externalUser,
+    })
+    if(alias.error)return sellerGo(sellerId,'erro:vendedor_alias')
+  }
+
   let code:FeedbackCode='ok:vendedor_cadastrado'
-  if(createAccess&&email&&row.invitation_id){
-    const outcome=await sendInvitationEmail(email)
-    code=outcome==='sent'?'ok:vendedor_cadastrado_acesso_enviado':'ok:vendedor_cadastrado_acesso_pendente'
+  if(createAccess&&email){
+    const access=await createPasswordAccess(email,password,name)
+    if(access.outcome==='ready')code='ok:vendedor_acesso_criado'
+    else if(access.outcome==='existing_user')code='erro:vendedor_acesso_existente'
+    else code='ok:vendedor_cadastrado_acesso_pendente'
   }
   revalidatePath(PATH)
-  return redirect(feedbackUrl(`${PATH}/${row.seller_id}`,code))
+  revalidatePath(PATH+'/consulta')
+  return redirect(feedbackUrl(sellerPath(sellerId),code))
 }
+
 
 export async function updateSeller(f:FormData){
   const ctx=await manager(); if(!ctx)return go('erro:sem_permissao')
   const id=text(f,'id'),name=text(f,'name'),category=text(f,'seller_category'),sellerGroup=text(f,'seller_group_id'),commissionGroup=text(f,'commission_group_id')
+  const branchId=text(f,'branch_id'),frequency=text(f,'commission_payment_frequency')
   const taxId=tax(text(f,'tax_id'))
-  if(!uuid(id)||name.length<1||name.length>160||!['pf','pj','sub'].includes(category)||!uuid(sellerGroup)||!uuid(commissionGroup)||taxId===undefined)return go('erro:vendedor_invalido')
+  if(!uuid(id)||name.length<1||name.length>160||!['pf','pj','sub'].includes(category)||!uuid(sellerGroup)||!uuid(commissionGroup)||!uuid(branchId)||!['daily','weekly','monthly'].includes(frequency)||taxId===undefined)return go('erro:vendedor_invalido')
   const {error}=await ctx.supabase.from('commercial_sellers').update({
-    name,seller_category:category,tax_id:taxId,seller_group_id:sellerGroup,commission_group_id:commissionGroup
+    name,seller_category:category,tax_id:taxId,seller_group_id:sellerGroup,commission_group_id:commissionGroup,
+    branch_id:branchId,commission_payment_frequency:frequency
   }).eq('id',id)
   return error?go(classifyDbFeedback(error)):go('ok:vendedor_atualizado')
 }
@@ -188,4 +218,49 @@ export async function saveSellerCertification(f:FormData){
     p_notes:text(f,'certification_notes')||null,
   })
   return error?sellerGo(sellerId,'erro:vendedor_certificacao'):sellerGo(sellerId,'ok:vendedor_certificacao_salva')
+}
+
+
+export async function addSellerBankAlias(f:FormData){
+  const ctx=await manager(); if(!ctx)return go('erro:sem_permissao')
+  const sellerId=text(f,'seller_id'),sourceKey=text(f,'source_key').toLowerCase(),externalUser=text(f,'external_user')
+  const bankId=text(f,'bank_id'),providerId=text(f,'provider_id')
+  if(!uuid(sellerId)||!sourceKey||!externalUser||(bankId&&!uuid(bankId))||(providerId&&!uuid(providerId)))return go('erro:vendedor_alias')
+  const {error}=await ctx.supabase.from('seller_bank_aliases').insert({
+    organization_id:ctx.membership.organization_id,
+    seller_id:sellerId,
+    source_key:sourceKey,
+    external_user:externalUser,
+    external_user_normalized:externalUser,
+    bank_id:bankId||null,
+    provider_id:providerId||null,
+  })
+  return error?sellerGo(sellerId,'erro:vendedor_alias'):sellerGo(sellerId,'ok:vendedor_alias_salvo')
+}
+
+export async function setSellerBankAliasActive(f:FormData){
+  const ctx=await manager(); if(!ctx)return go('erro:sem_permissao')
+  const sellerId=text(f,'seller_id'),id=text(f,'alias_id'),active=text(f,'active')==='true'
+  if(!uuid(sellerId)||!uuid(id))return go('erro:vendedor_alias')
+  const {error}=await ctx.supabase.from('seller_bank_aliases').update({is_active:active}).eq('id',id).eq('seller_id',sellerId)
+  return error?sellerGo(sellerId,'erro:vendedor_alias'):sellerGo(sellerId,'ok:vendedor_alias_atualizado')
+}
+
+export async function createSellerDirectAccess(f:FormData){
+  const ctx=await manager(); if(!ctx)return go('erro:sem_permissao')
+  const sellerId=text(f,'seller_id'),email=normalizeEmail(text(f,'email')),password=text(f,'password')
+  if(!uuid(sellerId)||!email)return go('erro:vendedor_acesso_email')
+  if(!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{12,}$/.test(password))return sellerGo(sellerId,'erro:vendedor_senha')
+  const seller=await ctx.supabase.from('commercial_sellers').select('id,name,user_id').eq('id',sellerId).maybeSingle()
+  if(!seller.data||seller.data.user_id)return sellerGo(sellerId,'erro:vendedor_usuario')
+  const invite=await ctx.supabase.rpc('create_organization_invitation',{p_org:ctx.membership.organization_id,p_email:email,p_role:'agent'})
+  if(invite.error)return sellerGo(sellerId,classifyDbFeedback(invite.error))
+  const invitationId=String(invite.data??'')
+  if(invitationId){
+    await ctx.supabase.from('organization_invitations').update({seller_id:sellerId}).eq('id',invitationId)
+  }
+  const access=await createPasswordAccess(email,password,seller.data.name)
+  if(access.outcome==='ready')return sellerGo(sellerId,'ok:vendedor_acesso_criado')
+  if(access.outcome==='existing_user')return sellerGo(sellerId,'erro:vendedor_acesso_existente')
+  return sellerGo(sellerId,'ok:vendedor_cadastrado_acesso_pendente')
 }
