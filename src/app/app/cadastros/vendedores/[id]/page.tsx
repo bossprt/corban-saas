@@ -69,13 +69,13 @@ export default async function SellerDetailPage({params}:{params:Promise<{id:stri
 
     <div className={card}>
       <h2 className="text-lg font-semibold">1. Identificação comercial</h2>
-      <p className="mt-1 text-xs text-slate-500">Categoria, grupos e regras que determinam produção e comissão.</p>
+      <p className="mt-1 text-xs text-slate-500">A classificação do vendedor é interna e serve para segmentação. Comissão é definida separadamente pelo Grupo de Comissão e suas regras.</p>
       <form action={updateSeller} className="mt-4 grid gap-3 md:grid-cols-2">
         <input type="hidden" name="id" value={seller.id}/>
         <label className="text-xs text-slate-400">Nome / razão social<input required name="name" defaultValue={seller.name} className={field+' mt-1 block w-full'}/></label>
         <label className="text-xs text-slate-400">CPF/CNPJ<input name="tax_id" defaultValue={seller.tax_id??''} className={field+' mt-1 block w-full'}/></label>
         <label className="text-xs text-slate-400">Categoria<select name="seller_category" defaultValue={seller.seller_category} className={field+' mt-1 block w-full'}><option value="pf">PF</option><option value="pj">PJ</option><option value="sub">SUB</option></select></label>
-        <label className="text-xs text-slate-400">Grupo de Vendedor<select name="seller_group_id" defaultValue={seller.seller_group_id} className={field+' mt-1 block w-full'}>{(sellerGroups.data??[]).filter(x=>x.is_active||x.id===seller.seller_group_id).map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
+        <label className="text-xs text-slate-400">Classificação do vendedor <span className="text-slate-500">(Grupo de Vendedores)</span><select name="seller_group_id" defaultValue={seller.seller_group_id} className={field+' mt-1 block w-full'}>{(sellerGroups.data??[]).filter(x=>x.is_active||x.id===seller.seller_group_id).map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
         <label className="text-xs text-slate-400">Grupo de Comissão<select name="commission_group_id" defaultValue={seller.commission_group_id} className={field+' mt-1 block w-full'}>{(commissionGroups.data??[]).filter(x=>x.is_active||x.id===seller.commission_group_id).map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
         <label className="text-xs text-slate-400">Matriz / Filial<select name="branch_id" defaultValue={seller.branch_id} className={field+' mt-1 block w-full'}>{(branches.data??[]).filter(x=>x.is_active||x.id===seller.branch_id).map(x=><option key={x.id} value={x.id}>{x.branch_type==='matrix'?'Matriz · ':'Filial · '}{x.name}</option>)}</select></label>
         <label className="text-xs text-slate-400 md:col-span-2">Periodicidade de pagamento<select name="commission_payment_frequency" defaultValue={seller.commission_payment_frequency} className={field+' mt-1 block w-full'}><option value="daily">Diário</option><option value="weekly">Semanal</option><option value="monthly">Mensal</option></select></label>
