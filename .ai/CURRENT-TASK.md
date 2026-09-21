@@ -1814,3 +1814,9 @@ Definition of Done do DDL:
 LIVE atual sem propostas/eventos/SUB reais, reduzindo risco de backfill.
 Próxima ação: aplicar migration LIVE somente após autorização explícita.
 Depois do LIVE: construir seletor de vendedor na proposta draft e exibir snapshot SUB/receita esperada supervisor+.
+
+
+## HANDOFF PARA NOVO CHAT — 20/09/2026
+Sessão encerrada por limite de contexto. Handoff consolidado criado em `.ai/NEXT-CHAT-HANDOFF.md`.
+
+Próximo chat deve retomar pelo Human Gate de `20261014_seller_sub_proposal_snapshot_v1.sql`, sem reexecutar migrations LIVE anteriores.
