@@ -34,10 +34,12 @@ export async function createSeller(f:FormData){
   const password=text(f,'password')
   const sourceKey=text(f,'bank_source_key').toLowerCase()
   const externalUser=text(f,'bank_external_user')
+  const aliasBankId=text(f,'bank_id')
+  const aliasProviderId=text(f,'provider_id')
   if(name.length<1||name.length>160||!['pf','pj','sub'].includes(category)||!uuid(sellerGroup)||!uuid(commissionGroup)||!uuid(branchId)||taxId===undefined||!['daily','weekly','monthly'].includes(frequency))return go('erro:vendedor_invalido')
   if(createAccess&&!email)return go('erro:vendedor_acesso_email')
   if(createAccess&&!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{12,}$/.test(password))return go('erro:vendedor_senha')
-  if((sourceKey&&!externalUser)||(!sourceKey&&externalUser))return go('erro:vendedor_alias')
+  if((sourceKey&&!externalUser)||(!sourceKey&&externalUser)||(aliasBankId&&!uuid(aliasBankId))||(aliasProviderId&&!uuid(aliasProviderId)))return go('erro:vendedor_alias')
 
   const {data,error}=await ctx.supabase.rpc('create_seller_with_access',{
     p_org:ctx.membership.organization_id,
@@ -67,8 +69,86 @@ export async function createSeller(f:FormData){
       source_key:sourceKey,
       external_user:externalUser,
       external_user_normalized:externalUser,
+      bank_id:aliasBankId||null,
+      provider_id:aliasProviderId||null,
     })
     if(alias.error)return sellerGo(sellerId,'erro:vendedor_alias')
+  }
+
+  const profileEmail=normalizeEmail(text(f,'profile_email'))
+  const profileFields={
+    legal_name:text(f,'legal_name')||null,
+    trade_name:text(f,'trade_name')||null,
+    email:profileEmail,
+    phone:text(f,'phone')||null,
+    whatsapp:text(f,'whatsapp')||null,
+    birth_or_opening_date:optionalDate(text(f,'birth_or_opening_date')),
+    identity_or_registration_number:text(f,'identity_or_registration_number')||null,
+    identity_issuer:text(f,'identity_issuer')||null,
+    occupation:text(f,'occupation')||null,
+    notes:text(f,'notes')||null,
+  }
+  if(Object.values(profileFields).some(Boolean)){
+    const saved=await ctx.supabase.rpc('upsert_seller_profile',{
+      p_seller_id:sellerId,
+      p_legal_name:profileFields.legal_name,
+      p_trade_name:profileFields.trade_name,
+      p_email:profileFields.email,
+      p_phone:profileFields.phone,
+      p_whatsapp:profileFields.whatsapp,
+      p_birth_or_opening_date:profileFields.birth_or_opening_date,
+      p_identity_or_registration_number:profileFields.identity_or_registration_number,
+      p_identity_issuer:profileFields.identity_issuer,
+      p_occupation:profileFields.occupation,
+      p_notes:profileFields.notes,
+    })
+    if(saved.error)return sellerGo(sellerId,'erro:vendedor_perfil')
+  }
+
+  const addressFields={
+    postal_code:text(f,'postal_code')||null,
+    street:text(f,'street')||null,
+    number:text(f,'number')||null,
+    complement:text(f,'complement')||null,
+    neighborhood:text(f,'neighborhood')||null,
+    city:text(f,'city')||null,
+    state:text(f,'state')||null,
+  }
+  if(Object.values(addressFields).some(Boolean)){
+    const saved=await ctx.supabase.rpc('replace_seller_address',{
+      p_seller_id:sellerId,
+      p_postal_code:addressFields.postal_code,
+      p_street:addressFields.street,
+      p_number:addressFields.number,
+      p_complement:addressFields.complement,
+      p_neighborhood:addressFields.neighborhood,
+      p_city:addressFields.city,
+      p_state:addressFields.state,
+    })
+    if(saved.error)return sellerGo(sellerId,'erro:vendedor_endereco')
+  }
+
+  const holderName=text(f,'holder_name')
+  const holderDocument=text(f,'holder_document').replace(/\D/g,'')
+  const paymentBankId=text(f,'payment_bank_id')
+  const accountType=text(f,'account_type')
+  const pixKeyType=text(f,'pix_key_type')
+  const hasPayment=Boolean(holderName||holderDocument||paymentBankId||text(f,'branch')||text(f,'account_number')||text(f,'pix_key'))
+  if(hasPayment){
+    if(!holderName||![11,14].includes(holderDocument.length)||(paymentBankId&&!uuid(paymentBankId)))return sellerGo(sellerId,'erro:vendedor_pagamento')
+    const saved=await ctx.supabase.rpc('set_seller_payment_account',{
+      p_seller_id:sellerId,
+      p_bank_id:paymentBankId||null,
+      p_branch:text(f,'branch')||null,
+      p_account_number:text(f,'account_number')||null,
+      p_account_digit:text(f,'account_digit')||null,
+      p_account_type:accountType||null,
+      p_holder_name:holderName,
+      p_holder_document:holderDocument,
+      p_pix_key_type:pixKeyType||null,
+      p_pix_key:text(f,'pix_key')||null,
+    })
+    if(saved.error)return sellerGo(sellerId,'erro:vendedor_pagamento')
   }
 
   let code:FeedbackCode='ok:vendedor_cadastrado'
@@ -244,23 +324,4 @@ export async function setSellerBankAliasActive(f:FormData){
   if(!uuid(sellerId)||!uuid(id))return go('erro:vendedor_alias')
   const {error}=await ctx.supabase.from('seller_bank_aliases').update({is_active:active}).eq('id',id).eq('seller_id',sellerId)
   return error?sellerGo(sellerId,'erro:vendedor_alias'):sellerGo(sellerId,'ok:vendedor_alias_atualizado')
-}
-
-export async function createSellerDirectAccess(f:FormData){
-  const ctx=await manager(); if(!ctx)return go('erro:sem_permissao')
-  const sellerId=text(f,'seller_id'),email=normalizeEmail(text(f,'email')),password=text(f,'password')
-  if(!uuid(sellerId)||!email)return go('erro:vendedor_acesso_email')
-  if(!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{12,}$/.test(password))return sellerGo(sellerId,'erro:vendedor_senha')
-  const seller=await ctx.supabase.from('commercial_sellers').select('id,name,user_id').eq('id',sellerId).maybeSingle()
-  if(!seller.data||seller.data.user_id)return sellerGo(sellerId,'erro:vendedor_usuario')
-  const invite=await ctx.supabase.rpc('create_organization_invitation',{p_org:ctx.membership.organization_id,p_email:email,p_role:'agent'})
-  if(invite.error)return sellerGo(sellerId,classifyDbFeedback(invite.error))
-  const invitationId=String(invite.data??'')
-  if(invitationId){
-    await ctx.supabase.from('organization_invitations').update({seller_id:sellerId}).eq('id',invitationId)
-  }
-  const access=await createPasswordAccess(email,password,seller.data.name)
-  if(access.outcome==='ready')return sellerGo(sellerId,'ok:vendedor_acesso_criado')
-  if(access.outcome==='existing_user')return sellerGo(sellerId,'erro:vendedor_acesso_existente')
-  return sellerGo(sellerId,'ok:vendedor_cadastrado_acesso_pendente')
 }
