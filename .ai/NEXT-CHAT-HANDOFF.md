@@ -359,3 +359,18 @@ Security:
 - passwords remain Auth-only and hashed by Supabase; never persisted as plaintext;
 - seller alias resolution is tenant-scoped and deterministic;
 - Security Advisor after DDL remained unchanged: no new WARN/ERROR, only 2 historical Platform Admin INFO.
+
+
+### Seller operations rollout final validation
+Final LIVE migration versions:
+- 20260921055340 seller_operations_identity_v1
+- 20260921055553 seller_branch_default_regression_fix_v1
+
+Final application build:
+- HEAD `27db75599047de8eb9f7d772fab9dd09254a483b`
+- Vercel production deployment READY.
+
+Build fixes applied during validation:
+- corrected branch-management action to use authenticated `user.id` from app context;
+- removed duplicate `producerExternalUser` property in generic import adapter;
+- made `producerExternalUser` optional at the TypeScript contract boundary for backward compatibility while new adapters still populate it when present.
