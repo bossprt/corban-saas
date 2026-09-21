@@ -1779,3 +1779,16 @@ Fila autônoma retomada:
 1. sugestão determinística de regra de comissão pelo escopo mais específico;
 2. exigir escolha humana quando houver empate/ambiguidade;
 3. mapeamento explícito de Repasse 1/2/3 para Grupo de Comissão somente para comparação/validação, nunca por inferência.
+
+
+## Smart Import — repasses externos comparados
+Concluído:
+- mapeamento explícito de Repasse 1/2/3 para Grupo de Comissão;
+- semântica e unidade obrigatórias;
+- comparação determinística do repasse externo contra a política interna;
+- nenhuma divergência altera regra financeira automaticamente;
+- sugestão determinística da política mais específica já ativa;
+- Vercel READY no commit `f165112f4e8aa1370d193c83e3b4b0b4bad4a4f6`.
+
+Próxima fronteira arquitetural:
+integrar o Vendedor/SUB à proposta e ao cálculo esperado, congelando seller/group/category e a versão da regra SUB usada por componente. Hoje o cadastro SUB existe e está LIVE, mas a proposta/financeiro ainda não congela nem aplica essa regra.
