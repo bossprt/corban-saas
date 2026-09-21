@@ -79,3 +79,23 @@ Cabecalho com >= 4 nomes conhecidos; cada linha de dados precisa alinhar suas ce
 
 ### Human Gate
 Nenhum novo. Sem DDL, secret, gasto ou servico pago. OCR/IA para PDF escaneado, se desejado, exigira gate de custo/secret.
+
+## Policy-scope hardening prepared
+
+A component-aware commission policy can be scoped to:
+- Institution/Origin;
+- Agreement;
+- Product/Table;
+- any combination of these.
+
+The Smart Import application now validates this scope before preview/apply.
+
+Migration `20261013_smart_import_policy_scope_guard_v1.sql` adds database defense-in-depth to the existing condition→policy-version guard:
+- scoped bank must equal the condition table route bank;
+- scoped agreement must equal the route agreement;
+- scoped table must equal the condition table;
+- inactive/missing policy is refused;
+- existing draft/immutability/RPC-only protections remain.
+
+Precheck found zero existing scope mismatches.
+Migration is prepared only and requires an explicit LIVE Human Gate.
