@@ -7,7 +7,7 @@ export type NormalizedImportRow={
  bankKey:string|null
  externalProposalNumber:string|null
  producerTaxId:string|null
- producerExternalUser:string|null
+ producerExternalUser?:string|null
  externalTableCode:string|null
  externalTableName:string|null
  operationType:string|null
