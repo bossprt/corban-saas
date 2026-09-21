@@ -7,6 +7,12 @@ alter table public.contract_types
   add column created_by uuid references auth.users(id) on delete set null,
   add column updated_at timestamptz not null default now();
 
+-- Refin/Portabilidade is a distinct operational contract type used for refinancing a portability contract.
+insert into public.contract_types(tech_key,name,is_active,sort_order)
+values ('refin_portabilidade','Refin/Portabilidade',true,50)
+on conflict (tech_key) do update
+set name=excluded.name,is_active=true,sort_order=excluded.sort_order;
+
 drop index if exists public.contract_types_name_key;
 create unique index contract_types_global_name_key on public.contract_types(lower(btrim(name))) where organization_id is null;
 create unique index contract_types_tenant_name_key on public.contract_types(organization_id,lower(btrim(name))) where organization_id is not null;
