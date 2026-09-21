@@ -22,7 +22,18 @@ export async function POST(req:Request){
   if(origin==='own'&&provider)return Response.json({error:'Produção própria não usa empresa de origem.'},{status:400})
   if(policy&&!uuid(policy))return Response.json({error:'Regra de comissão inválida.'},{status:400})
 
-  const parsed=await parseSmartCommercialFile(ctx,file)
+  const [typeRows,typeSettings,groupRows,componentRows]=await Promise.all([
+   ctx.supabase.from('contract_types').select('id,name,tech_key,is_active,organization_id').order('sort_order').order('name'),
+   ctx.supabase.from('organization_contract_type_settings').select('contract_type_id,is_enabled,use_in_pipeline,use_in_commission'),
+   ctx.supabase.from('commission_groups').select('id,name,is_active').eq('is_active',true).order('sort_order').order('name'),
+   ctx.supabase.from('commission_component_types').select('id,tech_key,name,is_active').eq('is_active',true).order('sort_order'),
+  ])
+  const parsed=await parseSmartCommercialFile(file,{
+   types:(typeRows.data??[]) as {id:string;name:string;tech_key:string;is_active:boolean;organization_id:string|null}[],
+   settings:(typeSettings.data??[]) as {contract_type_id:string;is_enabled:boolean;use_in_pipeline:boolean;use_in_commission:boolean}[],
+   groups:(groupRows.data??[]) as {id:string;name:string}[],
+   components:(componentRows.data??[]) as {id:string;tech_key:string;name:string}[],
+  })
   const generic=parsed.issues.some(x=>x.code==='generic_repass_requires_mapping')
   const hard=parsed.issues.filter(x=>x.code!=='generic_repass_requires_mapping')
   if(hard.length)return Response.json({error:'O arquivo ainda possui erros.',issues:hard.map(x=>({...x,message:SMART_IMPORT_ISSUES[x.code]??x.code}))},{status:400})
