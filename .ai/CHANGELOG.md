@@ -431,3 +431,21 @@ Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`)
 - Propostas agora podem congelar seller/SUB e company share por componente.
 - Receita esperada passa a respeitar o company share congelado.
 - UI da proposta draft recebeu seleção governada de vendedor/SUB; sem vazamento de commission group.
+
+
+### Aplicação — Seller/SUB + rota comercial
+- Proposta draft ganhou fluxo completo de atribuição de Vendedor/SUB e congelamento da rota comercial.
+- Canal agora é derivado da regra publicada escolhida na UI.
+- Snapshot SUB/empresa por componente fica restrito a supervisor+.
+- Publicação de expected ganhou feedback sanitizado e prevenção visual de repetição.
+- Leitura de ledger deixou de ocorrer para perfis sem comissão.
+- Parser de percentual SUB removido de `Number/float` e trocado por validação decimal escalada.
+- Claude não utilizado.
+
+### Preparado — Proposal/Financial integrity hardening V1
+- DB enforcement de vigência da regra no freeze preparado.
+- Auto-refresh de conciliação após expected e evidência direta preparado.
+- Revogação de UPDATE/DELETE em snapshots imutáveis preparada.
+- Contract passou junto da migration em `BEGIN/ROLLBACK`.
+- Zero dados LIVE a reinterpretar.
+- Migration ainda NÃO LIVE; aguarda Human Gate.
