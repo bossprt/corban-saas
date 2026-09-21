@@ -1105,3 +1105,18 @@ Após a integração XLS/PDF, foi corrigida mais uma ambiguidade financeira:
 - o operador recebe mensagem explícita para corrigir o valor/unidade;
 - teste unitário específico adicionado;
 - Vercel de produção READY no commit `8277790fe548ed1532ac5a56b6a3fe9ebb6f3da8`.
+
+
+## Smart Import — prévia econômica + mapeamento manual
+Continuação autônoma concluída sem Claude e sem DDL:
+- prévia econômica determinística por Grupo de Comissão;
+- cálculo usa somente inteiros escalados/BigInt, nunca float;
+- ordem da prévia: comissão recebida → imposto/desconto → repasse do grupo → retenção da empresa;
+- cada grupo é cenário alternativo, nunca soma de todos os grupos;
+- unidade %/R$ é preservada; unidades incompatíveis não geram retenção inventada;
+- escolha da regra ocorre antes da análise para que a prévia já mostre o efeito financeiro;
+- mapeamento manual fail-closed para cabeçalhos não reconhecidos de Banco, Convênio, Tabela, Tipo, Prazo, Taxa, Coeficiente e Fator;
+- o arquivo é reanalisado após o mapeamento e nada é gravado antes da nova validação;
+- o mesmo mapeamento da prévia é reenviado na aplicação, evitando divergência preview/apply;
+- reutilizar a mesma coluna para dois campos é recusado;
+- Vercel READY no commit `673bc577189c1f05834305382f2a82fd841452c5`.
