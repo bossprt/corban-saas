@@ -110,37 +110,38 @@ Estado consolidado:
 - Security Advisor pós última migration LIVE: nenhum WARN/ERROR novo;
 - permanecem apenas 2 INFO históricos em tabelas exclusivas de Platform Admin.
 
+## Seller/SUB + proposta/financeiro — estado LIVE
+LIVE:
+- `20260921025320 seller_sub_proposal_snapshot_v1`.
+
+Aplicação concluída:
+- Vendedor/SUB selecionável em proposta draft por RPC governada;
+- rota comercial pode ser congelada pela proposta;
+- snapshot SUB/empresa por componente visível apenas supervisor+;
+- expected commission usa company share congelado;
+- Vercel READY para o fluxo de freeze da UI no commit `97bf2548f360429a2f52c66af385295d04e5ba06`.
+
 ## HUMAN GATE ATUAL — PRÓXIMA DECISÃO
 Preparada e **NÃO LIVE**:
-- `20261014_seller_sub_proposal_snapshot_v1.sql`
-- `tests/security/seller-sub-proposal-snapshot-contract.sql`
-- `docs/SELLER-SUB-PROPOSAL-SNAPSHOT-V1.md`
+- `20261015_proposal_financial_integrity_hardening_v1.sql`
+- `tests/security/proposal-financial-integrity-hardening-contract.sql`
 
 Objetivo:
-ligar Vendedor/SUB à proposta e à receita/comissão esperada com snapshot imutável.
+fechar defesa em profundidade do freeze comercial e manter a conciliação financeira sincronizada em todos os caminhos governados.
 
-Modelo preparado:
-- proposta draft recebe `seller_id` por RPC governada;
-- vendedor só muda antes do freeze comercial;
-- freeze congela seller/category/seller group;
-- commission group só aparece em snapshot protegido supervisor+;
-- SUB resolve a versão publicada da regra por componente, fallback `all`;
-- SUB sem regra publicada falha fechado;
-- fórmula:
-  `gross component × upstream/network share × seller_company_share_pct / 100`;
-- não-SUB = company share 100%;
-- SUB 100% = empresa 0%;
-- SUB 90% = empresa 10%;
-- rede/split e SUB são dimensões independentes;
-- histórico financeiro já congelado nunca é reescrito.
+Mudanças preparadas:
+- regra de comissão precisa estar `published` **e dentro de effective_from/effective_until** no próprio banco;
+- `publish_expected_commission` refresca conciliação por componente;
+- `publish_financial_evidence_event` refresca conciliação para comissão reportada e pagamento recebido;
+- UPDATE/DELETE removidos de authenticated/anon nas tabelas imutáveis de snapshot comercial.
 
-Validação já feita:
+Validação:
 - migration + contract passaram em `BEGIN ... ROLLBACK`;
-- não consta em `list_migrations`;
-- LIVE atual tinha 0 propostas, 0 component snapshots, 0 commission_expected, 0 SUB sellers e 0 regras SUB publicadas no precheck;
-- portanto não existe backfill econômico atual para reinterpretar.
+- migration ainda não consta em `list_migrations`;
+- LIVE possui 0 propostas, 0 snapshots, 0 eventos financeiros, 0 casos de conciliação, 0 sellers e 0 regras SUB publicadas no precheck;
+- Security Advisor sem WARN/ERROR novo; apenas 2 INFO históricos de Platform Admin.
 
-**Novo chat deve começar perguntando somente se o Owner autoriza aplicar `20261014_seller_sub_proposal_snapshot_v1` LIVE, a menos que o Owner dê outra instrução.**
+**Novo chat deve começar perguntando somente se o Owner autoriza aplicar `20261015_proposal_financial_integrity_hardening_v1` LIVE, salvo outra instrução explícita do Owner.**
 
 ## Ambiente
 - GitHub: `bossprt/corban-saas`
