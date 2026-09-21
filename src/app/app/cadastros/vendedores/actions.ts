@@ -11,7 +11,7 @@ const text=(f:FormData,k:string)=>String(f.get(k)??'').trim()
 const go=(code:FeedbackCode):never=>{revalidatePath(PATH);return redirect(feedbackUrl(PATH,code))}
 const manager=async()=>{const ctx=await requireAppContext();return atLeast(ctx.membership.role,'manager')?ctx:null}
 const uuid=(v:string)=>/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v)
-const pct=(v:string)=>{const s=v.trim().replace(',','.');if(!/^\\d{1,3}(?:\\.\\d{1,6})?$/.test(s))return null;const [whole,frac='']=s.split('.');const scaled=BigInt(whole)*1_000_000n+BigInt((frac+'000000').slice(0,6));return scaled<=100_000_000n?s:null}
+const pct=(v:string)=>{const s=v.trim().replace(',','.');if(!/^\\d{1,3}(?:\\.\\d{1,6})?$/.test(s))return null;const [whole,frac='']=s.split('.');const normalizedWhole=whole.replace(/^0+(?=\\d)/,'');if(normalizedWhole.length>3)return null;if(normalizedWhole.length===3&&normalizedWhole>'100')return null;if(normalizedWhole==='100'&&/[^0]/.test(frac))return null;return s}
 const tax=(v:string)=>{const d=v.replace(/\D/g,'');return d===''?null:(d.length===11||d.length===14?d:undefined)}
 
 export async function createSellerGroup(f:FormData){
