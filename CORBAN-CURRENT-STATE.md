@@ -1065,3 +1065,20 @@ Aplicação adicionada:
 
 Limitação consciente:
 - XLS legado e PDF ainda não são suportados por esta primeira UI. A próxima etapa deve tratar esses formatos sem degradar as regras de segurança e prévia.
+
+
+## Build estável pós Smart Import UI
+Estado confirmado:
+- produção Vercel voltou a `READY` no commit `a0bad4a481feed5c0499ec566bfe9401d49c7e1d`;
+- Smart Import guiado CSV/XLSX permanece ativo;
+- tentativa experimental de cálculo econômico detalhado na prévia foi revertida porque introduziu erro de compilação; não afetou o banco nem a versão estável;
+- nenhuma migration foi revertida;
+- `smart_commercial_import_v1` continua LIVE e validada.
+
+Próxima necessidade real de ambiente local:
+- suporte a XLS legado e PDF;
+- geração correta de lockfile ao adicionar bibliotecas;
+- testes locais com arquivos reais HOPE/2Tech;
+- build/lint/test completos antes de novo push.
+
+Isso justifica acionar Claude Code local em tarefa longa única, preservando quota.
