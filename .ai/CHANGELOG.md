@@ -313,3 +313,12 @@ Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`)
 - Security advisor sem WARN/ERROR novo.
 - UI de Vendedores/SUB e Fatores adicionada; importação de fatores CSV/XLSX inicial disponível.
 - Nenhum Claude utilizado.
+
+
+### Preparado — 20/09/2026 (Componentes + Tipos de Contrato)
+- Preparada camada component-aware de comissão: À Vista, Diferido, Bônus 1/2/3, Plástico e Seguro fixo.
+- Suporte preparado para % e R$, regras por Grupo de Comissão, desconto/imposto e escopo organização/banco/convênio/tabela.
+- Preparado gerenciamento tenant-aware de Tipo de Contrato com flags de esteira/comissão.
+- Preparado pacote de índices das novas FKs de Seller/SUB/Fatores.
+- Três contratos rollback-only passaram; zero persistência.
+- Claude não utilizado.
