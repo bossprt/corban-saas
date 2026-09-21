@@ -1648,3 +1648,24 @@ Modelo XLSX dinâmico já disponível no código:
 
 Próxima ação que altera produção: aplicar `20261012_smart_commercial_import_v1` LIVE.
 Depois: montar UI de prévia/perguntas condicionais/aplicar e então usar Claude apenas para a etapa local de XLS legado/PDF + testes locais extensos, se ainda necessária.
+
+
+## Smart Import UI implementada
+Após o LIVE de `smart_commercial_import_v1`, foi criada a experiência guiada:
+- upload CSV/XLSX;
+- análise sem gravação;
+- resumo de linhas/tabelas/componentes;
+- amostra das condições;
+- perguntas somente quando Diferido/Plástico/Bônus aparecem;
+- confirmação para ignorar Repasse 1/2/3 legado;
+- seleção da política component-aware;
+- importação atômica;
+- rascunho obrigatório antes da publicação.
+
+Também existe `/api/comercial/modelo`, gerando XLSX com nomes reais dos Grupos de Comissão.
+
+Próxima fila autônoma:
+1. validar o build Vercel do fluxo guiado;
+2. corrigir qualquer erro de compilação;
+3. acrescentar comparação prévia entre componente recebido e política interna (empresa recebe / grupo recebe / empresa retém);
+4. avaliar suporte XLS legado/PDF. Se exigir execução local/biblioteca/testes com arquivo real, acionar Claude em uma única tarefa longa, instruído a economizar contexto e usar as ferramentas já instaladas.
