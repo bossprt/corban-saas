@@ -24,7 +24,7 @@ export async function createBranch(f:FormData){
 }
 
 export async function setBranchActive(f:FormData){
-  const {supabase,membership}=await requireAppContext()
+  const {supabase,membership,user}=await requireAppContext()
   if(!atLeast(membership.role,'manager'))return back('erro=sem_permissao')
   const id=text(f,'id'),active=text(f,'active')==='true'
   const {error}=await supabase.from('organization_branches').update({is_active:active,updated_by:user.id}).eq('id',id).eq('branch_type','branch')
