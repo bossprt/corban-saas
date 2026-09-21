@@ -1234,3 +1234,37 @@ Aplicação:
 - proposal detail ganhou seletor supervisor+ de vendedor/SUB em draft;
 - a ação chama somente a RPC governada;
 - nenhuma escrita direta em `seller_id` foi adicionada.
+
+
+## Seller/SUB + rota comercial — integração de aplicação
+Concluído diretamente pelo ChatGPT, sem Claude:
+- seleção governada de vendedor/SUB em proposta draft;
+- apresentação supervisor+ do snapshot congelado SUB/empresa por componente;
+- fluxo de congelamento de rota comercial disponível na proposta;
+- regra comercial selecionada determina o canal, evitando pares regra/canal inconsistentes na UI;
+- filtros de vigência também aplicados na camada de aplicação;
+- comissão esperada não oferece nova publicação quando já existe evento esperado;
+- perfis sem `canViewCommission` não fazem consulta de ledger na página;
+- percentual SUB validado sem ponto flutuante no servidor.
+
+Vercel:
+- fluxo de freeze UI READY em `97bf2548f360429a2f52c66af385295d04e5ba06`.
+
+## Human Gate — Proposal/Financial integrity hardening V1
+Auditoria adversarial pós-SUB encontrou duas lacunas de defesa em profundidade no LIVE atual:
+- a RPC de freeze ainda permite, via chamada direta, uma regra `published` fora da janela `effective_from/effective_until`;
+- publicação direta de expected/evidence pode deixar `financial_reconciliation_cases` sem refresh imediato em alguns caminhos.
+
+Pacote preparado:
+- `20261015_proposal_financial_integrity_hardening_v1.sql`;
+- `tests/security/proposal-financial-integrity-hardening-contract.sql`.
+
+O pacote:
+- exige regra publicada **e vigente** dentro da RPC de freeze;
+- faz `publish_expected_commission` refrescar conciliação por componente;
+- faz `publish_financial_evidence_event` refrescar conciliação para `commission_reported` e `payment_received`;
+- remove UPDATE/DELETE de authenticated/anon nas tabelas imutáveis de snapshot comercial.
+
+Validação rollback-only passou integralmente. LIVE permanece sem dados econômicos existentes (0 propostas/snapshots/eventos/casos), e a migration ainda não aparece em `list_migrations`.
+
+**NÃO LIVE. Requer Human Gate explícito.**
