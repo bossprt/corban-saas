@@ -247,7 +247,7 @@ export async function saveCondition(f: FormData) {
   const amountMinRaw=text(f,'amount_min'), amountMaxRaw=text(f,'amount_max')
   const amountMin=amountMinRaw===''?null:parseDecimal(amountMinRaw,{maxInt:9,scale:2})
   const amountMax=amountMaxRaw===''?null:parseDecimal(amountMaxRaw,{maxInt:9,scale:2})
-  const moneyCents=(v:string)=>{const [i,d='']=v.split('.');return BigInt(i)*100n+BigInt((d+'00').slice(0,2))}
+  const moneyCents=(v:string)=>{const [i,d='']=v.split('.');return BigInt(i)*BigInt(100)+BigInt((d+'00').slice(0,2))}
   const received = parsePercent(text(f, 'received'))
   if (termMin === null || termMax === null || termMin > termMax) return go('erro:com_invalid_term')
   if ((text(f, 'coefficient') !== '' && coefficient === null) || (text(f, 'rate') !== '' && rate === null)) return go('erro:catalogo_invalido')
