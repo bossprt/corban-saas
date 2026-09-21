@@ -423,3 +423,11 @@ Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`)
 - Rollback-only + contract verdes.
 - Zero dados LIVE existentes a reinterpretar.
 - Novo DDL ainda NÃO LIVE.
+
+
+### LIVE — Seller/SUB proposal snapshot
+- `seller_sub_proposal_snapshot_v1` aplicada como `20260921025320`.
+- Contract pós-apply verde; Security Advisor sem WARN/ERROR novo.
+- Propostas agora podem congelar seller/SUB e company share por componente.
+- Receita esperada passa a respeitar o company share congelado.
+- UI da proposta draft recebeu seleção governada de vendedor/SUB; sem vazamento de commission group.
