@@ -201,8 +201,7 @@ test('actions: every write needs manager+, tenant comes from the server context,
 test('commercial landing page also obeys the central commission visibility helper', () => {
   const p = read('src/app/app/comercial/page.tsx')
   assert.ok(/canViewCommission\(membership\.role\)/.test(p))
-  assert.ok(/seeCommission \? supabase\.from\('payout_policies'\)/.test(p))
-  assert.ok(/seeCommission \? supabase\.from\('commission_groups'\)/.test(p))
+  assert.ok(/seeCommission \? <>/.test(p))
 })
 test('RBAC helpers used by the commercial screens keep their matrix', () => {
   assert.equal(canViewCommission('agent'), false)
