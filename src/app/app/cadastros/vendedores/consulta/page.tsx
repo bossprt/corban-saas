@@ -4,6 +4,7 @@ import { atLeast } from '@/lib/rbac'
 
 const field='rounded-lg border border-slate-700 bg-slate-950 p-2 text-sm'
 const card='rounded-2xl border border-slate-800 bg-slate-900 p-5'
+const ghost='rounded-lg border border-slate-700 px-3 py-2 text-sm'
 const CAT:Record<string,string>={pf:'PF',pj:'PJ',sub:'SUB'}
 
 export default async function SellersConsultPage({
