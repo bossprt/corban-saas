@@ -35,7 +35,8 @@ export default async function CommissionGroupsPage(){
     </div>
 
     {canEdit&&<form action={createCommissionGroup} className={card+' mt-5'}>
-      <h2 className="text-lg font-semibold">Cadastrar grupo de comissão</h2>
+      <input type="hidden" name="return_to" value="/app/comercial/grupos"/>
+      <h2 className="text-lg font-semibold">Cadastrar grupo e configurar repasse</h2>
       <div className="mt-4">
         <label className="text-sm font-medium">Nome do grupo</label>
         <input required name="name" maxLength={80} placeholder="Ex.: Balcão, Corretores, Parceiros, Subestabelecido" className={field+' mt-2 w-full'}/>
@@ -47,7 +48,7 @@ export default async function CommissionGroupsPage(){
         </label>)}
       </div>
       <p className="mt-3 text-xs text-slate-500">Todos os componentes devem ser definidos. Use 0 quando o grupo não deve receber aquele componente.</p>
-      <SubmitButton className={btn+' mt-4'}>Cadastrar grupo</SubmitButton>
+      <SubmitButton className={btn+' mt-4'}>Cadastrar e salvar configuração</SubmitButton>
     </form>}
 
     <div className="mt-5 space-y-4">
