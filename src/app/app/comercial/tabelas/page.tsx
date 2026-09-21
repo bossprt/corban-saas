@@ -143,6 +143,70 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
   const importIssue = typeof sp.c === 'string' && Object.prototype.hasOwnProperty.call(IMPORT_ISSUE_TEXT,sp.c) ? IMPORT_ISSUE_TEXT[sp.c] : null
   const importLine = typeof sp.l === 'string' && /^\d{1,5}$/.test(sp.l) ? sp.l : null
 
+  const renderTable=(t:(typeof v3Tables)[number])=>{
+    const tableVersions=(versions.data ?? []).filter(v=>v.product_table_id===t.id)
+    const current=currentVersionFor(t.id)
+    const drafts=tableVersions.filter(v=>v.status==='draft').length
+    return <details key={t.id} className="rounded-xl border border-slate-800 bg-slate-950/40">
+      <summary className="cursor-pointer list-none px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <span className="font-medium">{t.name}</span>
+            <span className="ml-2 text-xs text-slate-500">{current?'Vigente':'Sem versão vigente'}{drafts?' · '+drafts+' rascunho(s)':''}</span>
+          </div>
+          <span className="text-xs text-slate-500">Abrir tabela</span>
+        </div>
+      </summary>
+      <div className="border-t border-slate-800 p-4">
+        {tableVersions.map(v => {
+          const conds=(conditions.data ?? []).filter(c=>c.product_table_version_id===v.id) as (Condition & {product_table_version_id:string})[]
+          return <div key={v.id} className="mt-2 rounded-xl border border-slate-800 p-3 first:mt-0">
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              <span>v{v.version} · {VSTATUS[v.status] ?? v.status} · {conds.length} condição(ões)</span>
+              {v.effective_from&&<span className="text-xs text-slate-500">início {new Date(v.effective_from).toLocaleDateString('pt-BR',{timeZone:'UTC'})}</span>}
+              {v.effective_until&&<span className="text-xs text-slate-500">fim {new Date(v.effective_until).toLocaleDateString('pt-BR',{timeZone:'UTC'})}</span>}
+              {v.status==='draft' && canEdit && <form action={publishCommercialVersion}><input type="hidden" name="version_id" value={v.id}/><SubmitButton className="rounded border border-emerald-500/60 px-2 py-1 text-xs text-emerald-300" pendingText="Publicando...">Publicar</SubmitButton></form>}
+            </div>
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full min-w-[1180px] text-left text-xs">
+                <thead className="text-slate-500"><tr>
+                  <th className="py-2 pr-4">Tipo</th><th className="pr-4">Prazo</th><th className="pr-4">Coef.</th><th className="pr-4">Taxa</th>
+                  {seeCommission && <><th className="pr-4">Comissão empresa</th><th className="pr-4">Base</th>{activeGroups.map(g=><th key={g.id} className="pr-4 whitespace-nowrap">{g.name}</th>)}</>}
+                </tr></thead>
+                <tbody>{conds.map(c => <tr key={c.id} className="border-t border-slate-800 align-top">
+                  <td className="py-2 pr-4 whitespace-nowrap">{typeN.get(c.contract_type_id) ?? 'Tipo'}</td>
+                  <td className="pr-4 whitespace-nowrap">{c.term}x</td>
+                  <td className="pr-4 whitespace-nowrap">{show(c.coefficient)}</td>
+                  <td className="pr-4 whitespace-nowrap">{showPct(c.rate)}%</td>
+                  {seeCommission && <>
+                    <td className="pr-4 whitespace-nowrap font-medium">{showPct(receivedBy.get(c.id))}%</td>
+                    <td className="pr-4 whitespace-nowrap">{baseBy.get(c.id) ?? '—'}</td>
+                    {activeGroups.map(g=>{const effective=effectiveBy.get(c.id)?.get(g.id);return <td key={g.id} className="pr-4 whitespace-nowrap">{effective===undefined?'—':showPct(effective)+'%'}</td>})}
+                  </>}
+                </tr>)}</tbody>
+              </table>
+            </div>
+            {v.status==='draft' && canEdit && <div className="mt-4 grid gap-3 lg:grid-cols-2">
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
+                <strong className="text-emerald-200">Importar várias condições</strong>
+                <p className="mt-1 text-xs text-slate-400">CSV ou XLSX. O arquivo inteiro é validado antes e a gravação é atômica.</p>
+                <form action={importConditions} className="mt-3 space-y-2 text-xs text-slate-400">
+                  <input type="hidden" name="version_id" value={v.id}/>
+                  <input required type="file" name="file" accept=".csv,.xlsx,text/csv" className="block w-full text-xs"/>
+                  <select name="policy_version_id" defaultValue="" className={field+' w-full'}><option value="">Sem regra padrão</option>{policyOpts.map(p=><option key={p.versionId} value={p.versionId}>Regra padrão: {p.name}</option>)}</select>
+                  <div className="flex flex-wrap gap-2"><button name="mode" value="preview" className={ghost}>Ver prévia</button><button name="mode" value="apply" className={btn}>Importar planilha</button></div>
+                </form>
+              </div>
+              <details className="rounded-xl border border-slate-800 p-4"><summary className="cursor-pointer font-medium">Adicionar condição manualmente</summary><div className="mt-3"><ConditionForm versionId={v.id} contractTypes={enabledContractTypes} groups={activeGroups} policies={policyOpts}/></div></details>
+            </div>}
+            {v.status==='draft' && canEdit && conds.map(c => <details key={'edit-'+c.id} className="mt-2"><summary className="cursor-pointer text-xs text-slate-400">Editar {typeN.get(c.contract_type_id) ?? 'condição'} {c.term}x</summary><div className="mt-2"><ConditionForm versionId={v.id} contractTypes={enabledContractTypes} groups={activeGroups} policies={policyOpts} cond={c} received={receivedBy.get(c.id)} shares={sharesBy.get(c.id)} policyVersion={policyOf.get(c.id)}/></div></details>)}
+          </div>
+        })}
+        {canEdit && <form action={newDraftVersion} className="mt-3"><input type="hidden" name="table_id" value={t.id}/><SubmitButton className={ghost}>Nova versão (rascunho)</SubmitButton></form>}
+      </div>
+    </details>
+  }
+
   return <section>
     <Link href="/app/comercial" className="text-sm text-slate-400 underline">← Voltar ao Comercial</Link>
     <div className="flex flex-wrap items-end justify-between gap-3"><div><h1 className="mt-3 text-3xl font-semibold">Tabelas e condições</h1>
@@ -160,55 +224,43 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
       <SubmitButton className={`${btn} md:col-span-4 md:justify-self-end`}>Criar tabela</SubmitButton>
     </form>}
 
-    <div className="mt-4 space-y-3">{!v3Tables.length && <p className={`${card} text-sm text-slate-400`}>Nenhuma tabela criada.</p>}
-      {v3Tables.map(t => <div key={t.id} className={card}>
-        <div className="font-medium">{t.name}<span className="ml-2 text-xs text-slate-500">· {routeLabel.get(t.route_id)}</span></div>
-        {(versions.data ?? []).filter(v=>v.product_table_id===t.id).map(v => {
-          const conds=(conditions.data ?? []).filter(c=>c.product_table_version_id===v.id) as (Condition & {product_table_version_id:string})[]
-          return <div key={v.id} className="mt-3 rounded-xl border border-slate-800 p-3">
-            <div className="flex flex-wrap items-center gap-3 text-sm"><span>v{v.version} · {VSTATUS[v.status] ?? v.status} · {conds.length} condição(ões)</span>{v.status==='draft' && canEdit && <form action={publishCommercialVersion}><input type="hidden" name="version_id" value={v.id}/><SubmitButton className="rounded border border-emerald-500/60 px-2 py-1 text-xs text-emerald-300" pendingText="Publicando...">Publicar</SubmitButton></form>}</div>
-            <div className="mt-3 overflow-x-auto">
-              <table className="w-full min-w-[1180px] text-left text-xs">
-                <thead className="text-slate-500">
-                  <tr>
-                    <th className="py-2 pr-4">Tipo</th>
-                    <th className="pr-4">Prazo</th>
-                    <th className="pr-4">Coef.</th>
-                    <th className="pr-4">Taxa</th>
-                    {seeCommission && <>
-                      <th className="pr-4">Comissão empresa</th>
-                      <th className="pr-4">Base</th>
-                      {activeGroups.map(g=><th key={g.id} className="pr-4 whitespace-nowrap">{g.name}</th>)}
-                    </>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {conds.map(c => <tr key={c.id} className="border-t border-slate-800 align-top">
-                    <td className="py-2 pr-4 whitespace-nowrap">{typeN.get(c.contract_type_id) ?? 'Tipo'}</td>
-                    <td className="pr-4 whitespace-nowrap">{c.term}x</td>
-                    <td className="pr-4 whitespace-nowrap">{show(c.coefficient)}</td>
-                    <td className="pr-4 whitespace-nowrap">{showPct(c.rate)}%</td>
-                    {seeCommission && <>
-                      <td className="pr-4 whitespace-nowrap font-medium">{showPct(receivedBy.get(c.id))}%</td>
-                      <td className="pr-4 whitespace-nowrap">{baseBy.get(c.id) ?? '—'}</td>
-                      {activeGroups.map(g=>{
-                        const effective=effectiveBy.get(c.id)?.get(g.id)
-                        return <td key={g.id} className="pr-4 whitespace-nowrap">{effective===undefined?'—':showPct(effective)+'%'}</td>
-                      })}
-                    </>}
-                  </tr>)}
-                </tbody>
-              </table>
-            </div>
-            {v.status==='draft' && canEdit && <div className="mt-4 grid gap-3 lg:grid-cols-2">
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4"><strong className="text-emerald-200">Importar várias condições</strong><p className="mt-1 text-xs text-slate-400">CSV ou XLSX. O arquivo inteiro é validado antes e a gravação é atômica.</p><form action={importConditions} className="mt-3 space-y-2 text-xs text-slate-400"><input type="hidden" name="version_id" value={v.id}/><input required type="file" name="file" accept=".csv,.xlsx,text/csv" className="block w-full text-xs"/><select name="policy_version_id" defaultValue="" className={`${field} w-full`}><option value="">Sem regra padrão</option>{policyOpts.map(p=><option key={p.versionId} value={p.versionId}>Regra padrão: {p.name}</option>)}</select><div className="flex flex-wrap gap-2"><button name="mode" value="preview" className={ghost}>Ver prévia</button><button name="mode" value="apply" className={btn}>Importar planilha</button></div><p>Colunas: Tipo de Contrato, Prazo, Coeficiente, Taxa, Comissão recebida e uma coluna por grupo ({activeGroups.map(g=>g.name).join(', ') || 'nenhum grupo'}).</p></form></div>
-              <details className="rounded-xl border border-slate-800 p-4"><summary className="cursor-pointer font-medium">Adicionar condição manualmente</summary><div className="mt-3"><ConditionForm versionId={v.id} contractTypes={enabledContractTypes} groups={activeGroups} policies={policyOpts}/></div></details>
-            </div>}
-            {v.status==='draft' && canEdit && conds.map(c => <details key={`edit-${c.id}`} className="mt-2"><summary className="cursor-pointer text-xs text-slate-400">Editar {typeN.get(c.contract_type_id) ?? 'condição'} {c.term}x</summary><div className="mt-2"><ConditionForm versionId={v.id} contractTypes={enabledContractTypes} groups={activeGroups} policies={policyOpts} cond={c} received={receivedBy.get(c.id)} shares={sharesBy.get(c.id)} policyVersion={policyOf.get(c.id)}/></div></details>)}
+    <form method="get" className="mt-5 grid gap-2 rounded-2xl border border-slate-800 bg-slate-900 p-4 md:grid-cols-5">
+      <input name="q" defaultValue={typeof sp.q==='string'?sp.q:''} placeholder="Buscar tabela, banco ou promotora" className={field}/>
+      <select name="bank" defaultValue={bankFilter} className={field}><option value="">Todos os bancos</option>{bankOptions.map(x=><option key={x} value={x}>{x}</option>)}</select>
+      <select name="provider" defaultValue={providerFilter} className={field}><option value="">Todas as origens/promotoras</option>{providerOptions.map(x=><option key={x} value={x}>{x}</option>)}</select>
+      <select name="agreement" defaultValue={agreementFilter} className={field}><option value="">Todos os convênios</option>{agreementOptions.map(x=><option key={x} value={x}>{x}</option>)}</select>
+      <select name="status" defaultValue={statusFilter} className={field}><option value="current">Somente vigentes</option><option value="all">Todas</option><option value="draft">Com rascunho</option><option value="inactive">Inativas</option></select>
+      <div className="flex flex-wrap gap-2 md:col-span-5"><button type="submit" className={btn}>Filtrar</button><Link href="/app/comercial/tabelas" className={ghost}>Limpar filtros</Link><span className="self-center text-xs text-slate-500">{v3Tables.length} tabela(s) encontrada(s)</span></div>
+    </form>
+
+    <div className="mt-5 space-y-3">
+      {!v3Tables.length && <p className={card+' text-sm text-slate-400'}>Nenhuma tabela encontrada com estes filtros.</p>}
+      {[...grouped.entries()].map(([bank,byProvider])=>{
+        const bankCount=[...byProvider.values()].reduce((sum,byAgreement)=>sum+[...byAgreement.values()].reduce((n,arr)=>n+arr.length,0),0)
+        return <details key={bank} className="rounded-2xl border border-slate-800 bg-slate-900">
+          <summary className="cursor-pointer list-none px-5 py-4">
+            <div className="flex items-center justify-between gap-3"><div><span className="text-lg font-semibold">{bank}</span><span className="ml-2 text-sm text-slate-500">{bankCount} tabela(s)</span></div><span className="text-xs text-slate-500">Abrir banco</span></div>
+          </summary>
+          <div className="space-y-3 border-t border-slate-800 p-4">
+            {[...byProvider.entries()].map(([provider,byAgreement])=>{
+              const providerCount=[...byAgreement.values()].reduce((n,arr)=>n+arr.length,0)
+              return <details key={provider} className="rounded-xl border border-slate-800 bg-slate-950/30">
+                <summary className="cursor-pointer list-none px-4 py-3">
+                  <div className="flex items-center justify-between gap-3"><div><span className="font-medium">{provider}</span><span className="ml-2 text-xs text-slate-500">{providerCount} tabela(s)</span></div><span className="text-xs text-slate-500">Abrir origem</span></div>
+                </summary>
+                <div className="space-y-3 border-t border-slate-800 p-3">
+                  {[...byAgreement.entries()].map(([agreement,items])=><details key={agreement} className="rounded-xl border border-slate-800">
+                    <summary className="cursor-pointer list-none px-4 py-3">
+                      <div className="flex items-center justify-between gap-3"><div><span className="font-medium">{agreement}</span><span className="ml-2 text-xs text-slate-500">{items.length} tabela(s)</span></div><span className="text-xs text-slate-500">Abrir convênio</span></div>
+                    </summary>
+                    <div className="space-y-2 border-t border-slate-800 p-3">{items.map(renderTable)}</div>
+                  </details>)}
+                </div>
+              </details>
+            })}
           </div>
-        })}
-        {canEdit && <form action={newDraftVersion} className="mt-3"><input type="hidden" name="table_id" value={t.id}/><SubmitButton className={ghost}>Nova versão (rascunho)</SubmitButton></form>}
-      </div>)}
+        </details>
+      })}
     </div>
   </section>
 }
