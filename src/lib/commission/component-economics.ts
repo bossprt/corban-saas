@@ -14,7 +14,7 @@ const text=(v:bigint):string=>{
   const f=String(a%SCALE).padStart(8,'0').replace(/0+$/,'')
   return sign+String(i)+(f?'.'+f:'')
 }
-const pct=(value:bigint,percentage:string):bigint=>(value*scaled(percentage)+HUNDRED/2n)/HUNDRED
+const pct=(value:bigint,percentage:string):bigint=>(value*scaled(percentage)+HUNDRED/BigInt(2))/HUNDRED
 
 export type ComponentEconomicsInput={
   receivedValue:string
@@ -38,7 +38,7 @@ export function componentEconomics(x:ComponentEconomicsInput):ComponentEconomics
   const gross=scaled(x.receivedValue)
   const discount=scaled(x.discountPct||'0')
   if(discount<BigInt(0)||discount>HUNDRED)throw new Error('invalid_discount')
-  const net=(gross*(HUNDRED-discount)+HUNDRED/2n)/HUNDRED
+  const net=(gross*(HUNDRED-discount)+HUNDRED/BigInt(2))/HUNDRED
   if(x.mode==='exclude'){
     return {gross:text(gross),net:text(net),payout:'0',retained:text(net),payoutKind:x.receivedKind,compatible:true}
   }
