@@ -460,3 +460,35 @@ Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`)
 - authenticated/anon não possuem mais UPDATE/DELETE nos snapshots comerciais imutáveis.
 - Security Advisor segue sem WARN/ERROR novo; permanecem somente 2 INFO históricos de Platform Admin.
 - A camada de aplicação financeira também deixou de usar ponto flutuante na validação de reversão e na decisão de saldo reversível.
+
+
+## Simulation lifecycle — próxima Human Gate
+Revisão pós-financeiro encontrou um P1 real ainda aberto:
+- a aplicação/banco reconhecem `calculated`, `selected`, `expired`, `cancelled`;
+- existe write guard, mas não existia RPC governada para encerrar uma simulação calculada;
+- o guard anterior ainda permitia transição de `selected` para `expired/cancelled`, o que pode conflitar com uma proposta já criada.
+
+Corrigido sem DDL LIVE:
+- parsing de valor de simulação deixou de usar `Number()` e usa decimal determinístico;
+- exibição monetária de simulações usa `formatBRL` sem float;
+- builds dessas correções estão READY no Vercel.
+
+Preparado e **NÃO LIVE**:
+- `supabase/migrations/20261016_simulation_lifecycle_v1.sql`;
+- `tests/security/simulation-lifecycle-contract.sql`.
+
+Modelo preparado:
+- `close_simulation(id,target)` aceita somente `cancelled` ou `expired`;
+- somente simulação `calculated` pode ser encerrada;
+- supervisor/manager/admin apenas (fail-closed nesta primeira versão);
+- simulação que já tenha proposta é recusada;
+- `selected` passa a ser terminal e não pode virar cancelled/expired;
+- terminal `expired/cancelled` permanece imutável;
+- anon sem EXECUTE; authenticated chama RPC, e RBAC é conferido dentro dela.
+
+Validação:
+- migration + contract passaram em `BEGIN -> testes -> ROLLBACK`;
+- migration não consta em `list_migrations`;
+- Security Advisor continua sem WARN/ERROR novo; somente 2 INFO históricos de Platform Admin.
+
+**Próxima ação irreversível: aplicar `20261016_simulation_lifecycle_v1` LIVE após autorização explícita.**
