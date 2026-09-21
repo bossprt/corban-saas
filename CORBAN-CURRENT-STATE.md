@@ -1085,3 +1085,14 @@ Isso justifica acionar Claude Code local em tarefa longa única, preservando quo
 
 ## 29. Smart Import aceita XLS legado e PDF textual — 20/09/2026 (branch `feature/smart-import-xls-pdf`, nao mesclada)
 - CSV, XLSX, XLS (BIFF) e PDF com texto entram pelo mesmo parser; PDF ambiguo/imagem e recusado com "necessita revisao". Regras: `docs/SMART-COMMERCIAL-IMPORT-V1.md`. Unit 329/329, tsc, eslint, build verdes. Nenhuma migration, nenhum secret.
+
+
+## XLS/PDF integrado e revisão independente concluída
+- PR #1 `feature/smart-import-xls-pdf` revisado e mesclado em `architecture/corban-os-master-v2`.
+- Merge commit: `3915d1a454f8c994cd80dd5742f38707238fbb68`.
+- Vercel do merge ficou READY.
+- Auditoria adicional de visibilidade de comissão corrigiu a página `/app/comercial` para obedecer `canViewCommission`, preservando a decisão central fail-closed.
+- Commit atual validado pelo Vercel: `fbca952839551254dc0990a8b969e476934ed191` — READY.
+- CSV/XLSX/XLS legado/PDF textual seguem no mesmo parser comercial.
+- PDF ambíguo, escaneado ou sem tabela é recusado; não há OCR nem inferência financeira.
+- Nenhum DDL adicional foi necessário e nenhuma migration foi reaplicada.
