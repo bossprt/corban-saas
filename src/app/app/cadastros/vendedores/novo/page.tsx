@@ -32,12 +32,13 @@ export default async function NewSellerPage(){
 
     <form action={createSeller} className="space-y-5">
       <div className={card}>
-        <h2 className="text-lg font-semibold">1. Identificação comercial</h2>
+        <h2 className="text-lg font-semibold">1. Identificação e classificação</h2>
+        <p className="mt-1 text-xs text-slate-500">A classificação do vendedor é interna (ex.: Bronze, Ouro, Elite) e não altera comissão automaticamente.</p>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           <label className="text-xs text-slate-400">Nome / razão social<input required name="name" maxLength={160} className={field+' mt-1 block w-full'}/></label>
           <label className="text-xs text-slate-400">CPF/CNPJ<input name="tax_id" inputMode="numeric" className={field+' mt-1 block w-full'}/></label>
           <label className="text-xs text-slate-400">Categoria<select required name="seller_category" defaultValue="pf" className={field+' mt-1 block w-full'}><option value="pf">PF</option><option value="pj">PJ</option><option value="sub">SUB</option></select></label>
-          <label className="text-xs text-slate-400">Grupo de Vendedor<select required name="seller_group_id" defaultValue="" className={field+' mt-1 block w-full'}><option value="" disabled>Selecione</option>{(sellerGroups.data??[]).map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
+          <label className="text-xs text-slate-400">Classificação do vendedor <span className="text-slate-500">(Grupo de Vendedores)</span><select required name="seller_group_id" defaultValue="" className={field+' mt-1 block w-full'}><option value="" disabled>Selecione</option>{(sellerGroups.data??[]).map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
           <label className="text-xs text-slate-400">Grupo de Comissão<select required name="commission_group_id" defaultValue="" className={field+' mt-1 block w-full'}><option value="" disabled>Selecione</option>{(commissionGroups.data??[]).map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
           <label className="text-xs text-slate-400">Matriz / Filial<select required name="branch_id" defaultValue={matrix?.id??''} className={field+' mt-1 block w-full'}>{(branches.data??[]).map(x=><option key={x.id} value={x.id}>{x.branch_type==='matrix'?'Matriz · ':'Filial · '}{x.name}</option>)}</select></label>
           <label className="text-xs text-slate-400 md:col-span-2">Periodicidade de pagamento da comissão<select required name="commission_payment_frequency" defaultValue="monthly" className={field+' mt-1 block w-full'}><option value="daily">Diário</option><option value="weekly">Semanal</option><option value="monthly">Mensal</option></select></label>
