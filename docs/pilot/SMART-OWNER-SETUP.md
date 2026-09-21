@@ -3,9 +3,9 @@
 Nada aqui foi feito pelo agente. São ações suas, fora do repositório. Valores entre `< >` são seus.
 
 ## 0. Situação verificada no banco (somente leitura, 2026-09-25)
-- A organização **Smart Promotora NÃO existe** ainda. Existem apenas duas organizações de teste ("Tenant A/B - Teste RLS").
+- A organização **Smart Promotora Ltda. existe e está ativa** no LIVE. Não recriar.
 - Existe 1 administrador de plataforma ativo (necessário para criar a organização).
-- Nenhum lead, cliente, proposta ou dado de negócio no banco.
+- O catálogo global está parcial: bancos carregados; provedores, convênios, produtos e tipos de documento ainda exigem dados reais.
 
 ## 1. Decidir e registrar
 - `<APP_ORIGIN>`: o endereço público do sistema (exemplo: `https://app.suaempresa.com.br`). Sem barra no final.
@@ -19,10 +19,10 @@ Nada aqui foi feito pelo agente. São ações suas, fora do repositório. Valore
 4. Política de senha: mínimo 10 caracteres; proteção contra senhas vazadas ligada se o plano permitir.
 5. Na hospedagem, variável de servidor `NEXT_PUBLIC_SITE_URL=<APP_ORIGIN>`.
 
-## 3. Carregar o catálogo de referência e criar a organização (administrador de plataforma, uma vez)
+## 3. Completar o catálogo de referência (administrador de plataforma)
 Passos exatos, com os dois comandos e as respostas possíveis: `docs/deployment/SMART-DEPLOYMENT-RUNBOOK.md`, seções 7 e 8.
-- O catálogo de referência (bancos, provedores, convênios, produtos, modalidades, tipos de documento) está VAZIO e precisa dos seus dados reais (modelo: `docs/deployment/reference-catalog.template.json`). O sistema não inventa nada.
-- A organização exige CNPJ válido, recusa CNPJ repetido e avisa se já existe nome parecido. NÃO repita o comando depois de um 201.
+- Bancos já estão carregados. Provedores, convênios, produtos e tipos de documento continuam vazios e precisam dos seus dados reais (modelo: `docs/deployment/reference-catalog.template.json`). O sistema não inventa nada.
+- A organização Smart já existe. NÃO execute novamente o bootstrap de organização.
 
 ## 4. Primeiro login do administrador da Smart
 1. Abra o convite, crie a senha (10+ caracteres), entre.
