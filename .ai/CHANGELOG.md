@@ -660,3 +660,22 @@ Stale pilot docs were refreshed:
 4. Human browser acceptance still requires real/test credentials after Auth/SMTP is configured.
 
 No unrelated DDL is currently prepared or justified. Do not create fake economic/business records in LIVE merely to exercise the UI.
+
+
+## Verificação visual do Owner + SMTP adiado
+Data: 2026-09-21
+
+Confirmado pelo Owner em produção:
+- Corban OS está online e acessível;
+- a organização exibida é Smart Promotora Ltda.;
+- o dashboard atualizado está visível em produção;
+- o menu atualizado inclui Comissões e Financeiro conforme o perfil Administrador;
+- a wave recente de comissão/visibilidade está refletida visualmente no sistema.
+
+Decisão operacional:
+- NÃO configurar Resend/SMTP agora;
+- manter Custom SMTP desligado por enquanto;
+- registrar SMTP/Auth e-mail como pendência externa futura;
+- quando retomado, continuar de Authentication -> Emails -> SMTP Settings, escolher provedor e configurar sem expor credenciais no chat.
+
+O sistema pode continuar sendo desenvolvido e validado no navegador sem SMTP; convites e recuperação por e-mail ficam como gate externo pendente até essa configuração.
