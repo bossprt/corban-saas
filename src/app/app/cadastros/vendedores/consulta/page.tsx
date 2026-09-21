@@ -41,11 +41,11 @@ export default async function SellersConsultPage({
   return <section>
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div>
-        <Link href="/app/cadastros/vendedores" className="text-sm text-slate-400 underline">← Cadastrar vendedor</Link>
+        <Link href="/app/cadastros" className="text-sm text-slate-400 underline">← Voltar aos Cadastros</Link>
         <h1 className="mt-3 text-3xl font-semibold">Consultar vendedores</h1>
         <p className="mt-2 text-sm text-slate-400">Localize o vendedor, confira o cadastro e altere somente quando necessário.</p>
       </div>
-      {canEdit&&<Link href="/app/cadastros/vendedores" className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950">Novo vendedor</Link>}
+      {canEdit&&<Link href="/app/cadastros/vendedores/novo" className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950">Cadastrar vendedor</Link>}
     </div>
 
     <form className={card+' mt-5 grid gap-3 md:grid-cols-[1fr_auto_auto]'}>
