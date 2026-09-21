@@ -78,3 +78,55 @@ $$;
 
 revoke all on function public.assert_commission_group_share_within_limit(uuid,uuid,numeric) from public,anon;
 grant execute on function public.assert_commission_group_share_within_limit(uuid,uuid,numeric) to authenticated;
+
+
+create or replace function public.guard_commission_share_limit()
+returns trigger
+language plpgsql
+set search_path=''
+as $$
+declare
+  v_pct numeric;
+begin
+  if tg_table_name='commercial_condition_shares' then
+    v_pct:=new.share_pct;
+  elsif tg_table_name='payout_policy_items' then
+    v_pct:=new.pct;
+  elsif tg_table_name='component_payout_policy_items' then
+    if new.mode<>'share_of_received' then
+      return new;
+    end if;
+    v_pct:=new.share_pct;
+  else
+    raise exception 'unsupported_commission_share_table';
+  end if;
+
+  perform public.assert_commission_group_share_within_limit(
+    new.organization_id,
+    new.group_id,
+    v_pct
+  );
+
+  return new;
+end
+$$;
+
+revoke all on function public.guard_commission_share_limit() from public,anon,authenticated;
+
+drop trigger if exists commercial_condition_shares_15_group_limit on public.commercial_condition_shares;
+create trigger commercial_condition_shares_15_group_limit
+before insert or update of share_pct,group_id,organization_id
+on public.commercial_condition_shares
+for each row execute function public.guard_commission_share_limit();
+
+drop trigger if exists payout_policy_items_15_group_limit on public.payout_policy_items;
+create trigger payout_policy_items_15_group_limit
+before insert or update of pct,group_id,organization_id
+on public.payout_policy_items
+for each row execute function public.guard_commission_share_limit();
+
+drop trigger if exists component_payout_policy_items_15_group_limit on public.component_payout_policy_items;
+create trigger component_payout_policy_items_15_group_limit
+before insert or update of share_pct,mode,group_id,organization_id
+on public.component_payout_policy_items
+for each row execute function public.guard_commission_share_limit();
