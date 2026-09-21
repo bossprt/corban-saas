@@ -1768,3 +1768,14 @@ Depois do apply:
 2. rodar Security Advisor;
 3. persistir versão da migration LIVE;
 4. continuar política sugerida automática e comparação explícita de Repasse 1/2/3.
+
+
+## Policy scope guard LIVE
+`smart_import_policy_scope_guard_v1` foi aplicada LIVE como versão `20260921021027`.
+Contract pós-apply passou e Security Advisor não apresentou WARN/ERROR novo.
+**NÃO REAPLICAR.**
+
+Fila autônoma retomada:
+1. sugestão determinística de regra de comissão pelo escopo mais específico;
+2. exigir escolha humana quando houver empate/ambiguidade;
+3. mapeamento explícito de Repasse 1/2/3 para Grupo de Comissão somente para comparação/validação, nunca por inferência.
