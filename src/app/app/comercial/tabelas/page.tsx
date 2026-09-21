@@ -24,7 +24,7 @@ const showPct = (v: number | string | null | undefined) => {
 
 type Group = { id:string; name:string; calculation_basis:string }
 type PolicyOpt = { versionId:string; name:string }
-type Condition = { id:string; contract_type_id:string; term:number; coefficient:number|null; rate:number|null }
+type Condition = { id:string; contract_type_id:string; term:number; term_min:number; term_max:number; coefficient:number|null; rate:number|null }
 
 function ConditionForm({ versionId, contractTypes, groups, policies, cond, received, shares, policyVersion }: {
   versionId:string; contractTypes:{id:string;name:string}[]; groups:Group[]; policies:PolicyOpt[]; cond?:Condition; received?:number|null; shares?:Map<string,number>; policyVersion?:string|null
@@ -32,7 +32,8 @@ function ConditionForm({ versionId, contractTypes, groups, policies, cond, recei
   return <form action={saveCondition} className="grid gap-2 md:grid-cols-4">
     <input type="hidden" name="version_id" value={versionId} />{cond && <input type="hidden" name="condition_id" value={cond.id} />}
     <select required name="contract_type_id" defaultValue={cond?.contract_type_id ?? ''} className={field}><option value="" disabled>Tipo de Contrato</option>{contractTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select>
-    <input required name="term" inputMode="numeric" defaultValue={cond?.term ?? ''} placeholder="Prazo (meses)" className={field} />
+    <input required name="term_min" inputMode="numeric" defaultValue={cond?.term_min ?? cond?.term ?? ''} placeholder="Prazo inicial" className={field} />
+    <input required name="term_max" inputMode="numeric" defaultValue={cond?.term_max ?? cond?.term ?? ''} placeholder="Prazo final" className={field} />
     <input name="coefficient" inputMode="decimal" defaultValue={cond?.coefficient ?? ''} placeholder="Coeficiente" className={field} />
     <input name="rate" inputMode="decimal" defaultValue={cond?.rate ?? ''} placeholder="Taxa (%)" className={field} />
     <input required name="received" inputMode="decimal" defaultValue={received ?? ''} placeholder="Comissão que a empresa recebe (%)" className={`${field} md:col-span-2`} />
@@ -49,20 +50,7 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
   const seeCommission = canViewCommission(membership.role)
   if (!atLeast(membership.role, 'supervisor')) return <section><p>Sem permissão.</p></section>
 
-  async function allPages<T>(fetchPage:(from:number,to:number)=>PromiseLike<{data:T[]|null;error:unknown}>) {
-    const out:T[]=[]
-    const pageSize=1000
-    for(let from=0;;from+=pageSize){
-      const {data,error}=await fetchPage(from,from+pageSize-1)
-      if(error) throw error
-      const rows=data ?? []
-      out.push(...rows)
-      if(rows.length<pageSize) break
-    }
-    return out
-  }
-
-  const [banks, providers, agreements, groups, contractTypes, contractTypeSettings, routes, tables, versions, conditions, commissions, components, shares, polRows, polVersions] = await Promise.all([
+  const [banks, providers, agreements, groups, contractTypes, contractTypeSettings, routes, tables, versionsQ, polRows, polVersions] = await Promise.all([
     supabase.from('organization_banks').select('id,name,is_active').order('name'),
     supabase.from('organization_providers').select('id,name,is_active').order('name'),
     supabase.from('organization_agreements').select('id,name,is_active').order('name'),
@@ -71,20 +59,12 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
     supabase.from('organization_contract_type_settings').select('contract_type_id,is_enabled,use_in_pipeline,use_in_commission'),
     supabase.from('organization_product_routes').select('id,org_bank_id,org_provider_id,org_agreement_id,production_origin,status').not('org_bank_id','is',null),
     supabase.from('product_tables').select('id,route_id,name,status').order('name'),
-    allPages<{id:string;product_table_id:string;version:number;status:string;effective_from:string|null;effective_until:string|null}>((from,to)=>supabase.from('product_table_versions').select('id,product_table_id,version,status,effective_from,effective_until').order('id').range(from,to)),
-    allPages<{id:string;product_table_version_id:string;contract_type_id:string;term:number;coefficient:number|null;rate:number|null}>((from,to)=>supabase.from('commercial_conditions').select('id,product_table_version_id,contract_type_id,term,coefficient,rate').order('id').range(from,to)),
-    seeCommission
-      ? allPages<{condition_id:string;received_commission_pct:number;policy_version_id:string|null}>((from,to)=>supabase.from('commercial_condition_commissions').select('condition_id,received_commission_pct,policy_version_id').order('condition_id').range(from,to))
-      : Promise.resolve([] as {condition_id:string;received_commission_pct:number;policy_version_id:string|null}[]),
-    seeCommission
-      ? allPages<{condition_id:string;calculation_base:string|null;component_type_id:string}>((from,to)=>supabase.from('commercial_condition_components').select('condition_id,calculation_base,component_type_id').order('id').range(from,to))
-      : Promise.resolve([] as {condition_id:string;calculation_base:string|null;component_type_id:string}[]),
-    seeCommission
-      ? allPages<{condition_id:string;group_id:string;share_pct:number;effective_pct:number;source:string}>((from,to)=>supabase.from('commercial_condition_shares').select('condition_id,group_id,share_pct,effective_pct,source').order('id').range(from,to))
-      : Promise.resolve([] as {condition_id:string;group_id:string;share_pct:number;effective_pct:number;source:string}[]),
+    supabase.from('product_table_versions').select('id,product_table_id,version,status,effective_from,effective_until').order('version',{ascending:false}),
     supabase.from('payout_policies').select('id,name,is_active').order('name'),
     supabase.from('payout_policy_versions').select('id,policy_id,version').order('version',{ascending:false}),
   ])
+
+  const versions=(versionsQ.data ?? []) as {id:string;product_table_id:string;version:number;status:string;effective_from:string|null;effective_until:string|null}[]
 
   const enabledContractTypes=effectiveContractTypes((contractTypes.data ?? []) as {id:string;name:string;tech_key:string;is_active:boolean;organization_id:string|null}[], (contractTypeSettings.data ?? []) as {contract_type_id:string;is_enabled:boolean;use_in_pipeline:boolean;use_in_commission:boolean}[], 'commission')
   const nameOf = (rows:{id:string;name:string}[]|null) => new Map((rows ?? []).map(r => [r.id,r.name]))
@@ -143,6 +123,41 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
   const bankOptions=[...new Set(allCommercialTables.map(t=>routeMeta.get(t.route_id)!.bank))].sort((a,b)=>a.localeCompare(b,'pt-BR'))
   const providerOptions=[...new Set(allCommercialTables.map(t=>routeMeta.get(t.route_id)!.provider))].sort((a,b)=>a.localeCompare(b,'pt-BR'))
   const agreementOptions=[...new Set(allCommercialTables.map(t=>routeMeta.get(t.route_id)!.agreement))].sort((a,b)=>a.localeCompare(b,'pt-BR'))
+
+  const visibleTableIds=new Set(v3Tables.map(t=>t.id))
+  const visibleVersions=versions.filter(v=>{
+    if(!visibleTableIds.has(v.product_table_id)) return false
+    if(statusFilter==='all') return true
+    if(statusFilter==='draft') return v.status==='draft'
+    if(statusFilter==='inactive') return true
+    const from=v.effective_from?new Date(v.effective_from):new Date(0)
+    const until=v.effective_until?new Date(v.effective_until):null
+    return v.status==='draft'||(v.status==='published'&&from<=now&&(!until||now<until))
+  })
+  const visibleVersionIds=visibleVersions.map(v=>v.id)
+
+  const emptyConditions:{id:string;product_table_version_id:string;contract_type_id:string;term:number;term_min:number;term_max:number;coefficient:number|null;rate:number|null}[]=[]
+  const conditionsQ=visibleVersionIds.length
+    ? await supabase.from('commercial_conditions')
+        .select('id,product_table_version_id,contract_type_id,term,term_min,term_max,coefficient,rate')
+        .in('product_table_version_id',visibleVersionIds)
+        .order('term_min')
+    : {data:emptyConditions,error:null}
+  if(conditionsQ.error) throw conditionsQ.error
+  const conditions=(conditionsQ.data ?? []) as typeof emptyConditions
+  const conditionIds=conditions.map(x=>x.id)
+
+  const [commissionsQ,componentsQ,sharesQ]=conditionIds.length&&seeCommission
+    ? await Promise.all([
+        supabase.from('commercial_condition_commissions').select('condition_id,received_commission_pct,policy_version_id').in('condition_id',conditionIds),
+        supabase.from('commercial_condition_components').select('condition_id,calculation_base,component_type_id').in('condition_id',conditionIds),
+        supabase.from('commercial_condition_shares').select('condition_id,group_id,share_pct,effective_pct,source').in('condition_id',conditionIds),
+      ])
+    : [{data:[]},{data:[]},{data:[]}]
+  const commissions=(commissionsQ.data ?? []) as {condition_id:string;received_commission_pct:number;policy_version_id:string|null}[]
+  const components=(componentsQ.data ?? []) as {condition_id:string;calculation_base:string|null;component_type_id:string}[]
+  const shares=(sharesQ.data ?? []) as {condition_id:string;group_id:string;share_pct:number;effective_pct:number;source:string}[]
+
   const activeGroups=(groups.data ?? []).filter(g => g.is_active) as Group[]
   const receivedBy=new Map(commissions.map(c => [c.condition_id,c.received_commission_pct]))
   const policyOf=new Map(commissions.map(c => [c.condition_id,c.policy_version_id]))
@@ -163,7 +178,7 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
   const importLine = typeof sp.l === 'string' && /^\d{1,5}$/.test(sp.l) ? sp.l : null
 
   const renderTable=(t:(typeof v3Tables)[number])=>{
-    const tableVersions=versions.filter(v=>v.product_table_id===t.id)
+    const tableVersions=visibleVersions.filter(v=>v.product_table_id===t.id)
     const current=currentVersionFor(t.id)
     const drafts=tableVersions.filter(v=>v.status==='draft').length
     return <details key={t.id} className="rounded-xl border border-slate-800 bg-slate-950/40">
@@ -189,12 +204,13 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
             <div className="mt-3 overflow-x-auto">
               <table className="w-full min-w-[1180px] text-left text-xs">
                 <thead className="text-slate-500"><tr>
-                  <th className="py-2 pr-4">Tipo</th><th className="pr-4">Prazo</th><th className="pr-4">Coef.</th><th className="pr-4">Taxa</th>
+                  <th className="py-2 pr-4">Tipo</th><th className="pr-4">Prazo inicial</th><th className="pr-4">Prazo final</th><th className="pr-4">Coef.</th><th className="pr-4">Taxa</th>
                   {seeCommission && <><th className="pr-4">Comissão empresa</th><th className="pr-4">Base</th>{activeGroups.map(g=><th key={g.id} className="pr-4 whitespace-nowrap">{g.name}</th>)}</>}
                 </tr></thead>
                 <tbody>{conds.map(c => <tr key={c.id} className="border-t border-slate-800 align-top">
                   <td className="py-2 pr-4 whitespace-nowrap">{typeN.get(c.contract_type_id) ?? 'Tipo'}</td>
-                  <td className="pr-4 whitespace-nowrap">{c.term}x</td>
+                  <td className="pr-4 whitespace-nowrap">{c.term_min}</td>
+                  <td className="pr-4 whitespace-nowrap">{c.term_max}</td>
                   <td className="pr-4 whitespace-nowrap">{show(c.coefficient)}</td>
                   <td className="pr-4 whitespace-nowrap">{showPct(c.rate)}%</td>
                   {seeCommission && <>
@@ -218,7 +234,7 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
               </div>
               <details className="rounded-xl border border-slate-800 p-4"><summary className="cursor-pointer font-medium">Adicionar condição manualmente</summary><div className="mt-3"><ConditionForm versionId={v.id} contractTypes={enabledContractTypes} groups={activeGroups} policies={policyOpts}/></div></details>
             </div>}
-            {v.status==='draft' && canEdit && conds.map(c => <details key={'edit-'+c.id} className="mt-2"><summary className="cursor-pointer text-xs text-slate-400">Editar {typeN.get(c.contract_type_id) ?? 'condição'} {c.term}x</summary><div className="mt-2"><ConditionForm versionId={v.id} contractTypes={enabledContractTypes} groups={activeGroups} policies={policyOpts} cond={c} received={receivedBy.get(c.id)} shares={sharesBy.get(c.id)} policyVersion={policyOf.get(c.id)}/></div></details>)}
+            {v.status==='draft' && canEdit && conds.map(c => <details key={'edit-'+c.id} className="mt-2"><summary className="cursor-pointer text-xs text-slate-400">Editar {typeN.get(c.contract_type_id) ?? 'condição'} {c.term_min===c.term_max?c.term_min+'x':c.term_min+'–'+c.term_max+'x'}</summary><div className="mt-2"><ConditionForm versionId={v.id} contractTypes={enabledContractTypes} groups={activeGroups} policies={policyOpts} cond={c} received={receivedBy.get(c.id)} shares={sharesBy.get(c.id)} policyVersion={policyOf.get(c.id)}/></div></details>)}
           </div>
         })}
         {canEdit && <form action={newDraftVersion} className="mt-3"><input type="hidden" name="table_id" value={t.id}/><SubmitButton className={ghost}>Nova versão (rascunho)</SubmitButton></form>}
