@@ -380,3 +380,12 @@ Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`)
 - Mensagem operacional adicionada.
 - Teste dedicado adicionado.
 - Produção Vercel READY.
+
+
+### Smart Import — economics + manual mapping
+- Adicionada prévia econômica determinística por grupo.
+- Regra interna agora pode ser visualizada antes da gravação.
+- Mapeamento manual fail-closed de cabeçalhos adicionado.
+- Preview/apply usam o mesmo mapa.
+- Vercel READY.
+- Sem DDL, secret, gasto ou Claude.
