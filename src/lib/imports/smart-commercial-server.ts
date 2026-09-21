@@ -4,10 +4,14 @@ import { xlsxRows } from '@/lib/commercial-xlsx'
 import { effectiveContractTypes } from '@/lib/contract-types'
 import { mapSmartCommercialRows, type SmartImportResult } from '@/lib/imports/smart-commercial'
 
-type Query=ReturnType<import('@supabase/supabase-js').SupabaseClient['from']>
-type Ctx={supabase:{from:(table:string)=>Query}}
+type RefData={
+ types:{id:string;name:string;tech_key:string;is_active:boolean;organization_id:string|null}[]
+ settings:{contract_type_id:string;is_enabled:boolean;use_in_pipeline:boolean;use_in_commission:boolean}[]
+ groups:{id:string;name:string}[]
+ components:{id:string;tech_key:string;name:string}[]
+}
 
-export async function parseSmartCommercialFile(ctx:Ctx,file:File):Promise<SmartImportResult>{
+export async function parseSmartCommercialFile(file:File,refs:RefData):Promise<SmartImportResult>{
  if(file.size===0||file.size>2_000_000)throw new Error('invalid_file')
  const buf=Buffer.from(await file.arrayBuffer())
  let raw:string[][]
@@ -16,22 +20,8 @@ export async function parseSmartCommercialFile(ctx:Ctx,file:File):Promise<SmartI
  else if(lower.endsWith('.csv')||lower.endsWith('.txt')) raw=parseDelimited(buf.toString('utf-8'))
  else throw new Error('unsupported_file')
 
- const [types,settings,groups,components]=await Promise.all([
-  ctx.supabase.from('contract_types').select('id,name,tech_key,is_active,organization_id').order('sort_order').order('name'),
-  ctx.supabase.from('organization_contract_type_settings').select('contract_type_id,is_enabled,use_in_pipeline,use_in_commission'),
-  ctx.supabase.from('commission_groups').select('id,name,is_active').eq('is_active',true).order('sort_order').order('name'),
-  ctx.supabase.from('commission_component_types').select('id,tech_key,name,is_active').eq('is_active',true).order('sort_order'),
- ])
- const enabled=effectiveContractTypes(
-  (types.data??[]) as {id:string;name:string;tech_key:string;is_active:boolean;organization_id:string|null}[],
-  (settings.data??[]) as {contract_type_id:string;is_enabled:boolean;use_in_pipeline:boolean;use_in_commission:boolean}[],
-  'commission',
- )
- return mapSmartCommercialRows(raw,{
-  contractTypes:enabled,
-  groups:(groups.data??[]) as {id:string;name:string}[],
-  components:(components.data??[]) as {id:string;tech_key:string;name:string}[],
- })
+ const enabled=effectiveContractTypes(refs.types,refs.settings,'commission')
+ return mapSmartCommercialRows(raw,{contractTypes:enabled,groups:refs.groups,components:refs.components})
 }
 
 export const SMART_IMPORT_ISSUES:Record<string,string>={
