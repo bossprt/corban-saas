@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
 import { SubmitButton } from '@/components/SubmitButton'
+import { createAdminClient } from '@/lib/supabaseAdmin'
 import { createCommissionGroup, saveCommissionGroupConfiguration, setActive } from '../actions'
 
 const field='rounded-lg border border-slate-700 bg-slate-950 p-2 text-sm'
@@ -13,12 +14,21 @@ export default async function CommissionGroupsPage(){
   const {supabase,membership}=await requireAppContext()
   if(!atLeast(membership.role,'supervisor'))return <section><p>Sem permissão.</p></section>
   const canEdit=atLeast(membership.role,'manager')
+  const admin=createAdminClient()
 
   const [groups,components,limits]=await Promise.all([
     supabase.from('commission_groups').select('id,name,is_active').order('sort_order').order('name'),
-    supabase.from('commission_component_types').select('id,tech_key,name,sort_order,is_active').eq('is_active',true).order('sort_order').order('name'),
+    admin.from('commission_component_types').select('id,tech_key,name,sort_order,is_active').eq('is_active',true).order('sort_order').order('name'),
     supabase.from('commission_group_component_limits').select('group_id,component_type_id,max_received_share_pct'),
   ])
+
+  if(components.error||!(components.data??[]).length){
+    return <section className="space-y-4">
+      <Link href="/app/cadastros" className="text-sm text-slate-400 underline">← Voltar aos Cadastros</Link>
+      <h1 className="text-3xl font-semibold">Grupos de comissão</h1>
+      <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4 text-sm text-red-200">Não foi possível carregar os componentes de comissão. Nenhum grupo pode ser salvo enquanto esse catálogo estiver indisponível.</div>
+    </section>
+  }
 
   const limitMap=new Map((limits.data??[]).map(x=>[x.group_id+'|'+x.component_type_id,String(x.max_received_share_pct)]))
   const configured=new Set((limits.data??[]).map(x=>x.group_id))
