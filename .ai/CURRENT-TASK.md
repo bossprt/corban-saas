@@ -1719,3 +1719,16 @@ Próxima fila:
 2. adicionar mapeamento manual para arquivos que retornem “Necessita revisão/mapeamento”;
 3. resolver formatação percentual de XLSX de forma determinística;
 4. depois retomar preview econômico empresa recebe / grupo recebe / empresa retém, sem delegar cálculo à IA.
+
+
+## XLSX percentual fechado
+A limitação registrada pelo Claude sobre percentual formatado em XLSX foi tratada diretamente pelo ChatGPT:
+- ExcelJS agora detecta numFmt com `%` no Smart Import;
+- a carga é recusada como ambígua, em vez de interpretar `0.15` como `0,15%` ou `15%`;
+- comportamento do importador legado fora do Smart Import não foi alterado;
+- build Vercel READY no commit `8277790fe548ed1532ac5a56b6a3fe9ebb6f3da8`.
+
+Próxima fila permanece:
+1. mapeamento manual para arquivos que exigem revisão;
+2. preview econômico determinístico;
+3. teste com XLS/PDF comercial real quando houver amostra adequada.
