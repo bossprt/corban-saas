@@ -494,3 +494,28 @@ Source/import result:
 
 Validation sample:
 - table 761118 GOV ACRE ESPECIAL DIG - AOL, term 120: Daycoval received 7.50%, no tax => base 7.50%; Corretor 65% => internal effective 4.875% (display 4.88%); Smart Promotora 100% => 7.50%.
+
+
+## Daycoval / Governo do Acre / Bevicred import
+Source file: 20260921161330.xls (legacy HTML table exported with .xls extension).
+Owner-specific interpretation for this file/case only (not a global default):
+- Provider/origin: Bevicred (third_party)
+- Bank: Daycoval
+- Agreement: Governo do Acre
+- No tax/discount; same group shares used in the Daycoval/Efetivamais case: Afiliado 10%, Balcão 50%, Call Center 25%, Corretor 65%, Parceiro 80%, Smart Promotora 100%.
+- NOVO -> Novo -> LÍQUIDO
+- REFIN -> Refinanciamento -> LÍQUIDO
+- TRANSFERENCIA -> Compra de Dívida -> BRUTO (explicit Owner mapping)
+- PORTABILIDADE -> Portabilidade -> BRUTO
+- REFIN DA PORTABILIDADE -> Refin/Portabilidade -> LÍQUIDO
+- Prazo '1 a 120' is expanded to all terms 1..120 so the condition is available for every valid term.
+- Source rate/commission values preserved exactly, including one source condition with rate 0.00 in Transferência Tab 4 / 60x.
+
+LIVE result:
+- route Daycoval -> Bevicred -> Governo do Acre created;
+- payout policy Daycoval - Governo do Acre - Bevicred - Sem imposto - 2026 created/reused;
+- 43 published commercial tables;
+- 1325 conditions (range expansion included);
+- 17 BRUTO tables, 26 LÍQUIDO tables;
+- sample checks: Novo Especial 48/120 @2.70 receives 7.00%, Corretor effective 4.55%; Portabilidade Tab 1 terms 1/48/120 @2.50 receives 3.00% BRUTO, Corretor 1.95%; Transferência Tab 1 mapped to Compra de Dívida BRUTO @2.50 receives 6.00%, Corretor 3.90%.
+- Existing Daycoval/Efetivamais remains separate: 40 tables / 106 conditions. Hierarchical catalog now shows both providers under Daycoval > Governo do Acre.
