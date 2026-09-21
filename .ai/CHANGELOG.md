@@ -405,3 +405,11 @@ Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`)
 - Contract pós-apply verde.
 - Security Advisor sem WARN/ERROR novo.
 - Escopo de política agora protegido também no banco.
+
+
+### Smart Import — repasse externo × interno
+- Repasse 1/2/3 ganhou mapeamento explícito por grupo, semântica e unidade.
+- Valores externos continuam somente como evidência/comparação.
+- Preview mostra divergência contra política interna sem mutação automática.
+- Política mais específica pode ser sugerida; empate permanece Human Gate.
+- Build Vercel READY.
