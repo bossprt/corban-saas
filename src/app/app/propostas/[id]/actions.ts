@@ -16,6 +16,30 @@ function proposalId(formData: FormData) {
   return id
 }
 
+export async function assignProposalSeller(formData: FormData) {
+  const id = idOf(formData)
+  const sellerRaw = String(formData.get('seller_id') ?? '')
+  const sellerId = sellerRaw === '' ? null : sellerRaw
+  if (!id || (sellerId !== null && !UUID.test(sellerId))) return back(id, 'erro:requisicao_invalida')
+
+  const { supabase, membership } = await requireAppContext()
+  if (!atLeast(membership.role, 'supervisor')) return back(id, 'erro:sem_permissao')
+
+  const { error } = await supabase.rpc('assign_proposal_seller', {
+    p_proposal_id: id,
+    p_seller_id: sellerId,
+  })
+  if (error) {
+    const msg = error.message ?? ''
+    if (/forbidden|not_authorized/.test(msg)) return back(id, 'erro:sem_permissao')
+    if (/proposal_commercial_route_already_frozen|proposal_seller_is_frozen/.test(msg)) return back(id, 'erro:requisicao_invalida')
+    return back(id, 'erro:requisicao_invalida')
+  }
+
+  revalidatePath(`/app/propostas/${id}`)
+  return back(id, 'ok:proposta_atualizada')
+}
+
 export async function prepareDocuments(formData: FormData) {
   const id = idOf(formData)
   if (!id) return back(null, 'erro:requisicao_invalida')
