@@ -587,3 +587,41 @@ Limite proposital:
 - componente/payout avançado que não resulte em `commercial_condition_shares.effective_pct` não é inferido; fica `unavailable` até integração determinística posterior.
 
 **Próximo Human Gate: aplicar `20261018_seller_commission_visibility_scope_v1` LIVE.**
+
+
+## Seller commission visibility + access governance — LIVE / CLOSED
+Owner policy now authoritative:
+- seller sees only own individual commission;
+- supervisor sees only commission of explicitly supervised sellers;
+- manager/admin see all seller commissions;
+- company Finance/ledger is manager/admin only;
+- seller commission is separate from company revenue/financial truth.
+
+LIVE migrations:
+- `20260921041041 seller_commission_visibility_scope_v1`;
+- `20260921041520 seller_access_governed_write_hardening_v1`.
+
+Implemented:
+- `commercial_sellers.user_id` tenant-safe binding to active membership;
+- `seller_supervisions` explicit supervisor -> seller scope;
+- governed RPCs `set_seller_user` and `set_seller_supervision` with audit events;
+- direct Data API bypass blocked by trigger gate `corban.seller_access_rpc`;
+- `can_view_seller_commission` RLS helper;
+- immutable `proposal_seller_commission_snapshots`, distinct from company `financial_events`;
+- seller commission snapshot only calculates from proven `commercial_condition_shares.effective_pct`; otherwise records `unavailable`, never estimates;
+- supervisor company-finance reads narrowed to supervised proposals at DB level;
+- application `canViewCommission` now manager/admin only for company Finance;
+- new `/app/comissoes` surface for seller/supervisor/manager/admin using scoped RLS;
+- seller catalog now has UI for binding login and supervisor assignments;
+- nav exposes Comissões to all authenticated roles, Financeiro only to manager/admin;
+- RBAC unit test pins manager/admin-only company ledger visibility.
+
+Validation:
+- both migrations passed rollback contracts before LIVE;
+- both post-apply contracts passed LIVE;
+- Security Advisor still has no new WARN/ERROR; only 2 historical INFO for Platform Admin tables;
+- functional Vercel commits for seller access, commissions page, nav, finance wording and RBAC are READY;
+- no synthetic sellers/proposals were created in LIVE; production remains free of fake economic data.
+
+Standing authorization note:
+Owner authorized future DDL without a new prompt only when strictly necessary to implement/complete this SAME seller commission visibility rule and only after rollback-test + contract. Unrelated DDL, destructive changes, secrets, spend, or external irreversible actions still require a new Human Gate.
