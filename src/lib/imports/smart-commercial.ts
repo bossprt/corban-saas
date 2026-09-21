@@ -141,7 +141,9 @@ const factorDecimal=(raw:string,maxInt=6,scale=12):string|null|'zero'=>{
  if(d===null)return null
  return Number(d)===0?'zero':d
 }
-const resolveType=(raw:string,types:readonly SmartImportContractType[])=>{
+const resolveType=(raw:string,types:readonly SmartImportContractType[],valueMap:Record<string,string>={})=>{
+ const mapped=valueMap[raw.trim()]
+ if(mapped)return types.find(t=>t.id===mapped)??null
  const k=n(raw)
  return types.find(t=>n(t.name)===k||n(t.tech_key)===k)??null
 }
@@ -171,7 +173,7 @@ const factorMode=(raw:string):'daily'|'fixed'|null=>{
 
 export function mapSmartCommercialRows(
  rawRows:readonly (readonly unknown[])[],
- ctx:{contractTypes:readonly SmartImportContractType[];groups:readonly SmartImportGroup[];components:readonly SmartImportComponent[]}
+ ctx:{contractTypes:readonly SmartImportContractType[];groups:readonly SmartImportGroup[];components:readonly SmartImportComponent[];contractTypeValueMap?:Record<string,string>}
 ):SmartImportResult{
  const issues:SmartImportIssue[]=[]
  const rows:SmartImportRow[]=[]
@@ -231,7 +233,7 @@ export function mapSmartCommercialRows(
   const line=idx+2
   const bank=cell(r,col.bank),agreement=cell(r,col.agreement),table=cell(r,col.table),contractRaw=cell(r,col.contract)
   if(!bank||!agreement||!table||!contractRaw){issues.push({line,code:'missing_identity'});return}
-  const type=resolveType(contractRaw,ctx.contractTypes)
+  const type=resolveType(contractRaw,ctx.contractTypes,ctx.contractTypeValueMap)
   if(!type){issues.push({line,code:'unknown_contract_type',detail:contractRaw});return}
   const single=col.term===undefined?null:parseTerm(cell(r,col.term))
   const min=single??(col.termMin===undefined?null:parseTerm(cell(r,col.termMin)))

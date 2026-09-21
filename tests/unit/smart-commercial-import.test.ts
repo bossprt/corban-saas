@@ -75,3 +75,21 @@ test('manual header map fails closed when the same source column is reused',()=>
  const mapped=applySmartHeaderMap([['Origem'],['HOPE']],{bank:0,agreement:0})
  assert.equal(mapped.issue?.code,'manual_mapping_invalid')
 })
+
+
+test('explicit contract type value map resolves external naming without inventing a type',()=>{
+ const r=mapSmartCommercialRows([
+  ['Banco','Convênio','Produto','Tipo de Contrato','Prazo','Taxa'],
+  ['HOPE','Gov. AC','Tabela 001','Refin-Portabilidade','84','1.8'],
+ ],{...ctx,contractTypeValueMap:{'Refin-Portabilidade':'00000000-0000-4000-8000-000000000002'}})
+ assert.equal(r.issues.length,0)
+ assert.equal(r.rows[0].contract_type_name,'Refin/Portabilidade')
+})
+
+test('contract type value map fails closed when target is not an enabled type',()=>{
+ const r=mapSmartCommercialRows([
+  ['Banco','Convênio','Produto','Tipo de Contrato','Prazo','Taxa'],
+  ['HOPE','Gov. AC','Tabela 001','Tipo Externo','84','1.8'],
+ ],{...ctx,contractTypeValueMap:{'Tipo Externo':'not-enabled'}})
+ assert.ok(r.issues.some(x=>x.code==='unknown_contract_type'))
+})
