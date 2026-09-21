@@ -86,7 +86,7 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
   return <section>
     <Link href="/app/comercial" className="text-sm text-slate-400 underline">← Voltar ao Comercial</Link>
     <div className="flex flex-wrap items-end justify-between gap-3"><div><h1 className="mt-3 text-3xl font-semibold">Tabelas e condições</h1>
-    <p className="mt-2 text-sm text-slate-400">Aqui ficam as tabelas comerciais. Para cada versão rascunho você pode importar uma planilha inteira ou adicionar uma condição manualmente.</p></div><a href="/api/comercial/modelo" className="rounded-lg border border-emerald-500/50 px-3 py-2 text-sm text-emerald-300">Baixar modelo inteligente XLSX</a></div>
+    <p className="mt-2 text-sm text-slate-400">Aqui ficam as tabelas comerciais. Para cada versão rascunho você pode importar uma planilha inteira ou adicionar uma condição manualmente.</p></div><div className="flex flex-wrap gap-2"><Link href="/app/comercial/importacao-inteligente" className="rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-slate-950">Importação inteligente</Link><a href="/api/comercial/modelo" className="rounded-lg border border-emerald-500/50 px-3 py-2 text-sm text-emerald-300">Baixar modelo XLSX</a></div></div>
     {sp.f === 'ok:previa_validada' && typeof sp.n === 'string' && /^\d{1,5}$/.test(sp.n) && <p className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm text-emerald-200">Prévia validada: {sp.n} condição(ões). Nada foi gravado.</p>}
     {importIssue && <p role="alert" className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-200">Importação recusada{importLine ? ` — linha ${importLine}` : ''}: {importIssue}</p>}
 
