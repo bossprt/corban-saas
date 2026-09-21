@@ -251,7 +251,7 @@ export async function saveCondition(f: FormData) {
   const received = parsePercent(text(f, 'received'))
   if (termMin === null || termMax === null || termMin > termMax) return go('erro:com_invalid_term')
   if ((text(f, 'coefficient') !== '' && coefficient === null) || (text(f, 'rate') !== '' && rate === null)) return go('erro:catalogo_invalido')
-  if ((amountMinRaw==='')!==(amountMaxRaw==='') || (amountMinRaw!==''&&(amountMin===null||amountMax===null||moneyCents(amountMin)>moneyCents(amountMax)))) return go('erro:com_invalid_amount_range')
+  if ((amountMinRaw==='')!==(amountMaxRaw==='') || (amountMinRaw!==''&&(amountMin===null||amountMax===null||moneyCents(amountMin)>moneyCents(amountMax)))) return go('erro:catalogo_invalido')
   if (received === null) return go('erro:com_invalid_received_commission')
   const groups = await loadGroups(ctx)
   const shares: ShareInput[] = []
