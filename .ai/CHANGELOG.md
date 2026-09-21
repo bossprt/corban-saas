@@ -398,3 +398,10 @@ Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`)
 - 0 mismatches existentes.
 - HEAD Vercel READY.
 - Novo DDL ainda não LIVE.
+
+
+### LIVE — Smart Import policy scope guard
+- `20260921021027 smart_import_policy_scope_guard_v1` aplicada.
+- Contract pós-apply verde.
+- Security Advisor sem WARN/ERROR novo.
+- Escopo de política agora protegido também no banco.
