@@ -13,7 +13,18 @@ export async function POST(req:Request){
   const fd=await req.formData()
   const file=fd.get('file')
   if(!(file instanceof File))return Response.json({error:'Envie um arquivo.'},{status:400})
-  const parsed=await parseSmartCommercialFile(ctx,file)
+  const [typeRows,typeSettings,groupRows,componentRows]=await Promise.all([
+   ctx.supabase.from('contract_types').select('id,name,tech_key,is_active,organization_id').order('sort_order').order('name'),
+   ctx.supabase.from('organization_contract_type_settings').select('contract_type_id,is_enabled,use_in_pipeline,use_in_commission'),
+   ctx.supabase.from('commission_groups').select('id,name,is_active').eq('is_active',true).order('sort_order').order('name'),
+   ctx.supabase.from('commission_component_types').select('id,tech_key,name,is_active').eq('is_active',true).order('sort_order'),
+  ])
+  const parsed=await parseSmartCommercialFile(file,{
+   types:(typeRows.data??[]) as {id:string;name:string;tech_key:string;is_active:boolean;organization_id:string|null}[],
+   settings:(typeSettings.data??[]) as {contract_type_id:string;is_enabled:boolean;use_in_pipeline:boolean;use_in_commission:boolean}[],
+   groups:(groupRows.data??[]) as {id:string;name:string}[],
+   components:(componentRows.data??[]) as {id:string;tech_key:string;name:string}[],
+  })
   const policyId=String(fd.get('policy_version_id')??'').trim()
   type PreviewEconomics={table:string;contract:string;term:number;component:string;group:string;kind:'percentage'|'fixed_brl';gross:string;net:string;payout:string;retained:string|null;payoutKind:'percentage'|'fixed_brl'|null;compatible:boolean}
   let economics:PreviewEconomics[]=[]
