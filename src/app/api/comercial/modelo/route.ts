@@ -36,12 +36,12 @@ export async function GET(){
     'Prazo Final',
     'Coeficiente',
     'Taxa a.m. (%)',
-    'Base da Comissão [LÍQUIDO ou BRUTO]',
-    'Comissão Empresa (%)',
+    'Base da Comissão',
   ]
 
-  for(const g of groups.data??[]){
-    columns.push(g.name)
+  for(const c of components.data??[]){
+    columns.push(`${c.name} (Empresa) - Valor`)
+    columns.push(`${c.name} (Empresa) - Unidade [% ou R$]`)
   }
   ws.addRow(columns)
   ws.views=[{state:'frozen',ySplit:1}]
@@ -57,8 +57,9 @@ export async function GET(){
     ['Tipo de Contrato','Use exatamente um dos nomes habilitados abaixo.'],
     ['Base da Comissão','Use LÍQUIDO ou BRUTO conforme a regra do banco para aquela tabela.'],
     ['Comissão Empresa','Informe o percentual que o banco repassa à empresa naquela condição.'],
-    ['Grupos de Comissão','Cada grupo tem sua própria coluna. Preencha somente quando houver ajuste manual. Se a tabela usar uma política/regra padrão, deixe as colunas dos grupos vazias para o Corban calcular.'],
-    ['Percentuais','Use valores como 15.00, 9.50, 0.89. O sistema apresenta percentuais com duas casas decimais.'],
+    ['Grupos de Comissão','Não preencha repasses manualmente neste modelo. Selecione a regra de comissão na importação; o Corban calcula Afiliado, Balcão, Call Center, Corretor, Parceiro e Smart Promotora automaticamente e mostra cada grupo em sua própria coluna.'],
+    ['Componentes recebidos','Informe apenas o que o banco paga à empresa: À Vista, Diferido, Bônus, Bônus 2, Bônus 3, Plástico e Seguro fixo. Deixe em branco o que não existir.'],
+    ['Percentuais','Use valores como 15.00 ou 9.50. O sistema apresenta percentuais com duas casas decimais.'],
     ['Segurança','Antes de gravar, o Corban mostrará prévia e conflitos.'],
     [],
     ['Tipos de Contrato habilitados'],
