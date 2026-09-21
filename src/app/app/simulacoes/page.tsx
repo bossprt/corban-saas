@@ -1,8 +1,9 @@
 import { requireAppContext } from '@/lib/appContext'
-import { createProposalFromSimulation, createSimulation } from './actions'
+import { closeSimulation, createProposalFromSimulation, createSimulation } from './actions'
 import { SubmitButton } from '@/components/SubmitButton'
 import { effectiveContractTypes } from '@/lib/contract-types'
 import { formatBRL } from '@/lib/finance/ledger'
+import { atLeast } from '@/lib/rbac'
 
 const SIM_STATUS: Record<string, string> = { draft: 'Rascunho', calculated: 'Calculada', selected: 'Virou proposta', expired: 'Expirada', cancelled: 'Cancelada' }
 
@@ -11,7 +12,8 @@ function brl(value: number | string | null) {
 }
 
 export default async function SimulationsPage() {
-  const { supabase } = await requireAppContext()
+  const { supabase, membership } = await requireAppContext()
+  const canCloseSimulation = atLeast(membership.role, 'supervisor')
   const [tablesResult, customersResult, versionsResult, simulationsResult, proposalsResult, typesResult, typeSettingsResult, conditionsResult] = await Promise.all([
     supabase.from('product_tables').select('id,name,code'),
     supabase.from('clients').select('id,full_name').is('deleted_at', null).order('full_name').limit(200),
@@ -74,12 +76,26 @@ export default async function SimulationsPage() {
               <div><span className="block text-xs text-slate-500">Parcela</span>{brl(s.installment_amount)}</div>
               <div><span className="block text-xs text-slate-500">Prazo</span>{s.term ?? '—'}</div>
             </div>
-            {proposalId
-              ? <span className="rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-400">Proposta criada</span>
-              : <form action={createProposalFromSimulation}>
+            <div className="flex flex-wrap gap-2">
+              {proposalId
+                ? <span className="rounded-full bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-400">Proposta criada</span>
+                : s.status === 'calculated' && <form action={createProposalFromSimulation}>
+                    <input type="hidden" name="simulation_id" value={s.id}/>
+                    <SubmitButton className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-500" pendingText="Criando...">Criar proposta</SubmitButton>
+                  </form>}
+              {canCloseSimulation && !proposalId && s.status === 'calculated' && <>
+                <form action={closeSimulation}>
                   <input type="hidden" name="simulation_id" value={s.id}/>
-                  <SubmitButton className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-500" pendingText="Criando...">Criar proposta</SubmitButton>
-                </form>}
+                  <input type="hidden" name="target_status" value="expired"/>
+                  <SubmitButton className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold" pendingText="Encerrando...">Expirar</SubmitButton>
+                </form>
+                <form action={closeSimulation}>
+                  <input type="hidden" name="simulation_id" value={s.id}/>
+                  <input type="hidden" name="target_status" value="cancelled"/>
+                  <SubmitButton className="rounded-lg border border-red-500/40 px-3 py-2 text-xs font-semibold text-red-200" pendingText="Cancelando...">Cancelar</SubmitButton>
+                </form>
+              </>}
+            </div>
           </div>
         </article>
       })}
