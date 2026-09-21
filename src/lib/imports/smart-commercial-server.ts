@@ -64,6 +64,7 @@ export const SMART_IMPORT_ISSUES:Record<string,string>={
  invalid_date:'Data de vigência inválida.',
  factor_mode_required:'O arquivo tem fator, mas não informa se é Diário ou Fixo.',
  invalid_component_value:'Componente de comissão inválido.',
+ invalid_commission_base:'Base da Comissão inválida. Use LÍQUIDO ou BRUTO.',
  component_unit_required:'Componente em que não foi possível determinar se é % ou R$.',
  component_percentage_over_100:'Percentual de componente acima de 100%.',
  invalid_repass_value:'Valor de repasse inválido.',
