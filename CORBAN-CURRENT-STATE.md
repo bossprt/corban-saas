@@ -1343,3 +1343,21 @@ Validação:
 - Security Advisor continua sem WARN/ERROR novo; apenas 2 INFO históricos de Platform Admin.
 
 **Próxima ação requer autorização explícita para aplicar `20261017_organization_direct_write_privilege_hardening_v1` LIVE.**
+
+
+## Organization direct-write privilege hardening V1 — LIVE
+- Autorização explícita recebida e migration aplicada LIVE como `20260921033720 organization_direct_write_privilege_hardening_v1`.
+- Contract pós-apply passou no banco real.
+- `authenticated` e `anon` não possuem mais INSERT/UPDATE/DELETE em `public.organizations`.
+- SELECT de `authenticated` foi preservado.
+- `authenticated` continua sem EXECUTE em `bootstrap_organization_admin`.
+- Security Advisor continua sem WARN/ERROR novo; permanecem apenas 2 INFO históricos de Platform Admin.
+
+## Próxima decisão de produto/segurança — visibilidade de comissão para agente
+Estado verificado:
+- UI centraliza visibilidade em `canViewCommission` e hoje é supervisor+;
+- porém `authenticated` ainda tem SELECT de tabela inteira em `simulations` e `proposals_v2`;
+- assim, `expected_commission_amount` continua tecnicamente legível por um membro autenticado via API, mesmo quando a UI não exibe;
+- resolver corretamente não é uma simples revogação de coluna porque RPCs security-invoker existentes leem essas tabelas e podem depender dos grants atuais.
+
+**Nenhuma migration foi criada para isso ainda.** Antes de alterar o contrato de acesso, o Owner precisa decidir se agentes devem ser impedidos também no nível da API de ler comissão esperada. A política atual da UI sugere SIM, mas a decisão de produto deve ser explícita.
