@@ -224,3 +224,18 @@ No novo chat:
 - Smart Promotora Ltda. appears in the UI.
 - Updated navigation/dashboard is visible, including Comissões.
 - SMTP/Resend intentionally deferred; do not configure until Owner resumes this gate.
+
+
+## Incident fix — seller group creation regression
+Owner reported that creating a Seller Group returned generic failure and therefore seller creation was blocked.
+Root cause verified LIVE: shared trigger `guard_seller_catalog_row()` was used by both `commercial_sellers` and `seller_groups`, but the seller-access hardening dereferenced `NEW.user_id` / `OLD.user_id`. `seller_groups` has no `user_id`, causing the insert to fail.
+
+Fix:
+- prepared `20261020_seller_catalog_shared_trigger_regression_fix_v1.sql` + security contract;
+- changed user binding inspection to safe `to_jsonb(NEW/OLD)->>'user_id'` so the shared trigger works on both tables;
+- rollback harness as authenticated Smart admin proved: Seller Group insert works, seller insert works, direct seller user binding remains blocked;
+- applied LIVE as `20260921044435 seller_catalog_shared_trigger_regression_fix_v1` under standing authorization for the same seller-access wave;
+- post-apply contract passed;
+- Security Advisor unchanged: no new WARN/ERROR, only 2 historical Platform Admin INFO.
+
+No rollback-test business rows persisted in LIVE.
