@@ -37,7 +37,7 @@ export async function assignProposalSeller(formData: FormData) {
   }
 
   revalidatePath(`/app/propostas/${id}`)
-  return back(id, 'ok:proposta_atualizada')
+  return back(id, 'ok:vendedor_atualizado')
 }
 
 export async function prepareDocuments(formData: FormData) {
