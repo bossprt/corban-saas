@@ -152,7 +152,6 @@ export function mapConditionRows(rows: readonly (readonly unknown[])[], ctx: { g
   })
   for (const f of ['contract', 'received'] as const) if (col[f] === undefined) fail(1, `missing_column_${f}`)
   if (col.term === undefined && (col.termMin === undefined || col.termMax === undefined)) fail(1, 'missing_column_term')
-  if (col.coefficient === undefined && col.rate === undefined) fail(1, 'missing_column_coefficient_or_rate')
   if ((col.amountMin===undefined)!==(col.amountMax===undefined)) fail(1,'invalid_amount_range')
   if (issues.length) return { conditions: [], issues }
 
@@ -177,7 +176,6 @@ export function mapConditionRows(rows: readonly (readonly unknown[])[], ctx: { g
     const coefficient = cell(col.coefficient) === '' ? null : parseCoefficient(cell(col.coefficient))
     const rate = cell(col.rate) === '' ? null : parseRate(cell(col.rate))
     if ((cell(col.coefficient) !== '' && coefficient === null) || (cell(col.rate) !== '' && rate === null)) return fail(line, 'invalid_number')
-    if (coefficient === null && rate === null) return fail(line, 'coefficient_or_rate_required')
     const received = parsePercent(cell(col.received))
     if (received === null || scaled(received) > HUNDRED) return fail(line, 'invalid_received_commission', cell(col.received))
     const shares: ShareInput[] = []
