@@ -389,3 +389,12 @@ Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`)
 - Preview/apply usam o mesmo mapa.
 - Vercel READY.
 - Sem DDL, secret, gasto ou Claude.
+
+
+### Preparado — policy scope DB guard
+- Tipo de Contrato externo pode ser mapeado explicitamente sem criação silenciosa.
+- Preview/apply agora validam escopo da política component-aware.
+- DB guard correspondente preparado e aprovado em rollback-only.
+- 0 mismatches existentes.
+- HEAD Vercel READY.
+- Novo DDL ainda não LIVE.
