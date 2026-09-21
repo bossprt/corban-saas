@@ -49,6 +49,19 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
   const seeCommission = canViewCommission(membership.role)
   if (!atLeast(membership.role, 'supervisor')) return <section><p>Sem permissão.</p></section>
 
+  async function allPages<T>(fetchPage:(from:number,to:number)=>Promise<{data:T[]|null;error:unknown}>) {
+    const out:T[]=[]
+    const pageSize=1000
+    for(let from=0;;from+=pageSize){
+      const {data,error}=await fetchPage(from,from+pageSize-1)
+      if(error) throw error
+      const rows=data ?? []
+      out.push(...rows)
+      if(rows.length<pageSize) break
+    }
+    return out
+  }
+
   const [banks, providers, agreements, groups, contractTypes, contractTypeSettings, routes, tables, versions, conditions, commissions, components, shares, polRows, polVersions] = await Promise.all([
     supabase.from('organization_banks').select('id,name,is_active').order('name'),
     supabase.from('organization_providers').select('id,name,is_active').order('name'),
@@ -58,11 +71,17 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
     supabase.from('organization_contract_type_settings').select('contract_type_id,is_enabled,use_in_pipeline,use_in_commission'),
     supabase.from('organization_product_routes').select('id,org_bank_id,org_provider_id,org_agreement_id,production_origin,status').not('org_bank_id','is',null),
     supabase.from('product_tables').select('id,route_id,name,status').order('name'),
-    supabase.from('product_table_versions').select('id,product_table_id,version,status,effective_from,effective_until').order('version',{ascending:false}),
-    supabase.from('commercial_conditions').select('id,product_table_version_id,contract_type_id,term,coefficient,rate').order('term'),
-    seeCommission ? supabase.from('commercial_condition_commissions').select('condition_id,received_commission_pct,policy_version_id') : Promise.resolve({data:[] as {condition_id:string;received_commission_pct:number;policy_version_id:string|null}[]}),
-    seeCommission ? supabase.from('commercial_condition_components').select('condition_id,calculation_base,component_type_id') : Promise.resolve({data:[] as {condition_id:string;calculation_base:string|null;component_type_id:string}[]}),
-    seeCommission ? supabase.from('commercial_condition_shares').select('condition_id,group_id,share_pct,effective_pct,source') : Promise.resolve({data:[] as {condition_id:string;group_id:string;share_pct:number;effective_pct:number;source:string}[]}),
+    allPages<{id:string;product_table_id:string;version:number;status:string;effective_from:string|null;effective_until:string|null}>((from,to)=>supabase.from('product_table_versions').select('id,product_table_id,version,status,effective_from,effective_until').order('id').range(from,to)),
+    allPages<{id:string;product_table_version_id:string;contract_type_id:string;term:number;coefficient:number|null;rate:number|null}>((from,to)=>supabase.from('commercial_conditions').select('id,product_table_version_id,contract_type_id,term,coefficient,rate').order('id').range(from,to)),
+    seeCommission
+      ? allPages<{condition_id:string;received_commission_pct:number;policy_version_id:string|null}>((from,to)=>supabase.from('commercial_condition_commissions').select('condition_id,received_commission_pct,policy_version_id').order('condition_id').range(from,to))
+      : Promise.resolve([] as {condition_id:string;received_commission_pct:number;policy_version_id:string|null}[]),
+    seeCommission
+      ? allPages<{condition_id:string;calculation_base:string|null;component_type_id:string}>((from,to)=>supabase.from('commercial_condition_components').select('condition_id,calculation_base,component_type_id').order('id').range(from,to))
+      : Promise.resolve([] as {condition_id:string;calculation_base:string|null;component_type_id:string}[]),
+    seeCommission
+      ? allPages<{condition_id:string;group_id:string;share_pct:number;effective_pct:number;source:string}>((from,to)=>supabase.from('commercial_condition_shares').select('condition_id,group_id,share_pct,effective_pct,source').order('id').range(from,to))
+      : Promise.resolve([] as {condition_id:string;group_id:string;share_pct:number;effective_pct:number;source:string}[]),
     supabase.from('payout_policies').select('id,name,is_active').order('name'),
     supabase.from('payout_policy_versions').select('id,policy_id,version').order('version',{ascending:false}),
   ])
@@ -87,13 +106,13 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
   const statusFilter=typeof sp.status==='string'?sp.status:'current'
   const now=new Date()
 
-  const currentVersionFor=(tableId:string)=>(versions.data ?? []).find(v=>{
+  const currentVersionFor=(tableId:string)=>versions.find(v=>{
     if(v.product_table_id!==tableId||v.status!=='published')return false
     const from=v.effective_from?new Date(v.effective_from):new Date(0)
     const until=v.effective_until?new Date(v.effective_until):null
     return from<=now&&(!until||now<until)
   })
-  const hasDraft=(tableId:string)=>(versions.data ?? []).some(v=>v.product_table_id===tableId&&v.status==='draft')
+  const hasDraft=(tableId:string)=>versions.some(v=>v.product_table_id===tableId&&v.status==='draft')
 
   const v3Tables=allCommercialTables.filter(t=>{
     const meta=routeMeta.get(t.route_id)!
@@ -125,8 +144,8 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
   const providerOptions=[...new Set(allCommercialTables.map(t=>routeMeta.get(t.route_id)!.provider))].sort((a,b)=>a.localeCompare(b,'pt-BR'))
   const agreementOptions=[...new Set(allCommercialTables.map(t=>routeMeta.get(t.route_id)!.agreement))].sort((a,b)=>a.localeCompare(b,'pt-BR'))
   const activeGroups=(groups.data ?? []).filter(g => g.is_active) as Group[]
-  const receivedBy=new Map((commissions.data ?? []).map(c => [c.condition_id,c.received_commission_pct]))
-  const policyOf=new Map((commissions.data ?? []).map(c => [c.condition_id,c.policy_version_id]))
+  const receivedBy=new Map(commissions.map(c => [c.condition_id,c.received_commission_pct]))
+  const policyOf=new Map(commissions.map(c => [c.condition_id,c.policy_version_id]))
   const baseBy=new Map<string,string>()
   for(const x of components.data ?? []) if(x.calculation_base && !baseBy.has(x.condition_id)) baseBy.set(x.condition_id,x.calculation_base)
   const sharesBy=new Map<string,Map<string,number>>()
@@ -144,7 +163,7 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
   const importLine = typeof sp.l === 'string' && /^\d{1,5}$/.test(sp.l) ? sp.l : null
 
   const renderTable=(t:(typeof v3Tables)[number])=>{
-    const tableVersions=(versions.data ?? []).filter(v=>v.product_table_id===t.id)
+    const tableVersions=versions.filter(v=>v.product_table_id===t.id)
     const current=currentVersionFor(t.id)
     const drafts=tableVersions.filter(v=>v.status==='draft').length
     return <details key={t.id} className="rounded-xl border border-slate-800 bg-slate-950/40">
@@ -159,7 +178,7 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
       </summary>
       <div className="border-t border-slate-800 p-4">
         {tableVersions.map(v => {
-          const conds=(conditions.data ?? []).filter(c=>c.product_table_version_id===v.id) as (Condition & {product_table_version_id:string})[]
+          const conds=conditions.filter(c=>c.product_table_version_id===v.id) as (Condition & {product_table_version_id:string})[]
           return <div key={v.id} className="mt-2 rounded-xl border border-slate-800 p-3 first:mt-0">
             <div className="flex flex-wrap items-center gap-3 text-sm">
               <span>v{v.version} · {VSTATUS[v.status] ?? v.status} · {conds.length} condição(ões)</span>
