@@ -962,3 +962,22 @@ Seller/Sub adicionará: seller_groups, commercial_sellers, seller_sub_rule_versi
 Fatores adicionará: commercial_factor_profiles, commercial_factor_batches, commercial_factor_entries, publicação e resolução determinísticas.
 
 Build Vercel atual: READY. Próximo passo bloqueado apenas pelo Human Gate de DDL LIVE.
+
+
+## Seller/SUB e Fatores — LIVE
+Aplicadas em produção com autorização explícita do Owner:
+- `20260920235725 seller_commercial_profile_v1`
+- `20260920235731 commercial_factors_v1`
+
+Validação pós-apply:
+- contratos SQL de Seller/SUB e Fatores passaram;
+- RLS presente nas seis novas tabelas;
+- advisor de segurança: nenhum WARN/ERROR novo; somente 2 INFO já conhecidos nas tabelas exclusivas de Platform Admin;
+- advisor de performance: INFO de FKs sem índice e índices ainda não usados; não foi aplicado novo DDL fora do gate autorizado.
+
+UI adicionada:
+- `/app/cadastros/vendedores`: Grupo de Vendedor, Grupo de Comissão, PF/PJ/SUB e regra SUB versionada;
+- `/app/comercial/fatores`: perfis daily/fixed, cadastro manual e importação inicial CSV/XLSX;
+- Central de Cadastros atualizada com Vendedores e Fatores.
+
+Limitação atual de importação de fatores: PDF e XLS legado ainda não entram nesta primeira UI; o domínio e a linhagem já estão preparados para a próxima onda adaptativa.
