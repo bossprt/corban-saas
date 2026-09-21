@@ -49,7 +49,7 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
   const seeCommission = canViewCommission(membership.role)
   if (!atLeast(membership.role, 'supervisor')) return <section><p>Sem permissão.</p></section>
 
-  async function allPages<T>(fetchPage:(from:number,to:number)=>Promise<{data:T[]|null;error:unknown}>) {
+  async function allPages<T>(fetchPage:(from:number,to:number)=>PromiseLike<{data:T[]|null;error:unknown}>) {
     const out:T[]=[]
     const pageSize=1000
     for(let from=0;;from+=pageSize){
@@ -147,10 +147,10 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
   const receivedBy=new Map(commissions.map(c => [c.condition_id,c.received_commission_pct]))
   const policyOf=new Map(commissions.map(c => [c.condition_id,c.policy_version_id]))
   const baseBy=new Map<string,string>()
-  for(const x of components.data ?? []) if(x.calculation_base && !baseBy.has(x.condition_id)) baseBy.set(x.condition_id,x.calculation_base)
+  for(const x of components) if(x.calculation_base && !baseBy.has(x.condition_id)) baseBy.set(x.condition_id,x.calculation_base)
   const sharesBy=new Map<string,Map<string,number>>()
   const effectiveBy=new Map<string,Map<string,number>>()
-  for (const s of shares.data ?? []) {
+  for (const s of shares) {
     if (s.source !== 'policy') { if (!sharesBy.has(s.condition_id)) sharesBy.set(s.condition_id,new Map()); sharesBy.get(s.condition_id)!.set(s.group_id,s.share_pct) }
     if (!effectiveBy.has(s.condition_id)) effectiveBy.set(s.condition_id,new Map())
     effectiveBy.get(s.condition_id)!.set(s.group_id,s.effective_pct)
