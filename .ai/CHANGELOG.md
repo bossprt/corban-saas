@@ -330,3 +330,12 @@ Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`)
 - Contratos pós-apply passaram; security advisor sem WARN/ERROR novo.
 - UI de Tipos de Contrato e regras por componente iniciada.
 - Claude não utilizado.
+
+
+### Preparado — 20/09/2026 (Smart Commercial Import V1)
+- Parser determinístico de planilha comercial adicionado.
+- Modelo XLSX dinâmico passa a usar nomes reais dos Grupos de Comissão.
+- RPC atômica preparada para catálogo/tabela/condições/componentes/fatores.
+- Generic Repasse 1/2/3 é tratado como ambiguidade, não como grupo.
+- 20261012 passou em rollback-only; zero persistência.
+- Claude ainda não utilizado.
