@@ -4,7 +4,8 @@ import { xlsxRows } from '@/lib/commercial-xlsx'
 import { effectiveContractTypes } from '@/lib/contract-types'
 import { mapSmartCommercialRows, type SmartImportResult } from '@/lib/imports/smart-commercial'
 
-type Ctx={supabase:{from:(table:string)=>any}}
+type Query=ReturnType<import('@supabase/supabase-js').SupabaseClient['from']>
+type Ctx={supabase:{from:(table:string)=>Query}}
 
 export async function parseSmartCommercialFile(ctx:Ctx,file:File):Promise<SmartImportResult>{
  if(file.size===0||file.size>2_000_000)throw new Error('invalid_file')
