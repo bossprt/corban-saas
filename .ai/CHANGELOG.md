@@ -542,3 +542,48 @@ Estado verificado:
 - resolver corretamente não é uma simples revogação de coluna porque RPCs security-invoker existentes leem essas tabelas e podem depender dos grants atuais.
 
 **Nenhuma migration foi criada para isso ainda.** Antes de alterar o contrato de acesso, o Owner precisa decidir se agentes devem ser impedidos também no nível da API de ler comissão esperada. A política atual da UI sugere SIM, mas a decisão de produto deve ser explícita.
+
+
+## Política de visibilidade de comissão por vendedor — decisão do Owner
+Regra aprovada:
+- vendedor: vê somente a própria comissão;
+- administrador: vê comissão de todos;
+- gerente: vê comissão de todos;
+- supervisor: vê somente comissão dos vendedores que supervisiona.
+
+### Estado arquitetural encontrado
+- `commercial_sellers` não tinha vínculo com usuário autenticado;
+- não existia relação supervisor -> vendedores;
+- `financial_events`, `financial_reconciliation_cases` e snapshots de componentes davam SELECT amplo a supervisor+;
+- `commission_expected` do ledger é receita esperada da empresa, não a comissão individual do vendedor;
+- o motor de condição já materializa `commercial_condition_shares.effective_pct` por Grupo de Comissão, que pode ser congelado como comissão individual quando disponível;
+- no LIVE atual existem 0 sellers, 0 proposals e 0 commercial_conditions, então não há histórico econômico para migrar/reinterpretar.
+
+### Preparado e NÃO LIVE — Seller commission visibility scope V1
+Arquivos:
+- `supabase/migrations/20261018_seller_commission_visibility_scope_v1.sql`;
+- `tests/security/seller-commission-visibility-scope-contract.sql`.
+
+O pacote preparado:
+1. adiciona `commercial_sellers.user_id` com FK tenant-safe para membership;
+2. cria `seller_supervisions` para vínculo explícito supervisor -> vendedor, sem DELETE físico;
+3. cria RPCs governadas `set_seller_user` e `set_seller_supervision` (admin/manager) com auditoria;
+4. cria helper `can_view_seller_commission(org,seller)`:
+   - admin/manager = todos;
+   - vendedor autenticado = seller ligado ao próprio user_id;
+   - supervisor = somente seller em seller_supervisions ativo;
+5. cria `proposal_seller_commission_snapshots`, imutável e separado do ledger da empresa;
+6. quando a condição tem share inequívoco do Grupo de Comissão, congela `amount = base * effective_pct / 100`;
+7. quando o repasse não puder ser determinado com segurança, congela status `unavailable` com motivo, sem estimativa;
+8. restringe leitura de `proposal_commercial_component_snapshots`, `financial_events` e `financial_reconciliation_cases` para admin/manager ou supervisor dentro do seu escopo;
+9. vendedor não ganha acesso ao ledger da empresa: sua futura UI deve ler somente `proposal_seller_commission_snapshots`.
+
+Validação:
+- primeira execução rollback encontrou erro de rowtype e foi corrigida sem qualquer alteração LIVE;
+- segunda execução `BEGIN -> migration -> contract -> ROLLBACK` passou integralmente;
+- migration ainda não consta em `list_migrations` e NÃO está LIVE.
+
+Limite proposital:
+- componente/payout avançado que não resulte em `commercial_condition_shares.effective_pct` não é inferido; fica `unavailable` até integração determinística posterior.
+
+**Próximo Human Gate: aplicar `20261018_seller_commission_visibility_scope_v1` LIVE.**
