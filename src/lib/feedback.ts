@@ -35,6 +35,13 @@ export const FEEDBACK = {
   'ok:condicoes_importadas': 'Condições importadas.',
   'ok:politica_salva': 'Política de repasse salva como nova versão. Ela vale para as próximas condições; o que já foi cadastrado não muda.',
   'ok:previa_validada': 'Arquivo válido. Nada foi gravado ainda: confira o resumo e envie de novo escolhendo Importar.',
+  'ok:grupo_vendedor_cadastrado': 'Grupo de Vendedor cadastrado.',
+  'ok:vendedor_cadastrado': 'Vendedor cadastrado.',
+  'ok:vendedor_atualizado': 'Cadastro do vendedor atualizado.',
+  'ok:sub_regra_publicada': 'Nova regra SUB publicada. O histórico anterior foi preservado.',
+  'ok:fator_perfil_cadastrado': 'Perfil de fator cadastrado.',
+  'ok:fator_publicado': 'Fator publicado.',
+  'ok:fatores_importados': 'Fatores importados e publicados.',
   // errors
   'erro:nome_invalido': 'Informe um nome válido.',
   'erro:canal_invalido': 'Canal inválido.',
@@ -99,6 +106,11 @@ export const FEEDBACK = {
   'erro:com_sem_grupos': 'Cadastre pelo menos um grupo de comissão antes de registrar condições.',
   'erro:import_invalido': 'O arquivo tem erros e nada foi importado. Corrija e envie de novo.',
   'erro:import_arquivo': 'Envie um arquivo CSV ou XLSX de até 1 MB.',
+  'erro:vendedor_invalido': 'Confira nome, categoria, CPF/CNPJ, Grupo de Vendedor e Grupo de Comissão.',
+  'erro:sub_regra_invalida': 'Confira o percentual do SUB e a data de vigência.',
+  'erro:fator_invalido': 'Confira instituição, escopo, regime, prazo, data e valor do fator.',
+  'erro:fator_arquivo': 'Envie um CSV ou XLSX válido de até 2 MB.',
+  'erro:fator_colunas': 'Não foi possível identificar Prazo Inicial/Prazo Final/Fator ou há valores inválidos.',
 } as const
 export type FeedbackCode = keyof typeof FEEDBACK
 export const isFeedbackCode = (v: unknown): v is FeedbackCode => typeof v === 'string' && Object.prototype.hasOwnProperty.call(FEEDBACK, v)

@@ -14,10 +14,12 @@ export default async function RegistrationsHubPage() {
       ['Convênios', 'Convênios nacionais habilitados e convênios próprios.', '/app/comercial/convenios'],
       ['Produtos / Tabelas', 'Tabelas comerciais, versões, condições e importação.', '/app/comercial/tabelas'],
       ['Empresas de origem de terceiros', 'Masters, promotoras, correspondentes e parceiros externos.', '/app/comercial/origens'],
-      ['Grupos comerciais / comissão', 'Grupos usados nas regras de remuneração.', '/app/comercial/grupos'],
+      ['Grupos de comissão', 'Regras de remuneração por canal/grupo.', '/app/comercial/grupos'],
+      ['Fatores', 'Fatores diários e fixos usados no CRM e nas simulações.', '/app/comercial/fatores'],
       ['Modelo comercial', 'Resumo da configuração comercial da organização.', '/app/comercial'],
     ]],
     ['Rede e acesso', [
+      ['Vendedores', 'Grupo de Vendedor, Grupo de Comissão e categoria PF/PJ/SUB.', '/app/cadastros/vendedores'],
       ['Rede comercial', 'Entidades, relações e canais comerciais.', '/app/rede'],
       ...(manageTeam ? [['Equipe e acessos', 'Usuários, papéis e ciclo de acesso.', '/app/equipe']] : []),
     ]],
