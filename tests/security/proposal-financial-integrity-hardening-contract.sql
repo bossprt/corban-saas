@@ -14,7 +14,7 @@ begin
   end if;
 
   select pg_get_functiondef(p.oid) into def
-  from pg_proc p join pg_namespace n on n.oid=p.relnamespace
+  from pg_proc p join pg_namespace n on n.oid=p.pronamespace
   where n.nspname='public' and p.proname='publish_expected_commission';
   if def is null or position('refresh_financial_reconciliation' in def)=0 then
     raise exception 'expected_commission_does_not_refresh_reconciliation';
