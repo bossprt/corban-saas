@@ -49,7 +49,7 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
   const seeCommission = canViewCommission(membership.role)
   if (!atLeast(membership.role, 'supervisor')) return <section><p>Sem permissão.</p></section>
 
-  const [banks, providers, agreements, groups, contractTypes, contractTypeSettings, routes, tables, versions, conditions, commissions, shares, polRows, polVersions] = await Promise.all([
+  const [banks, providers, agreements, groups, contractTypes, contractTypeSettings, routes, tables, versions, conditions, commissions, components, shares, polRows, polVersions] = await Promise.all([
     supabase.from('organization_banks').select('id,name,is_active').order('name'),
     supabase.from('organization_providers').select('id,name,is_active').order('name'),
     supabase.from('organization_agreements').select('id,name,is_active').order('name'),
@@ -61,6 +61,7 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
     supabase.from('product_table_versions').select('id,product_table_id,version,status').order('version',{ascending:false}),
     supabase.from('commercial_conditions').select('id,product_table_version_id,contract_type_id,term,coefficient,rate').order('term'),
     seeCommission ? supabase.from('commercial_condition_commissions').select('condition_id,received_commission_pct,policy_version_id') : Promise.resolve({data:[] as {condition_id:string;received_commission_pct:number;policy_version_id:string|null}[]}),
+    seeCommission ? supabase.from('commercial_condition_components').select('condition_id,calculation_base,component_type_id') : Promise.resolve({data:[] as {condition_id:string;calculation_base:string|null;component_type_id:string}[]}),
     seeCommission ? supabase.from('commercial_condition_shares').select('condition_id,group_id,share_pct,effective_pct,source') : Promise.resolve({data:[] as {condition_id:string;group_id:string;share_pct:number;effective_pct:number;source:string}[]}),
     supabase.from('payout_policies').select('id,name,is_active').order('name'),
     supabase.from('payout_policy_versions').select('id,policy_id,version').order('version',{ascending:false}),
@@ -74,6 +75,8 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
   const activeGroups=(groups.data ?? []).filter(g => g.is_active) as Group[]
   const receivedBy=new Map((commissions.data ?? []).map(c => [c.condition_id,c.received_commission_pct]))
   const policyOf=new Map((commissions.data ?? []).map(c => [c.condition_id,c.policy_version_id]))
+  const baseBy=new Map<string,string>()
+  for(const x of components.data ?? []) if(x.calculation_base && !baseBy.has(x.condition_id)) baseBy.set(x.condition_id,x.calculation_base)
   const sharesBy=new Map<string,Map<string,number>>()
   const effectiveBy=new Map<string,Map<string,number>>()
   for (const s of shares.data ?? []) {
@@ -122,6 +125,7 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
                     <th className="pr-4">Taxa</th>
                     {seeCommission && <>
                       <th className="pr-4">Comissão empresa</th>
+                      <th className="pr-4">Base</th>
                       {activeGroups.map(g=><th key={g.id} className="pr-4 whitespace-nowrap">{g.name}</th>)}
                     </>}
                   </tr>
@@ -134,6 +138,7 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
                     <td className="pr-4 whitespace-nowrap">{showPct(c.rate)}%</td>
                     {seeCommission && <>
                       <td className="pr-4 whitespace-nowrap font-medium">{showPct(receivedBy.get(c.id))}%</td>
+                      <td className="pr-4 whitespace-nowrap">{baseBy.get(c.id) ?? '—'}</td>
                       {activeGroups.map(g=>{
                         const effective=effectiveBy.get(c.id)?.get(g.id)
                         return <td key={g.id} className="pr-4 whitespace-nowrap">{effective===undefined?'—':showPct(effective)+'%'}</td>
