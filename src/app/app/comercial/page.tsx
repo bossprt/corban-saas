@@ -21,14 +21,14 @@ export default async function CommercialPage() {
     supabase.from('organization_banks').select('id,name,is_active').order('name'),
     supabase.from('organization_providers').select('id,name,is_active').order('name'),
     supabase.from('organization_agreements').select('id,name,is_active').order('name'),
-    seeCommission ? supabase.from('commission_groups').select('id,name,calculation_basis,is_active').order('sort_order').order('name') : Promise.resolve({data:[] as Group[]}),
+    supabase.from('commission_groups').select('id,name,calculation_basis,is_active').order('sort_order').order('name'),
     supabase.from('organization_product_routes').select('id').not('org_bank_id', 'is', null),
     supabase.from('product_tables').select('id,route_id,status').order('name'),
     supabase.from('product_table_versions').select('id,product_table_id,status').order('version', { ascending: false }),
     supabase.from('commercial_conditions').select('id,product_table_version_id'),
-    seeCommission ? supabase.from('payout_policies').select('id,name,is_active').order('name') : Promise.resolve({data:[] as {id:string;name:string;is_active:boolean}[]}),
-    seeCommission ? supabase.from('payout_policy_versions').select('id,policy_id,version,base_kind,discount_pct').order('version', { ascending: false }) : Promise.resolve({data:[] as {id:string;policy_id:string;version:number;base_kind:string;discount_pct:number}[]}),
-    seeCommission ? supabase.from('payout_policy_items').select('version_id,group_id,pct') : Promise.resolve({data:[] as {version_id:string;group_id:string;pct:number}[]}),
+    supabase.from('payout_policies').select('id,name,is_active').order('name'),
+    supabase.from('payout_policy_versions').select('id,policy_id,version,base_kind,discount_pct').order('version', { ascending: false }),
+    supabase.from('payout_policy_items').select('version_id,group_id,pct'),
   ])
   const groupN = new Map((groups.data ?? []).map(g => [g.id, g.name]))
   const activeGroups = (groups.data ?? []).filter(g => g.is_active) as Group[]
