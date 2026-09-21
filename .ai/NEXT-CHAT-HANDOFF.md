@@ -217,3 +217,10 @@ No novo chat:
 3. não repetir migrations LIVE;
 4. não refazer OAuth, setup ou testes já concluídos;
 5. continuar da próxima fronteira autônoma registrada acima; não reaplicar migrations LIVE.
+
+
+## OWNER VISUAL CHECK — production confirmed
+- Owner confirmed Corban OS is online and current updates are visible in production.
+- Smart Promotora Ltda. appears in the UI.
+- Updated navigation/dashboard is visible, including Comissões.
+- SMTP/Resend intentionally deferred; do not configure until Owner resumes this gate.
