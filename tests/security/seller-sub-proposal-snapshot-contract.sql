@@ -33,6 +33,7 @@ begin
   from pg_proc p join pg_namespace ns on ns.oid=p.pronamespace
   where ns.nspname='public' and p.proname='assign_proposal_seller';
   if def is null then raise exception 'assign_proposal_seller_missing'; end if;
+  if position('commission_group_id' in def)>0 then raise exception 'commission_group_leaked_into_proposal_attribution'; end if;
   if position('proposal_seller_rpc' in def)=0
      or position('proposal_commercial_route_already_frozen' in def)=0
      or position('active_seller_not_found' in def)=0 then
