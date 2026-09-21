@@ -2042,3 +2042,38 @@ Validation:
 
 Standing authorization note:
 Owner authorized future DDL without a new prompt only when strictly necessary to implement/complete this SAME seller commission visibility rule and only after rollback-test + contract. Unrelated DDL, destructive changes, secrets, spend, or external irreversible actions still require a new Human Gate.
+
+
+## Pilot external readiness — verified after commission wave
+Verified LIVE / deploy:
+- production login responds HTTP 200 at `https://corban-saas.vercel.app/login`;
+- Smart Promotora Ltda. exists and is active; do NOT recreate it;
+- reference catalog counts: banks=34, providers=0, agreements=0, products=0, document_types=0;
+- seller commission visibility wave is closed and Vercel HEAD is green.
+
+Stale pilot docs were refreshed:
+- commission decision marked RESOLVED/LIVE;
+- organization direct-write hardening marked RESOLVED/LIVE;
+- simulation lifecycle marked RESOLVED/LIVE;
+- Smart organization marked RESOLVED;
+- Smart Owner Setup no longer tells the Owner to recreate Smart.
+
+### Next real external gates
+1. Supabase Auth production configuration:
+   - Site URL: `https://corban-saas.vercel.app` (or later custom production domain, if intentionally adopted);
+   - redirect: `https://corban-saas.vercel.app/auth/definir-senha`;
+   - optional token-hash redirect: `https://corban-saas.vercel.app/auth/confirm`;
+   - custom SMTP sender/credentials;
+   - Confirm email ON; closed-pilot public signup OFF;
+   - password policy >=10 and leaked-password protection if plan supports it;
+   - hosting `NEXT_PUBLIC_SITE_URL=https://corban-saas.vercel.app` should be confirmed/set.
+2. Complete global reference catalog with REAL data. Do not invent:
+   - providers;
+   - agreements;
+   - products/modalities;
+   - document types.
+   Banks are already loaded (34).
+3. Worker remains intentionally disabled until a real provider is homologated; activation requires secret + scheduler and is a separate external gate.
+4. Human browser acceptance still requires real/test credentials after Auth/SMTP is configured.
+
+No unrelated DDL is currently prepared or justified. Do not create fake economic/business records in LIVE merely to exercise the UI.
