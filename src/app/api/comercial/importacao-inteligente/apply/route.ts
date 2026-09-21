@@ -16,11 +16,15 @@ export async function POST(req:Request){
   const origin=String(fd.get('production_origin')??'')
   const provider=String(fd.get('provider_id')??'').trim()
   const policy=String(fd.get('policy_version_id')??'').trim()
+  const remittanceMode=String(fd.get('remittance_mode')??'partial')
+  const remittanceEffectiveFrom=String(fd.get('remittance_effective_from')??'').trim()
   const ignoreLegacy=String(fd.get('ignore_legacy_repasses')??'')==='true'
   if(!['own','third_party'].includes(origin))return Response.json({error:'Escolha a origem da produção.'},{status:400})
   if(origin==='third_party'&&!uuid(provider))return Response.json({error:'Escolha a empresa de origem.'},{status:400})
   if(origin==='own'&&provider)return Response.json({error:'Produção própria não usa empresa de origem.'},{status:400})
   if(policy&&!uuid(policy))return Response.json({error:'Regra de comissão inválida.'},{status:400})
+  if(!['partial','complete'].includes(remittanceMode))return Response.json({error:'Tipo de atualização inválido.'},{status:400})
+  if(remittanceMode==='complete'&&!/^\d{4}-\d{2}-\d{2}$/.test(remittanceEffectiveFrom))return Response.json({error:'Informe a data de início da nova vigência para a remessa completa.'},{status:400})
 
   const headerMap=headerMapFromForm(fd)
   const contractTypeMap=contractTypeMapFromForm(fd)
@@ -42,12 +46,14 @@ export async function POST(req:Request){
     coefficient:r.coefficient,rate:r.rate,effective_from:r.effective_from,effective_until:r.effective_until,
     factor_mode:r.factor_mode,factor_value:r.factor_value,factor_date:r.factor_date,components:r.components,
   }))
-  const {data,error}=await ctx.supabase.rpc('import_smart_commercial_rows',{
+  const {data,error}=await ctx.supabase.rpc('apply_smart_commercial_remittance',{
    p_organization:ctx.membership.organization_id,
    p_production_origin:origin,
    p_provider:origin==='third_party'?provider:null,
    p_policy_version:policy||null,
-   p_rows:payload
+   p_rows:payload,
+   p_mode:remittanceMode,
+   p_remittance_effective_from:remittanceMode==='complete'?remittanceEffectiveFrom+'T00:00:00Z':null,
   })
   if(error)return Response.json({error:error.message||'Importação recusada pelo banco de dados.'},{status:400})
   return Response.json({ok:true,result:data,summary:parsed.summary})
