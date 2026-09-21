@@ -108,7 +108,7 @@ export function parseDelimited(text: string): string[][] {
   return rows.filter(r => r.some(x => x.trim() !== ''))
 }
 
-export type ParsedCondition = { line: number; contractTypeId: string; termMin: number; termMax: number; coefficient: string | null; rate: string | null; received: string; shares: ShareInput[]; resolved: ResolvedShare[] }
+export type ParsedCondition = { line: number; contractTypeId: string; termMin: number; termMax: number; amountMin:string|null; amountMax:string|null; coefficient: string | null; rate: string | null; received: string; shares: ShareInput[]; resolved: ResolvedShare[] }
 export type ImportIssue = { line: number; code: string; detail?: string }
 export const IMPORT_MAX_ROWS = 500
 
@@ -117,6 +117,8 @@ const ALIASES = {
   term: ['prazo', 'prazo_meses', 'prazo_em_meses'],
   termMin: ['prazo_inicial', 'prazo_minimo', 'prazo_min'],
   termMax: ['prazo_final', 'prazo_maximo', 'prazo_max'],
+  amountMin: ['valor_inicial','valor_minimo','valor_contrato_inicial','vr_inicial'],
+  amountMax: ['valor_final','valor_maximo','valor_contrato_final','vr_final'],
   coefficient: ['coeficiente'],
   rate: ['taxa', 'taxa_mensal'],
   received: ['comissao_recebida', 'comissao', 'comissao_do_banco'],
@@ -151,6 +153,7 @@ export function mapConditionRows(rows: readonly (readonly unknown[])[], ctx: { g
   for (const f of ['contract', 'received'] as const) if (col[f] === undefined) fail(1, `missing_column_${f}`)
   if (col.term === undefined && (col.termMin === undefined || col.termMax === undefined)) fail(1, 'missing_column_term')
   if (col.coefficient === undefined && col.rate === undefined) fail(1, 'missing_column_coefficient_or_rate')
+  if ((col.amountMin===undefined)!==(col.amountMax===undefined)) fail(1,'invalid_amount_range')
   if (issues.length) return { conditions: [], issues }
 
   const typeKey = new Map<string, ContractTypeRef>()
@@ -166,6 +169,11 @@ export function mapConditionRows(rows: readonly (readonly unknown[])[], ctx: { g
     const termMin = singleTerm ?? (col.termMin === undefined ? null : parseTerm(cell(col.termMin)))
     const termMax = singleTerm ?? (col.termMax === undefined ? null : parseTerm(cell(col.termMax)))
     if (termMin === null || termMax === null || termMin > termMax) return fail(line, 'invalid_term_range')
+    const amountMinRaw=cell(col.amountMin), amountMaxRaw=cell(col.amountMax)
+    const amountMin=col.amountMin===undefined||amountMinRaw===''?null:parseDecimal(amountMinRaw,{maxInt:9,scale:2})
+    const amountMax=col.amountMax===undefined||amountMaxRaw===''?null:parseDecimal(amountMaxRaw,{maxInt:9,scale:2})
+    const moneyCents=(v:string)=>{const [i,d='']=v.split('.');return BigInt(i)*100n+BigInt((d+'00').slice(0,2))}
+    if((amountMinRaw==='')!==(amountMaxRaw==='')||(amountMinRaw!==''&&(amountMin===null||amountMax===null||moneyCents(amountMin)>moneyCents(amountMax))))return fail(line,'invalid_amount_range')
     const coefficient = cell(col.coefficient) === '' ? null : parseCoefficient(cell(col.coefficient))
     const rate = cell(col.rate) === '' ? null : parseRate(cell(col.rate))
     if ((cell(col.coefficient) !== '' && coefficient === null) || (cell(col.rate) !== '' && rate === null)) return fail(line, 'invalid_number')
@@ -182,10 +190,10 @@ export function mapConditionRows(rows: readonly (readonly unknown[])[], ctx: { g
     }
     const res = resolveShares(ctx.groups, shares, received, ctx.policy)
     if (res.error) return fail(line, res.error)
-    const key = `${type.id}|${termMin}|${termMax}`
+    const key = `${type.id}|${termMin}|${termMax}|${amountMin??'*'}|${amountMax??'*'}`
     if (seen.has(key)) return fail(line, 'duplicate_row')
     seen.add(key)
-    conditions.push({ line, contractTypeId: type.id, termMin, termMax, coefficient, rate, received, shares, resolved: res.rows })
+    conditions.push({ line, contractTypeId: type.id, termMin, termMax, amountMin, amountMax, coefficient, rate, received, shares, resolved: res.rows })
   })
   return { conditions: issues.length ? [] : conditions, issues }
 }
@@ -229,6 +237,7 @@ export const IMPORT_ISSUE_TEXT: Record<string, string> = {
   missing_column_coefficient_or_rate: 'Falta a coluna Coeficiente ou Taxa.',
   unknown_contract_type: 'Tipo de Contrato desconhecido.',
   invalid_term: 'Prazo inválido (1 a 600).',
+  invalid_amount_range: 'Faixa de valor inválida. Informe Valor Inicial e Valor Final juntos, com inicial menor ou igual ao final.',
   invalid_number: 'Número inválido no coeficiente ou na taxa.',
   coefficient_or_rate_required: 'Informe coeficiente ou taxa.',
   invalid_received_commission: 'Comissão recebida inválida (0 a 100).',
