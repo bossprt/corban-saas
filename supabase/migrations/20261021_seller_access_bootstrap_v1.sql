@@ -170,10 +170,10 @@ begin
       ) then raise exception 'seller_already_bound_to_other_user'; end if;
 
       perform set_config('corban.seller_access_rpc','on',true);
-      update public.commercial_sellers
+      update public.commercial_sellers s
       set user_id=p_user_id,updated_at=now()
-      where organization_id=i.organization_id
-        and id=i.seller_id;
+      where s.organization_id=i.organization_id
+        and s.id=i.seller_id;
       perform set_config('corban.seller_access_rpc','off',true);
     end if;
 
