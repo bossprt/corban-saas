@@ -45,6 +45,11 @@ export default async function SellersPage(){
           <select required name="seller_category" defaultValue="" className={field}><option value="" disabled>Categoria</option><option value="pf">PF</option><option value="pj">PJ</option><option value="sub">SUB</option></select>
           <select required name="seller_group_id" defaultValue="" className={field}><option value="" disabled>Grupo de Vendedor</option>{(sellerGroups.data??[]).filter(x=>x.is_active).map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select>
           <select required name="commission_group_id" defaultValue="" className={`${field} md:col-span-2`}><option value="" disabled>Grupo de Comissão</option>{(commissionGroups.data??[]).filter(x=>x.is_active).map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select>
+          <input name="email" type="email" placeholder="E-mail para acesso ao sistema" className={`${field} md:col-span-2`}/>
+          <label className="md:col-span-2 flex items-start gap-2 rounded-lg border border-slate-800 bg-slate-950/60 p-3 text-sm">
+            <input type="checkbox" name="create_access" defaultChecked className="mt-1"/>
+            <span><strong>Criar acesso ao sistema</strong><span className="mt-1 block text-xs text-slate-400">Ligado por padrão. O vendedor entra como Operador e vê somente a própria comissão. Para parceiro externo sem acesso, desmarque.</span></span>
+          </label>
         </div>
         <SubmitButton className={`${btn} mt-3`}>Cadastrar vendedor</SubmitButton>
       </form>
