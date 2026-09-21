@@ -413,3 +413,13 @@ Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`)
 - Preview mostra divergência contra política interna sem mutação automática.
 - Política mais específica pode ser sugerida; empate permanece Human Gate.
 - Build Vercel READY.
+
+
+### Preparado — Seller/SUB proposal snapshot
+- Estado de Vendedor/Fatores reconciliado na documentação: schema/UI base já LIVE.
+- Migration de atribuição/snapshot SUB preparada.
+- Fórmula de receita esperada da empresa incorpora company share congelado.
+- SUB 100% → 0%; SUB 90% → 10%; não-SUB → 100%.
+- Rollback-only + contract verdes.
+- Zero dados LIVE existentes a reinterpretar.
+- Novo DDL ainda NÃO LIVE.
