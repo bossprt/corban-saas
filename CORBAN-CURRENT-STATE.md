@@ -1023,3 +1023,21 @@ Aplicação em andamento sem Claude:
 - gerenciamento de Tipos de Contrato por tenant;
 - flags Habilitado / Usar na esteira / Usar em comissão;
 - regras de comissão por componentes e por Grupo de Comissão.
+
+
+## Smart Commercial Import V1 — preparado, não LIVE
+A fundação da meta principal está preparada:
+- parser determinístico para XLSX/CSV;
+- modelo XLSX dinâmico com nomes reais dos grupos;
+- migration `20261012_smart_commercial_import_v1` validada em rollback-only;
+- RPC atômica preparada para cadastrar/atualizar catálogo, condições, componentes e fatores em uma transação.
+
+Proteções:
+- Repasse 1/2/3 não é mapeado automaticamente;
+- Plástico ambíguo exige unidade;
+- Tipo de Contrato deve existir e estar habilitado;
+- política interna é escolhida explicitamente;
+- tabela fica em rascunho para revisão;
+- IA não calcula nem inventa valores.
+
+Nenhum objeto de 20261012 está LIVE ainda.
