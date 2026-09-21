@@ -157,13 +157,31 @@ Pós-apply:
 - bootstrap segue exclusivo do fluxo Platform Admin;
 - Security Advisor sem WARN/ERROR novo.
 
-## DECISÃO ATUAL — comissão esperada para agentes
-A UI hoje é fail-closed supervisor+ via `canViewCommission`, mas `authenticated` ainda possui SELECT da tabela inteira de `simulations` e `proposals_v2`; por isso `expected_commission_amount` permanece legível via API por membros do tenant.
+## POLÍTICA APROVADA — comissão por vendedor
+- vendedor vê somente a própria comissão;
+- admin e gerente veem todos;
+- supervisor vê somente vendedores explicitamente supervisionados.
 
-Não existe migration preparada ainda. A correção de banco precisa preservar as RPCs security-invoker existentes e depende de uma decisão explícita do Owner:
-**agentes devem ser impedidos também no nível da API de ler comissão esperada?**
+## HUMAN GATE ATUAL — Seller commission visibility scope V1
+Preparada e **NÃO LIVE**:
+- `20261018_seller_commission_visibility_scope_v1.sql`
+- `tests/security/seller-commission-visibility-scope-contract.sql`
 
-Ao retomar, obter essa decisão antes de desenhar qualquer migration de column-level access/view/RPC.
+Mudanças:
+- seller <-> user membership;
+- supervisor <-> sellers;
+- helper fail-closed de escopo;
+- snapshot imutável separado da receita da empresa;
+- supervisor deixa de ter leitura tenant-wide em component snapshots, financial events e reconciliation cases;
+- vendedor não recebe acesso ao ledger da empresa;
+- quando o payout individual não é inequívoco, fica `unavailable`, sem inferência.
+
+Validação:
+- migration + contract passaram em `BEGIN ... ROLLBACK` após correção de um erro de rowtype encontrado no primeiro teste;
+- LIVE atual tem 0 sellers/proposals/conditions, sem histórico para reinterpretar;
+- migration ainda não consta em `list_migrations`.
+
+**Ao retomar, perguntar somente se o Owner autoriza aplicar `20261018_seller_commission_visibility_scope_v1` LIVE, salvo outra instrução explícita.**
 
 ## Ambiente
 - GitHub: `bossprt/corban-saas`
