@@ -1793,3 +1793,34 @@ LIVE result:
 - 17 BRUTO tables, 26 LÍQUIDO tables;
 - sample checks: Novo Especial 48/120 @2.70 receives 7.00%, Corretor effective 4.55%; Portabilidade Tab 1 terms 1/48/120 @2.50 receives 3.00% BRUTO, Corretor 1.95%; Transferência Tab 1 mapped to Compra de Dívida BRUTO @2.50 receives 6.00%, Corretor 3.90%.
 - Existing Daycoval/Efetivamais remains separate: 40 tables / 106 conditions. Hierarchical catalog now shows both providers under Daycoval > Governo do Acre.
+
+
+## Commercial condition term ranges + lightweight catalog
+Owner corrected the domain model: commercial commission conditions use Prazo Inicial/Prazo Final, not one row per individual month. Examples: 1–120 is one condition valid for every term in that interval; 120–120 is a single-term condition. Expanding 1–120 into 120 conditions is prohibited going forward.
+
+LIVE migrations:
+- commercial_condition_term_ranges_v1
+- term_range_import_paths_v1
+- move_btree_gist_extension_v1
+
+Authoritative behavior:
+- commercial_conditions now has term_min and term_max; legacy term is retained temporarily as compatibility and equals term_min.
+- DB check requires 1 <= term_min <= term_max <= 600.
+- overlapping ranges for the same product_table_version + contract_type are rejected by an exclusion constraint.
+- save_commercial_condition_range is the governed write path; old save_commercial_condition remains as a single-term wrapper.
+- create_simulation_for_condition selects the row where requested term is BETWEEN term_min AND term_max and snapshots the selected range.
+- standard CSV/XLSX import accepts either legacy Prazo or Prazo Inicial + Prazo Final and preserves one row per range.
+- Smart Import preserves ranges instead of expanding them; DB smart importer and factor import also use term_min/term_max.
+- Bevicred Daycoval GOV AC was corrected through versioning, not history rewrite: the 43 current tables now have exactly 135 current conditions (the 135 source rows), with 10 ranged conditions. Old expanded versions remain historical and are no longer current.
+- validated sample: DAYCOVAL GOV ACRE PORTABILIDADE TABELAO 1 DIG 1 A = Portabilidade, 1–120, rate 2.50%, company commission 3.00% BRUTO, Corretor effective 1.95%.
+
+Performance/UI:
+- /app/comercial/tabelas is now a lightweight hierarchy (Banco -> Origem/Promotora -> Convênio -> table) and does NOT load commercial conditions/commission shares for the whole catalog.
+- clicking Abrir tabela goes to /app/comercial/tabelas/[id], which loads only that table's current/draft conditions and 6 group commissions; historical versions load only when the user chooses Ver histórico.
+- detail grid now shows Prazo inicial and Prazo final as separate columns.
+- This replaces the earlier pagination attempt that still risked loading thousands of commission-share rows into Vercel memory.
+
+Validation/security:
+- rollback test proved 1–120 persists as one row and overlapping 60–120 is rejected.
+- rollback tests proved both normal bulk import and Smart Import preserve 1–120 as one condition.
+- Supabase security advisor returned to only the 2 historical INFO items after moving btree_gist to schema extensions; no new WARN/ERROR.
