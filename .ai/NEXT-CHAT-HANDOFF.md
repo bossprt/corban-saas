@@ -184,8 +184,21 @@ Security:
 Standing authorization:
 Owner authorized future LIVE DDL without a new prompt only when strictly necessary to complete this same seller-commission visibility rule, and only after rollback contract passes. Any unrelated DDL/destructive/external action still requires Human Gate.
 
-## Próxima fronteira
-No seller-commission scope there is no known pending DDL. Do not create fake LIVE business/economic data for testing. If continuing elsewhere, follow normal triple review and stop at the next unrelated Human Gate.
+## NEXT REAL GATE — external pilot readiness
+Verified:
+- production login is live at `https://corban-saas.vercel.app/login` (HTTP 200);
+- Smart Promotora Ltda. exists and is active; never recreate it;
+- banks=34; providers=0; agreements=0; products=0; document_types=0.
+
+External actions still required before a real human pilot:
+1. Supabase Auth URL/SMTP/password configuration using `https://corban-saas.vercel.app` as the current production origin;
+2. confirm/set Vercel `NEXT_PUBLIC_SITE_URL=https://corban-saas.vercel.app`;
+3. provide/load REAL reference-catalog providers, agreements, products/modalities and document types;
+4. then run one real invitation/recovery/browser acceptance pass.
+
+Worker is NOT a current blocker for browser pilot and stays disabled until a real provider is homologated. Enabling it later requires `INTEGRATION_WORKER_SECRET` + scheduler and is a separate external gate.
+
+No unrelated DDL is pending. Do not invent catalog or business/economic data and do not create fake LIVE records solely for tests.
 
 ## Ambiente
 - GitHub: `bossprt/corban-saas`
