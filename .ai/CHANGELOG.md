@@ -322,3 +322,11 @@ Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`)
 - Preparado pacote de índices das novas FKs de Seller/SUB/Fatores.
 - Três contratos rollback-only passaram; zero persistência.
 - Claude não utilizado.
+
+
+### LIVE — 20/09/2026 (Componentes + Tipos de Contrato)
+- Componentes de comissão, tipos tenant-aware e índices adicionais aplicados LIVE.
+- Refin/Portabilidade incluído no catálogo global.
+- Contratos pós-apply passaram; security advisor sem WARN/ERROR novo.
+- UI de Tipos de Contrato e regras por componente iniciada.
+- Claude não utilizado.
