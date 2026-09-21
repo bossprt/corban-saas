@@ -15,7 +15,7 @@ export default async function RegistrationsHubPage() {
       ['Produtos / Tabelas', 'Tabelas comerciais, versões, condições e importação.', '/app/comercial/tabelas'],
       ['Tipos de Contrato', 'Novo, Refinanciamento, Portabilidade, Refin/Portabilidade e tipos próprios.', '/app/comercial/tipos-contrato'],
       ['Empresas de origem de terceiros', 'Masters, promotoras, correspondentes e parceiros externos.', '/app/comercial/origens'],
-      ['Grupos de comissão', 'Regras de remuneração por canal/grupo.', '/app/comercial/grupos'],
+      ['Grupos de comissão', 'Colunas de repasse como Balcão, Corretores, Parceiros e Indicadores.', '/app/comercial/grupos'],
       ['Regras de comissão', 'À Vista, Diferido, Bônus, Plástico, Seguro e repasses por grupo.', '/app/comercial/regras-comissao'],
       ['Fatores', 'Fatores diários e fixos usados no CRM e nas simulações.', '/app/comercial/fatores'],
       ['Modelo comercial', 'Resumo da configuração comercial da organização.', '/app/comercial'],
