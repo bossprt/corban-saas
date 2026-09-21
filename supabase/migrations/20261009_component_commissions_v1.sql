@@ -146,7 +146,7 @@ create trigger component_payout_policy_items_00_guard before insert or update or
 create trigger component_payout_policies_00_guard before insert or update on public.component_payout_policies for each row execute function public.guard_org_catalog_row();
 
 create or replace function public.guard_component_payout_policy_scope()
-returns trigger language plpgsql set search_path='' as $
+returns trigger language plpgsql set search_path='' as $scope$
 declare v_bank uuid; v_agreement uuid;
 begin
   if new.product_table_id is not null then
@@ -159,7 +159,7 @@ begin
     if new.org_agreement_id is not null and new.org_agreement_id is distinct from v_agreement then raise exception 'component_policy_agreement_mismatch'; end if;
   end if;
   return new;
-end $;
+end $scope$;
 create trigger component_payout_policies_01_scope before insert or update on public.component_payout_policies for each row execute function public.guard_component_payout_policy_scope();
 
 create or replace function public.replace_commercial_condition_components(p_condition uuid,p_components jsonb)
