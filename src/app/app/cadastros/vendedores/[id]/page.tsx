@@ -3,8 +3,6 @@ import { notFound } from 'next/navigation'
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
 import { SubmitButton } from '@/components/SubmitButton'
-import { formatBRL } from '@/lib/finance/ledger'
-import { add, fromDecimalString, toDecimalString } from '@/lib/commission/money'
 import { SellerAccessScope } from '../SellerAccessScope'
 import {
   addSubRule,
@@ -35,7 +33,7 @@ export default async function SellerDetailPage({params}:{params:Promise<{id:stri
     .eq('id',id).maybeSingle()
   if(!seller)notFound()
 
-  const [profile,address,payments,certifications,sellerGroups,commissionGroups,banks,subRules,proposals,commissionSnapshots]=await Promise.all([
+  const [profile,address,payments,certifications,sellerGroups,commissionGroups,banks,subRules]=await Promise.all([
     supabase.from('seller_profiles').select('*').eq('seller_id',id).maybeSingle(),
     supabase.from('seller_addresses').select('*').eq('seller_id',id).eq('is_current',true).maybeSingle(),
     supabase.from('seller_payment_accounts').select('*').eq('seller_id',id).order('valid_from',{ascending:false}).limit(20),
@@ -44,16 +42,11 @@ export default async function SellerDetailPage({params}:{params:Promise<{id:stri
     supabase.from('commission_groups').select('id,name,is_active').order('sort_order').order('name'),
     supabase.from('banks').select('id,code,name,is_active').eq('is_active',true).order('name'),
     supabase.from('seller_sub_rule_versions').select('id,sub_share_pct,company_share_pct,effective_from,status').eq('seller_id',id).eq('status','published').order('effective_from',{ascending:false}),
-    supabase.from('proposals_v2').select('id,status,created_at').eq('seller_id',id).order('created_at',{ascending:false}).limit(50),
-    supabase.from('proposal_seller_commission_snapshots').select('id,proposal_id,calculation_status,amount,frozen_at').eq('seller_id',id).order('frozen_at',{ascending:false}).limit(50),
   ])
 
   const currentPayment=(payments.data??[]).find(p=>p.is_current)??null
   const historicalPayments=(payments.data??[]).filter(p=>!p.is_current)
   const latestSub=(subRules.data??[])[0]
-  const commissionTotal=toDecimalString((commissionSnapshots.data??[]).reduce((sum,x)=>
-    x.calculation_status==='calculated'&&x.amount!=null?add(sum,fromDecimalString(String(x.amount))):sum
-  ,fromDecimalString('0')),2)
 
   return <section className="space-y-5">
     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -156,25 +149,7 @@ export default async function SellerDetailPage({params}:{params:Promise<{id:stri
     </div>}
 
     <div className={card}>
-      <h2 className="text-lg font-semibold">6. Produção e comissão</h2>
-      <p className="mt-1 text-xs text-slate-500">Resumo da produção vinculada a este vendedor. Comissão calculada não significa pagamento efetuado.</p>
-      <div className="mt-4 grid gap-3 md:grid-cols-3">
-        <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-4"><div className="text-xs text-slate-500">Propostas vinculadas</div><div className="mt-1 text-xl font-semibold">{proposals.data?.length??0}</div></div>
-        <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-4"><div className="text-xs text-slate-500">Comissões calculadas</div><div className="mt-1 text-xl font-semibold">{(commissionSnapshots.data??[]).filter(x=>x.calculation_status==='calculated').length}</div></div>
-        <div className="rounded-xl border border-slate-800 bg-slate-950/50 p-4"><div className="text-xs text-slate-500">Total calculado visível</div><div className="mt-1 text-xl font-semibold">{formatBRL(commissionTotal)}</div></div>
-      </div>
-      {(proposals.data??[]).length>0&&<details className="mt-4">
-        <summary className="cursor-pointer text-xs underline">Ver últimas propostas</summary>
-        <div className="mt-3 space-y-2">{(proposals.data??[]).slice(0,20).map(p=><div key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-800 p-3 text-xs">
-          <Link href={'/app/propostas/'+p.id} className="underline">{p.id.slice(0,8)+'…'}</Link>
-          <span className="text-slate-400">{p.status}</span>
-          <span className="text-slate-500">{new Date(p.created_at).toLocaleDateString('pt-BR')}</span>
-        </div>)}</div>
-      </details>}
-    </div>
-
-    <div className={card}>
-      <h2 className="text-lg font-semibold">7. Certificações</h2>
+      <h2 className="text-lg font-semibold">6. Certificações</h2>
       <div className="mt-3 space-y-2">{!(certifications.data??[]).length?<p className="text-sm text-slate-500">Nenhuma certificação cadastrada.</p>:(certifications.data??[]).map(c=><div key={c.id} className="rounded-lg border border-slate-800 p-3 text-sm">
         <div className="font-medium">{c.name}</div>
         <div className="mt-1 text-xs text-slate-400">{(c.issuer||'Emissor não informado')+' · '+(c.certificate_number||'sem número')+' · '+(CERT_STATUS[c.status]??c.status)+(c.expires_at?' · validade '+String(c.expires_at):'')}</div>
