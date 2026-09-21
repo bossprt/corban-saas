@@ -198,6 +198,12 @@ test('actions: every write needs manager+, tenant comes from the server context,
   assert.ok(!/from\('commercial_condition(s|_commissions|_shares)'\)\.(insert|update|delete)/.test(a)) // conditions only through the governed RPC
   assert.ok(!/(text\(f, |f\.get\()'[a-z_]*(tech_key|official_code|code)'\)/.test(a)) // the person never types a technical code
 })
+test('commercial landing page also obeys the central commission visibility helper', () => {
+  const p = read('src/app/app/comercial/page.tsx')
+  assert.ok(/canViewCommission\(membership\.role\)/.test(p))
+  assert.ok(/seeCommission \? supabase\.from\('payout_policies'\)/.test(p))
+  assert.ok(/seeCommission \? supabase\.from\('commission_groups'\)/.test(p))
+})
 test('RBAC helpers used by the commercial screens keep their matrix', () => {
   assert.equal(canViewCommission('agent'), false)
   assert.equal(canViewCommission('supervisor'), true)
