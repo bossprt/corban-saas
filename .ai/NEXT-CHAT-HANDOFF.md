@@ -121,27 +121,23 @@ Aplicação concluída:
 - expected commission usa company share congelado;
 - Vercel READY para o fluxo de freeze da UI no commit `97bf2548f360429a2f52c66af385295d04e5ba06`.
 
-## HUMAN GATE ATUAL — PRÓXIMA DECISÃO
-Preparada e **NÃO LIVE**:
-- `20261015_proposal_financial_integrity_hardening_v1.sql`
-- `tests/security/proposal-financial-integrity-hardening-contract.sql`
+## Proposal/Financial integrity hardening — LIVE
+LIVE:
+- `20260921031621 proposal_financial_integrity_hardening_v1`.
 
-Objetivo:
-fechar defesa em profundidade do freeze comercial e manter a conciliação financeira sincronizada em todos os caminhos governados.
+Pós-apply:
+- contract passou no banco real;
+- freeze exige regra publicada e vigente também no banco;
+- expected/evidence atualizam conciliação automaticamente nos caminhos governados;
+- UPDATE/DELETE removidos de authenticated/anon nos snapshots comerciais imutáveis;
+- Security Advisor continua sem WARN/ERROR novo, apenas 2 INFO históricos de Platform Admin.
 
-Mudanças preparadas:
-- regra de comissão precisa estar `published` **e dentro de effective_from/effective_until** no próprio banco;
-- `publish_expected_commission` refresca conciliação por componente;
-- `publish_financial_evidence_event` refresca conciliação para comissão reportada e pagamento recebido;
-- UPDATE/DELETE removidos de authenticated/anon nas tabelas imutáveis de snapshot comercial.
+Aplicação financeira:
+- validação de valor de reversão e comparação de saldo reversível foram ajustadas para não usar ponto flutuante;
+- commit funcional em validação/READY no Vercel antes do encerramento desta sessão.
 
-Validação:
-- migration + contract passaram em `BEGIN ... ROLLBACK`;
-- migration ainda não consta em `list_migrations`;
-- LIVE possui 0 propostas, 0 snapshots, 0 eventos financeiros, 0 casos de conciliação, 0 sellers e 0 regras SUB publicadas no precheck;
-- Security Advisor sem WARN/ERROR novo; apenas 2 INFO históricos de Platform Admin.
-
-**Novo chat deve começar perguntando somente se o Owner autoriza aplicar `20261015_proposal_financial_integrity_hardening_v1` LIVE, salvo outra instrução explícita do Owner.**
+## PRÓXIMA FRONTEIRA AUTÔNOMA
+Não há DDL pendente preparado neste momento. Próximos trabalhos seguros são auditoria/UX/testes do fluxo operacional e Smart Import. Teste com XLS/PDF comercial real depende de amostra adequada sem dados pessoais; não inventar arquivo real nem criar dados econômicos LIVE só para testar.
 
 ## Ambiente
 - GitHub: `bossprt/corban-saas`
@@ -151,7 +147,7 @@ Validação:
 - URL pública: `https://corban-saas.vercel.app`
 
 ## Commit/head no momento do handoff
-Branch HEAD observado antes deste handoff: `3ea063e8cf197471bc3efeaf90fb9661e81bf8ec`.
+Branch HEAD deve ser conferido no GitHub ao retomar; não confiar em SHA histórico.
 
 ## Regra de retomada
 No novo chat:
@@ -159,4 +155,4 @@ No novo chat:
 2. ler apenas o final de `.ai/CURRENT-TASK.md` e `CORBAN-CURRENT-STATE.md`;
 3. não repetir migrations LIVE;
 4. não refazer OAuth, setup ou testes já concluídos;
-5. continuar do Human Gate de Seller/SUB proposal snapshot.
+5. continuar da próxima fronteira autônoma registrada acima; não reaplicar migrations LIVE.
