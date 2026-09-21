@@ -1206,3 +1206,8 @@ Validação:
 - LIVE atual contém 0 propostas, 0 component snapshots, 0 commission_expected, 0 SUB sellers e 0 regras SUB publicadas, então não há backfill econômico existente para reinterpretar.
 
 **NÃO LIVE. Requer autorização explícita.**
+
+
+## Handoff de sessão — próximo chat
+Estado consolidado para retomada gravado em `.ai/NEXT-CHAT-HANDOFF.md`.
+O próximo Human Gate é `20261014_seller_sub_proposal_snapshot_v1.sql` (preparada/testada rollback-only, NÃO LIVE).
