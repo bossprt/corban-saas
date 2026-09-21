@@ -339,3 +339,13 @@ Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`)
 - Generic Repasse 1/2/3 é tratado como ambiguidade, não como grupo.
 - 20261012 passou em rollback-only; zero persistência.
 - Claude ainda não utilizado.
+
+
+### LIVE/UX — 20/09/2026 (Smart Import)
+- `smart_commercial_import_v1` aplicado LIVE.
+- Contract pós-apply passou; security advisor sem WARN/ERROR novo.
+- Tela guiada de importação inteligente adicionada.
+- CSV/XLSX com prévia, perguntas condicionais e confirmação antes do RPC atômico.
+- Repasse 1/2/3 legado nunca é associado silenciosamente a Grupo de Comissão.
+- Tabela fica em rascunho após a carga.
+- Claude não utilizado até este ponto.
