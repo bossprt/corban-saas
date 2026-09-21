@@ -11,6 +11,7 @@ import { IMPORT_ISSUE_TEXT, mapConditionRows, parseCoefficient, parseDelimited, 
 import { xlsxRows } from '@/lib/commercial-xlsx'
 import { effectiveContractTypes } from '@/lib/contract-types'
 import { parseBulkRefusal } from '@/lib/commercial'
+import { createAdminClient } from '@/lib/supabaseAdmin'
 
 const PATH = '/app/comercial'
 const RETURN_PATHS = new Set([PATH, `${PATH}/instituicoes`, `${PATH}/origens`, `${PATH}/convenios`, `${PATH}/grupos`])
@@ -69,12 +70,13 @@ export async function createCommissionGroup(f: FormData) {
   const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')
   const name = text(f, 'name')
   if (!isLabel(name, 80)) return go('erro:catalogo_invalido', returnPath(f))
-  const { data: components } = await ctx.supabase
+  const admin = createAdminClient()
+  const { data: components, error: componentsError } = await admin
     .from('commission_component_types')
     .select('id')
     .eq('is_active', true)
     .order('sort_order')
-  if (!components?.length) return go('erro:indisponivel', returnPath(f))
+  if (componentsError || !components?.length) return go('erro:indisponivel', returnPath(f))
 
   const items = []
   for (const component of components) {
