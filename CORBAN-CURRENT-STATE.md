@@ -1546,3 +1546,26 @@ Important deployment sequencing:
 - after LIVE apply, update seller form to default `Criar acesso ao sistema` ON, require email when checked, call new RPC, and attempt invitation email without failing seller creation when SMTP is unavailable.
 
 **Human Gate required before applying this new DDL LIVE.**
+
+
+## Seller access bootstrap V1 — LIVE + UI migration in progress
+Applied LIVE as `20260921050521 seller_access_bootstrap_v1` after explicit Owner authorization.
+Post-apply contract passed; Security Advisor unchanged (no new WARN/ERROR; 2 historical Platform Admin INFO only).
+
+Authoritative seller access rule:
+- seller/corretor with system access is always an `agent` membership;
+- seller can see only own seller commission via scoped RLS;
+- supervisor sees only explicitly supervised sellers;
+- manager/admin see all seller commissions;
+- company Finance remains manager/admin only.
+
+New business flow:
+- seller form defaults to `Criar acesso ao sistema` ON;
+- e-mail is required only when access is requested;
+- `create_seller_with_access` atomically creates seller + linked agent invitation;
+- invitation acceptance automatically binds the verified Auth user to `commercial_sellers.user_id`;
+- seller record remains valid even if invitation e-mail cannot be sent (SMTP currently deferred);
+- external seller can be created without system access by unchecking access;
+- old manual login-binding UI is removed from the normal path; access panel now reports active/pending/no-access state and keeps supervisor management.
+
+Application commits include unified seller creation and automatic access state UI. Latest application HEAD before documentation: `afe22a296ec21baedad0384e017cc41333244920`; Vercel build was still BUILDING at last check.
