@@ -69,14 +69,55 @@ export async function createCommissionGroup(f: FormData) {
   const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')
   const name = text(f, 'name')
   if (!isLabel(name, 80)) return go('erro:catalogo_invalido', returnPath(f))
-  // Business invariant: a commission group is a payout column calculated as a percentage of what the organization received.
-  const { error } = await ctx.supabase.from('commission_groups').insert({
-    organization_id: ctx.membership.organization_id,
-    name,
-    kind: 'other',
-    calculation_basis: 'percent_of_received_commission'
+  const { data: components } = await ctx.supabase
+    .from('commission_component_types')
+    .select('id')
+    .eq('is_active', true)
+    .order('sort_order')
+  if (!components?.length) return go('erro:indisponivel', returnPath(f))
+
+  const items = []
+  for (const component of components) {
+    const pct = parsePercent(text(f, `component_${component.id}`))
+    if (pct === null) return go('erro:regra_comissao_invalida', returnPath(f))
+    items.push({ component_type_id: component.id, max_received_share_pct: pct })
+  }
+
+  const { error } = await ctx.supabase.rpc('save_commission_group_configuration', {
+    p_organization: ctx.membership.organization_id,
+    p_group: null,
+    p_name: name,
+    p_items: items,
   })
-  return error ? go(comError(error), returnPath(f)) : go('ok:grupo_cadastrado', returnPath(f))
+  return error ? go('erro:regra_comissao_invalida', returnPath(f)) : go('ok:grupo_cadastrado', returnPath(f))
+}
+
+export async function saveCommissionGroupConfiguration(f: FormData) {
+  const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')
+  const id = text(f, 'group_id'), name = text(f, 'name')
+  if (!isUuid(id) || !isLabel(name, 80)) return go('erro:regra_comissao_invalida', returnPath(f))
+
+  const { data: components } = await ctx.supabase
+    .from('commission_component_types')
+    .select('id')
+    .eq('is_active', true)
+    .order('sort_order')
+  if (!components?.length) return go('erro:indisponivel', returnPath(f))
+
+  const items = []
+  for (const component of components) {
+    const pct = parsePercent(text(f, `component_${component.id}`))
+    if (pct === null) return go('erro:regra_comissao_invalida', returnPath(f))
+    items.push({ component_type_id: component.id, max_received_share_pct: pct })
+  }
+
+  const { error } = await ctx.supabase.rpc('save_commission_group_configuration', {
+    p_organization: ctx.membership.organization_id,
+    p_group: id,
+    p_name: name,
+    p_items: items,
+  })
+  return error ? go('erro:regra_comissao_invalida', returnPath(f)) : go('ok:situacao_atualizada', returnPath(f))
 }
 
 // Deactivate / reactivate. Nothing is ever deleted: history keeps pointing at the row.
