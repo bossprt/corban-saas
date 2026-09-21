@@ -11,7 +11,7 @@ type Preview={
  headerMapApplied:Record<string,number>
  contractTypes:{id:string;name:string}[]
  groups:{id:string;name:string}[]
- summary:{sourceRows:number;expandedRows:number;tables:string[];components:string[];hasDeferred:boolean;hasPlastic:boolean;hasBonus:boolean;hasGenericRepasseColumns:boolean}
+ summary:{sourceRows:number;expandedRows:number;tables:string[];components:string[];hasDeferred:boolean;hasPlastic:boolean;hasBonus:boolean;hasGenericRepasseColumns:boolean;genericRepasseSlots:string[]}
  issues:{line:number;code:string;detail?:string;message:string}[]
  economics:{table:string;contract:string;term:number;component:string;group:string;receivedKind:'percentage'|'fixed_brl';gross:string;net:string;payout:string;retained:string|null;payoutKind:'percentage'|'fixed_brl'|null;compatible:boolean}[]
  suggestedPolicy:{versionId:string;policyId:string;name:string;version:number;discount:string;specificity:number;scopeLabel:string}|null
