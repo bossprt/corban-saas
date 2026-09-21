@@ -1591,3 +1591,26 @@ Próxima ação exige autorização explícita para DDL LIVE. Depois do apply:
 - gerar XLSX com nomes reais dos Grupos de Comissão;
 - implementar perguntas condicionais para Diferido/Plástico/Bônus;
 - não usar Claude salvo necessidade real.
+
+
+## Pós-LIVE Componentes + Tipos de Contrato
+LIVE confirmado:
+- `component_commissions_v1`
+- `tenant_contract_types_v1`
+- `post_seller_factors_fk_indexes_v1`
+
+`Refin/Portabilidade` foi incluído como Tipo de Contrato global para refinanciamento da portabilidade.
+
+Contratos pós-apply passaram e security advisor não trouxe WARN/ERROR novo.
+
+Código já iniciado:
+- `/app/comercial/tipos-contrato`;
+- `/app/comercial/regras-comissao`;
+- Central de Cadastros atualizada.
+
+Fila autônoma atual:
+1. validar build Vercel das novas UIs;
+2. respeitar flags de Tipo de Contrato em telas de tabela/simulação;
+3. gerar modelo XLSX com nomes reais dos Grupos de Comissão;
+4. construir parser component-aware para planilhas HOPE/2Tech-style;
+5. preparar RPC atômica de importação inteligente (não aplicar LIVE sem novo gate).
