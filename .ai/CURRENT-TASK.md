@@ -2246,3 +2246,35 @@ Build fixes applied during validation:
 - corrected branch-management action to use authenticated `user.id` from app context;
 - removed duplicate `producerExternalUser` property in generic import adapter;
 - made `producerExternalUser` optional at the TypeScript contract boundary for backward compatibility while new adapters still populate it when present.
+
+
+## Commission Groups — authoritative component-limit model
+Final rule clarified by Owner:
+- Commission Group is NOT the seller's final payout percentage.
+- Commission Group defines, per received commission component, how much of 100% received by the organization may enter the calculation base for that group.
+- Components: upfront, deferred, bonus_1, bonus_2, bonus_3, plastic, insurance_fixed.
+- 100% = the full amount received for that component may be used as base.
+- 0% = that component is not repassed for that group.
+- Intermediate values (e.g. 90%) cap the usable received amount for that component.
+- A later table/rule may use any value from 0 up to that group/component ceiling; values above the ceiling must be rejected, not silently capped.
+- A table/rule may always choose 0/exclude even if the group ceiling is greater than 0.
+- Direct calculation over production is forbidden for Commission Groups; basis is always commission received by the organization.
+- Examples such as seller receiving 65% belong to another layer and must not be embedded in Commission Group semantics.
+
+LIVE migrations:
+- 20260921153515 commission_group_component_limits_v1
+- 20260921153627 commission_group_component_limits_security_hardening_v1
+- commission_group_component_exclude_semantics_fix_v1 applied under the same authorized wave
+
+Security:
+- configuration RPC is SECURITY INVOKER;
+- direct writes to group-component limits are blocked outside governed RPC context;
+- Security Advisor returned to prior state: only 2 historical INFO findings for Platform Admin, no new WARN/ERROR.
+
+UI:
+- /app/comercial/grupos now shows Name + per-component percentages;
+- existing Basic group remains Configuração pendente until Owner explicitly fills values; no percentages were invented;
+- each component uses 0..100 with clear meaning;
+- back button returns to /app/cadastros.
+
+Current verified green HEAD: fb16360599059fc4ba91587c279cf36ec32e2853 (Vercel SUCCESS).
