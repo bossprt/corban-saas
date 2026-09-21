@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { atLeast } from '../../src/lib/rbac'
+import { atLeast, canViewCommission } from '../../src/lib/rbac'
 
 test('role hierarchy is monotonic: agent < supervisor < manager < admin',()=>{
  assert.equal(atLeast('agent','supervisor'),false)
@@ -14,4 +14,13 @@ test('role hierarchy is monotonic: agent < supervisor < manager < admin',()=>{
 
 test('unknown, empty, null or prototype-key roles are denied (fail closed)',()=>{
  for(const r of [undefined,null,'','owner','ADMIN','root','__proto__','constructor','toString','hasOwnProperty'])assert.equal(atLeast(r as string|null|undefined,'agent'),false,String(r))
+})
+
+
+test('company financial commission is manager/admin only',()=>{
+ assert.equal(canViewCommission('agent'),false)
+ assert.equal(canViewCommission('supervisor'),false)
+ assert.equal(canViewCommission('manager'),true)
+ assert.equal(canViewCommission('admin'),true)
+ assert.equal(canViewCommission(undefined),false)
 })
