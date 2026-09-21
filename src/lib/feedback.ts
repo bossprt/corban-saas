@@ -45,6 +45,8 @@ export const FEEDBACK = {
   'ok:tipo_contrato_cadastrado': 'Tipo de Contrato cadastrado.',
   'ok:tipo_contrato_atualizado': 'Configuração do Tipo de Contrato atualizada.',
   'ok:regra_comissao_salva': 'Regra de comissão salva como nova versão.',
+  'ok:rota_congelada': 'Rota comercial congelada para esta proposta.',
+  'ok:comissao_esperada_publicada': 'Comissão esperada publicada a partir do snapshot congelado.',
   // errors
   'erro:nome_invalido': 'Informe um nome válido.',
   'erro:canal_invalido': 'Canal inválido.',
@@ -115,6 +117,8 @@ export const FEEDBACK = {
   'erro:fator_arquivo': 'Envie um CSV ou XLSX válido de até 2 MB.',
   'erro:fator_colunas': 'Não foi possível identificar Prazo Inicial/Prazo Final/Fator ou há valores inválidos.',
   'erro:regra_comissao_invalida': 'Confira nome, vigência, imposto/desconto, escopo e regras dos grupos.',
+  'erro:rota_comercial': 'Não foi possível congelar a rota comercial. Confira a regra publicada, vigência, canal e vendedor/SUB.',
+  'erro:comissao_esperada': 'Não foi possível publicar a comissão esperada. Confira se a rota e os componentes estão congelados.',
 } as const
 export type FeedbackCode = keyof typeof FEEDBACK
 export const isFeedbackCode = (v: unknown): v is FeedbackCode => typeof v === 'string' && Object.prototype.hasOwnProperty.call(FEEDBACK, v)
