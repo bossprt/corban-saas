@@ -1838,3 +1838,7 @@ Novo modelo de condição:
 - seleção futura por valor usa contract_value explícito; caminho antigo não escolhe faixa de valor silenciosamente.
 
 PROSESP Governo do Acre analisada: 203 linhas fonte -> 16 condições após consolidação segura. Instituição PROSESP, produção Própria/Smart, mensalidade ignorada, valor consolidável 300,00-10.000,00 porque a comissão não varia entre as sete faixas nesta fonte. Regras 8%->Corretor/Parceiro 3% efetivo e 5%->2% efetivo confirmadas. Regra de 7% ainda pendente antes da carga LIVE. Ver `docs/imports/PROSESP-GOV-AC-2026-09-21.md`.
+
+
+### PROSESP Governo do Acre — carga concluída
+Em 21/09/2026, a carga PROSESP foi persistida no LIVE como rascunho, após teste transacional com rollback. Regra final confirmada pelo Owner: 7% recebido paga 3% efetivo para Corretor e 3% efetivo para Parceiro. Resultado: 3 tabelas, 16 condições, 16 componentes À Vista/LÍQUIDO e 96 repasses. As versões continuam `draft` e não participam das simulações até publicação manual.
