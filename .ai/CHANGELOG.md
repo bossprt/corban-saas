@@ -305,3 +305,11 @@ Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`)
 - Publicação financeira/configuração protegida por RPC; inserts autenticados começam em draft.
 - Vercel READY; Claude não utilizado.
 - Aguardando autorização explícita para DDL LIVE.
+
+
+### LIVE — 20/09/2026 (Seller/SUB + Fatores)
+- Aplicadas `seller_commercial_profile_v1` e `commercial_factors_v1`.
+- Contratos pós-apply passaram.
+- Security advisor sem WARN/ERROR novo.
+- UI de Vendedores/SUB e Fatores adicionada; importação de fatores CSV/XLSX inicial disponível.
+- Nenhum Claude utilizado.
