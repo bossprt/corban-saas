@@ -1,5 +1,5 @@
-const SCALE=100000000n
-const HUNDRED=100n*SCALE
+const SCALE=BigInt(100000000)
+const HUNDRED=BigInt(100)*SCALE
 
 const scaled=(raw:string):bigint=>{
   const v=String(raw??'').trim()
@@ -8,8 +8,8 @@ const scaled=(raw:string):bigint=>{
   return BigInt(i)*SCALE+BigInt((f+'00000000').slice(0,8))
 }
 const text=(v:bigint):string=>{
-  const sign=v<0n?'-':''
-  const a=v<0n?-v:v
+  const sign=v<BigInt(0)?'-':''
+  const a=v<BigInt(0)?-v:v
   const i=a/SCALE
   const f=String(a%SCALE).padStart(8,'0').replace(/0+$/,'')
   return sign+String(i)+(f?'.'+f:'')
@@ -37,7 +37,7 @@ export type ComponentEconomicsResult={
 export function componentEconomics(x:ComponentEconomicsInput):ComponentEconomicsResult{
   const gross=scaled(x.receivedValue)
   const discount=scaled(x.discountPct||'0')
-  if(discount<0n||discount>HUNDRED)throw new Error('invalid_discount')
+  if(discount<BigInt(0)||discount>HUNDRED)throw new Error('invalid_discount')
   const net=(gross*(HUNDRED-discount)+HUNDRED/2n)/HUNDRED
   if(x.mode==='exclude'){
     return {gross:text(gross),net:text(net),payout:'0',retained:text(net),payoutKind:x.receivedKind,compatible:true}
