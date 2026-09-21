@@ -161,3 +161,58 @@ export async function validateSmartPolicyScope(ctx:Ctx,organizationId:string,pol
  }
  return {ok:true as const}
 }
+
+
+export type SmartPolicySuggestion={
+ versionId:string
+ policyId:string
+ name:string
+ version:number
+ discount:string
+ specificity:number
+ scopeLabel:string
+}
+export async function suggestSmartPolicyScope(ctx:Ctx,organizationId:string,rows:SmartImportResult['rows']){
+ if(!rows.length)return {suggested:null as SmartPolicySuggestion|null,ambiguous:[] as SmartPolicySuggestion[]}
+ const [policiesQ,versionsQ,banksQ,agreementsQ,tablesQ,routesQ]=await Promise.all([
+  ctx.supabase.from('component_payout_policies').select('id,name,org_bank_id,org_agreement_id,product_table_id,is_active').eq('organization_id',organizationId).eq('is_active',true),
+  ctx.supabase.from('component_payout_policy_versions').select('id,policy_id,version,discount_pct,organization_id').eq('organization_id',organizationId).order('version',{ascending:false}),
+  ctx.supabase.from('organization_banks').select('id,name').eq('organization_id',organizationId),
+  ctx.supabase.from('organization_agreements').select('id,name').eq('organization_id',organizationId),
+  ctx.supabase.from('product_tables').select('id,name,route_id').eq('organization_id',organizationId),
+  ctx.supabase.from('organization_product_routes').select('id,org_bank_id,org_agreement_id').eq('organization_id',organizationId),
+ ])
+ const policies=(policiesQ.data??[]) as {id:string;name:string;org_bank_id:string|null;org_agreement_id:string|null;product_table_id:string|null;is_active:boolean}[]
+ const versions=(versionsQ.data??[]) as {id:string;policy_id:string;version:number;discount_pct:string|number;organization_id:string}[]
+ const banks=new Map(((banksQ.data??[]) as {id:string;name:string}[]).map(x=>[x.id,x.name]))
+ const agreements=new Map(((agreementsQ.data??[]) as {id:string;name:string}[]).map(x=>[x.id,x.name]))
+ const tables=new Map(((tablesQ.data??[]) as {id:string;name:string;route_id:string}[]).map(x=>[x.id,x]))
+ const routes=new Map(((routesQ.data??[]) as {id:string;org_bank_id:string|null;org_agreement_id:string|null}[]).map(x=>[x.id,x]))
+ const same=(a:string,b:string)=>normalizeHeader(a)===normalizeHeader(b)
+ const candidates:SmartPolicySuggestion[]=[]
+ for(const p of policies){
+  const v=versions.find(x=>x.policy_id===p.id)
+  if(!v)continue
+  let bankName=p.org_bank_id?banks.get(p.org_bank_id)??null:null
+  let agreementName=p.org_agreement_id?agreements.get(p.org_agreement_id)??null:null
+  let tableName:string|null=null
+  if(p.product_table_id){
+   const t=tables.get(p.product_table_id)
+   if(!t)continue
+   tableName=t.name
+   const route=routes.get(t.route_id)
+   if(!bankName&&route?.org_bank_id)bankName=banks.get(route.org_bank_id)??null
+   if(!agreementName&&route?.org_agreement_id)agreementName=agreements.get(route.org_agreement_id)??null
+  }
+  if(bankName&&rows.some(r=>!same(r.bank_name,bankName!)))continue
+  if(agreementName&&rows.some(r=>!same(r.agreement_name,agreementName!)))continue
+  if(tableName&&rows.some(r=>!same(r.table_name,tableName!)))continue
+  const specificity=(p.product_table_id?100:0)+(p.org_agreement_id?10:0)+(p.org_bank_id?1:0)
+  const scope=[tableName&&'Tabela '+tableName,agreementName&&'Convênio '+agreementName,bankName&&'Instituição '+bankName].filter(Boolean).join(' · ')||'Toda a empresa'
+  candidates.push({versionId:v.id,policyId:p.id,name:p.name,version:v.version,discount:String(v.discount_pct??0),specificity,scopeLabel:scope})
+ }
+ if(!candidates.length)return {suggested:null,ambiguous:[]}
+ const top=Math.max(...candidates.map(x=>x.specificity))
+ const best=candidates.filter(x=>x.specificity===top)
+ return best.length===1?{suggested:best[0],ambiguous:[]}:{suggested:null,ambiguous:best}
+}

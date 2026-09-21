@@ -1,7 +1,7 @@
 
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
-import { contractTypeMapFromForm, headerMapFromForm, parseSmartCommercialFile, SMART_IMPORT_ISSUES, validateSmartPolicyScope } from '@/lib/imports/smart-commercial-server'
+import { contractTypeMapFromForm, headerMapFromForm, parseSmartCommercialFile, SMART_IMPORT_ISSUES, suggestSmartPolicyScope, validateSmartPolicyScope } from '@/lib/imports/smart-commercial-server'
 import { safeFileName } from '@/lib/imports/file-guards'
 import { componentEconomics } from '@/lib/commission/component-economics'
 
@@ -17,7 +17,9 @@ export async function POST(req:Request){
   const headerMap=headerMapFromForm(fd)
   const contractTypeMap=contractTypeMapFromForm(fd)
   const parsed=await parseSmartCommercialFile(ctx,file,headerMap,contractTypeMap)
-  const policyId=String(fd.get('policy_version_id')??'').trim()
+  const requestedPolicyId=String(fd.get('policy_version_id')??'').trim()
+  const suggestion=await suggestSmartPolicyScope(ctx,ctx.membership.organization_id,parsed.rows)
+  const policyId=requestedPolicyId||suggestion.suggested?.versionId||''
   type Econ={table:string;contract:string;term:number;component:string;group:string;receivedKind:'percentage'|'fixed_brl';gross:string;net:string;payout:string;retained:string|null;payoutKind:'percentage'|'fixed_brl'|null;compatible:boolean}
   const economics:Econ[]=[]
   if(policyId){
@@ -64,6 +66,9 @@ export async function POST(req:Request){
    needsReview:parsed.issues.some(x=>x.code.startsWith('pdf_')),
    summary:parsed.summary,
    economics,
+   suggestedPolicy:suggestion.suggested,
+   ambiguousPolicies:suggestion.ambiguous,
+   policyUsedForPreview:policyId||null,
    issues:parsed.issues.map(x=>({...x,message:SMART_IMPORT_ISSUES[x.code]??x.code})),
    sample:parsed.rows.slice(0,8).map(r=>({
     bank:r.bank_name,agreement:r.agreement_name,table:r.table_name,contract:r.contract_type_name,

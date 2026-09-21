@@ -13,6 +13,9 @@ type Preview={
  summary:{sourceRows:number;expandedRows:number;tables:string[];components:string[];hasDeferred:boolean;hasPlastic:boolean;hasBonus:boolean;hasGenericRepasseColumns:boolean}
  issues:{line:number;code:string;detail?:string;message:string}[]
  economics:{table:string;contract:string;term:number;component:string;group:string;receivedKind:'percentage'|'fixed_brl';gross:string;net:string;payout:string;retained:string|null;payoutKind:'percentage'|'fixed_brl'|null;compatible:boolean}[]
+ suggestedPolicy:{versionId:string;policyId:string;name:string;version:number;discount:string;specificity:number;scopeLabel:string}|null
+ ambiguousPolicies:{versionId:string;policyId:string;name:string;version:number;discount:string;specificity:number;scopeLabel:string}[]
+ policyUsedForPreview:string|null
  sample:{bank:string;agreement:string;table:string;contract:string;term:number;rate:string|null;factor:string|null;components:number}[]
 }
 const field='rounded-lg border border-slate-700 bg-slate-950 p-2 text-sm'
@@ -47,6 +50,7 @@ export function SmartImportClient({providers,policies}:{providers:Provider[];pol
    const body=await res.json()
    if(!res.ok){setMessage(body.error??'Não foi possível analisar.');return}
    setPreview(body)
+   if(!policy&&body.suggestedPolicy?.versionId)setPolicy(body.suggestedPolicy.versionId)
   }finally{setBusy(false)}
  }
 
@@ -71,7 +75,7 @@ export function SmartImportClient({providers,policies}:{providers:Provider[];pol
   <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
    <h2 className="font-semibold">1. Envie o arquivo e escolha a regra</h2>
    <p className="mt-1 text-xs text-slate-400">CSV, XLSX, XLS antigo ou PDF com texto. Até 2 MB para planilhas e 5 MB para PDF. A prévia não grava nada.</p>
-   <div className="mt-3 grid gap-2 md:grid-cols-2"><select value={policy} onChange={e=>{setPolicy(e.target.value);setPreview(null)}} className={field+' md:col-span-2'}><option value="">Sem regra interna na prévia</option>{policies.map(p=><option key={p.versionId} value={p.versionId}>{p.name} · v{p.version} · imposto/desconto {p.discount}%</option>)}</select><input type="file" accept=".csv,.xlsx,.xls,.pdf,text/csv" onChange={e=>{setFile(e.target.files?.[0]??null);setPreview(null);setHeaderMap({});setContractMap({});setMessage('')}} className="block text-sm"/><button disabled={!file||busy} onClick={runPreview} className={ghost}>{busy?'Analisando...':'Analisar sem gravar'}</button></div>
+   <div className="mt-3 grid gap-2 md:grid-cols-2"><select value={policy} onChange={e=>{setPolicy(e.target.value);setPreview(null)}} className={field+' md:col-span-2'}><option value="">Deixar o Corban sugerir a regra pelo escopo</option>{policies.map(p=><option key={p.versionId} value={p.versionId}>{p.name} · v{p.version} · imposto/desconto {p.discount}%</option>)}</select><input type="file" accept=".csv,.xlsx,.xls,.pdf,text/csv" onChange={e=>{setFile(e.target.files?.[0]??null);setPreview(null);setHeaderMap({});setContractMap({});setMessage('')}} className="block text-sm"/><button disabled={!file||busy} onClick={runPreview} className={ghost}>{busy?'Analisando...':'Analisar sem gravar'}</button></div>
   </div>
 
   {preview&&<div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-5">
@@ -83,6 +87,8 @@ export function SmartImportClient({providers,policies}:{providers:Provider[];pol
     <div><span className="text-slate-500">Componentes detectados</span><div className="text-lg font-semibold">{preview.summary.components.length}</div></div>
    </div>
    <div className="mt-3 text-xs text-slate-300">{preview.summary.tables.slice(0,8).map(x=><div key={x}>• {x}</div>)}</div>
+   {preview.suggestedPolicy&&<div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm"><div className="font-semibold text-emerald-200">Regra sugerida automaticamente</div><div className="mt-1">{preview.suggestedPolicy.name} · v{preview.suggestedPolicy.version}</div><div className="mt-1 text-xs text-slate-400">{preview.suggestedPolicy.scopeLabel} · imposto/desconto {preview.suggestedPolicy.discount}%</div></div>}
+   {!!preview.ambiguousPolicies?.length&&<div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm"><div className="font-semibold text-amber-200">Há mais de uma regra igualmente específica</div><p className="mt-1 text-xs text-slate-400">Escolha explicitamente antes de importar; o Corban não desempata regra financeira por conta própria.</p><select value={policy} onChange={e=>setPolicy(e.target.value)} className={field+' mt-3 w-full'}><option value="">Escolha a regra</option>{preview.ambiguousPolicies.map(p=><option key={p.versionId} value={p.versionId}>{p.name} · v{p.version} · {p.scopeLabel}</option>)}</select>{policy&&<button onClick={runPreview} className={ghost+' mt-3'}>Recalcular prévia com esta regra</button>}</div>}
    {!!preview.issues.length&&<div className="mt-4 space-y-2">{preview.issues.map((x,i)=><div key={i} className={x.code==='generic_repass_requires_mapping'?'rounded-lg border border-amber-500/30 p-3 text-xs text-amber-200':'rounded-lg border border-red-500/30 p-3 text-xs text-red-200'}>Linha {x.line}: {x.message}{x.detail?' — '+x.detail:''}</div>)}</div>}
    {preview.headers?.length>0&&preview.issues.some(x=>['missing_bank','missing_agreement','missing_table','missing_contract','missing_term','missing_rate_coefficient_or_factor'].includes(x.code))&&<div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4"><h3 className="text-sm font-semibold text-amber-200">Mapear colunas manualmente</h3><p className="mt-1 text-xs text-slate-400">Use somente quando o arquivo chama uma coluna por outro nome. O Corban reanalisa antes de permitir qualquer gravação.</p><div className="mt-3 grid gap-2 md:grid-cols-2">{[
     ['bank','Banco / Instituição'],['agreement','Convênio'],['table','Produto / Tabela'],['contract','Tipo de Contrato'],
@@ -109,7 +115,7 @@ export function SmartImportClient({providers,policies}:{providers:Provider[];pol
    {preview.summary.hasGenericRepasseColumns&&<label className="mt-4 block rounded-xl border border-amber-500/30 p-4 text-sm text-amber-100"><input type="checkbox" checked={ignoreLegacy} onChange={e=>setIgnoreLegacy(e.target.checked)} className="mr-2"/>Confirmo que <b>Repasse 1/2/3...</b> da planilha não será usado como regra interna. O Corban usará somente a política selecionada acima.</label>}
 
    <div className="mt-4 rounded-xl border border-slate-800 p-4 text-xs text-slate-400">Nenhuma Tabela será publicada automaticamente. A carga cria/atualiza rascunhos para você revisar antes de disponibilizar em simulações.</div>
-   <button disabled={busy||preview.issues.some(x=>x.code!=='generic_repass_requires_mapping')||(preview.summary.hasGenericRepasseColumns&&!ignoreLegacy)} onClick={apply} className={btn+' mt-4'}>{busy?'Importando...':'Confirmar e importar'}</button>
+   <button disabled={busy||preview.issues.some(x=>x.code!=='generic_repass_requires_mapping')||(preview.summary.hasGenericRepasseColumns&&!ignoreLegacy)||(preview.ambiguousPolicies?.length>0&&!policy)} onClick={apply} className={btn+' mt-4'}>{busy?'Importando...':'Confirmar e importar'}</button>
   </div>}
 
   {message&&<div className="rounded-xl border border-slate-700 bg-slate-900 p-4 text-sm">{message}</div>}
