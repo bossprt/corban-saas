@@ -1909,3 +1909,35 @@ Validação:
 - Security Advisor continua sem WARN/ERROR novo; somente 2 INFO históricos de Platform Admin.
 
 **Próxima ação irreversível: aplicar `20261016_simulation_lifecycle_v1` LIVE após autorização explícita.**
+
+
+## Simulation lifecycle V1 — LIVE
+- Autorização explícita recebida e migration aplicada LIVE como `20260921032402 simulation_lifecycle_v1`.
+- Contract pós-apply passou no banco real.
+- `selected` agora é terminal; `expired/cancelled` continuam terminais.
+- Encerramento governado aceita somente `calculated -> cancelled|expired`, supervisor/manager/admin, e recusa simulação com proposta vinculada.
+- UI concluída: supervisor+ vê ações Cancelar/Expirar apenas em `calculated`; simulações terminais não oferecem Criar proposta.
+- Vercel READY no commit funcional `ac367bdf97f8cfd6a933b2ec3ebab1bd873b4c8d`.
+
+## Human Gate atual — Organization direct-write privilege hardening V1
+Achado confirmado no LIVE:
+- `authenticated` ainda possui INSERT/UPDATE/DELETE em `public.organizations`;
+- não há dependência funcional legítima dessa escrita direta na aplicação;
+- criação de organização é fluxo Platform Admin via Admin client + `bootstrap_organization_admin`;
+- tenant comum precisa apenas de SELECT governado por RLS.
+
+Preparado e **NÃO LIVE**:
+- `supabase/migrations/20261017_organization_direct_write_privilege_hardening_v1.sql`;
+- `tests/security/organization-direct-write-privilege-contract.sql`.
+
+O pacote:
+- revoga INSERT/UPDATE/DELETE de `authenticated` e `anon` em `organizations`;
+- preserva SELECT de authenticated;
+- verifica que authenticated continua sem EXECUTE em `bootstrap_organization_admin`.
+
+Validação:
+- migration + contract passaram em `BEGIN -> testes -> ROLLBACK`;
+- `20261017_organization_direct_write_privilege_hardening_v1` não consta em `list_migrations`;
+- Security Advisor continua sem WARN/ERROR novo; apenas 2 INFO históricos de Platform Admin.
+
+**Próxima ação requer autorização explícita para aplicar `20261017_organization_direct_write_privilege_hardening_v1` LIVE.**
