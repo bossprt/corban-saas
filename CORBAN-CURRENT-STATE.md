@@ -1151,3 +1151,20 @@ Pós-apply:
 - Security Advisor: 0 WARN/ERROR novos; permanecem apenas 2 INFO históricos das tabelas de Platform Admin sem policy pública;
 - migration consta em `list_migrations`;
 - não reaplicar.
+
+
+## Smart Import — comparação externa × regra interna
+Concluído diretamente pelo ChatGPT, sem Claude e sem DDL:
+- `Repasse 1/2/3` pode ser vinculado explicitamente a um Grupo de Comissão;
+- cada slot exige semântica explícita: valor final pago ao grupo ou % da comissão recebida;
+- cada slot exige unidade explícita; `share_of_received` aceita apenas percentual;
+- mapeamento parcial continua fail-closed;
+- também existe opção explícita de ignorar os repasses legados e usar somente a política interna;
+- os valores externos são apenas observações para comparação, nunca substituem a política interna;
+- preview compara externo × interno com estados Confere / Difere / Unidade diferente / Regra diferente / Sem regra interna;
+- comparação usa igualdade decimal escalada determinística, sem float;
+- Vercel READY no commit `f165112f4e8aa1370d193c83e3b4b0b4bad4a4f6`.
+
+O Smart Import também sugere a política ativa mais específica pelo escopo:
+Tabela > Convênio > Instituição > Global.
+Empate no mesmo nível exige escolha humana explícita.
