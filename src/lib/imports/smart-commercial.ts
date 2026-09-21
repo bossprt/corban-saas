@@ -188,6 +188,7 @@ export function mapSmartCommercialRows(
  }
  const rawHead=rawRows[0].map(x=>String(x??'').trim())
  const head=rawHead.map(n)
+ const commissionBaseCol=firstIndex(head,['base_da_comissao','base_calculo','base_calculo_a_vista','base_de_calculo'])
  const col={
   bank:firstIndex(head,baseAliases.bank),agreement:firstIndex(head,baseAliases.agreement),table:firstIndex(head,baseAliases.table),
   externalCode:firstIndex(head,baseAliases.externalCode),validFrom:firstIndex(head,baseAliases.validFrom),validUntil:firstIndex(head,baseAliases.validUntil),
@@ -231,7 +232,7 @@ export function mapSmartCommercialRows(
   if(component)namedRepassCols.push({value:i,group,component,header:rawHead[i]})
  }
 
- const consumed=new Set<number>([...Object.values(col).filter((v):v is number=>v!==undefined),...componentCols.flatMap(c=>[c.value,...(c.unit===undefined?[]:[c.unit])]),...namedRepassCols.map(c=>c.value),...genericRepassCols.map(c=>c.value)])
+ const consumed=new Set<number>([...Object.values(col).filter((v):v is number=>v!==undefined),...(commissionBaseCol===undefined?[]:[commissionBaseCol]),...componentCols.flatMap(c=>[c.value,...(c.unit===undefined?[]:[c.unit])]),...namedRepassCols.map(c=>c.value),...genericRepassCols.map(c=>c.value)])
  for(let i=0;i<rawHead.length;i++){
   const h=head[i]
   if(!h||consumed.has(i)||/repasse[_ ]?\d+/.test(h)||/unidade/.test(h)||IGNORABLE.test(h))continue
@@ -271,6 +272,11 @@ export function mapSmartCommercialRows(
   if(factor!==null&&fMode==='daily'&&!fDate){issues.push({line,code:'factor_date_required'});return}
   if([bank,agreement,table].some(x=>x.length>SMART_LIMITS.text)){issues.push({line,code:'text_too_long'});return}
 
+  const baseRaw=commissionBaseCol===undefined?'':cell(r,commissionBaseCol)
+  const baseNorm=n(baseRaw)
+  const commissionBase=baseRaw===''?null:baseNorm==='liquido'?'LÍQUIDO':baseNorm==='bruto'?'BRUTO':null
+  if(baseRaw!==''&&!commissionBase){issues.push({line,code:'invalid_commission_base',detail:baseRaw});return}
+
   const comps:SmartImportComponentValue[]=[]
   for(const cc of componentCols){
    const raw=cell(r,cc.value)
@@ -281,7 +287,7 @@ export function mapSmartCommercialRows(
    const unit=unitFor(cc.header,cc.unit===undefined?'':cell(r,cc.unit),cc.component.tech_key)
    if(!unit){issues.push({line,code:'component_unit_required',detail:cc.component.name});return}
    if(unit==='percentage'&&Number(value)>100){issues.push({line,code:'component_percentage_over_100',detail:cc.component.name});return}
-   comps.push({component_type_id:cc.component.id,value_kind:unit,received_value:value,source:'import'})
+   comps.push({component_type_id:cc.component.id,value_kind:unit,received_value:value,source:'import',calculation_base:commissionBase})
   }
 
   const repasses:SmartImportRepassObservation[]=[]
