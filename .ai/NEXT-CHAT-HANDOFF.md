@@ -406,3 +406,33 @@ UI:
 - back button returns to /app/cadastros.
 
 Current verified green HEAD: fb16360599059fc4ba91587c279cf36ec32e2853 (Vercel SUCCESS).
+
+
+## HOPE Governo do Acre — first real commercial table import
+Owner-confirmed source: 2026-09-21T08_43_11-05_00_RelatorioMelhorComissao.xls.
+Business interpretation confirmed before write:
+- each distinct source rate/name is its own commercial table; do NOT place multiple rates in one table;
+- 13 HOPE/Gov. Acre tables, 44 total conditions;
+- Contrato Novo tables use commission calculation base LÍQUIDO and source vigência 03/07/2026;
+- Refin-Portabilidade COMBO tables use commission calculation base BRUTO and source vigência 04/09/2026;
+- source Bônus=0 and Diferido=0 for all 44 rows; components are persisted separately as À Vista/Bônus/Diferido;
+- commission policy uses 6% tax/discount first, then percentage of the net received commission by group:
+  Afiliado 10%, Balcão 50%, Call Center 25%, Corretor 65%, Parceiro 80%, Smart Promotora 100%;
+- internal calculations keep numeric precision; UI display standard is 2 decimal places for percentages.
+
+LIVE write completed atomically and validated:
+- 13 product tables;
+- 44 commercial conditions;
+- 132 condition components (3 per condition);
+- 264 group shares (6 per condition);
+- one versioned policy: HOPE - Governo do Acre - Líquido após 6% - 2026;
+- all table versions published;
+- sample validated: received 15.00%, net after 6%=14.10%, Corretor share 65%, internal effective=9.165%, displayed=9.17%.
+
+Important correction:
+- the prepared multi-rate-per-table migration 20261028_commercial_condition_rate_identity_v1 was NOT applied LIVE and was removed from the branch after Owner clarified that each rate is a separate table;
+- import behavior remains one rate per commercial table.
+
+Seller groups cleanup requested by Owner:
+- only seller group Padrão remains;
+- existing seller LUCIANE DO NASCIMENTO BRAGA was reassigned from Corretor to Padrão before old seller groups were deleted.
