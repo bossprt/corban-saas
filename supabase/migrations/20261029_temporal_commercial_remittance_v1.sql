@@ -4,7 +4,7 @@ create or replace function public.guard_product_table_version_immutable()
 returns trigger
 language plpgsql
 set search_path=''
-as $
+as $guard$
 declare
   v_catalog_governed boolean:=coalesce(current_setting('corban.catalog_rpc',true),'')='on';
 begin
@@ -19,7 +19,6 @@ begin
   end if;
 
   if old.status<>'draft' then
-    -- Commercial facts remain immutable after publication.
     if new.organization_id is distinct from old.organization_id
        or new.product_table_id is distinct from old.product_table_id
        or new.version is distinct from old.version
@@ -34,14 +33,13 @@ begin
       raise exception 'published_product_table_version_is_immutable';
     end if;
 
-    -- Only governed catalog/remittance code may close a published interval.
     if new.effective_until is distinct from old.effective_until and not v_catalog_governed then
       raise exception 'published_product_table_version_is_immutable';
     end if;
   end if;
   return new;
 end
-$;
+$guard$;
 
 create or replace function public.publish_product_table_version(p_version_id uuid)
 returns uuid
