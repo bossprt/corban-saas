@@ -54,7 +54,7 @@ export default async function CasePage({params,searchParams}:{params:Promise<{id
   <h2 className="mt-8 text-xl font-semibold">Ledger e reversões</h2>
   <p className="mt-1 text-xs text-slate-500">Eventos são append-only. Uma reversão nunca altera o original: cria um evento compensatório e reduz o saldo líquido.</p>
   {!ledger.entries.length?<p className="mt-4 text-sm text-slate-400">Nenhum evento financeiro para este componente.</p>:<div className="mt-4 space-y-4">
-   {ledger.entries.map(e=>{const ev=evidenceOf(e.original.id);const canReverse=Number(e.remainingReversible)>0
+   {ledger.entries.map(e=>{const ev=evidenceOf(e.original.id);const canReverse=cmp(fromDecimalString(e.remainingReversible),fromDecimalString('0'))>0
     return <article key={e.original.id} className="rounded-xl border border-slate-800 bg-slate-900 p-4">
      <header className="flex flex-wrap items-baseline justify-between gap-2"><h3 className="font-semibold">{EVENT_LABEL[e.original.event_type]??e.original.event_type}</h3><span className="text-sm text-slate-400">{new Date(e.original.occurred_at).toLocaleDateString('pt-BR')} · {SOURCE_LABEL[e.original.source_kind]??e.original.source_kind}{e.original.source_reference?` · ref. ${e.original.source_reference}`:''}</span></header>
      <div className="mt-2 text-sm">ORIGINAL <strong>{formatBRL(e.original.amount_text)}</strong></div>
