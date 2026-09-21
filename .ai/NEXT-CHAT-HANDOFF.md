@@ -146,22 +146,24 @@ Pós-apply:
 - fechamento governado somente `calculated -> cancelled|expired` para supervisor/manager/admin;
 - UI de Cancelar/Expirar está READY no Vercel.
 
-## HUMAN GATE ATUAL — Organization direct-write privilege hardening V1
-Preparada e **NÃO LIVE**:
-- `20261017_organization_direct_write_privilege_hardening_v1.sql`
-- `tests/security/organization-direct-write-privilege-contract.sql`
+## Organization direct-write privilege hardening V1 — LIVE
+LIVE:
+- `20260921033720 organization_direct_write_privilege_hardening_v1`.
 
-Objetivo:
-remover privilégios diretos de mutação de `public.organizations` do papel `authenticated`. O bootstrap real já usa Admin client + RPC de Platform Admin e não depende desses grants.
-
-Validação:
-- migration + contract passaram em `BEGIN ... ROLLBACK`;
-- authenticated preserva SELECT;
-- authenticated continua sem EXECUTE em `bootstrap_organization_admin`;
-- migration não consta em `list_migrations`;
+Pós-apply:
+- contract passou;
+- authenticated/anon sem INSERT/UPDATE/DELETE em `organizations`;
+- authenticated mantém SELECT;
+- bootstrap segue exclusivo do fluxo Platform Admin;
 - Security Advisor sem WARN/ERROR novo.
 
-**Ao retomar, perguntar somente se o Owner autoriza aplicar `20261017_organization_direct_write_privilege_hardening_v1` LIVE, salvo outra instrução explícita.**
+## DECISÃO ATUAL — comissão esperada para agentes
+A UI hoje é fail-closed supervisor+ via `canViewCommission`, mas `authenticated` ainda possui SELECT da tabela inteira de `simulations` e `proposals_v2`; por isso `expected_commission_amount` permanece legível via API por membros do tenant.
+
+Não existe migration preparada ainda. A correção de banco precisa preservar as RPCs security-invoker existentes e depende de uma decisão explícita do Owner:
+**agentes devem ser impedidos também no nível da API de ler comissão esperada?**
+
+Ao retomar, obter essa decisão antes de desenhar qualquer migration de column-level access/view/RPC.
 
 ## Ambiente
 - GitHub: `bossprt/corban-saas`
