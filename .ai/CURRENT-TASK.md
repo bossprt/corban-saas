@@ -1866,3 +1866,14 @@ Validação:
 - Security Advisor continua sem WARN/ERROR novo; somente 2 INFO históricos de Platform Admin.
 
 **Próxima ação requer autorização explícita do Owner para aplicar `20261015_proposal_financial_integrity_hardening_v1` LIVE.**
+
+
+## Proposal/Financial integrity hardening V1 — LIVE
+- Autorização explícita recebida e migration aplicada LIVE como `20260921031621 proposal_financial_integrity_hardening_v1`.
+- Contract pós-apply passou no banco real.
+- `freeze_proposal_commercial_route` agora exige regra publicada e dentro de `effective_from/effective_until` também no banco.
+- `publish_expected_commission` refresca a conciliação por componente após publicação/idempotência.
+- `publish_financial_evidence_event` refresca conciliação em `commission_reported` e `payment_received`.
+- authenticated/anon não possuem mais UPDATE/DELETE nos snapshots comerciais imutáveis.
+- Security Advisor segue sem WARN/ERROR novo; permanecem somente 2 INFO históricos de Platform Admin.
+- A camada de aplicação financeira também deixou de usar ponto flutuante na validação de reversão e na decisão de saldo reversível.
