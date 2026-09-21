@@ -13,6 +13,13 @@ export async function POST(req:Request){
   if(!atLeast(ctx.membership.role,'manager'))return Response.json({error:'Sem permissão.'},{status:403})
   const fd=await req.formData()
   const file=fd.get('file')
+  const remittanceMode=String(fd.get('remittance_mode')??'partial')
+  const remittanceEffectiveFrom=String(fd.get('remittance_effective_from')??'').trim()
+  const productionOrigin=String(fd.get('production_origin')??'own')
+  const providerId=String(fd.get('provider_id')??'').trim()
+  if(!['partial','complete'].includes(remittanceMode))return Response.json({error:'Tipo de atualização inválido.'},{status:400})
+  if(!['own','third_party'].includes(productionOrigin))return Response.json({error:'Origem da produção inválida.'},{status:400})
+  if(remittanceMode==='complete'&&!/^\d{4}-\d{2}-\d{2}$/.test(remittanceEffectiveFrom))return Response.json({error:'Informe a data de início da nova vigência para a remessa completa.'},{status:400})
   if(!(file instanceof File))return Response.json({error:'Envie um arquivo.'},{status:400})
   const headerMap=headerMapFromForm(fd)
   const contractTypeMap=contractTypeMapFromForm(fd)
@@ -69,6 +76,57 @@ export async function POST(req:Request){
   })).slice(0,60)
 
   const hard=parsed.issues.filter(x=>x.code!=='generic_repass_requires_mapping')
+
+  const norm=(v:string)=>v.trim().toLocaleLowerCase('pt-BR')
+  const sourceTables=[...new Set(parsed.rows.map(r=>r.table_name))]
+  let remittance={
+    mode:remittanceMode as 'partial'|'complete',
+    effectiveFrom:remittanceEffectiveFrom||null,
+    scope:null as string|null,
+    existingTables:[] as string[],
+    missingTables:[] as string[],
+    newTables:[] as string[],
+  }
+
+  if(parsed.rows.length){
+    const scopes=[...new Set(parsed.rows.map(r=>norm(r.bank_name)+'|'+norm(r.agreement_name)))]
+    if(remittanceMode==='complete'&&scopes.length!==1){
+      return Response.json({error:'Remessa completa deve conter apenas uma Instituição e um Convênio por vez.'},{status:400})
+    }
+    const first=parsed.rows[0]
+    remittance.scope=first.bank_name+' · '+first.agreement_name
+
+    const [banksQ,agreementsQ,routesQ,tablesQ,versionsQ]=await Promise.all([
+      ctx.supabase.from('organization_banks').select('id,name').eq('organization_id',ctx.membership.organization_id),
+      ctx.supabase.from('organization_agreements').select('id,name').eq('organization_id',ctx.membership.organization_id),
+      ctx.supabase.from('organization_product_routes').select('id,org_bank_id,org_agreement_id,org_provider_id,production_origin').eq('organization_id',ctx.membership.organization_id),
+      ctx.supabase.from('product_tables').select('id,route_id,name,status').eq('organization_id',ctx.membership.organization_id),
+      ctx.supabase.from('product_table_versions').select('product_table_id,status,effective_from,effective_until').eq('organization_id',ctx.membership.organization_id),
+    ])
+    const bank=(banksQ.data??[]).find((x:{id:string;name:string})=>norm(x.name)===norm(first.bank_name))
+    const agreement=(agreementsQ.data??[]).find((x:{id:string;name:string})=>norm(x.name)===norm(first.agreement_name))
+    const route=(routesQ.data??[]).find((x:{id:string;org_bank_id:string|null;org_agreement_id:string|null;org_provider_id:string|null;production_origin:string|null})=>
+      x.org_bank_id===bank?.id&&x.org_agreement_id===agreement?.id&&x.production_origin===productionOrigin&&
+      (productionOrigin==='own'?x.org_provider_id===null:x.org_provider_id===providerId)
+    )
+    if(route){
+      const cutoff=remittanceEffectiveFrom?new Date(remittanceEffectiveFrom+'T00:00:00Z'):new Date()
+      const activeTableIds=new Set((versionsQ.data??[]).filter((v:{product_table_id:string;status:string;effective_from:string|null;effective_until:string|null})=>{
+        if(v.status!=='published')return false
+        const from=v.effective_from?new Date(v.effective_from):new Date(0)
+        const until=v.effective_until?new Date(v.effective_until):null
+        return from<=cutoff&&(!until||cutoff<until)
+      }).map((v:{product_table_id:string})=>v.product_table_id))
+      remittance.existingTables=(tablesQ.data??[])
+        .filter((t:{id:string;route_id:string;name:string;status:string})=>t.route_id===route.id&&t.status==='active'&&activeTableIds.has(t.id))
+        .map((t:{name:string})=>t.name)
+    }
+    const sourceNorm=new Set(sourceTables.map(norm))
+    const existingNorm=new Set(remittance.existingTables.map(norm))
+    remittance.missingTables=remittance.existingTables.filter(x=>!sourceNorm.has(norm(x)))
+    remittance.newTables=sourceTables.filter(x=>!existingNorm.has(norm(x)))
+  }
+
   return Response.json({
    ok:hard.length===0,
    fileName:safeFileName(file.name),
@@ -79,6 +137,7 @@ export async function POST(req:Request){
    groups:parsed.availableGroups,
    needsReview:parsed.issues.some(x=>x.code.startsWith('pdf_')),
    summary:parsed.summary,
+   remittance,
    economics,
    suggestedPolicy:suggestion.suggested,
    ambiguousPolicies:suggestion.ambiguous,
