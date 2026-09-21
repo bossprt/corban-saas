@@ -93,3 +93,23 @@ test('contract type value map fails closed when target is not an enabled type',(
  ],{...ctx,contractTypeValueMap:{'Tipo Externo':'not-enabled'}})
  assert.ok(r.issues.some(x=>x.code==='unknown_contract_type'))
 })
+
+
+test('explicit generic repasse mapping turns a slot into an observation without changing internal policy',()=>{
+ const r=mapSmartCommercialRows([
+  ['Banco','Convênio','Produto','Tipo de Contrato','Prazo','Taxa','À Vista (Empresa)','À Vista (Repasse 1)'],
+  ['HOPE','Gov. AC','Tabela 001','Novo','84','1.8','10','6.5'],
+ ],{...ctx,genericRepassMap:{'1':{group_id:'00000000-0000-4000-8000-000000000010',rule_hint:'direct',value_kind_hint:'percentage'}}})
+ assert.ok(!r.issues.some(x=>x.code==='generic_repass_requires_mapping'))
+ assert.equal(r.rows[0].source_repasses[0].group_id,'00000000-0000-4000-8000-000000000010')
+ assert.equal(r.rows[0].source_repasses[0].raw_value,'6.5')
+ assert.equal(r.rows[0].source_repasses[0].source_slot,'1')
+})
+
+test('partial generic repasse mapping remains fail-closed for the unmapped slot',()=>{
+ const r=mapSmartCommercialRows([
+  ['Banco','Convênio','Produto','Tipo de Contrato','Prazo','Taxa','À Vista (Repasse 1)','À Vista (Repasse 2)'],
+  ['HOPE','Gov. AC','Tabela 001','Novo','84','1.8','6.5','8'],
+ ],{...ctx,genericRepassMap:{'1':{group_id:'00000000-0000-4000-8000-000000000010',rule_hint:'direct',value_kind_hint:'percentage'}}})
+ assert.ok(r.issues.some(x=>x.code==='generic_repass_requires_mapping'&&x.detail?.includes('Repasse 2')))
+})

@@ -2,26 +2,26 @@
 import { readSmartFile, type SmartFormat } from '@/lib/imports/smart-file'
 import { normalizeHeader } from '@/lib/commercial'
 import { effectiveContractTypes } from '@/lib/contract-types'
-import { applySmartHeaderMap, mapSmartCommercialRows, type SmartHeaderMap, type SmartImportResult } from '@/lib/imports/smart-commercial'
+import { applySmartHeaderMap, mapSmartCommercialRows, type SmartGenericRepassMap, type SmartHeaderMap, type SmartImportResult } from '@/lib/imports/smart-commercial'
 
-export type SmartParsed=SmartImportResult&{format:SmartFormat|null;headers:{index:number;label:string}[];headerMapApplied:SmartHeaderMap;availableContractTypes:{id:string;name:string}[]}
+export type SmartParsed=SmartImportResult&{format:SmartFormat|null;headers:{index:number;label:string}[];headerMapApplied:SmartHeaderMap;availableContractTypes:{id:string;name:string}[];availableGroups:{id:string;name:string}[]}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the scoped Supabase client is untyped in this codebase
 type Ctx={supabase:{from:(table:string)=>any}}
 
-export async function parseSmartCommercialFile(ctx:Ctx,file:File,headerMap:SmartHeaderMap={},contractTypeValueMap:Record<string,string>={}):Promise<SmartParsed>{
+export async function parseSmartCommercialFile(ctx:Ctx,file:File,headerMap:SmartHeaderMap={},contractTypeValueMap:Record<string,string>={},genericRepassMap:SmartGenericRepassMap={}):Promise<SmartParsed>{
  // size is checked BEFORE reading the body into memory (arrayBuffer would allocate it all)
  if(file.size===0||file.size>5_000_000)throw new Error('invalid_file')
  const read=await readSmartFile(new Uint8Array(await file.arrayBuffer()),file.name)
  if(read.issues.length||read.rows.length===0){
   // a file the reader could not turn into a table never reaches the commercial parser and never reaches the database
   const issues=read.issues.length?read.issues:[{line:1,code:'file_without_rows'}]
-  return {format:read.format,headers:[],headerMapApplied:headerMap,availableContractTypes:[],rows:[],issues,summary:{sourceRows:0,expandedRows:0,tables:[],components:[],hasDeferred:false,hasPlastic:false,hasBonus:false,hasGenericRepasseColumns:false,genericRepasseSlots:[]}}
+  return {format:read.format,headers:[],headerMapApplied:headerMap,availableContractTypes:[],availableGroups:[],rows:[],issues,summary:{sourceRows:0,expandedRows:0,tables:[],components:[],hasDeferred:false,hasPlastic:false,hasBonus:false,hasGenericRepasseColumns:false,genericRepasseSlots:[]}}
  }
  const headers=(read.rows[0]??[]).map((x,index)=>({index,label:String(x??'').trim()||`Coluna ${index+1}`}))
  const mapped=applySmartHeaderMap(read.rows,headerMap)
  if(mapped.issue){
-  return {format:read.format,headers,headerMapApplied:headerMap,availableContractTypes:[],rows:[],issues:[mapped.issue],summary:{sourceRows:Math.max(0,read.rows.length-1),expandedRows:0,tables:[],components:[],hasDeferred:false,hasPlastic:false,hasBonus:false,hasGenericRepasseColumns:false,genericRepasseSlots:[]}}
+  return {format:read.format,headers,headerMapApplied:headerMap,availableContractTypes:[],availableGroups:[],rows:[],issues:[mapped.issue],summary:{sourceRows:Math.max(0,read.rows.length-1),expandedRows:0,tables:[],components:[],hasDeferred:false,hasPlastic:false,hasBonus:false,hasGenericRepasseColumns:false,genericRepasseSlots:[]}}
  }
  const raw=mapped.rows
 
@@ -36,10 +36,12 @@ export async function parseSmartCommercialFile(ctx:Ctx,file:File,headerMap:Smart
   (settings.data??[]) as {contract_type_id:string;is_enabled:boolean;use_in_pipeline:boolean;use_in_commission:boolean}[],
   'commission',
  )
- return {format:read.format,headers,headerMapApplied:headerMap,availableContractTypes:enabled.map(t=>({id:t.id,name:t.name})),...mapSmartCommercialRows(raw,{
+ const groupRows=(groups.data??[]) as {id:string;name:string}[]
+ return {format:read.format,headers,headerMapApplied:headerMap,availableContractTypes:enabled.map(t=>({id:t.id,name:t.name})),availableGroups:groupRows,...mapSmartCommercialRows(raw,{
   contractTypes:enabled,
   contractTypeValueMap,
-  groups:(groups.data??[]) as {id:string;name:string}[],
+  genericRepassMap,
+  groups:groupRows,
   components:(components.data??[]) as {id:string;tech_key:string;name:string}[],
  })}
 }
@@ -52,7 +54,8 @@ export const SMART_IMPORT_ISSUES:Record<string,string>={
  missing_contract:'Não encontrei a coluna Tipo de Contrato.',
  missing_term:'Não encontrei Prazo ou Prazo Inicial.',
  missing_rate_coefficient_or_factor:'Não encontrei Taxa, Coeficiente ou Fator.',
- generic_repass_requires_mapping:'O arquivo usa Repasse 1/2/3. Esses repasses não serão usados como regra interna sem confirmação.',
+ generic_repass_requires_mapping:'O arquivo usa Repasse 1/2/3. Vincule cada slot explicitamente a um Grupo de Comissão ou confirme que deseja ignorá-lo.',
+ generic_repass_mapping_invalid:'O mapeamento de Repasse aponta para um Grupo de Comissão inválido ou inativo.',
  missing_identity:'Banco, Convênio, Tabela ou Tipo de Contrato está vazio.',
  unknown_contract_type:'Tipo de Contrato não existe ou não está habilitado.',
  invalid_term_range:'Faixa de prazo inválida.',
@@ -215,4 +218,21 @@ export async function suggestSmartPolicyScope(ctx:Ctx,organizationId:string,rows
  const top=Math.max(...candidates.map(x=>x.specificity))
  const best=candidates.filter(x=>x.specificity===top)
  return best.length===1?{suggested:best[0],ambiguous:[]}:{suggested:null,ambiguous:best}
+}
+
+
+export function genericRepassMapFromForm(fd:FormData){
+ const raw=String(fd.get('generic_repass_map')??'').trim()
+ if(!raw)return {}
+ if(raw.length>6000)throw new Error('invalid_generic_repass_map')
+ const parsed=JSON.parse(raw) as Record<string,unknown>
+ if(!parsed||Array.isArray(parsed)||typeof parsed!=='object')throw new Error('invalid_generic_repass_map')
+ const out:SmartGenericRepassMap={}
+ for(const [slot,value] of Object.entries(parsed)){
+  if(!/^\d{1,2}$/.test(slot)||!value||Array.isArray(value)||typeof value!=='object')throw new Error('invalid_generic_repass_map')
+  const v=value as Record<string,unknown>
+  if(typeof v.group_id!=='string'||!v.group_id||!['share_of_received','direct'].includes(String(v.rule_hint))||!['percentage','fixed_brl'].includes(String(v.value_kind_hint)))throw new Error('invalid_generic_repass_map')
+  out[slot]={group_id:v.group_id,rule_hint:v.rule_hint as 'share_of_received'|'direct',value_kind_hint:v.value_kind_hint as 'percentage'|'fixed_brl'}
+ }
+ return out
 }

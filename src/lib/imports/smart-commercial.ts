@@ -17,7 +17,9 @@ export type SmartImportRepassObservation={
  raw_value:string
  rule_hint:'share_of_received'|'direct'|'unknown'
  value_kind_hint:'percentage'|'fixed_brl'|null
+ source_slot:string|null
 }
+export type SmartGenericRepassMap=Record<string,{group_id:string;rule_hint:'share_of_received'|'direct';value_kind_hint:'percentage'|'fixed_brl'}>
 export type SmartImportRow={
  bank_name:string
  agreement_name:string
@@ -173,7 +175,7 @@ const factorMode=(raw:string):'daily'|'fixed'|null=>{
 
 export function mapSmartCommercialRows(
  rawRows:readonly (readonly unknown[])[],
- ctx:{contractTypes:readonly SmartImportContractType[];groups:readonly SmartImportGroup[];components:readonly SmartImportComponent[];contractTypeValueMap?:Record<string,string>}
+ ctx:{contractTypes:readonly SmartImportContractType[];groups:readonly SmartImportGroup[];components:readonly SmartImportComponent[];contractTypeValueMap?:Record<string,string>;genericRepassMap?:SmartGenericRepassMap}
 ):SmartImportResult{
  const issues:SmartImportIssue[]=[]
  const rows:SmartImportRow[]=[]
@@ -206,9 +208,19 @@ export function mapSmartCommercialRows(
   componentCols.push({value:i,unit:unit>=0?unit:undefined,component:c,header:rawHead[i]})
  }
 
- const genericRepasseSlots=[...new Set(rawHead.map(h=>/repasse[_ ]?(\d+)/i.exec(n(h))?.[1]).filter((x):x is string=>!!x))].map(x=>`Repasse ${x}`)
+ const genericRepasseSlotIds=[...new Set(rawHead.map(h=>/repasse[_ ]?(\d+)/i.exec(n(h))?.[1]).filter((x):x is string=>!!x))]
+ const genericRepasseSlots=genericRepasseSlotIds.map(x=>`Repasse ${x}`)
  const genericRepasse=genericRepasseSlots.length>0
- if(genericRepasse)issues.push({line:1,code:'generic_repass_requires_mapping',detail:`${genericRepasseSlots.join(', ')} não identificam Corretor, Parceiro ou outro grupo: nenhum foi mapeado.`})
+ const mappedGeneric=new Set(Object.keys(ctx.genericRepassMap??{}))
+ const missingGeneric=genericRepasseSlotIds.filter(x=>!mappedGeneric.has(x))
+ if(missingGeneric.length)issues.push({line:1,code:'generic_repass_requires_mapping',detail:`${missingGeneric.map(x=>`Repasse ${x}`).join(', ')} ainda não está vinculado a um Grupo de Comissão.`})
+ const genericRepassCols:{value:number;slot:string;component:SmartImportComponent}[]=[]
+ for(let i=0;i<rawHead.length;i++){
+  const slot=/repasse[_ ]?(\d+)/i.exec(n(rawHead[i]))?.[1]
+  if(!slot)continue
+  const component=ctx.components.find(c=>(componentAliases[c.tech_key]??[n(c.name)]).some(a=>head[i].includes(a)))
+  if(component)genericRepassCols.push({value:i,slot,component})
+ }
 
  const namedRepassCols:{value:number;group:SmartImportGroup;component:SmartImportComponent;header:string}[]=[]
  for(let i=0;i<rawHead.length;i++){
@@ -219,7 +231,7 @@ export function mapSmartCommercialRows(
   if(component)namedRepassCols.push({value:i,group,component,header:rawHead[i]})
  }
 
- const consumed=new Set<number>([...Object.values(col).filter((v):v is number=>v!==undefined),...componentCols.flatMap(c=>[c.value,...(c.unit===undefined?[]:[c.unit])]),...namedRepassCols.map(c=>c.value)])
+ const consumed=new Set<number>([...Object.values(col).filter((v):v is number=>v!==undefined),...componentCols.flatMap(c=>[c.value,...(c.unit===undefined?[]:[c.unit])]),...namedRepassCols.map(c=>c.value),...genericRepassCols.map(c=>c.value)])
  for(let i=0;i<rawHead.length;i++){
   const h=head[i]
   if(!h||consumed.has(i)||/repasse[_ ]?\d+/.test(h)||/unidade/.test(h)||IGNORABLE.test(h))continue
@@ -278,7 +290,19 @@ export function mapSmartCommercialRows(
    if(raw==='')continue
    const value=decimal(raw,9,8)
    if(value===null){issues.push({line,code:'invalid_repass_value',detail:`${rc.group.name} / ${rc.component.name}`});return}
-   repasses.push({group_id:rc.group.id,component_type_id:rc.component.id,raw_value:value,rule_hint:'unknown',value_kind_hint:null})
+   repasses.push({group_id:rc.group.id,component_type_id:rc.component.id,raw_value:value,rule_hint:'unknown',value_kind_hint:null,source_slot:null})
+  }
+
+  for(const gc of genericRepassCols){
+   const mapping=ctx.genericRepassMap?.[gc.slot]
+   if(!mapping)continue
+   const group=ctx.groups.find(g=>g.id===mapping.group_id)
+   if(!group){issues.push({line,code:'generic_repass_mapping_invalid',detail:`Repasse ${gc.slot}`});return}
+   const raw=cell(r,gc.value)
+   if(raw==='')continue
+   const value=decimal(raw,9,8)
+   if(value===null){issues.push({line,code:'invalid_repass_value',detail:`Repasse ${gc.slot} / ${gc.component.name}`});return}
+   repasses.push({group_id:group.id,component_type_id:gc.component.id,raw_value:value,rule_hint:mapping.rule_hint,value_kind_hint:mapping.value_kind_hint,source_slot:gc.slot})
   }
 
   if(rows.length+(max-min+1)>SMART_LIMITS.expandedRows){issues.push({line,code:'file_too_large_for_import'});return}

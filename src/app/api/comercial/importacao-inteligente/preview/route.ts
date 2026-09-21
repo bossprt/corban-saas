@@ -1,7 +1,7 @@
 
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
-import { contractTypeMapFromForm, headerMapFromForm, parseSmartCommercialFile, SMART_IMPORT_ISSUES, suggestSmartPolicyScope, validateSmartPolicyScope } from '@/lib/imports/smart-commercial-server'
+import { contractTypeMapFromForm, genericRepassMapFromForm, headerMapFromForm, parseSmartCommercialFile, SMART_IMPORT_ISSUES, suggestSmartPolicyScope, validateSmartPolicyScope } from '@/lib/imports/smart-commercial-server'
 import { safeFileName } from '@/lib/imports/file-guards'
 import { componentEconomics } from '@/lib/commission/component-economics'
 
@@ -16,7 +16,8 @@ export async function POST(req:Request){
   if(!(file instanceof File))return Response.json({error:'Envie um arquivo.'},{status:400})
   const headerMap=headerMapFromForm(fd)
   const contractTypeMap=contractTypeMapFromForm(fd)
-  const parsed=await parseSmartCommercialFile(ctx,file,headerMap,contractTypeMap)
+  const genericRepassMap=genericRepassMapFromForm(fd)
+  const parsed=await parseSmartCommercialFile(ctx,file,headerMap,contractTypeMap,genericRepassMap)
   const requestedPolicyId=String(fd.get('policy_version_id')??'').trim()
   const suggestion=await suggestSmartPolicyScope(ctx,ctx.membership.organization_id,parsed.rows)
   const policyId=requestedPolicyId||suggestion.suggested?.versionId||''
@@ -63,6 +64,7 @@ export async function POST(req:Request){
    headers:parsed.headers,
    headerMapApplied:parsed.headerMapApplied,
    contractTypes:parsed.availableContractTypes,
+   groups:parsed.availableGroups,
    needsReview:parsed.issues.some(x=>x.code.startsWith('pdf_')),
    summary:parsed.summary,
    economics,
@@ -70,6 +72,7 @@ export async function POST(req:Request){
    ambiguousPolicies:suggestion.ambiguous,
    policyUsedForPreview:policyId||null,
    issues:parsed.issues.map(x=>({...x,message:SMART_IMPORT_ISSUES[x.code]??x.code})),
+   repasses:parsed.rows.flatMap(r=>r.source_repasses.map(x=>({table:r.table_name,contract:r.contract_type_name,term:r.term,...x}))).slice(0,40),
    sample:parsed.rows.slice(0,8).map(r=>({
     bank:r.bank_name,agreement:r.agreement_name,table:r.table_name,contract:r.contract_type_name,
     term:r.term,rate:r.rate,factor:r.factor_value,components:r.components.length
@@ -77,6 +80,6 @@ export async function POST(req:Request){
   })
  }catch(e){
   const m=e instanceof Error?e.message:'unexpected'
-  return Response.json({error:m==='invalid_file'?'Arquivo vazio ou maior que 5 MB.':(m==='invalid_header_map'||m==='invalid_contract_type_map')?'Mapeamento manual inválido.':'Não foi possível ler o arquivo.'},{status:400})
+  return Response.json({error:m==='invalid_file'?'Arquivo vazio ou maior que 5 MB.':(m==='invalid_header_map'||m==='invalid_contract_type_map'||m==='invalid_generic_repass_map')?'Mapeamento manual inválido.':'Não foi possível ler o arquivo.'},{status:400})
  }
 }
