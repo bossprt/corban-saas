@@ -21,7 +21,8 @@ export default async function RegistrationsHubPage() {
       ['Modelo comercial', 'Resumo da configuração comercial da organização.', '/app/comercial'],
     ]],
     ['Rede e acesso', [
-      ['Vendedores', 'Grupo de Vendedor, Grupo de Comissão e categoria PF/PJ/SUB.', '/app/cadastros/vendedores'],
+      ['Vendedores', 'Consulta, cadastro, acesso, filial, pagamento e identidades bancárias dos vendedores.', '/app/cadastros/vendedores'],
+      ['Matriz e filiais', 'Unidades usadas para vincular vendedores à estrutura da organização.', '/app/cadastros/filiais'],
       ['Rede comercial', 'Entidades, relações e canais comerciais.', '/app/rede'],
       ...(manageTeam ? [['Equipe e acessos', 'Usuários, papéis e ciclo de acesso.', '/app/equipe']] : []),
     ]],
