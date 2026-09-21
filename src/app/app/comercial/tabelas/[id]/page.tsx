@@ -20,7 +20,7 @@ const showPct=(v:number|string|null|undefined)=>{
 
 type Group={id:string;name:string;calculation_basis:string}
 type PolicyOpt={versionId:string;name:string}
-type Condition={id:string;contract_type_id:string;term:number;term_min:number;term_max:number;coefficient:number|null;rate:number|null}
+type Condition={id:string;contract_type_id:string;term:number;term_min:number;term_max:number;amount_min:number|string|null;amount_max:number|string|null;coefficient:number|null;rate:number|null}
 
 function ConditionForm({versionId,contractTypes,groups,policies,cond,received,shares,policyVersion}:{
   versionId:string
@@ -41,7 +41,9 @@ function ConditionForm({versionId,contractTypes,groups,policies,cond,received,sh
     </select>
     <input required name="term_min" inputMode="numeric" defaultValue={cond?.term_min??cond?.term??''} placeholder="Prazo inicial" className={field}/>
     <input required name="term_max" inputMode="numeric" defaultValue={cond?.term_max??cond?.term??''} placeholder="Prazo final" className={field}/>
-    <input name="coefficient" inputMode="decimal" defaultValue={cond?.coefficient??''} placeholder="Coeficiente" className={field}/>
+    <input name="amount_min" inputMode="decimal" defaultValue={cond?.amount_min??''} placeholder="Valor inicial (R$)" className={field}/>
+    <input name="amount_max" inputMode="decimal" defaultValue={cond?.amount_max??''} placeholder="Valor final (R$)" className={field}/>
+    <input name="coefficient" inputMode="decimal" defaultValue={cond?.coefficient??''} placeholder="Coeficiente (opcional)" className={field}/>
     <input name="rate" inputMode="decimal" defaultValue={cond?.rate??''} placeholder="Taxa (%)" className={field}/>
     <input required name="received" inputMode="decimal" defaultValue={received??''} placeholder="Comissão empresa (%)" className={field}/>
     <select name="policy_version_id" defaultValue={policyVersion??''} className={field}>
@@ -109,7 +111,7 @@ export default async function CommercialTableDetail({
 
   const conditionsQ=versionIds.length
     ?await supabase.from('commercial_conditions')
-       .select('id,product_table_version_id,contract_type_id,term,term_min,term_max,coefficient,rate')
+       .select('id,product_table_version_id,contract_type_id,term,term_min,term_max,amount_min,amount_max,coefficient,rate')
        .in('product_table_version_id',versionIds)
        .order('term_min')
     :{data:[],error:null}
@@ -183,6 +185,8 @@ export default async function CommercialTableDetail({
                 <th className="py-2 pr-4">Tipo</th>
                 <th className="pr-4">Prazo inicial</th>
                 <th className="pr-4">Prazo final</th>
+                <th className="pr-4">Valor inicial</th>
+                <th className="pr-4">Valor final</th>
                 <th className="pr-4">Coef.</th>
                 <th className="pr-4">Taxa</th>
                 {seeCommission&&<>
@@ -196,6 +200,8 @@ export default async function CommercialTableDetail({
                   <td className="py-2 pr-4 whitespace-nowrap">{typeN.get(c.contract_type_id)??'Tipo'}</td>
                   <td className="pr-4">{c.term_min}</td>
                   <td className="pr-4">{c.term_max}</td>
+                  <td className="pr-4">{c.amount_min===null||c.amount_min===undefined?'Qualquer':`R$ ${String(c.amount_min).replace('.',',')}`}</td>
+                  <td className="pr-4">{c.amount_max===null||c.amount_max===undefined?'Qualquer':`R$ ${String(c.amount_max).replace('.',',')}`}</td>
                   <td className="pr-4">{show(c.coefficient)}</td>
                   <td className="pr-4">{showPct(c.rate)}%</td>
                   {seeCommission&&<>
@@ -214,7 +220,7 @@ export default async function CommercialTableDetail({
           {v.status==='draft'&&canEdit&&<div className="mt-5 grid gap-4 lg:grid-cols-2">
             <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
               <strong className="text-emerald-200">Importar condições</strong>
-              <p className="mt-1 text-xs text-slate-400">Use Prazo Inicial e Prazo Final. Se for um prazo único, repita o mesmo valor nas duas colunas.</p>
+              <p className="mt-1 text-xs text-slate-400">Use Prazo Inicial/Prazo Final e, quando a comissão depender do valor do contrato, Valor Inicial/Valor Final. Prazo ou valor único repete o mesmo número nas duas colunas.</p>
               <form action={importConditions} className="mt-3 space-y-2">
                 <input type="hidden" name="version_id" value={v.id}/>
                 <input required type="file" name="file" accept=".csv,.xlsx,text/csv" className="block w-full text-xs"/>
