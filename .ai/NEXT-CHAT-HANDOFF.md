@@ -136,8 +136,30 @@ Aplicação financeira:
 - validação de valor de reversão e comparação de saldo reversível foram ajustadas para não usar ponto flutuante;
 - commit funcional em validação/READY no Vercel antes do encerramento desta sessão.
 
-## PRÓXIMA FRONTEIRA AUTÔNOMA
-Não há DDL pendente preparado neste momento. Próximos trabalhos seguros são auditoria/UX/testes do fluxo operacional e Smart Import. Teste com XLS/PDF comercial real depende de amostra adequada sem dados pessoais; não inventar arquivo real nem criar dados econômicos LIVE só para testar.
+## HUMAN GATE ATUAL — Simulation lifecycle V1
+Preparada e **NÃO LIVE**:
+- `20261016_simulation_lifecycle_v1.sql`
+- `tests/security/simulation-lifecycle-contract.sql`
+
+Objetivo:
+fechar o lifecycle de simulações sem permitir que uma simulação que já virou proposta seja cancelada/expirada depois.
+
+Regras preparadas:
+- somente `calculated -> cancelled|expired`;
+- supervisor/manager/admin;
+- simulação com proposta vinculada falha fechado;
+- `selected` torna-se terminal;
+- `expired/cancelled` continuam terminais;
+- RPC governada, anon sem EXECUTE.
+
+A camada de aplicação já foi corrigida para não usar float no valor/exibição da simulação e está READY no Vercel.
+
+Validação:
+- migration + contract verdes em `BEGIN ... ROLLBACK`;
+- migration não consta em `list_migrations`;
+- Security Advisor sem WARN/ERROR novo.
+
+**Ao retomar, perguntar somente se o Owner autoriza aplicar `20261016_simulation_lifecycle_v1` LIVE, salvo outra instrução explícita.**
 
 ## Ambiente
 - GitHub: `bossprt/corban-saas`
