@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { LayoutDashboard, Users, Workflow, Landmark, LogOut, WalletCards, Settings, Library, BarChart3 } from 'lucide-react'
+import { LayoutDashboard, Users, Workflow, Landmark, LogOut, WalletCards, Settings, Library, BarChart3, BadgeDollarSign } from 'lucide-react'
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast, canManageTeam, canViewCommission } from '@/lib/rbac'
 import { ROLE_LABEL } from '@/lib/team'
@@ -12,6 +12,7 @@ const nav: { href: string; label: string; icon: typeof Users; show?: (role: stri
   { href: '/app', label: 'Visão geral', icon: LayoutDashboard },
   { href: '/app/crm', label: 'CRM', icon: Users },
   { href: '/app/operacional', label: 'Operacional', icon: Workflow },
+  { href: '/app/comissoes', label: 'Comissões', icon: BadgeDollarSign },
   { href: '/app/financeiro', label: 'Financeiro', icon: WalletCards, show: canViewCommission },
   { href: '/app/cadastros', label: 'Cadastros', icon: Library, show: r => atLeast(r, 'supervisor') },
   { href: '/app/relatorios', label: 'Relatórios', icon: BarChart3 },
