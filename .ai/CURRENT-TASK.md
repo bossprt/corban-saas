@@ -1614,3 +1614,37 @@ Fila autônoma atual:
 3. gerar modelo XLSX com nomes reais dos Grupos de Comissão;
 4. construir parser component-aware para planilhas HOPE/2Tech-style;
 5. preparar RPC atômica de importação inteligente (não aplicar LIVE sem novo gate).
+
+
+## Human Gate — Smart Commercial Import V1
+Preparado e validado rollback-only:
+- `20261012_smart_commercial_import_v1.sql`
+- contrato SQL correspondente.
+
+A migration cria:
+- vínculo condição -> versão da política component-aware;
+- RPC atômica `import_smart_commercial_rows`;
+- criação/localização automática de Instituição, Convênio, rota e Produto/Tabela;
+- uso/criação de versão rascunho;
+- upsert de condição por Tipo de Contrato + prazo;
+- componentes recebidos;
+- vínculo da regra interna;
+- fator daily/fixed quando presente;
+- nada publica a Tabela automaticamente.
+
+Parser determinístico adicionado em `src/lib/imports/smart-commercial.ts`:
+- reconhece planilhas HOPE/2Tech-style em XLSX/CSV;
+- expande faixa de prazo;
+- reconhece Refin/Portabilidade;
+- zero em Diferido/Bônus não gera falsa necessidade;
+- Plástico sem unidade explícita é recusado;
+- Repasse 1/2/3 é recusado como ambíguo, nunca associado silenciosamente a um grupo;
+- nomes reais de Grupo de Comissão são reconhecidos.
+
+Modelo XLSX dinâmico já disponível no código:
+- gera colunas com nomes reais dos grupos;
+- inclui componentes da empresa e regras/unidades por grupo;
+- respeita Tipos de Contrato habilitados.
+
+Próxima ação que altera produção: aplicar `20261012_smart_commercial_import_v1` LIVE.
+Depois: montar UI de prévia/perguntas condicionais/aplicar e então usar Claude apenas para a etapa local de XLS legado/PDF + testes locais extensos, se ainda necessária.
