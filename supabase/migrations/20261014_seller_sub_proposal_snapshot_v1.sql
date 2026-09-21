@@ -188,7 +188,6 @@ begin
         'name',v_seller.name,
         'category',v_seller.seller_category,
         'seller_group_id',v_seller.seller_group_id,
-        'commission_group_id',v_seller.commission_group_id,
         'assigned_at',now()
       ));
   else
@@ -297,8 +296,7 @@ begin
      'per_component_split',true,
      'seller_id',v_seller_id,
      'seller_category',case when v_seller_id is null then null else v_seller.seller_category end,
-     'seller_group_id',case when v_seller_id is null then null else v_seller.seller_group_id end,
-     'commission_group_id',case when v_seller_id is null then null else v_seller.commission_group_id end
+     'seller_group_id',case when v_seller_id is null then null else v_seller.seller_group_id end
    )
  );
 
