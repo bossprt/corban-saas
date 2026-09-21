@@ -11,7 +11,6 @@ const card = 'rounded-2xl border border-slate-800 bg-slate-900 p-5'
 const btn = 'rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950'
 const ghost = 'rounded-lg border border-slate-700 px-3 py-2 text-sm'
 const VSTATUS: Record<string,string> = { draft:'Rascunho', published:'Publicada', superseded:'Substituída', expired:'Expirada' }
-const SOURCE: Record<string,string> = { manual:'manual', policy:'regra padrão', override:'ajuste sobre a regra' }
 const BASIS: Record<string,string> = {
   percent_of_production:'% direto sobre a operação',
   percent_of_received_commission:'% da comissão recebida',
@@ -76,10 +75,11 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
   const receivedBy=new Map((commissions.data ?? []).map(c => [c.condition_id,c.received_commission_pct]))
   const policyOf=new Map((commissions.data ?? []).map(c => [c.condition_id,c.policy_version_id]))
   const sharesBy=new Map<string,Map<string,number>>()
-  const shownBy=new Map<string,{group_id:string;share_pct:number;effective_pct:number;source:string}[]>()
+  const effectiveBy=new Map<string,Map<string,number>>()
   for (const s of shares.data ?? []) {
     if (s.source !== 'policy') { if (!sharesBy.has(s.condition_id)) sharesBy.set(s.condition_id,new Map()); sharesBy.get(s.condition_id)!.set(s.group_id,s.share_pct) }
-    shownBy.set(s.condition_id,[...(shownBy.get(s.condition_id) ?? []),s])
+    if (!effectiveBy.has(s.condition_id)) effectiveBy.set(s.condition_id,new Map())
+    effectiveBy.get(s.condition_id)!.set(s.group_id,s.effective_pct)
   }
   const policyOpts:PolicyOpt[]=(polRows.data ?? []).filter(p=>p.is_active).map(p => {
     const latest=(polVersions.data ?? []).find(v=>v.policy_id===p.id)
@@ -112,7 +112,37 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
           const conds=(conditions.data ?? []).filter(c=>c.product_table_version_id===v.id) as (Condition & {product_table_version_id:string})[]
           return <div key={v.id} className="mt-3 rounded-xl border border-slate-800 p-3">
             <div className="flex flex-wrap items-center gap-3 text-sm"><span>v{v.version} · {VSTATUS[v.status] ?? v.status} · {conds.length} condição(ões)</span>{v.status==='draft' && canEdit && <form action={publishCommercialVersion}><input type="hidden" name="version_id" value={v.id}/><SubmitButton className="rounded border border-emerald-500/60 px-2 py-1 text-xs text-emerald-300" pendingText="Publicando...">Publicar</SubmitButton></form>}</div>
-            <div className="mt-3 overflow-x-auto"><table className="w-full min-w-[760px] text-left text-xs"><thead className="text-slate-500"><tr><th className="py-2">Tipo</th><th>Prazo</th><th>Coef.</th><th>Taxa</th>{seeCommission && <><th>Comissão empresa</th><th>Comissões dos grupos</th></>}</tr></thead><tbody>{conds.map(c => <tr key={c.id} className="border-t border-slate-800 align-top"><td className="py-2">{typeN.get(c.contract_type_id) ?? 'Tipo'}</td><td>{c.term}x</td><td>{show(c.coefficient)}</td><td>{showPct(c.rate)}</td>{seeCommission && <><td>{showPct(receivedBy.get(c.id))}%</td><td>{(shownBy.get(c.id) ?? []).map(s => <div key={s.group_id}>{groupN.get(s.group_id) ?? 'grupo'}: {showPct(s.share_pct)}% → {showPct(s.effective_pct)}% efetivo <span className="text-slate-500">({SOURCE[s.source] ?? s.source})</span></div>)}</td></>}</tr>)}</tbody></table></div>
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full min-w-[1180px] text-left text-xs">
+                <thead className="text-slate-500">
+                  <tr>
+                    <th className="py-2 pr-4">Tipo</th>
+                    <th className="pr-4">Prazo</th>
+                    <th className="pr-4">Coef.</th>
+                    <th className="pr-4">Taxa</th>
+                    {seeCommission && <>
+                      <th className="pr-4">Comissão empresa</th>
+                      {activeGroups.map(g=><th key={g.id} className="pr-4 whitespace-nowrap">{g.name}</th>)}
+                    </>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {conds.map(c => <tr key={c.id} className="border-t border-slate-800 align-top">
+                    <td className="py-2 pr-4 whitespace-nowrap">{typeN.get(c.contract_type_id) ?? 'Tipo'}</td>
+                    <td className="pr-4 whitespace-nowrap">{c.term}x</td>
+                    <td className="pr-4 whitespace-nowrap">{show(c.coefficient)}</td>
+                    <td className="pr-4 whitespace-nowrap">{showPct(c.rate)}%</td>
+                    {seeCommission && <>
+                      <td className="pr-4 whitespace-nowrap font-medium">{showPct(receivedBy.get(c.id))}%</td>
+                      {activeGroups.map(g=>{
+                        const effective=effectiveBy.get(c.id)?.get(g.id)
+                        return <td key={g.id} className="pr-4 whitespace-nowrap">{effective===undefined?'—':showPct(effective)+'%'}</td>
+                      })}
+                    </>}
+                  </tr>)}
+                </tbody>
+              </table>
+            </div>
             {v.status==='draft' && canEdit && <div className="mt-4 grid gap-3 lg:grid-cols-2">
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4"><strong className="text-emerald-200">Importar várias condições</strong><p className="mt-1 text-xs text-slate-400">CSV ou XLSX. O arquivo inteiro é validado antes e a gravação é atômica.</p><form action={importConditions} className="mt-3 space-y-2 text-xs text-slate-400"><input type="hidden" name="version_id" value={v.id}/><input required type="file" name="file" accept=".csv,.xlsx,text/csv" className="block w-full text-xs"/><select name="policy_version_id" defaultValue="" className={`${field} w-full`}><option value="">Sem regra padrão</option>{policyOpts.map(p=><option key={p.versionId} value={p.versionId}>Regra padrão: {p.name}</option>)}</select><div className="flex flex-wrap gap-2"><button name="mode" value="preview" className={ghost}>Ver prévia</button><button name="mode" value="apply" className={btn}>Importar planilha</button></div><p>Colunas: Tipo de Contrato, Prazo, Coeficiente, Taxa, Comissão recebida e uma coluna por grupo ({activeGroups.map(g=>g.name).join(', ') || 'nenhum grupo'}).</p></form></div>
               <details className="rounded-xl border border-slate-800 p-4"><summary className="cursor-pointer font-medium">Adicionar condição manualmente</summary><div className="mt-3"><ConditionForm versionId={v.id} contractTypes={enabledContractTypes} groups={activeGroups} policies={policyOpts}/></div></details>
