@@ -17,6 +17,7 @@ type Preview={
  suggestedPolicy:{versionId:string;policyId:string;name:string;version:number;discount:string;specificity:number;scopeLabel:string}|null
  ambiguousPolicies:{versionId:string;policyId:string;name:string;version:number;discount:string;specificity:number;scopeLabel:string}[]
  policyUsedForPreview:string|null
+ remittance:{mode:'partial'|'complete';effectiveFrom:string|null;scope:string|null;existingTables:string[];missingTables:string[];newTables:string[]}
  repasses:{table:string;contract:string;term:number;group_id:string;component_type_id:string;raw_value:string;rule_hint:'share_of_received'|'direct'|'unknown';value_kind_hint:'percentage'|'fixed_brl'|null;source_slot:string|null}[]
  repassComparisons:{table:string;contract:string;term:number;groupId:string;componentTypeId:string;slot:string;external:string;externalKind:'percentage'|'fixed_brl'|null;internal:string|null;status:'match'|'different'|'incompatible_unit'|'incompatible_semantics'|'no_internal_rule'}[]
  sample:{bank:string;agreement:string;table:string;contract:string;term:number;rate:string|null;factor:string|null;components:number}[]
@@ -30,6 +31,8 @@ export function SmartImportClient({providers,policies}:{providers:Provider[];pol
  const [origin,setOrigin]=useState<'own'|'third_party'>('own')
  const [provider,setProvider]=useState('')
  const [policy,setPolicy]=useState('')
+ const [remittanceMode,setRemittanceMode]=useState<'partial'|'complete'>('partial')
+ const [remittanceEffectiveFrom,setRemittanceEffectiveFrom]=useState('')
  const [preview,setPreview]=useState<Preview|null>(null)
  const [busy,setBusy]=useState(false)
  const [message,setMessage]=useState('')
@@ -49,7 +52,8 @@ export function SmartImportClient({providers,policies}:{providers:Provider[];pol
   if(!file)return
   setBusy(true);setMessage('');setPreview(null);setIgnoreLegacy(false);setAnswers({deferred:false,plastic:false,bonus:false})
   try{
-   const fd=new FormData();fd.set('file',file);fd.set('policy_version_id',policy);fd.set('header_map',JSON.stringify(Object.fromEntries(Object.entries(headerMap).filter(([,v])=>v!=='').map(([k,v])=>[k,Number(v)]))));fd.set('contract_type_map',JSON.stringify(Object.fromEntries(Object.entries(contractMap).filter(([,v])=>v!==''))));fd.set('generic_repass_map',JSON.stringify(Object.fromEntries(Object.entries(repassMap).filter(([,v])=>v.group_id&&v.rule_hint&&v.value_kind_hint))))
+   if(remittanceMode==='complete'&&!remittanceEffectiveFrom){setMessage('Informe a data de início da nova vigência para a remessa completa.');setBusy(false);return}
+   const fd=new FormData();fd.set('file',file);fd.set('policy_version_id',policy);fd.set('remittance_mode',remittanceMode);fd.set('remittance_effective_from',remittanceEffectiveFrom);fd.set('production_origin',origin);fd.set('provider_id',origin==='third_party'?provider:'');fd.set('header_map',JSON.stringify(Object.fromEntries(Object.entries(headerMap).filter(([,v])=>v!=='').map(([k,v])=>[k,Number(v)]))));fd.set('contract_type_map',JSON.stringify(Object.fromEntries(Object.entries(contractMap).filter(([,v])=>v!==''))));fd.set('generic_repass_map',JSON.stringify(Object.fromEntries(Object.entries(repassMap).filter(([,v])=>v.group_id&&v.rule_hint&&v.value_kind_hint))))
    const res=await fetch('/api/comercial/importacao-inteligente/preview',{method:'POST',body:fd})
    const body=await res.json()
    if(!res.ok){setMessage(body.error??'Não foi possível analisar.');return}
@@ -66,12 +70,12 @@ export function SmartImportClient({providers,policies}:{providers:Provider[];pol
   try{
    const fd=new FormData()
    fd.set('file',file);fd.set('production_origin',origin);fd.set('provider_id',origin==='third_party'?provider:'')
-   fd.set('policy_version_id',policy);fd.set('ignore_legacy_repasses',String(ignoreLegacy));fd.set('header_map',JSON.stringify(Object.fromEntries(Object.entries(headerMap).filter(([,v])=>v!=='').map(([k,v])=>[k,Number(v)]))));fd.set('contract_type_map',JSON.stringify(Object.fromEntries(Object.entries(contractMap).filter(([,v])=>v!==''))));fd.set('generic_repass_map',JSON.stringify(Object.fromEntries(Object.entries(repassMap).filter(([,v])=>v.group_id&&v.rule_hint&&v.value_kind_hint))))
+   fd.set('policy_version_id',policy);fd.set('remittance_mode',remittanceMode);fd.set('remittance_effective_from',remittanceEffectiveFrom);fd.set('ignore_legacy_repasses',String(ignoreLegacy));fd.set('header_map',JSON.stringify(Object.fromEntries(Object.entries(headerMap).filter(([,v])=>v!=='').map(([k,v])=>[k,Number(v)]))));fd.set('contract_type_map',JSON.stringify(Object.fromEntries(Object.entries(contractMap).filter(([,v])=>v!==''))));fd.set('generic_repass_map',JSON.stringify(Object.fromEntries(Object.entries(repassMap).filter(([,v])=>v.group_id&&v.rule_hint&&v.value_kind_hint))))
    const res=await fetch('/api/comercial/importacao-inteligente/apply',{method:'POST',body:fd})
    const body=await res.json()
    if(!res.ok){setMessage(body.error??'Importação recusada.');return}
    const r=body.result??{}
-   setMessage('Importação concluída: '+String(r.created_tables??0)+' tabela(s) nova(s), '+String(r.upserted_conditions??0)+' condição(ões), '+String(r.components??0)+' componente(s) e '+String(r.factors??0)+' fator(es). As tabelas ficaram em rascunho para revisão.')
+   setMessage('Atualização aplicada: '+String(r.created_tables??0)+' tabela(s) nova(s), '+String(r.upserted_conditions??0)+' condição(ões), '+String(r.published_versions??0)+' versão(ões) publicada(s)/agendada(s) e '+String(r.retired_absent_versions??0)+' versão(ões) de tabela ausente encerrada(s). O histórico anterior foi preservado.')
   }finally{setBusy(false)}
  }
 
@@ -79,7 +83,14 @@ export function SmartImportClient({providers,policies}:{providers:Provider[];pol
   <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
    <h2 className="font-semibold">1. Envie o arquivo e escolha a regra</h2>
    <p className="mt-1 text-xs text-slate-400">CSV, XLSX, XLS antigo ou PDF com texto. Até 2 MB para planilhas e 5 MB para PDF. A prévia não grava nada.</p>
-   <div className="mt-3 grid gap-2 md:grid-cols-2"><select value={policy} onChange={e=>{setPolicy(e.target.value);setPreview(null)}} className={field+' md:col-span-2'}><option value="">Deixar o Corban sugerir a regra pelo escopo</option>{policies.map(p=><option key={p.versionId} value={p.versionId}>{p.name} · v{p.version} · imposto/desconto {p.discount}%</option>)}</select><input type="file" accept=".csv,.xlsx,.xls,.pdf,text/csv" onChange={e=>{setFile(e.target.files?.[0]??null);setPreview(null);setHeaderMap({});setContractMap({});setRepassMap({});setMessage('')}} className="block text-sm"/><button disabled={!file||busy} onClick={runPreview} className={ghost}>{busy?'Analisando...':'Analisar sem gravar'}</button></div>
+   <div className="mt-3 grid gap-2 md:grid-cols-2">
+    <select value={policy} onChange={e=>{setPolicy(e.target.value);setPreview(null)}} className={field+' md:col-span-2'}><option value="">Deixar o Corban sugerir a regra pelo escopo</option>{policies.map(p=><option key={p.versionId} value={p.versionId}>{p.name} · v{p.version} · imposto/desconto {p.discount}%</option>)}</select>
+    <label className="text-xs text-slate-400">Tipo da atualização<select value={remittanceMode} onChange={e=>{setRemittanceMode(e.target.value as 'partial'|'complete');setPreview(null)}} className={field+' mt-1 w-full'}><option value="partial">Atualização parcial — tabelas ausentes não mudam</option><option value="complete">Remessa completa — tabelas ausentes deixam de vigorar</option></select></label>
+    <label className="text-xs text-slate-400">Início da nova vigência<input type="date" disabled={remittanceMode!=='complete'} value={remittanceEffectiveFrom} onChange={e=>{setRemittanceEffectiveFrom(e.target.value);setPreview(null)}} className={field+' mt-1 w-full disabled:opacity-50'}/></label>
+    <input type="file" accept=".csv,.xlsx,.xls,.pdf,text/csv" onChange={e=>{setFile(e.target.files?.[0]??null);setPreview(null);setHeaderMap({});setContractMap({});setRepassMap({});setMessage('')}} className="block text-sm"/>
+    <button disabled={!file||busy||(remittanceMode==='complete'&&!remittanceEffectiveFrom)} onClick={runPreview} className={ghost}>{busy?'Analisando...':'Analisar sem gravar'}</button>
+   </div>
+   <p className="mt-3 text-xs text-slate-500">Use <b>Remessa completa</b> somente quando o arquivo representa todo o catálogo vigente daquele Banco + Convênio. Na parcial, ausência nunca encerra uma tabela.</p>
   </div>
 
   {preview&&<div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-5">
@@ -91,6 +102,13 @@ export function SmartImportClient({providers,policies}:{providers:Provider[];pol
     <div><span className="text-slate-500">Componentes detectados</span><div className="text-lg font-semibold">{preview.summary.components.length}</div></div>
    </div>
    <div className="mt-3 text-xs text-slate-300">{preview.summary.tables.slice(0,8).map(x=><div key={x}>• {x}</div>)}</div>
+   <div className="mt-4 rounded-xl border border-slate-800 p-4 text-sm">
+    <div className="font-semibold">Impacto da atualização</div>
+    <div className="mt-1 text-xs text-slate-400">{preview.remittance.mode==='complete'?'Remessa completa':'Atualização parcial'}{preview.remittance.scope?' · '+preview.remittance.scope:''}{preview.remittance.effectiveFrom?' · nova vigência '+preview.remittance.effectiveFrom:''}</div>
+    {!!preview.remittance.newTables.length&&<div className="mt-3"><span className="text-emerald-300">Novas tabelas:</span> {preview.remittance.newTables.join(', ')}</div>}
+    {preview.remittance.mode==='complete'&&!!preview.remittance.missingTables.length&&<div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3"><div className="font-semibold text-amber-200">Tabelas atuais ausentes nesta remessa</div><p className="mt-1 text-xs text-slate-400">Elas não serão apagadas. A vigência será encerrada no início informado e propostas/simulações anteriores manterão a versão histórica.</p><div className="mt-2 text-xs">{preview.remittance.missingTables.map(x=><div key={x}>• {x}</div>)}</div></div>}
+    {preview.remittance.mode==='partial'&&<p className="mt-3 text-xs text-slate-400">Tabelas que não vieram neste arquivo permanecerão exatamente como estão.</p>}
+   </div>
    {preview.suggestedPolicy&&<div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm"><div className="font-semibold text-emerald-200">Regra sugerida automaticamente</div><div className="mt-1">{preview.suggestedPolicy.name} · v{preview.suggestedPolicy.version}</div><div className="mt-1 text-xs text-slate-400">{preview.suggestedPolicy.scopeLabel} · imposto/desconto {preview.suggestedPolicy.discount}%</div></div>}
    {!!preview.ambiguousPolicies?.length&&<div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm"><div className="font-semibold text-amber-200">Há mais de uma regra igualmente específica</div><p className="mt-1 text-xs text-slate-400">Escolha explicitamente antes de importar; o Corban não desempata regra financeira por conta própria.</p><select value={policy} onChange={e=>setPolicy(e.target.value)} className={field+' mt-3 w-full'}><option value="">Escolha a regra</option>{preview.ambiguousPolicies.map(p=><option key={p.versionId} value={p.versionId}>{p.name} · v{p.version} · {p.scopeLabel}</option>)}</select>{policy&&<button onClick={runPreview} className={ghost+' mt-3'}>Recalcular prévia com esta regra</button>}</div>}
    {!!preview.issues.length&&<div className="mt-4 space-y-2">{preview.issues.map((x,i)=><div key={i} className={x.code==='generic_repass_requires_mapping'?'rounded-lg border border-amber-500/30 p-3 text-xs text-amber-200':'rounded-lg border border-red-500/30 p-3 text-xs text-red-200'}>Linha {x.line}: {x.message}{x.detail?' — '+x.detail:''}</div>)}</div>}
@@ -120,7 +138,7 @@ export function SmartImportClient({providers,policies}:{providers:Provider[];pol
 
    {preview.summary.hasGenericRepasseColumns&&<div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-100"><div className="font-semibold">Repasse 1/2/3 detectado</div><p className="mt-1 text-xs text-slate-400">O Corban nunca decide sozinho quem é Repasse 1, 2 ou 3. Você pode mapear os slots para comparar com a regra interna ou ignorá-los.</p><div className="mt-3 space-y-3">{preview.summary.genericRepasseSlots.map(label=>{const slot=label.replace(/\D/g,'');const m=repassMap[slot]??{group_id:'',rule_hint:'',value_kind_hint:''};return <div key={slot} className="grid gap-2 rounded-lg border border-slate-800 p-3 md:grid-cols-3"><div className="font-medium">{label}</div><select value={m.group_id} onChange={e=>setRepassMap(x=>({...x,[slot]:{...m,group_id:e.target.value}}))} className={field}><option value="">Grupo de Comissão</option>{preview.groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select><select value={m.rule_hint} onChange={e=>setRepassMap(x=>({...x,[slot]:{...m,rule_hint:e.target.value}}))} className={field}><option value="">Como interpretar</option><option value="direct">Valor final pago ao grupo</option><option value="share_of_received">% da comissão recebida</option></select><select value={m.value_kind_hint} onChange={e=>setRepassMap(x=>({...x,[slot]:{...m,value_kind_hint:e.target.value}}))} className={field+' md:col-start-2'}><option value="">Unidade</option><option value="percentage">%</option>{m.rule_hint!=='share_of_received'&&<option value="fixed_brl">R$</option>}</select></div>})}</div><div className="mt-3 flex flex-wrap gap-2"><button disabled={busy||!preview.summary.genericRepasseSlots.every(label=>{const m=repassMap[label.replace(/\D/g,'')];return !!m?.group_id&&!!m?.rule_hint&&!!m?.value_kind_hint})} onClick={()=>{setIgnoreLegacy(false);runPreview()}} className={ghost}>Reanalisar com mapeamento</button><label className="flex items-center text-xs"><input type="checkbox" checked={ignoreLegacy} onChange={e=>setIgnoreLegacy(e.target.checked)} className="mr-2"/>Ignorar os Repasse 1/2/3 e usar somente a regra interna</label></div></div>}
 
-   <div className="mt-4 rounded-xl border border-slate-800 p-4 text-xs text-slate-400">Nenhuma Tabela será publicada automaticamente. A carga cria/atualiza rascunhos para você revisar antes de disponibilizar em simulações.</div>
+   <div className="mt-4 rounded-xl border border-slate-800 p-4 text-xs text-slate-400">Ao confirmar, a atualização é aplicada de forma atômica. Versões futuras ficam agendadas pela vigência; versões anteriores e propostas antigas permanecem preservadas no histórico.</div>
    <button disabled={busy||preview.issues.some(x=>x.code!=='generic_repass_requires_mapping')||(preview.issues.some(x=>x.code==='generic_repass_requires_mapping')&&!ignoreLegacy)||(preview.ambiguousPolicies?.length>0&&!policy)} onClick={apply} className={btn+' mt-4'}>{busy?'Importando...':'Confirmar e importar'}</button>
   </div>}
 
