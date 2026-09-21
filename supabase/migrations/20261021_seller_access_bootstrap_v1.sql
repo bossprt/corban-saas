@@ -67,37 +67,12 @@ begin
   returning id into v_seller;
 
   if v_email is not null then
-    if exists(
-      select 1 from public.organization_memberships m
-      join auth.users u on u.id=m.user_id
-      where m.organization_id=p_org
-        and lower(u.email)=v_email
-        and m.status='active'
-    ) then
-      -- Existing active member: bind immediately only if role is agent.
-      select m.user_id into strict invitation_id
-      from public.organization_memberships m
-      join auth.users u on u.id=m.user_id
-      where m.organization_id=p_org
-        and lower(u.email)=v_email
-        and m.status='active'
-      limit 1;
-      -- reusing output variable invitation_id temporarily as user id is unsafe; reset below.
-      perform set_config('corban.seller_access_rpc','on',true);
-      update public.commercial_sellers s
-      set user_id=invitation_id,updated_at=now()
-      where s.organization_id=p_org and s.id=v_seller;
-      perform set_config('corban.seller_access_rpc','off',true);
-      v_inv:=null;
-      invitation_id:=null;
-    else
-      v_inv:=public.create_organization_invitation(p_org,v_email,'agent');
-      perform set_config('corban.membership_rpc','on',true);
-      update public.organization_invitations i
-      set seller_id=v_seller
-      where i.id=v_inv and i.organization_id=p_org;
-      perform set_config('corban.membership_rpc','off',true);
-    end if;
+    v_inv:=public.create_organization_invitation(p_org,v_email,'agent');
+    perform set_config('corban.membership_rpc','on',true);
+    update public.organization_invitations i
+    set seller_id=v_seller
+    where i.id=v_inv and i.organization_id=p_org;
+    perform set_config('corban.membership_rpc','off',true);
   end if;
 
   insert into public.organization_admin_events(
