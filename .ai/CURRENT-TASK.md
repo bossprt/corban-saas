@@ -2422,3 +2422,13 @@ Validation/security:
 - rollback test proved 1–120 persists as one row and overlapping 60–120 is rejected.
 - rollback tests proved both normal bulk import and Smart Import preserve 1–120 as one condition.
 - Supabase security advisor returned to only the 2 historical INFO items after moving btree_gist to schema extensions; no new WARN/ERROR.
+
+
+## PROSESP + faixa de valor do contrato — 21/09/2026
+Owner pediu cadastro das comissões PROSESP e corrigiu o modelo: além de Prazo Inicial/Prazo Final, condições comerciais precisam de Valor Inicial/Valor Final para bancos que pagam comissão por faixa de valor. A planilha fonte tem 203 linhas e foi consolidada para 16 condições sem preencher lacunas de prazo. Mensalidade deve ser ignorada. Faixas como 300-499 podem ser interpretadas como 300,00-499,99.
+
+PROSESP: Instituição/Banco da rota; produção Própria/Smart (Smart é correspondente direto da PROSESP); convênio Governo do Acre; base LÍQUIDO; sem imposto/desconto informado. Regra definida: 8% recebido -> Corretor e Parceiro 3% efetivo da operação; 5% recebido -> Corretor e Parceiro 2% efetivo; Afiliado 10%, Balcão 50%, Call Center 25%, Smart 100% da comissão recebida. **Pendente somente a regra de Corretor/Parceiro quando a Smart recebe 7%**.
+
+LIVE aplicado: `20260921210534 commercial_condition_amount_ranges_v1`. commercial_conditions agora tem amount_min/amount_max; NULL/NULL = qualquer valor; exclusão considera sobreposição simultânea de prazo + valor; condições commission-only podem ficar sem taxa/coeficiente; caminho de simulação legado falha com contract_value_required quando a condição depende de valor e há overload com p_contract_value explícito. Rollback test antes do apply: ALL PASS. Security Advisor pós-apply: sem WARN/ERROR novo, somente 2 INFO históricos de Platform Admin.
+
+Plano/fonte: `docs/imports/PROSESP-GOV-AC-2026-09-21.md`. Não persistir a carga PROSESP até o Owner responder a regra das condições de 7%.
