@@ -1,7 +1,7 @@
 
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
-import { parseSmartCommercialFile, SMART_IMPORT_ISSUES } from '@/lib/imports/smart-commercial-server'
+import { headerMapFromForm, parseSmartCommercialFile, SMART_IMPORT_ISSUES } from '@/lib/imports/smart-commercial-server'
 import { safeFileName } from '@/lib/imports/file-guards'
 import { componentEconomics } from '@/lib/commission/component-economics'
 
@@ -14,7 +14,8 @@ export async function POST(req:Request){
   const fd=await req.formData()
   const file=fd.get('file')
   if(!(file instanceof File))return Response.json({error:'Envie um arquivo.'},{status:400})
-  const parsed=await parseSmartCommercialFile(ctx,file)
+  const headerMap=headerMapFromForm(fd)
+  const parsed=await parseSmartCommercialFile(ctx,file,headerMap)
   const policyId=String(fd.get('policy_version_id')??'').trim()
   type Econ={table:string;contract:string;term:number;component:string;group:string;receivedKind:'percentage'|'fixed_brl';gross:string;net:string;payout:string;retained:string|null;payoutKind:'percentage'|'fixed_brl'|null;compatible:boolean}
   const economics:Econ[]=[]
@@ -54,6 +55,8 @@ export async function POST(req:Request){
    ok:hard.length===0,
    fileName:safeFileName(file.name),
    format:parsed.format,
+   headers:parsed.headers,
+   headerMapApplied:parsed.headerMapApplied,
    needsReview:parsed.issues.some(x=>x.code.startsWith('pdf_')),
    summary:parsed.summary,
    economics,
@@ -65,6 +68,6 @@ export async function POST(req:Request){
   })
  }catch(e){
   const m=e instanceof Error?e.message:'unexpected'
-  return Response.json({error:m==='invalid_file'?'Arquivo vazio ou maior que 5 MB.':'Não foi possível ler o arquivo.'},{status:400})
+  return Response.json({error:m==='invalid_file'?'Arquivo vazio ou maior que 5 MB.':m==='invalid_header_map'?'Mapeamento manual inválido.':'Não foi possível ler o arquivo.'},{status:400})
  }
 }

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mapSmartCommercialRows } from '../../src/lib/imports/smart-commercial'
+import { applySmartHeaderMap, mapSmartCommercialRows } from '../../src/lib/imports/smart-commercial'
 
 const ctx={
  contractTypes:[
@@ -55,4 +55,23 @@ test('zero deferred is ignored and does not trigger question',()=>{
  ],ctx)
  assert.equal(r.summary.hasDeferred,false)
  assert.equal(r.issues.length,0)
+})
+
+
+test('manual header map only renames explicitly chosen columns and then uses normal parser',()=>{
+ const raw=[
+  ['Instituição Financeira','Órgão Pagador','Nome Comercial','Operação','Parcelas','Juros'],
+  ['HOPE','Gov. AC','Tabela X','Novo','84','1.8'],
+ ]
+ const mapped=applySmartHeaderMap(raw,{bank:0,agreement:1,table:2,contract:3,term:4,rate:5})
+ assert.equal(mapped.issue,null)
+ const r=mapSmartCommercialRows(mapped.rows,ctx)
+ assert.equal(r.issues.length,0)
+ assert.equal(r.rows[0].bank_name,'HOPE')
+ assert.equal(r.rows[0].term,84)
+})
+
+test('manual header map fails closed when the same source column is reused',()=>{
+ const mapped=applySmartHeaderMap([['Origem'],['HOPE']],{bank:0,agreement:0})
+ assert.equal(mapped.issue?.code,'manual_mapping_invalid')
 })

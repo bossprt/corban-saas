@@ -1,23 +1,28 @@
 
 import { readSmartFile, type SmartFormat } from '@/lib/imports/smart-file'
 import { effectiveContractTypes } from '@/lib/contract-types'
-import { mapSmartCommercialRows, type SmartImportResult } from '@/lib/imports/smart-commercial'
+import { applySmartHeaderMap, mapSmartCommercialRows, type SmartHeaderMap, type SmartImportResult } from '@/lib/imports/smart-commercial'
 
-export type SmartParsed=SmartImportResult&{format:SmartFormat|null}
+export type SmartParsed=SmartImportResult&{format:SmartFormat|null;headers:{index:number;label:string}[];headerMapApplied:SmartHeaderMap}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the scoped Supabase client is untyped in this codebase
 type Ctx={supabase:{from:(table:string)=>any}}
 
-export async function parseSmartCommercialFile(ctx:Ctx,file:File):Promise<SmartParsed>{
+export async function parseSmartCommercialFile(ctx:Ctx,file:File,headerMap:SmartHeaderMap={}):Promise<SmartParsed>{
  // size is checked BEFORE reading the body into memory (arrayBuffer would allocate it all)
  if(file.size===0||file.size>5_000_000)throw new Error('invalid_file')
  const read=await readSmartFile(new Uint8Array(await file.arrayBuffer()),file.name)
  if(read.issues.length||read.rows.length===0){
   // a file the reader could not turn into a table never reaches the commercial parser and never reaches the database
   const issues=read.issues.length?read.issues:[{line:1,code:'file_without_rows'}]
-  return {format:read.format,rows:[],issues,summary:{sourceRows:0,expandedRows:0,tables:[],components:[],hasDeferred:false,hasPlastic:false,hasBonus:false,hasGenericRepasseColumns:false,genericRepasseSlots:[]}}
+  return {format:read.format,headers:[],headerMapApplied:headerMap,rows:[],issues,summary:{sourceRows:0,expandedRows:0,tables:[],components:[],hasDeferred:false,hasPlastic:false,hasBonus:false,hasGenericRepasseColumns:false,genericRepasseSlots:[]}}
  }
- const raw=read.rows
+ const headers=(read.rows[0]??[]).map((x,index)=>({index,label:String(x??'').trim()||`Coluna ${index+1}`}))
+ const mapped=applySmartHeaderMap(read.rows,headerMap)
+ if(mapped.issue){
+  return {format:read.format,headers,headerMapApplied:headerMap,rows:[],issues:[mapped.issue],summary:{sourceRows:Math.max(0,read.rows.length-1),expandedRows:0,tables:[],components:[],hasDeferred:false,hasPlastic:false,hasBonus:false,hasGenericRepasseColumns:false,genericRepasseSlots:[]}}
+ }
+ const raw=mapped.rows
 
  const [types,settings,groups,components]=await Promise.all([
   ctx.supabase.from('contract_types').select('id,name,tech_key,is_active,organization_id').order('sort_order').order('name'),
@@ -30,7 +35,7 @@ export async function parseSmartCommercialFile(ctx:Ctx,file:File):Promise<SmartP
   (settings.data??[]) as {contract_type_id:string;is_enabled:boolean;use_in_pipeline:boolean;use_in_commission:boolean}[],
   'commission',
  )
- return {format:read.format,...mapSmartCommercialRows(raw,{
+ return {format:read.format,headers,headerMapApplied:headerMap,...mapSmartCommercialRows(raw,{
   contractTypes:enabled,
   groups:(groups.data??[]) as {id:string;name:string}[],
   components:(components.data??[]) as {id:string;tech_key:string;name:string}[],
@@ -82,4 +87,20 @@ export const SMART_IMPORT_ISSUES:Record<string,string>={
  pdf_too_many_pages:'PDF com páginas demais (máximo 30).',
  pdf_too_complex:'PDF complexo demais para leitura automática.',
  pdf_unreadable:'Não foi possível ler o PDF (corrompido ou protegido).',
+ manual_mapping_invalid:'O mapeamento manual de colunas é inválido ou usa a mesma coluna mais de uma vez.',
+}
+
+const HEADER_FIELDS=new Set(['bank','agreement','table','externalCode','validFrom','validUntil','contract','term','termMin','termMax','coefficient','rate','factor','factorMode','factorDate'])
+export function headerMapFromForm(fd:FormData){
+ const raw=String(fd.get('header_map')??'').trim()
+ if(!raw)return {}
+ if(raw.length>2000)throw new Error('invalid_header_map')
+ const parsed=JSON.parse(raw) as Record<string,unknown>
+ if(!parsed||Array.isArray(parsed)||typeof parsed!=='object')throw new Error('invalid_header_map')
+ const out:Record<string,number>={}
+ for(const [k,v] of Object.entries(parsed)){
+  if(!HEADER_FIELDS.has(k)||typeof v!=='number'||!Number.isInteger(v)||v<0||v>199)throw new Error('invalid_header_map')
+  out[k]=v
+ }
+ return out
 }

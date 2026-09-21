@@ -1,7 +1,7 @@
 
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
-import { parseSmartCommercialFile, SMART_IMPORT_ISSUES } from '@/lib/imports/smart-commercial-server'
+import { headerMapFromForm, parseSmartCommercialFile, SMART_IMPORT_ISSUES } from '@/lib/imports/smart-commercial-server'
 
 export const dynamic='force-dynamic'
 const uuid=(v:string)=>/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v)
@@ -22,7 +22,8 @@ export async function POST(req:Request){
   if(origin==='own'&&provider)return Response.json({error:'Produção própria não usa empresa de origem.'},{status:400})
   if(policy&&!uuid(policy))return Response.json({error:'Regra de comissão inválida.'},{status:400})
 
-  const parsed=await parseSmartCommercialFile(ctx,file)
+  const headerMap=headerMapFromForm(fd)
+  const parsed=await parseSmartCommercialFile(ctx,file,headerMap)
   const generic=parsed.issues.some(x=>x.code==='generic_repass_requires_mapping')
   const hard=parsed.issues.filter(x=>x.code!=='generic_repass_requires_mapping')
   if(hard.length)return Response.json({error:'O arquivo ainda possui erros.',issues:hard.map(x=>({...x,message:SMART_IMPORT_ISSUES[x.code]??x.code}))},{status:400})
@@ -44,7 +45,8 @@ export async function POST(req:Request){
   })
   if(error)return Response.json({error:error.message||'Importação recusada pelo banco de dados.'},{status:400})
   return Response.json({ok:true,result:data,summary:parsed.summary})
- }catch{
-  return Response.json({error:'Não foi possível concluir a importação.'},{status:500})
+ }catch(e){
+  const m=e instanceof Error?e.message:'unexpected'
+  return Response.json({error:m==='invalid_header_map'?'Mapeamento manual inválido.':'Não foi possível concluir a importação.'},{status:m==='invalid_header_map'?400:500})
  }
 }

@@ -72,6 +72,36 @@ const baseAliases={
 } as const
 export const SMART_HEADER_ALIASES=baseAliases
 
+export type SmartHeaderField='bank'|'agreement'|'table'|'externalCode'|'validFrom'|'validUntil'|'contract'|'term'|'termMin'|'termMax'|'coefficient'|'rate'|'factor'|'factorMode'|'factorDate'
+export type SmartHeaderMap=Partial<Record<SmartHeaderField,number>>
+export const SMART_HEADER_TARGETS:Record<SmartHeaderField,string>={
+ bank:'Banco',agreement:'Convênio',table:'Produto / Tabela',externalCode:'Código no Banco',
+ validFrom:'Vigência Inicial',validUntil:'Vigência Final',contract:'Tipo de Contrato',
+ term:'Prazo',termMin:'Prazo Inicial',termMax:'Prazo Final',coefficient:'Coeficiente',
+ rate:'Taxa',factor:'Fator',factorMode:'Tipo Fator',factorDate:'Data Fator',
+}
+const SMART_HEADER_CANONICAL:Record<SmartHeaderField,string>={
+ bank:'Banco',agreement:'Convênio',table:'Produto',externalCode:'Código no Banco',
+ validFrom:'Vigência Inicial',validUntil:'Vigência Final',contract:'Tipo de Contrato',
+ term:'Prazo',termMin:'Prazo Inicial',termMax:'Prazo Final',coefficient:'Coeficiente',
+ rate:'Taxa',factor:'Fator',factorMode:'Tipo Fator',factorDate:'Data Fator',
+}
+export function applySmartHeaderMap(rawRows:readonly (readonly unknown[])[],mapping:SmartHeaderMap){
+ if(!Object.keys(mapping).length)return {rows:rawRows.map(r=>[...r]),issue:null as SmartImportIssue|null}
+ if(!rawRows.length)return {rows:[] as unknown[][],issue:{line:1,code:'manual_mapping_invalid'} as SmartImportIssue}
+ const head=[...rawRows[0]]
+ const used=new Set<number>()
+ for(const [keyRaw,indexRaw] of Object.entries(mapping)){
+  const key=keyRaw as SmartHeaderField
+  if(!(key in SMART_HEADER_CANONICAL)||!Number.isInteger(indexRaw)||indexRaw<0||indexRaw>=head.length||used.has(indexRaw)){
+   return {rows:[] as unknown[][],issue:{line:1,code:'manual_mapping_invalid'} as SmartImportIssue}
+  }
+  used.add(indexRaw)
+  head[indexRaw]=SMART_HEADER_CANONICAL[key]
+ }
+ return {rows:[head,...rawRows.slice(1).map(r=>[...r])],issue:null as SmartImportIssue|null}
+}
+
 const componentAliases:Record<string,string[]>={
  upfront:['a_vista','avista','comissao_a_vista'],
  deferred:['diferido','comissao_diferida'],
