@@ -1820,3 +1820,18 @@ Depois do LIVE: construir seletor de vendedor na proposta draft e exibir snapsho
 Sessão encerrada por limite de contexto. Handoff consolidado criado em `.ai/NEXT-CHAT-HANDOFF.md`.
 
 Próximo chat deve retomar pelo Human Gate de `20261014_seller_sub_proposal_snapshot_v1.sql`, sem reexecutar migrations LIVE anteriores.
+
+
+## Seller/SUB proposal snapshot — LIVE
+- Autorização recebida e `seller_sub_proposal_snapshot_v1` aplicada LIVE como `20260921025320`.
+- Contract pós-apply passou sem exceções.
+- Security Advisor sem WARN/ERROR novo; permanecem apenas 2 INFO históricos de Platform Admin.
+- `assign_proposal_seller` está governada e disponível apenas para authenticated, com RBAC supervisor+ dentro da função/app.
+- Proposal component snapshot congela seller, regra SUB e company share por componente.
+- `publish_expected_commission` usa o company share congelado; histórico já congelado não é reescrito.
+- UI de proposta draft ganhou seletor de vendedor/SUB usando a RPC governada; commission group não é exposto nessa tela.
+
+Próximo passo autônomo:
+1. confirmar Vercel READY do seletor de vendedor;
+2. revisar se a rota comercial/freeze já tem UI completa para seller/SUB ou se falta somente apresentação do snapshot supervisor+;
+3. seguir apenas até o próximo DDL/Human Gate real.
