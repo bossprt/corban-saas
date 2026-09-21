@@ -56,9 +56,9 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
     supabase.from('commission_groups').select('id,name,calculation_basis,is_active').order('sort_order').order('name'),
     supabase.from('contract_types').select('id,name,tech_key,is_active,organization_id').order('sort_order'),
     supabase.from('organization_contract_type_settings').select('contract_type_id,is_enabled,use_in_pipeline,use_in_commission'),
-    supabase.from('organization_product_routes').select('id,org_bank_id,org_provider_id,org_agreement_id,status').not('org_bank_id','is',null),
+    supabase.from('organization_product_routes').select('id,org_bank_id,org_provider_id,org_agreement_id,production_origin,status').not('org_bank_id','is',null),
     supabase.from('product_tables').select('id,route_id,name,status').order('name'),
-    supabase.from('product_table_versions').select('id,product_table_id,version,status').order('version',{ascending:false}),
+    supabase.from('product_table_versions').select('id,product_table_id,version,status,effective_from,effective_until').order('version',{ascending:false}),
     supabase.from('commercial_conditions').select('id,product_table_version_id,contract_type_id,term,coefficient,rate').order('term'),
     seeCommission ? supabase.from('commercial_condition_commissions').select('condition_id,received_commission_pct,policy_version_id') : Promise.resolve({data:[] as {condition_id:string;received_commission_pct:number;policy_version_id:string|null}[]}),
     seeCommission ? supabase.from('commercial_condition_components').select('condition_id,calculation_base,component_type_id') : Promise.resolve({data:[] as {condition_id:string;calculation_base:string|null;component_type_id:string}[]}),
@@ -69,9 +69,61 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
 
   const enabledContractTypes=effectiveContractTypes((contractTypes.data ?? []) as {id:string;name:string;tech_key:string;is_active:boolean;organization_id:string|null}[], (contractTypeSettings.data ?? []) as {contract_type_id:string;is_enabled:boolean;use_in_pipeline:boolean;use_in_commission:boolean}[], 'commission')
   const nameOf = (rows:{id:string;name:string}[]|null) => new Map((rows ?? []).map(r => [r.id,r.name]))
-  const bankN=nameOf(banks.data), provN=nameOf(providers.data), agrN=nameOf(agreements.data), typeN=nameOf(enabledContractTypes), groupN=nameOf(groups.data)
-  const routeLabel = new Map((routes.data ?? []).map(r => [r.id, `${bankN.get(r.org_bank_id) ?? 'Instituição'} · ${agrN.get(r.org_agreement_id) ?? 'Convênio'}${r.org_provider_id ? ` · origem terceira: ${provN.get(r.org_provider_id) ?? 'Empresa'}` : ''}`]))
-  const v3Tables=(tables.data ?? []).filter(t => routeLabel.has(t.route_id))
+  const bankN=nameOf(banks.data), provN=nameOf(providers.data), agrN=nameOf(agreements.data), typeN=nameOf(enabledContractTypes)
+  const routeMeta=new Map((routes.data ?? []).map(r=>{
+    const bank=bankN.get(r.org_bank_id) ?? 'Instituição'
+    const agreement=agrN.get(r.org_agreement_id) ?? 'Convênio'
+    const provider=r.production_origin==='third_party'
+      ? (provN.get(r.org_provider_id) ?? 'Terceiro')
+      : 'Próprio / Smart'
+    return [r.id,{bank,agreement,provider,productionOrigin:r.production_origin ?? 'own'}]
+  }))
+  const allCommercialTables=(tables.data ?? []).filter(t => routeMeta.has(t.route_id))
+
+  const q=typeof sp.q==='string'?sp.q.trim().toLocaleLowerCase('pt-BR'):''
+  const bankFilter=typeof sp.bank==='string'?sp.bank:''
+  const providerFilter=typeof sp.provider==='string'?sp.provider:''
+  const agreementFilter=typeof sp.agreement==='string'?sp.agreement:''
+  const statusFilter=typeof sp.status==='string'?sp.status:'current'
+  const now=new Date()
+
+  const currentVersionFor=(tableId:string)=>(versions.data ?? []).find(v=>{
+    if(v.product_table_id!==tableId||v.status!=='published')return false
+    const from=v.effective_from?new Date(v.effective_from):new Date(0)
+    const until=v.effective_until?new Date(v.effective_until):null
+    return from<=now&&(!until||now<until)
+  })
+  const hasDraft=(tableId:string)=>(versions.data ?? []).some(v=>v.product_table_id===tableId&&v.status==='draft')
+
+  const v3Tables=allCommercialTables.filter(t=>{
+    const meta=routeMeta.get(t.route_id)!
+    if(bankFilter&&meta.bank!==bankFilter)return false
+    if(providerFilter&&meta.provider!==providerFilter)return false
+    if(agreementFilter&&meta.agreement!==agreementFilter)return false
+    if(statusFilter==='current'&&!currentVersionFor(t.id))return false
+    if(statusFilter==='draft'&&!hasDraft(t.id))return false
+    if(statusFilter==='inactive'&&t.status==='active')return false
+    if(q){
+      const hay=[t.name,meta.bank,meta.provider,meta.agreement].join(' ').toLocaleLowerCase('pt-BR')
+      if(!hay.includes(q))return false
+    }
+    return true
+  })
+
+  const grouped=new Map<string,Map<string,Map<string,typeof v3Tables>>>()
+  for(const t of v3Tables){
+    const meta=routeMeta.get(t.route_id)!
+    if(!grouped.has(meta.bank))grouped.set(meta.bank,new Map())
+    const byProvider=grouped.get(meta.bank)!
+    if(!byProvider.has(meta.provider))byProvider.set(meta.provider,new Map())
+    const byAgreement=byProvider.get(meta.provider)!
+    if(!byAgreement.has(meta.agreement))byAgreement.set(meta.agreement,[])
+    byAgreement.get(meta.agreement)!.push(t)
+  }
+
+  const bankOptions=[...new Set(allCommercialTables.map(t=>routeMeta.get(t.route_id)!.bank))].sort((a,b)=>a.localeCompare(b,'pt-BR'))
+  const providerOptions=[...new Set(allCommercialTables.map(t=>routeMeta.get(t.route_id)!.provider))].sort((a,b)=>a.localeCompare(b,'pt-BR'))
+  const agreementOptions=[...new Set(allCommercialTables.map(t=>routeMeta.get(t.route_id)!.agreement))].sort((a,b)=>a.localeCompare(b,'pt-BR'))
   const activeGroups=(groups.data ?? []).filter(g => g.is_active) as Group[]
   const receivedBy=new Map((commissions.data ?? []).map(c => [c.condition_id,c.received_commission_pct]))
   const policyOf=new Map((commissions.data ?? []).map(c => [c.condition_id,c.policy_version_id]))
