@@ -9,7 +9,7 @@ const FILTERS=['all','open','divergent','human_required','matched','resolved'] a
 
 export default async function FinancePage({searchParams}:{searchParams:Promise<{status?:string}>}){
  const {supabase,membership}=await requireAppContext()
- if(!canViewCommission(membership.role))return <section><h1 className="text-3xl font-semibold">Financeiro</h1><p className="mt-3 text-sm text-slate-400">Dados de comissão e conciliação são restritos aos perfis administrador, gerente e supervisor.</p></section>
+ if(!canViewCommission(membership.role))return <section><h1 className="text-3xl font-semibold">Financeiro</h1><p className="mt-3 text-sm text-slate-400">O Financeiro da empresa é restrito aos perfis administrador e gerente. Vendedores e supervisores usam a área Comissões, com escopo individual.</p></section>
  const sp=await searchParams
  const filter=(FILTERS as readonly string[]).includes(sp.status??'')?sp.status!:'all'
  const {count:events}=await supabase.from('financial_events').select('*',{count:'exact',head:true})
@@ -23,7 +23,7 @@ export default async function FinancePage({searchParams}:{searchParams:Promise<{
  for(const c of cases??[])counts.set(c.status,(counts.get(c.status)??0)+1)
  return <section>
   <h1 className="text-3xl font-semibold">Financeiro</h1>
-  <p className="mt-2 text-sm text-slate-400">Comissão esperada, reportada e recebida são fatos distintos. Aprovação/produção operacional não significa comissão recebida, e nenhum matching isolado é tratado como pagamento.</p>
+  <p className="mt-2 text-sm text-slate-400">Receita/comissão da empresa esperada, reportada e recebida são fatos distintos. Aprovação/produção operacional não significa comissão recebida, e nenhum matching isolado é tratado como pagamento.</p>
   <div className="mt-6 grid gap-4 md:grid-cols-4">
    {[['Esperado (casos listados)',formatBRL(sum('expected_text'))],['Reportado',formatBRL(sum('reported_text'))],['Recebido',formatBRL(sum('settled_text'))],['Eventos / reversões',`${events??0} / ${reversals??0}`]].map(([l,v])=><div key={l} className="rounded-xl border border-slate-800 bg-slate-900 p-5"><div className="text-sm text-slate-400">{l}</div><div className="mt-2 text-2xl font-semibold">{v}</div></div>)}
   </div>
