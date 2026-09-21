@@ -15,7 +15,8 @@ export async function POST(req:Request){
   if(!(file instanceof File))return Response.json({error:'Envie um arquivo.'},{status:400})
   const parsed=await parseSmartCommercialFile(ctx,file)
   const policyId=String(fd.get('policy_version_id')??'').trim()
-  let economics:any[]=[]
+  type PreviewEconomics={table:string;contract:string;term:number;component:string;group:string;kind:'percentage'|'fixed_brl';gross:string;net:string;payout:string;retained:string|null;payoutKind:'percentage'|'fixed_brl'|null;compatible:boolean}
+  let economics:PreviewEconomics[]=[]
   if(policyId){
    const [pv,items,groups,components]=await Promise.all([
     ctx.supabase.from('component_payout_policy_versions').select('id,discount_pct').eq('id',policyId).maybeSingle(),
@@ -35,8 +36,8 @@ export async function POST(req:Request){
       seen.add(key)
       const calc=componentEconomics({
        receivedValue:String(c.received_value),receivedKind:c.value_kind,discountPct:String(pv.data.discount_pct),
-       mode:it.mode,sharePct:it.share_pct==null?null:String(it.share_pct),
-       directValueKind:it.direct_value_kind,directValue:it.direct_value==null?null:String(it.direct_value)
+       mode:it.mode as 'share_of_received'|'direct'|'exclude',sharePct:it.share_pct==null?null:String(it.share_pct),
+       directValueKind:it.direct_value_kind as 'percentage'|'fixed_brl'|null,directValue:it.direct_value==null?null:String(it.direct_value)
       })
       economics.push({table:row.table_name,contract:row.contract_type_name,term:row.term,component:cn.get(c.component_type_id)??'Componente',group:gn.get(it.group_id)??'Grupo',kind:c.value_kind,...calc})
      }
