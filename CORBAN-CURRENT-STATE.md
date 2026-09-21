@@ -1824,3 +1824,17 @@ Validation/security:
 - rollback test proved 1–120 persists as one row and overlapping 60–120 is rejected.
 - rollback tests proved both normal bulk import and Smart Import preserve 1–120 as one condition.
 - Supabase security advisor returned to only the 2 historical INFO items after moving btree_gist to schema extensions; no new WARN/ERROR.
+
+
+## Faixa de valor em condição comercial + PROSESP
+LIVE: `20260921210534 commercial_condition_amount_ranges_v1`.
+
+Novo modelo de condição:
+`Tipo de Contrato + Prazo Inicial/Final + Valor Inicial/Final + economia/comissão`.
+- amount_min/amount_max NULL = qualquer valor e mantém catálogos anteriores compatíveis;
+- mesmas faixas de prazo podem existir para valores disjuntos;
+- sobreposição simultânea de prazo e valor é recusada pelo banco;
+- condições podem ser somente de comissão, sem inventar taxa/coeficiente;
+- seleção futura por valor usa contract_value explícito; caminho antigo não escolhe faixa de valor silenciosamente.
+
+PROSESP Governo do Acre analisada: 203 linhas fonte -> 16 condições após consolidação segura. Instituição PROSESP, produção Própria/Smart, mensalidade ignorada, valor consolidável 300,00-10.000,00 porque a comissão não varia entre as sete faixas nesta fonte. Regras 8%->Corretor/Parceiro 3% efetivo e 5%->2% efetivo confirmadas. Regra de 7% ainda pendente antes da carga LIVE. Ver `docs/imports/PROSESP-GOV-AC-2026-09-21.md`.
