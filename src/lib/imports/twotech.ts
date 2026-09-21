@@ -22,6 +22,7 @@ const COMMISSION_FIELDS=['ComissaoRepasseValor']
 const PROPOSAL_NUMBER_FIELDS=['NumeroProposta','NrProposta','Proposta','NumeroContrato','Contrato','CodigoProposta','ADE']
 const INSTITUTION_FIELDS=['Banco','NomeBanco','Instituicao','InstituicaoFinanceira']
 const PRODUCER_TAX_ID_FIELDS=['CnpjProdutor','CNPJProdutor','CnpjParceiro','CNPJParceiro']
+const PRODUCER_EXTERNAL_USER_FIELDS=['UsuarioBanco','UsuárioBanco','UsuarioVendedor','UsuárioVendedor','Usuario','Usuário','Login','Operador','Vendedor']
 const TABLE_CODE_FIELDS=['CodigoTabela','CodTabela','Tabela']
 const OPERATION_FIELDS=['Operacao','TipoOperacao','FormaContrato']
 const TERM_FIELDS=['Prazo','QtdParcelas','Parcelas']
@@ -52,7 +53,7 @@ export function analyzeTwoTechSchema(headers:string[]):TwoTechSchemaReport{
  const idx=index(headers)
  const fingerprint=schemaFingerprint(headers)
  const known=new Set<string>()
- const allKnown=[...PROPOSAL_NUMBER_FIELDS,...INSTITUTION_FIELDS,...PRODUCER_TAX_ID_FIELDS,...TABLE_CODE_FIELDS,...OPERATION_FIELDS,...TERM_FIELDS,...RATE_FIELDS,...COMMISSION_FIELDS,...Object.values(STATUS_FIELDS).flat()]
+ const allKnown=[...PROPOSAL_NUMBER_FIELDS,...INSTITUTION_FIELDS,...PRODUCER_TAX_ID_FIELDS,...PRODUCER_EXTERNAL_USER_FIELDS,...TABLE_CODE_FIELDS,...OPERATION_FIELDS,...TERM_FIELDS,...RATE_FIELDS,...COMMISSION_FIELDS,...Object.values(STATUS_FIELDS).flat()]
  for(const k of allKnown)known.add(normalizeHeader(k))
  const unmappedHeaders=headers.filter(h=>!known.has(normalizeHeader(h)))
  const hasIdentity=findHeader(idx,PROPOSAL_NUMBER_FIELDS)!==null
@@ -92,6 +93,7 @@ function parseRow(r:Record<string,unknown>,rowNumber:number,idx:Map<string,strin
   bankKey:text(pick(r,idx,INSTITUTION_FIELDS)),
   externalProposalNumber:rowQuarantine?null:externalProposalNumber,
   producerTaxId:text(pick(r,idx,PRODUCER_TAX_ID_FIELDS))?.replace(/\D/g,'')||null,
+  producerExternalUser:text(pick(r,idx,PRODUCER_EXTERNAL_USER_FIELDS)),
   externalTableCode:text(pick(r,idx,TABLE_CODE_FIELDS)),
   externalTableName:null,
   operationType:text(pick(r,idx,OPERATION_FIELDS)),
