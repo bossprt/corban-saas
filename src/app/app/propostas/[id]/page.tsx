@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { requireAppContext } from '@/lib/appContext'
-import { attachDocument, prepareDocuments, sendToDigitization, validateRequirement, publishExpectedCommission } from './actions'
+import { assignProposalSeller, attachDocument, prepareDocuments, sendToDigitization, validateRequirement, publishExpectedCommission } from './actions'
 import { atLeast, canViewCommission } from '@/lib/rbac'
 import { proposalStatusLabel } from '@/lib/operational'
 
@@ -14,12 +14,14 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
   const { supabase, membership } = await requireAppContext()
 
   const { data: proposal } = await supabase.from('proposals_v2')
-    .select('id,status,customer_id,simulation_id,requested_amount,released_amount,installment_amount,term,rate,customer_snapshot,commercial_snapshot,created_at')
+    .select('id,status,customer_id,simulation_id,seller_id,requested_amount,released_amount,installment_amount,term,rate,customer_snapshot,commercial_snapshot,created_at')
     .eq('id', id).maybeSingle()
 
   if (!proposal) notFound()
 
-  const [{ data: requirements }, { data: job }, { data: operationalCase }, { data: customerDocuments }, { data: externalIds }, { data: commercialRouteRaw }, { data: financialEventsRaw }] = await Promise.all([
+  const canAssignSeller = proposal.status === 'draft' && atLeast(membership.role, 'supervisor')
+
+  const [{ data: requirements }, { data: job }, { data: operationalCase }, { data: customerDocuments }, { data: externalIds }, { data: commercialRouteRaw }, { data: financialEventsRaw }, { data: sellers }] = await Promise.all([
     supabase.from('proposal_document_requirements')
       .select('id,document_type_id,label_snapshot,required_snapshot,status,exception_reason')
       .eq('proposal_id', id).order('created_at'),
@@ -40,6 +42,9 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
         : r)
       : supabase.from('proposal_commercial_snapshots').select('channel_id,producer_entity_id,payer_entity_id,created_at').eq('proposal_id', id).maybeSingle(),
     supabase.from('financial_events').select('id,event_type,component_type,amount,currency,created_at').eq('proposal_id',id).order('created_at',{ascending:false}),
+    canAssignSeller
+      ? supabase.from('commercial_sellers').select('id,name,seller_category').eq('is_active', true).order('name')
+      : Promise.resolve({ data: [] as { id: string; name: string; seller_category: string }[] }),
   ])
 
   type CommercialRoute = { channel_id: string | null; producer_entity_id: string | null; payer_entity_id: string | null; commission_rule_version_id?: string | null; split_rule_version_id?: string | null; snapshot?: unknown } | null
@@ -62,6 +67,14 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
     </div>
 
     <div className="mt-6 flex flex-wrap gap-3">
+      {canAssignSeller && <form action={assignProposalSeller} className="flex flex-wrap items-center gap-2">
+        <input type="hidden" name="proposal_id" value={proposal.id}/>
+        <select name="seller_id" className="field min-w-56" defaultValue={proposal.seller_id ?? ''}>
+          <option value="">Sem vendedor atribuído</option>
+          {(sellers ?? []).map(s => <option key={s.id} value={s.id}>{s.name} · {s.seller_category.toUpperCase()}</option>)}
+        </select>
+        <button className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-semibold">Salvar vendedor</button>
+      </form>}
       {['draft','documents_pending'].includes(proposal.status) && <form action={prepareDocuments}>
         <input type="hidden" name="proposal_id" value={proposal.id}/>
         <button className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-950">Preparar checklist</button>
