@@ -25,18 +25,23 @@ export async function GET(){
   const wb=new ExcelJS.Workbook()
   const ws=wb.addWorksheet('Importação inteligente')
   const columns:string[]=[
-    'Banco / Instituição','Convênio','Produto / Tabela','Código no Banco',
-    'Vigência Inicial','Vigência Final','Tipo de Contrato','Prazo Inicial','Prazo Final',
-    'Fator','Taxa a.m. (%)',
+    'Banco / Instituição',
+    'Convênio',
+    'Produto / Tabela',
+    'Código no Banco',
+    'Vigência Inicial',
+    'Vigência Final',
+    'Tipo de Contrato',
+    'Prazo Inicial',
+    'Prazo Final',
+    'Coeficiente',
+    'Taxa a.m. (%)',
+    'Base da Comissão [LÍQUIDO ou BRUTO]',
+    'Comissão Empresa (%)',
   ]
 
-  for(const c of components.data??[]){
-    columns.push(`${c.name} (Empresa) - Valor`)
-    columns.push(`${c.name} (Empresa) - Unidade [% ou R$]`)
-  }
-  for(const g of groups.data??[])for(const c of components.data??[]){
-    columns.push(`${c.name} (${g.name}) - Regra [% recebido, % operação, R$, não repassar]`)
-    columns.push(`${c.name} (${g.name}) - Valor`)
+  for(const g of groups.data??[]){
+    columns.push(g.name)
   }
   ws.addRow(columns)
   ws.views=[{state:'frozen',ySplit:1}]
@@ -48,10 +53,12 @@ export async function GET(){
   guide.addRows([
     ['CORBAN OS — Modelo de importação inteligente'],
     ['Empresa',organization.name],
-    ['Objetivo','Importar tabelas, prazos, fatores, componentes recebidos e repasses sem usar Repasse 1/2/3.'],
+    ['Objetivo','Importar tabelas comerciais de forma legível, uma linha por condição.'],
     ['Tipo de Contrato','Use exatamente um dos nomes habilitados abaixo.'],
-    ['Componente - Unidade','Informe % ou R$. Não deixe o sistema adivinhar a unidade quando houver dúvida.'],
-    ['Repasse - Regra','Use: % recebido, % operação, R$, ou não repassar.'],
+    ['Base da Comissão','Use LÍQUIDO ou BRUTO conforme a regra do banco para aquela tabela.'],
+    ['Comissão Empresa','Informe o percentual que o banco repassa à empresa naquela condição.'],
+    ['Grupos de Comissão','Cada grupo tem sua própria coluna. Preencha somente quando houver ajuste manual. Se a tabela usar uma política/regra padrão, deixe as colunas dos grupos vazias para o Corban calcular.'],
+    ['Percentuais','Use valores como 15.00, 9.50, 0.89. O sistema apresenta percentuais com duas casas decimais.'],
     ['Segurança','Antes de gravar, o Corban mostrará prévia e conflitos.'],
     [],
     ['Tipos de Contrato habilitados'],
