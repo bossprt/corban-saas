@@ -19,7 +19,7 @@ const returnPath = (f: FormData) => { const p = String(f.get('return_to') ?? '')
 const go = (code: FeedbackCode, path = PATH): never => { revalidatePath(PATH); revalidatePath(path); revalidatePath('/app/configuracao'); return redirect(feedbackUrl(path, code)) }
 const text = (f: FormData, k: string) => String(f.get(k) ?? '').trim()
 // The database authorizes every write (RLS + guard triggers + governed RPC); the role check here only fails early with a clear message.
-const COM_CODES = ['condition_already_exists', 'invalid_shares', 'duplicate_group_share', 'commission_group_not_found', 'production_shares_exceed_received_commission', 'policy_not_found', 'policy_group_inactive', 'policy_group_must_use_received_basis', 'invalid_policy', 'policy_already_exists', 'invalid_term', 'coefficient_or_rate_required', 'invalid_received_commission', 'contract_type_not_found', 'condition_not_found', 'version_not_draft', 'national_template_not_available'] as const
+const COM_CODES = ['condition_already_exists', 'condition_range_conflict', 'invalid_term_range', 'invalid_shares', 'duplicate_group_share', 'commission_group_not_found', 'production_shares_exceed_received_commission', 'policy_not_found', 'policy_group_inactive', 'policy_group_must_use_received_basis', 'invalid_policy', 'policy_already_exists', 'invalid_term', 'coefficient_or_rate_required', 'invalid_received_commission', 'contract_type_not_found', 'condition_not_found', 'version_not_draft', 'national_template_not_available'] as const
 const comError = (e: { message?: string; code?: string }): FeedbackCode => {
   const m = String(e.message ?? '')
   if (e.code === '23505') return 'erro:duplicado'
@@ -240,11 +240,12 @@ export async function saveCondition(f: FormData) {
   const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')
   const version = text(f, 'version_id'), contractType = text(f, 'contract_type_id'), condition = text(f, 'condition_id'), policyVersion = text(f, 'policy_version_id')
   if (!isUuid(version) || !isUuid(contractType) || (condition !== '' && !isUuid(condition)) || (policyVersion !== '' && !isUuid(policyVersion))) return go('erro:catalogo_invalido')
-  const term = parseTerm(text(f, 'term'))
+  const termMin = parseTerm(text(f, 'term_min'))
+  const termMax = parseTerm(text(f, 'term_max'))
   const coefficient = text(f, 'coefficient') === '' ? null : parseCoefficient(text(f, 'coefficient'))
   const rate = text(f, 'rate') === '' ? null : parseRate(text(f, 'rate'))
   const received = parsePercent(text(f, 'received'))
-  if (term === null) return go('erro:com_invalid_term')
+  if (termMin === null || termMax === null || termMin > termMax) return go('erro:com_invalid_term')
   if ((text(f, 'coefficient') !== '' && coefficient === null) || (text(f, 'rate') !== '' && rate === null) || (coefficient === null && rate === null)) return go('erro:com_coefficient_or_rate_required')
   if (received === null) return go('erro:com_invalid_received_commission')
   const groups = await loadGroups(ctx)
@@ -260,8 +261,9 @@ export async function saveCondition(f: FormData) {
   if (policyVersion && !policy) return go('erro:com_policy_not_found')
   const bad = resolveShares(groups, shares, received, policy ?? undefined).error
   if (bad) return go(`erro:com_${bad}` as FeedbackCode)
-  const { error } = await ctx.supabase.rpc('save_commercial_condition', {
-    p_version: version, p_contract_type: contractType, p_term: term, p_coefficient: coefficient, p_rate: rate, p_received: received, p_shares: shares, p_condition: condition || null,
+  const { error } = await ctx.supabase.rpc('save_commercial_condition_range', {
+    p_version: version, p_contract_type: contractType, p_term_min: termMin, p_term_max: termMax,
+    p_coefficient: coefficient, p_rate: rate, p_received: received, p_shares: shares, p_condition: condition || null,
     p_policy_version: policyVersion || null,
   })
   return error ? go(comError(error)) : go('ok:condicao_salva')
@@ -287,7 +289,7 @@ export async function importConditions(f: FormData) {
       ctx.supabase.from('contract_types').select('id,name,tech_key,is_active,organization_id').order('sort_order'),
       ctx.supabase.from('organization_contract_type_settings').select('contract_type_id,is_enabled,use_in_pipeline,use_in_commission')
     ]),
-    ctx.supabase.from('commercial_conditions').select('id,contract_type_id,term').eq('product_table_version_id', version),
+    ctx.supabase.from('commercial_conditions').select('id,contract_type_id,term_min,term_max').eq('product_table_version_id', version),
     policyVersion ? loadPolicy(ctx, policyVersion) : Promise.resolve(undefined),
   ])
   if (policyVersion && !policy) return go('erro:com_policy_not_found')
@@ -300,14 +302,14 @@ export async function importConditions(f: FormData) {
     revalidatePath(PATH)
     return redirect(`${feedbackUrl(PATH, 'erro:import_invalido')}&l=${first.line}&c=${code}&n=${issues.length}`)
   }
-  const byKey = new Map((existing.data ?? []).map(c => [`${c.contract_type_id}|${c.term}`, c.id as string]))
+  const byKey = new Map((existing.data ?? []).map(c => [`${c.contract_type_id}|${c.term_min}|${c.term_max}`, c.id as string]))
   if (preview) {
-    const updates = conditions.filter(c => byKey.has(`${c.contractTypeId}|${c.term}`)).length
+    const updates = conditions.filter(c => byKey.has(`${c.contractTypeId}|${c.termMin}|${c.termMax}`)).length
     revalidatePath(PATH)
     return redirect(`${feedbackUrl(PATH, 'ok:previa_validada')}&n=${conditions.length}&u=${updates}`)
   }
   // Atomic path: ONE database call = one transaction (all lines or none). Numbers travel as strings, never floats.
-  const payload = conditions.map(c => ({ line: c.line, contract_type_id: c.contractTypeId, term: c.term, coefficient: c.coefficient, rate: c.rate, received: c.received, shares: c.shares }))
+  const payload = conditions.map(c => ({ line: c.line, contract_type_id: c.contractTypeId, term_min: c.termMin, term_max: c.termMax, coefficient: c.coefficient, rate: c.rate, received: c.received, shares: c.shares }))
   const bulk = await ctx.supabase.rpc('import_commercial_conditions', { p_version: version, p_rows: payload, p_policy_version: policyVersion || null })
   if (!bulk.error) return go('ok:condicoes_importadas')
   const refused = parseBulkRefusal(bulk.error)
@@ -319,9 +321,10 @@ export async function importConditions(f: FormData) {
   // Until the bulk migration is applied the RPC does not exist: keep working with the previous line-by-line path (NOT atomic; re-sending the file is safe).
   if (bulk.error.code !== 'PGRST202') return go(comError(bulk.error))
   for (const c of conditions) {
-    const { error } = await ctx.supabase.rpc('save_commercial_condition', {
-      p_version: version, p_contract_type: c.contractTypeId, p_term: c.term, p_coefficient: c.coefficient, p_rate: c.rate, p_received: c.received, p_shares: c.shares,
-      p_condition: byKey.get(`${c.contractTypeId}|${c.term}`) ?? null, p_policy_version: policyVersion || null,
+    const { error } = await ctx.supabase.rpc('save_commercial_condition_range', {
+      p_version: version, p_contract_type: c.contractTypeId, p_term_min: c.termMin, p_term_max: c.termMax,
+      p_coefficient: c.coefficient, p_rate: c.rate, p_received: c.received, p_shares: c.shares,
+      p_condition: byKey.get(`${c.contractTypeId}|${c.termMin}|${c.termMax}`) ?? null, p_policy_version: policyVersion || null,
     })
     if (error) return go(comError(error))
   }
