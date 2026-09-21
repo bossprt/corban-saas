@@ -1168,3 +1168,41 @@ Concluído diretamente pelo ChatGPT, sem Claude e sem DDL:
 O Smart Import também sugere a política ativa mais específica pelo escopo:
 Tabela > Convênio > Instituição > Global.
 Empate no mesmo nível exige escolha humana explícita.
+
+
+## Human Gate — Seller/SUB → proposta/receita esperada
+Tripla revisão concluída e migration preparada:
+- `20261014_seller_sub_proposal_snapshot_v1.sql`;
+- contract `tests/security/seller-sub-proposal-snapshot-contract.sql`;
+- desenho `docs/SELLER-SUB-PROPOSAL-SNAPSHOT-V1.md`.
+
+Problema resolvido:
+o cadastro de Vendedor/SUB já está LIVE, mas hoje a proposta e `commission_expected` ainda não congelam/aplicam SUB 100/90 etc.
+
+Modelo preparado:
+- proposta draft pode receber `seller_id` por RPC governada;
+- vendedor só pode ser alterado antes do freeze comercial;
+- freeze congela seller/category/seller group e, em área supervisor+, commission group;
+- para SUB, cada componente resolve e congela a versão publicada da regra SUB, com fallback `all`;
+- SUB sem regra publicada falha fechado;
+- fórmula:
+  `gross component × upstream/network share × seller_company_share_pct / 100`;
+- não-SUB = company share 100%;
+- SUB 100% = company share 0%;
+- SUB 90% = company share 10%;
+- rede/split e SUB permanecem dimensões independentes;
+- nenhuma regra atual é consultada depois do snapshot.
+
+Adversarial:
+- commission_group_id foi removido dos snapshots de proposta visíveis a membros comuns; permanece apenas no snapshot de componente protegido supervisor+;
+- alteração direta de seller continua bloqueada pelo write guard;
+- same-tenant FK protege seller e regra;
+- eventos financeiros históricos não são reescritos;
+- idempotency key existente é preservada.
+
+Validação:
+- migration + contract passaram em `BEGIN ... ROLLBACK`;
+- migration não consta em `list_migrations`;
+- LIVE atual contém 0 propostas, 0 component snapshots, 0 commission_expected, 0 SUB sellers e 0 regras SUB publicadas, então não há backfill econômico existente para reinterpretar.
+
+**NÃO LIVE. Requer autorização explícita.**
