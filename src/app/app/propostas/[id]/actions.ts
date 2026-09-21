@@ -96,13 +96,15 @@ export async function validateRequirement(formData: FormData) {
 }
 
 export async function publishExpectedCommission(formData: FormData) {
-  const id = proposalId(formData)
+  const id = idOf(formData)
+  if (!id) return back(null, 'erro:requisicao_invalida')
   const { supabase, membership } = await requireAppContext()
-  if (!atLeast(membership.role,'supervisor')) throw new Error('Seu perfil não pode publicar comissão esperada.')
+  if (!atLeast(membership.role,'supervisor')) return back(id, 'erro:sem_permissao')
   const { error } = await supabase.rpc('publish_expected_commission', { p_proposal_id: id })
-  if (error) throw new Error('Não foi possível publicar a comissão esperada. Verifique snapshot e regras comerciais publicadas.')
+  if (error) return back(id, /forbidden|not_authorized/.test(error.message ?? '') ? 'erro:sem_permissao' : 'erro:comissao_esperada')
   revalidatePath(`/app/propostas/${id}`)
   revalidatePath('/app/financeiro')
+  return back(id, 'ok:comissao_esperada_publicada')
 }
 
 
@@ -118,15 +120,37 @@ export async function refreshFinancialReconciliation(formData: FormData) {
 }
 
 
-export async function freezeCommercialRoute(formData:FormData){
- const id=proposalId(formData)
- const channelId=String(formData.get('channel_id')??'')
- const ruleId=String(formData.get('commission_rule_version_id')??'')
- const producerId=String(formData.get('producer_entity_id')??'')||null
- const {supabase,membership}=await requireAppContext()
- if(!atLeast(membership.role,'supervisor'))throw new Error('Seu perfil não pode congelar a rota comercial.')
- if(!channelId||!ruleId)throw new Error('Canal e regra de comissão são obrigatórios.')
- const {error}=await supabase.rpc('freeze_proposal_commercial_route',{p_proposal_id:id,p_channel_id:channelId,p_commission_rule_version_id:ruleId,p_producer_entity_id:producerId})
- if(error)throw new Error('Não foi possível congelar a rota. Verifique canal, tabela, vigência e regra publicada.')
- revalidatePath(`/app/propostas/${id}`)
+export async function freezeCommercialRoute(formData: FormData) {
+  const id = idOf(formData)
+  const ruleId = String(formData.get('commission_rule_version_id') ?? '')
+  const producerRaw = String(formData.get('producer_entity_id') ?? '')
+  const producerId = producerRaw === '' ? null : producerRaw
+  if (!id || !UUID.test(ruleId) || (producerId !== null && !UUID.test(producerId))) return back(id, 'erro:requisicao_invalida')
+
+  const { supabase, membership } = await requireAppContext()
+  if (!atLeast(membership.role, 'supervisor')) return back(id, 'erro:sem_permissao')
+
+  const now = new Date().toISOString()
+  const { data: rule, error: ruleError } = await supabase
+    .from('channel_commission_rule_versions')
+    .select('id,channel_id,effective_from,effective_until,status')
+    .eq('id', ruleId)
+    .eq('status', 'published')
+    .maybeSingle()
+
+  if (ruleError || !rule) return back(id, 'erro:rota_comercial')
+  if ((rule.effective_from && rule.effective_from > now) || (rule.effective_until && rule.effective_until <= now)) {
+    return back(id, 'erro:rota_comercial')
+  }
+
+  const { error } = await supabase.rpc('freeze_proposal_commercial_route', {
+    p_proposal_id: id,
+    p_channel_id: rule.channel_id,
+    p_commission_rule_version_id: rule.id,
+    p_producer_entity_id: producerId,
+  })
+  if (error) return back(id, /forbidden|not_authorized/.test(error.message ?? '') ? 'erro:sem_permissao' : 'erro:rota_comercial')
+
+  revalidatePath(`/app/propostas/${id}`)
+  return back(id, 'ok:rota_congelada')
 }
