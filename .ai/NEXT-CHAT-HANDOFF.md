@@ -470,3 +470,27 @@ UI/API:
 - preview shows impact, new tables, and missing tables that would have their vigency ended;
 - apply route uses governed apply_smart_commercial_remittance RPC.
 - production deploy for UI commit 5bb809d754115a0b43e06e3ab758acd226a05f51 is READY.
+
+
+## Daycoval Gov AC via Efetivamais — real commission catalog
+Imported from source file 2026-09-21T13_17_28-05_00_RelatorioMelhorComissao.xls after Owner clarified there is NO tax/discount for this source.
+Scope: Bank Daycoval + Agreement Governo do Acre + production_origin=third_party + provider Efetivamais.
+Catalog objects already existed before import: Daycoval bank, Governo do Acre agreement, Efetivamais provider.
+
+Commission policy:
+- discount/tax = 0%; base_kind=gross;
+- Afiliado 10%; Balcão 50%; Call Center 25%; Corretor 65%; Parceiro 80%; Smart Promotora 100%;
+- percentages are applied directly to commission received from Daycoval because there is no tax discount.
+
+Source/import result:
+- 106 source conditions;
+- source contains 38 distinct Product names;
+- AUTORREGULAÇÃO contained Novo + Refinanciamento + Portabilidade with mixed commission bases, so to preserve the Owner invariant that one table has one commission base it was split internally into AUTORREGULAÇÃO - CONTRATO NOVO (LÍQUIDO), AUTORREGULAÇÃO - REFINANCIAMENTO (LÍQUIDO), and AUTORREGULAÇÃO - PORTABILIDADE (BRUTO);
+- the separate source spelling AUTORREGULAÇAO was preserved as its own table;
+- therefore LIVE contains 40 commercial tables, 106 conditions, 318 condition components, 636 group shares;
+- base distribution: 29 tables / 95 conditions LÍQUIDO; 11 tables / 11 conditions BRUTO;
+- À Vista is the only non-zero commission component in this source; Bônus/Diferido and other source ancillary commission columns are zero. Stored components mirror the established HOPE path (À Vista/Bônus/Diferido) with source base preserved.
+- all versions published with their source vigência; no existing Daycoval/Efetivamais route or table existed, so no replacement/retirement occurred.
+
+Validation sample:
+- table 761118 GOV ACRE ESPECIAL DIG - AOL, term 120: Daycoval received 7.50%, no tax => base 7.50%; Corretor 65% => internal effective 4.875% (display 4.88%); Smart Promotora 100% => 7.50%.
