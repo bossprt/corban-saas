@@ -297,6 +297,7 @@ set search_path=''
 as $$
 declare
   v_org uuid;
+  v_seller_id uuid;
   v_seller public.commercial_sellers%rowtype;
   v_sim public.simulations%rowtype;
   v_condition uuid;
@@ -305,15 +306,22 @@ declare
   v_id uuid;
   v_reason text;
 begin
-  select p.organization_id,s.*
-    into v_org,v_seller
+  select p.organization_id,p.seller_id
+    into v_org,v_seller_id
   from public.proposals_v2 p
-  join public.commercial_sellers s
-    on s.organization_id=p.organization_id and s.id=p.seller_id
   where p.id=p_proposal_id
+    and p.seller_id is not null
     and public.has_active_organization_role(p.organization_id,array['admin','manager','supervisor']);
 
-  if v_org is null or v_seller.id is null then return null; end if;
+  if v_org is null or v_seller_id is null then return null; end if;
+
+  select s.* into v_seller
+  from public.commercial_sellers s
+  where s.organization_id=v_org
+    and s.id=v_seller_id
+    and s.is_active;
+
+  if v_seller.id is null then return null; end if;
 
   if exists(
     select 1 from public.proposal_seller_commission_snapshots x
