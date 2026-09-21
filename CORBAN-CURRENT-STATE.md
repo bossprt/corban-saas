@@ -1096,3 +1096,12 @@ Isso justifica acionar Claude Code local em tarefa longa única, preservando quo
 - CSV/XLSX/XLS legado/PDF textual seguem no mesmo parser comercial.
 - PDF ambíguo, escaneado ou sem tabela é recusado; não há OCR nem inferência financeira.
 - Nenhum DDL adicional foi necessário e nenhuma migration foi reaplicada.
+
+
+## XLSX percentual — fail-closed
+Após a integração XLS/PDF, foi corrigida mais uma ambiguidade financeira:
+- células numéricas de XLSX formatadas como percentual agora são recusadas no Smart Import;
+- motivo: o arquivo pode armazenar `0.15` e exibir `15%`, e o sistema não pode adivinhar a intenção financeira;
+- o operador recebe mensagem explícita para corrigir o valor/unidade;
+- teste unitário específico adicionado;
+- Vercel de produção READY no commit `8277790fe548ed1532ac5a56b6a3fe9ebb6f3da8`.
