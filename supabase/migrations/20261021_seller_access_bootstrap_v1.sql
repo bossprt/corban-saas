@@ -75,6 +75,7 @@ begin
     perform set_config('corban.membership_rpc','off',true);
   end if;
 
+  perform set_config('corban.membership_rpc','on',true);
   insert into public.organization_admin_events(
     organization_id,actor_user_id,event_type,target_email,details
   ) values(
@@ -87,6 +88,7 @@ begin
       'access_invitation_id',v_inv
     )
   );
+  perform set_config('corban.membership_rpc','off',true);
 
   seller_id:=v_seller;
   invitation_id:=v_inv;
