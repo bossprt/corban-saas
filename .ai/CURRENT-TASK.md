@@ -1669,3 +1669,23 @@ Próxima fila autônoma:
 2. corrigir qualquer erro de compilação;
 3. acrescentar comparação prévia entre componente recebido e política interna (empresa recebe / grupo recebe / empresa retém);
 4. avaliar suporte XLS legado/PDF. Se exigir execução local/biblioteca/testes com arquivo real, acionar Claude em uma única tarefa longa, instruído a economizar contexto e usar as ferramentas já instaladas.
+
+
+## Próxima etapa requer Claude local
+ChatGPT esgotou o que é seguro executar diretamente nesta onda.
+
+Motivo real para Claude:
+- o suporte a `.xls` legado e PDF provavelmente exige nova dependência npm;
+- é necessário gerar/validar `package-lock.json` via npm real, não manualmente;
+- precisamos testar contra arquivos reais locais HOPE/2Tech;
+- precisamos rodar `npm test`, `npm run build` e lint localmente antes de publicar;
+- ChatGPT não possui checkout local autenticado do repo nem deve fabricar lockfile.
+
+Estado antes do handoff:
+- branch `architecture/corban-os-master-v2`;
+- Vercel produção `READY`;
+- Smart Import CSV/XLSX LIVE;
+- migration `smart_commercial_import_v1` LIVE;
+- nenhuma DDL pendente imediata;
+- Claude deve trabalhar somente em branch própria derivada da branch atual e não tocar main;
+- usar ferramentas/plugins locais já instalados e leitura seletiva para economizar tokens.
