@@ -157,31 +157,35 @@ Pós-apply:
 - bootstrap segue exclusivo do fluxo Platform Admin;
 - Security Advisor sem WARN/ERROR novo.
 
-## POLÍTICA APROVADA — comissão por vendedor
-- vendedor vê somente a própria comissão;
-- admin e gerente veem todos;
-- supervisor vê somente vendedores explicitamente supervisionados.
+## Seller commission visibility + access governance — LIVE / CLOSED
+Owner policy:
+- seller = own commission only;
+- supervisor = explicitly supervised sellers only;
+- manager/admin = all seller commissions;
+- company Finance/ledger = manager/admin only.
 
-## HUMAN GATE ATUAL — Seller commission visibility scope V1
-Preparada e **NÃO LIVE**:
-- `20261018_seller_commission_visibility_scope_v1.sql`
-- `tests/security/seller-commission-visibility-scope-contract.sql`
+LIVE:
+- `20260921041041 seller_commission_visibility_scope_v1`;
+- `20260921041520 seller_access_governed_write_hardening_v1`.
 
-Mudanças:
-- seller <-> user membership;
-- supervisor <-> sellers;
-- helper fail-closed de escopo;
-- snapshot imutável separado da receita da empresa;
-- supervisor deixa de ter leitura tenant-wide em component snapshots, financial events e reconciliation cases;
-- vendedor não recebe acesso ao ledger da empresa;
-- quando o payout individual não é inequívoco, fica `unavailable`, sem inferência.
+Application:
+- `/app/comissoes` is the scoped seller commission surface;
+- seller user binding and supervisor assignments are managed under Cadastros > Vendedores;
+- Financeiro is manager/admin only;
+- seller commission snapshot is immutable and separate from company financial events;
+- ambiguous payout resolves to `unavailable`, never an estimate.
 
-Validação:
-- migration + contract passaram em `BEGIN ... ROLLBACK` após correção de um erro de rowtype encontrado no primeiro teste;
-- LIVE atual tem 0 sellers/proposals/conditions, sem histórico para reinterpretar;
-- migration ainda não consta em `list_migrations`.
+Security:
+- direct user binding/supervision Data API writes are blocked unless inside governed RPC context;
+- RLS helper enforces own/supervised/all scope;
+- post-apply contracts passed;
+- Security Advisor has no new WARN/ERROR.
 
-**Ao retomar, perguntar somente se o Owner autoriza aplicar `20261018_seller_commission_visibility_scope_v1` LIVE, salvo outra instrução explícita.**
+Standing authorization:
+Owner authorized future LIVE DDL without a new prompt only when strictly necessary to complete this same seller-commission visibility rule, and only after rollback contract passes. Any unrelated DDL/destructive/external action still requires Human Gate.
+
+## Próxima fronteira
+No seller-commission scope there is no known pending DDL. Do not create fake LIVE business/economic data for testing. If continuing elsewhere, follow normal triple review and stop at the next unrelated Human Gate.
 
 ## Ambiente
 - GitHub: `bossprt/corban-saas`
