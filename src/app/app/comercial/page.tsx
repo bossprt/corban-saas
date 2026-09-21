@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { requireAppContext } from '@/lib/appContext'
-import { atLeast } from '@/lib/rbac'
+import { atLeast, canViewCommission } from '@/lib/rbac'
 import { SubmitButton } from '@/components/SubmitButton'
 import { onboardingSteps } from '@/lib/commercial'
 import { savePayoutPolicy } from './actions'
@@ -13,6 +13,7 @@ type Group = { id: string; name: string; calculation_basis: string }
 export default async function CommercialPage() {
   const { supabase, membership } = await requireAppContext()
   const canEdit = atLeast(membership.role, 'manager')
+  const seeCommission = canViewCommission(membership.role)
   if (!atLeast(membership.role, 'supervisor')) return <section><h1 className="text-3xl font-semibold">Modelo comercial</h1>
     <p role="alert" className="mt-3 rounded-xl border border-slate-800 p-5 text-sm text-slate-300">O modelo comercial é restrito a supervisor, gerente e administrador.</p></section>
 
@@ -20,14 +21,14 @@ export default async function CommercialPage() {
     supabase.from('organization_banks').select('id,name,is_active').order('name'),
     supabase.from('organization_providers').select('id,name,is_active').order('name'),
     supabase.from('organization_agreements').select('id,name,is_active').order('name'),
-    supabase.from('commission_groups').select('id,name,calculation_basis,is_active').order('sort_order').order('name'),
+    seeCommission ? supabase.from('commission_groups').select('id,name,calculation_basis,is_active').order('sort_order').order('name') : Promise.resolve({data:[] as Group[]}),
     supabase.from('organization_product_routes').select('id').not('org_bank_id', 'is', null),
     supabase.from('product_tables').select('id,route_id,status').order('name'),
     supabase.from('product_table_versions').select('id,product_table_id,status').order('version', { ascending: false }),
     supabase.from('commercial_conditions').select('id,product_table_version_id'),
-    supabase.from('payout_policies').select('id,name,is_active').order('name'),
-    supabase.from('payout_policy_versions').select('id,policy_id,version,base_kind,discount_pct').order('version', { ascending: false }),
-    supabase.from('payout_policy_items').select('version_id,group_id,pct'),
+    seeCommission ? supabase.from('payout_policies').select('id,name,is_active').order('name') : Promise.resolve({data:[] as {id:string;name:string;is_active:boolean}[]}),
+    seeCommission ? supabase.from('payout_policy_versions').select('id,policy_id,version,base_kind,discount_pct').order('version', { ascending: false }) : Promise.resolve({data:[] as {id:string;policy_id:string;version:number;base_kind:string;discount_pct:number}[]}),
+    seeCommission ? supabase.from('payout_policy_items').select('version_id,group_id,pct') : Promise.resolve({data:[] as {version_id:string;group_id:string;pct:number}[]}),
   ])
   const groupN = new Map((groups.data ?? []).map(g => [g.id, g.name]))
   const activeGroups = (groups.data ?? []).filter(g => g.is_active) as Group[]
@@ -75,7 +76,7 @@ export default async function CommercialPage() {
       </div>
     </div>
 
-    <h2 id="passo-grupos" className="mt-8 scroll-mt-4 text-xl font-semibold">3. Grupos e regras de comissão</h2>
+    {seeCommission ? <><h2 id="passo-grupos" className="mt-8 scroll-mt-4 text-xl font-semibold">3. Grupos e regras de comissão</h2>
     <div className={`${card} mt-3 space-y-4 text-sm`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div><strong>{activeGroups.length} grupo(s) ativo(s)</strong><p className="mt-1 text-xs text-slate-500">O grupo identifica quem recebe. Você só precisa informar o nome e como o percentual deve ser interpretado.</p></div>
@@ -94,7 +95,7 @@ export default async function CommercialPage() {
           <SubmitButton className={`${btn} md:col-span-4 md:justify-self-end`} pendingText="Salvando...">Salvar regra padrão</SubmitButton>
         </form></details> : <p className="mt-3 text-xs text-amber-200">Para usar regra padrão, crie ao menos um grupo configurado como percentual da comissão recebida.</p>)}
       </div>
-    </div>
+    </div></> : <div className={`${card} mt-8 text-sm text-slate-400`}>As regras financeiras de comissão não estão disponíveis para este perfil.</div>}
 
     <h2 id="passo-tabelas" className="mt-8 scroll-mt-4 text-xl font-semibold">4. Tabelas e condições</h2>
     <div className={`${card} mt-3`}>
