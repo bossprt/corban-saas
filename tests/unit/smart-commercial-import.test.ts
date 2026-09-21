@@ -20,8 +20,8 @@ const ctx={
 
 test('maps HOPE-style row and expands term range',()=>{
  const r=mapSmartCommercialRows([
-  ['Banco','Convênio','Produto','Tipo de Contrato','Prazo Inicial','Prazo Final','Taxa a.m.','Tipo Fator','Fator','À Vista (Empresa) - Valor','À Vista (Empresa) - Unidade [% ou R$]'],
-  ['HOPE','Gov. AC','Tabela 001','Refin/Portabilidade','12','14','1,80','DIÁRIO','0,031234','10','%'],
+  ['Banco','Convênio','Produto','Tipo de Contrato','Prazo Inicial','Prazo Final','Taxa a.m.','Tipo Fator','Fator','À Vista (Empresa) - Valor','À Vista (Empresa) - Unidade [% ou R$]','Data Fator'],
+  ['HOPE','Gov. AC','Tabela 001','Refin/Portabilidade','12','14','1,80','DIÁRIO','0,031234','10','%','15/09/2026'],
  ],ctx)
  assert.equal(r.issues.length,0)
  assert.equal(r.rows.length,3)

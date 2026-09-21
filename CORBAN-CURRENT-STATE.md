@@ -1082,3 +1082,6 @@ Próxima necessidade real de ambiente local:
 - build/lint/test completos antes de novo push.
 
 Isso justifica acionar Claude Code local em tarefa longa única, preservando quota.
+
+## 29. Smart Import aceita XLS legado e PDF textual — 20/09/2026 (branch `feature/smart-import-xls-pdf`, nao mesclada)
+- CSV, XLSX, XLS (BIFF) e PDF com texto entram pelo mesmo parser; PDF ambiguo/imagem e recusado com "necessita revisao". Regras: `docs/SMART-COMMERCIAL-IMPORT-V1.md`. Unit 329/329, tsc, eslint, build verdes. Nenhuma migration, nenhum secret.

@@ -1,4 +1,4 @@
-import { normalizeHeader, parseCoefficient, parseRate, parseTerm, parseDecimal } from '@/lib/commercial'
+import { normalizeHeader, parseTerm, parseDecimal } from '../commercial'
 
 export type SmartImportContractType={id:string;name:string;tech_key:string}
 export type SmartImportGroup={id:string;name:string}
@@ -48,16 +48,18 @@ export type SmartImportResult={
   hasPlastic:boolean
   hasBonus:boolean
   hasGenericRepasseColumns:boolean
+  genericRepasseSlots:string[]
  }
 }
 
+export const SMART_LIMITS={sourceRows:5000,expandedRows:20000,columns:200,text:200} as const
 const baseAliases={
  bank:['banco','instituicao','banco_instituicao'],
  agreement:['convenio'],
- table:['produto','tabela','produto_tabela','nome_do_produto','nome_tabela'],
+ table:['produto','tabela','produto_tabela','nome_do_produto','nome_tabela','tabela_nome_do_produto','tabela_produto'],
  externalCode:['codigo_no_banco','codigo_banco','codigo_tabela','cod_tabela'],
- validFrom:['vigencia','vigencia_inicial','inicio_vigencia'],
- validUntil:['vigencia_final','fim_vigencia'],
+ validFrom:['vigencia','vigencia_inicial','inicio_vigencia','inicio','data_inicio_vigencia','data_inicial_vigencia'],
+ validUntil:['vigencia_final','fim_vigencia','fim','data_final_vigencia','data_fim_vigencia'],
  contract:['tipo_de_contrato','tipo_contrato','contrato'],
  term:['prazo'],
  termMin:['prazo_inicial','prazo_minimo','prazo_min'],
@@ -66,8 +68,9 @@ const baseAliases={
  rate:['taxa','taxa_a_m','taxa_am','taxa_mensal'],
  factor:['fator'],
  factorMode:['tipo_fator','tipo_de_fator'],
- factorDate:['data_fator','vigencia_fator'],
+ factorDate:['data_fator','vigencia_fator','data_do_fator','data_referencia','data'],
 } as const
+export const SMART_HEADER_ALIASES=baseAliases
 
 const componentAliases:Record<string,string[]>={
  upfront:['a_vista','avista','comissao_a_vista'],
@@ -79,25 +82,34 @@ const componentAliases:Record<string,string[]>={
  insurance_fixed:['seguro_fixo','seguro'],
 }
 
+// Columns that carry money but are not understood are REFUSED (silently dropping a commission column would be a financial error). Known harmless ones are listed.
+const MONEY_WORDS=/(comiss|bonus|repasse|diferido|a_vista|avista|plastico|seguro|spread|premio)/
+const IGNORABLE=/^(base_calculo|id_|idade|valor_contrato|taxa_inicial|taxa_final|tipo_de_formalizacao|ativacao)/
 const n=(v:unknown)=>normalizeHeader(v)
 const cell=(row:readonly unknown[],i:number|undefined)=>i===undefined?'':String(row[i]??'').trim()
 const firstIndex=(head:string[],aliases:readonly string[])=>{
  for(const a of aliases){const i=head.indexOf(a);if(i>=0)return i}
  return undefined
 }
+// open-ended validity written as text (HOPE exports "Não definida"): only for the END date, it means "no end" and is not an error
+const OPEN_END=/^(nao definida|não definida|indefinida|indeterminada|sem fim|sem data|-|—)$/i
+// a real calendar date only (32/13/2026 or 2026-02-30 are refused, never stored)
+const validYmd=(y:number,m:number,d:number)=>m>=1&&m<=12&&d>=1&&d<=new Date(Date.UTC(y,m,0)).getUTCDate()&&y>=1990&&y<=2100
 const parseDate=(raw:string):string|null=>{
  const v=raw.trim()
  if(!v)return null
  const iso=/^(\d{4})-(\d{2})-(\d{2})/.exec(v)
- if(iso)return `${iso[1]}-${iso[2]}-${iso[3]}T00:00:00Z`
+ if(iso)return validYmd(+iso[1],+iso[2],+iso[3])?`${iso[1]}-${iso[2]}-${iso[3]}T00:00:00Z`:null
  const br=/^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(v)
- if(br)return `${br[3]}-${br[2].padStart(2,'0')}-${br[1].padStart(2,'0')}T00:00:00Z`
+ if(br)return validYmd(+br[3],+br[2],+br[1])?`${br[3]}-${br[2].padStart(2,'0')}-${br[1].padStart(2,'0')}T00:00:00Z`:null
  return null
 }
 const decimal=(raw:string,maxInt=6,scale=8)=>parseDecimal(raw,{maxInt,scale})
-const positiveDecimal=(raw:string,maxInt=6,scale=8)=>{
+// a factor of 0 means "no factor informed" (HOPE exports DIÁRIO with Fator 0): it is not an error and not a factor; a malformed or negative one is still refused
+const factorDecimal=(raw:string,maxInt=6,scale=12):string|null|'zero'=>{
  const d=decimal(raw,maxInt,scale)
- return d!==null&&Number(d)>0?d:null
+ if(d===null)return null
+ return Number(d)===0?'zero':d
 }
 const resolveType=(raw:string,types:readonly SmartImportContractType[])=>{
  const k=n(raw)
@@ -135,7 +147,10 @@ export function mapSmartCommercialRows(
  const rows:SmartImportRow[]=[]
  const sourceRows=Math.max(0,rawRows.length-1)
  if(rawRows.length<2){
-  return {rows:[],issues:[{line:1,code:'file_without_rows'}],summary:{sourceRows:0,expandedRows:0,tables:[],components:[],hasDeferred:false,hasPlastic:false,hasBonus:false,hasGenericRepasseColumns:false}}
+  return {rows:[],issues:[{line:1,code:'file_without_rows'}],summary:{sourceRows:0,expandedRows:0,tables:[],components:[],hasDeferred:false,hasPlastic:false,hasBonus:false,hasGenericRepasseColumns:false,genericRepasseSlots:[]}}
+ }
+ if(rawRows.length-1>SMART_LIMITS.sourceRows||rawRows[0].length>SMART_LIMITS.columns){
+  return {rows:[],issues:[{line:1,code:'file_too_large_for_import'}],summary:{sourceRows,expandedRows:0,tables:[],components:[],hasDeferred:false,hasPlastic:false,hasBonus:false,hasGenericRepasseColumns:false,genericRepasseSlots:[]}}
  }
  const rawHead=rawRows[0].map(x=>String(x??'').trim())
  const head=rawHead.map(n)
@@ -159,8 +174,9 @@ export function mapSmartCommercialRows(
   componentCols.push({value:i,unit:unit>=0?unit:undefined,component:c,header:rawHead[i]})
  }
 
- const genericRepasse=rawHead.some(h=>/repasse[_ ]?\d+/i.test(n(h)))
- if(genericRepasse)issues.push({line:1,code:'generic_repass_requires_mapping',detail:'Repasse 1/2/3 não identifica Corretor, Parceiro ou outro grupo.'})
+ const genericRepasseSlots=[...new Set(rawHead.map(h=>/repasse[_ ]?(\d+)/i.exec(n(h))?.[1]).filter((x):x is string=>!!x))].map(x=>`Repasse ${x}`)
+ const genericRepasse=genericRepasseSlots.length>0
+ if(genericRepasse)issues.push({line:1,code:'generic_repass_requires_mapping',detail:`${genericRepasseSlots.join(', ')} não identificam Corretor, Parceiro ou outro grupo: nenhum foi mapeado.`})
 
  const namedRepassCols:{value:number;group:SmartImportGroup;component:SmartImportComponent;header:string}[]=[]
  for(let i=0;i<rawHead.length;i++){
@@ -171,8 +187,14 @@ export function mapSmartCommercialRows(
   if(component)namedRepassCols.push({value:i,group,component,header:rawHead[i]})
  }
 
+ const consumed=new Set<number>([...Object.values(col).filter((v):v is number=>v!==undefined),...componentCols.flatMap(c=>[c.value,...(c.unit===undefined?[]:[c.unit])]),...namedRepassCols.map(c=>c.value)])
+ for(let i=0;i<rawHead.length;i++){
+  const h=head[i]
+  if(!h||consumed.has(i)||/repasse[_ ]?\d+/.test(h)||/unidade/.test(h)||IGNORABLE.test(h))continue
+  if(MONEY_WORDS.test(h))issues.push({line:1,code:'unrecognized_commission_column',detail:rawHead[i].slice(0,60)})
+ }
  if(issues.some(x=>x.line===1&&x.code!=='generic_repass_requires_mapping')){
-  return {rows:[],issues,summary:{sourceRows,expandedRows:0,tables:[],components:[],hasDeferred:false,hasPlastic:false,hasBonus:false,hasGenericRepasseColumns:genericRepasse}}
+  return {rows:[],issues,summary:{sourceRows,expandedRows:0,tables:[],components:[],hasDeferred:false,hasPlastic:false,hasBonus:false,hasGenericRepasseColumns:genericRepasse,genericRepasseSlots}}
  }
 
  rawRows.slice(1).forEach((r,idx)=>{
@@ -187,18 +209,23 @@ export function mapSmartCommercialRows(
   if(min===null||max===null||max<min||max-min>240){issues.push({line,code:'invalid_term_range'});return}
   const coefficient=col.coefficient===undefined||cell(r,col.coefficient)===''?null:decimal(cell(r,col.coefficient),6,8)
   const rate=col.rate===undefined||cell(r,col.rate)===''?null:decimal(cell(r,col.rate),3,6)
-  const factor=col.factor===undefined||cell(r,col.factor)===''?null:positiveDecimal(cell(r,col.factor),6,12)
-  if((col.coefficient!==undefined&&cell(r,col.coefficient)!==''&&coefficient===null)||(col.rate!==undefined&&cell(r,col.rate)!==''&&rate===null)||(col.factor!==undefined&&cell(r,col.factor)!==''&&factor===null)){
+  const factorRaw=col.factor===undefined||cell(r,col.factor)===''?null:factorDecimal(cell(r,col.factor),6,12)
+  const factor=factorRaw==='zero'?null:factorRaw
+  if((col.coefficient!==undefined&&cell(r,col.coefficient)!==''&&coefficient===null)||(col.rate!==undefined&&cell(r,col.rate)!==''&&rate===null)||(col.factor!==undefined&&cell(r,col.factor)!==''&&factorRaw===null)){
    issues.push({line,code:'invalid_number'});return
   }
   if(coefficient===null&&rate===null&&factor===null){issues.push({line,code:'rate_coefficient_or_factor_required'});return}
   const from=col.validFrom===undefined?null:parseDate(cell(r,col.validFrom))
-  const until=col.validUntil===undefined?null:parseDate(cell(r,col.validUntil))
-  if((col.validFrom!==undefined&&cell(r,col.validFrom)!==''&&!from)||(col.validUntil!==undefined&&cell(r,col.validUntil)!==''&&!until)){issues.push({line,code:'invalid_date'});return}
+  const untilRaw=col.validUntil===undefined?'':cell(r,col.validUntil),openEnd=OPEN_END.test(untilRaw)
+  const until=col.validUntil===undefined||openEnd?null:parseDate(untilRaw)
+  if((col.validFrom!==undefined&&cell(r,col.validFrom)!==''&&!from)||(col.validUntil!==undefined&&untilRaw!==''&&!openEnd&&!until)){issues.push({line,code:'invalid_date'});return}
   const fMode=factor===null?null:(col.factorMode===undefined?'daily':factorMode(cell(r,col.factorMode)))
   if(factor!==null&&!fMode){issues.push({line,code:'factor_mode_required'});return}
   const fDateRaw=col.factorDate===undefined?'':cell(r,col.factorDate)
   const fDate=(fDateRaw?parseDate(fDateRaw):from)?.slice(0,10)??null
+  if(fDateRaw&&!parseDate(fDateRaw)){issues.push({line,code:'invalid_date'});return}
+  if(factor!==null&&fMode==='daily'&&!fDate){issues.push({line,code:'factor_date_required'});return}
+  if([bank,agreement,table].some(x=>x.length>SMART_LIMITS.text)){issues.push({line,code:'text_too_long'});return}
 
   const comps:SmartImportComponentValue[]=[]
   for(const cc of componentCols){
@@ -222,6 +249,7 @@ export function mapSmartCommercialRows(
    repasses.push({group_id:rc.group.id,component_type_id:rc.component.id,raw_value:value,rule_hint:'unknown',value_kind_hint:null})
   }
 
+  if(rows.length+(max-min+1)>SMART_LIMITS.expandedRows){issues.push({line,code:'file_too_large_for_import'});return}
   for(let term=min;term<=max;term++)rows.push({
    bank_name:bank,agreement_name:agreement,table_name:table,external_table_code:cell(r,col.externalCode)||null,
    contract_type_id:type.id,contract_type_name:type.name,term,
@@ -241,7 +269,7 @@ export function mapSmartCommercialRows(
    sourceRows,expandedRows:rows.length,tables,components:[...componentNames],
    hasDeferred:componentNames.has('deferred'),hasPlastic:componentNames.has('plastic'),
    hasBonus:['bonus_1','bonus_2','bonus_3'].some(x=>componentNames.has(x)),
-   hasGenericRepasseColumns:genericRepasse,
+   hasGenericRepasseColumns:genericRepasse,genericRepasseSlots,
   }
  }
 }

@@ -65,7 +65,7 @@ export function SmartImportClient({providers,policies}:{providers:Provider[];pol
   <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
    <h2 className="font-semibold">1. Envie a planilha</h2>
    <p className="mt-1 text-xs text-slate-400">CSV ou XLSX, até 2 MB. XLS antigo e PDF entram na próxima etapa.</p>
-   <div className="mt-3 flex flex-wrap gap-2"><input type="file" accept=".csv,.xlsx,text/csv" onChange={e=>{setFile(e.target.files?.[0]??null);setPreview(null);setMessage('')}} className="block flex-1 text-sm"/><button disabled={!file||busy} onClick={runPreview} className={ghost}>{busy?'Analisando...':'Analisar sem gravar'}</button></div>
+   <div className="mt-3 flex flex-wrap gap-2"><input type="file" accept=".csv,.xlsx,.xls,.pdf,text/csv" onChange={e=>{setFile(e.target.files?.[0]??null);setPreview(null);setMessage('')}} className="block flex-1 text-sm"/><button disabled={!file||busy} onClick={runPreview} className={ghost}>{busy?'Analisando...':'Analisar sem gravar'}</button></div>
   </div>
 
   {preview&&<div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-5">
