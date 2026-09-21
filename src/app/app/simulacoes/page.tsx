@@ -2,11 +2,12 @@ import { requireAppContext } from '@/lib/appContext'
 import { createProposalFromSimulation, createSimulation } from './actions'
 import { SubmitButton } from '@/components/SubmitButton'
 import { effectiveContractTypes } from '@/lib/contract-types'
+import { formatBRL } from '@/lib/finance/ledger'
 
 const SIM_STATUS: Record<string, string> = { draft: 'Rascunho', calculated: 'Calculada', selected: 'Virou proposta', expired: 'Expirada', cancelled: 'Cancelada' }
 
 function brl(value: number | string | null) {
-  return value === null ? 'Não calculado' : Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  return value === null ? 'Não calculado' : formatBRL(String(value))
 }
 
 export default async function SimulationsPage() {
