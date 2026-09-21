@@ -373,3 +373,10 @@ Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`)
 - Build de produção READY.
 - `/app/comercial` auditado e novamente vinculado a `canViewCommission`.
 - Nenhuma migration nova/reaplicada.
+
+
+### Hardening — XLSX percentual
+- Smart Import passa a recusar percentuais formatados de XLSX quando o valor armazenado é ambíguo.
+- Mensagem operacional adicionada.
+- Teste dedicado adicionado.
+- Produção Vercel READY.
