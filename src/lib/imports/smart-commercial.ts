@@ -28,6 +28,8 @@ export type SmartImportRow={
  contract_type_id:string
  contract_type_name:string
  term:number
+ term_min:number
+ term_max:number
  coefficient:string|null
  rate:string|null
  effective_from:string|null
@@ -54,7 +56,7 @@ export type SmartImportResult={
  }
 }
 
-export const SMART_LIMITS={sourceRows:5000,expandedRows:20000,columns:200,text:200} as const
+export const SMART_LIMITS={sourceRows:5000,expandedRows:5000,columns:200,text:200} as const
 const baseAliases={
  bank:['banco','instituicao','banco_instituicao'],
  agreement:['convenio'],
@@ -311,10 +313,10 @@ export function mapSmartCommercialRows(
    repasses.push({group_id:group.id,component_type_id:gc.component.id,raw_value:value,rule_hint:mapping.rule_hint,value_kind_hint:mapping.value_kind_hint,source_slot:gc.slot})
   }
 
-  if(rows.length+(max-min+1)>SMART_LIMITS.expandedRows){issues.push({line,code:'file_too_large_for_import'});return}
-  for(let term=min;term<=max;term++)rows.push({
+  if(rows.length+1>SMART_LIMITS.expandedRows){issues.push({line,code:'file_too_large_for_import'});return}
+  rows.push({
    bank_name:bank,agreement_name:agreement,table_name:table,external_table_code:cell(r,col.externalCode)||null,
-   contract_type_id:type.id,contract_type_name:type.name,term,
+   contract_type_id:type.id,contract_type_name:type.name,term:min,term_min:min,term_max:max,
    coefficient:coefficient??factor,rate,effective_from:from,effective_until:until,
    factor_mode:fMode,factor_value:factor,factor_date:fDate,
    components:comps,source_repasses:repasses,
