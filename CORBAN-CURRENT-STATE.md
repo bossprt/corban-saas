@@ -981,3 +981,20 @@ UI adicionada:
 - Central de Cadastros atualizada com Vendedores e Fatores.
 
 Limitação atual de importação de fatores: PDF e XLS legado ainda não entram nesta primeira UI; o domínio e a linhagem já estão preparados para a próxima onda adaptativa.
+
+
+## Próxima onda preparada — Componentes/Tipos de Contrato
+Ainda NÃO LIVE:
+- `20261009_component_commissions_v1`
+- `20261010_tenant_contract_types_v1`
+- `20261011_post_seller_factors_fk_indexes_v1`
+
+As três passaram em rollback-only contra o schema LIVE.
+
+A 20261009 cria a fundação para a meta principal do importador: componentes de comissão recebida e repasse por grupo, com valores em percentual ou R$, política por escopo e versões imutáveis.
+
+A 20261010 transforma Tipo de Contrato em catálogo global + extensões/configurações do tenant, mantendo independência de Produto/Tabela.
+
+A 20261011 fecha índices de FKs introduzidas por Seller/SUB/Fatores.
+
+Nenhuma dessas migrations foi aplicada ainda.
