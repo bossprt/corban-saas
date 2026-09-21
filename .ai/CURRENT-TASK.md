@@ -1792,3 +1792,25 @@ Concluído:
 
 Próxima fronteira arquitetural:
 integrar o Vendedor/SUB à proposta e ao cálculo esperado, congelando seller/group/category e a versão da regra SUB usada por componente. Hoje o cadastro SUB existe e está LIVE, mas a proposta/financeiro ainda não congela nem aplica essa regra.
+
+
+## Human Gate atual — Seller/SUB proposal snapshot
+Preparado e validado rollback-only:
+- `supabase/migrations/20261014_seller_sub_proposal_snapshot_v1.sql`
+- `tests/security/seller-sub-proposal-snapshot-contract.sql`
+- `docs/SELLER-SUB-PROPOSAL-SNAPSHOT-V1.md`
+
+Definition of Done do DDL:
+- seller atribuído somente em draft via RPC supervisor+;
+- seller congela antes do financeiro;
+- SUB resolve regra publicada por componente/fallback all;
+- company share fica congelado por componente;
+- expected commission usa company share congelado;
+- non-SUB/legado preserva 100%;
+- comissão de grupo não vaza em attribution snapshot member-visible;
+- network split não é confundido com SUB;
+- migration/contract rollback-only verde.
+
+LIVE atual sem propostas/eventos/SUB reais, reduzindo risco de backfill.
+Próxima ação: aplicar migration LIVE somente após autorização explícita.
+Depois do LIVE: construir seletor de vendedor na proposta draft e exibir snapshot SUB/receita esperada supervisor+.
