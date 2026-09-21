@@ -125,13 +125,14 @@ test('proposal statuses have labels and a next step; paid is evidence-only', () 
 test('unknown money is "Não calculado", never R$ 0,00', () => {
   for (const f of ['src/app/app/simulacoes/page.tsx', 'src/app/app/propostas/[id]/page.tsx']) assert.match(read(f), /value === null \? 'Não calculado'/, f)
 })
-test('menu: modules are role-aware', () => {
+test('menu: modules are role-aware (navigation redesigned: 7 entries)', () => {
+  const NL = String.fromCharCode(10)
   const l = read('src/app/app/layout.tsx')
-  for (const [href, guard] of [['/app/catalogo', "atLeast(r, 'supervisor')"], ['/app/rede', 'canManageTeam'], ['/app/importacoes', "atLeast(r, 'supervisor')"], ['/app/integracoes', "atLeast(r, 'supervisor')"], ['/app/financeiro', 'canViewCommission'], ['/app/equipe', 'canManageTeam'], ['/app/configuracao', 'canManageTeam']]) {
-    const line = l.split('\n').find(x => x.includes(`'${href}'`)) ?? ''
+  for (const [href, guard] of [['/app/financeiro', 'canViewCommission'], ['/app/cadastros', "atLeast(r, 'supervisor')"], ['/app/configuracao', 'canManageTeam']]) {
+    const line = l.split(NL).find(x => x.includes(`'${href}'`)) ?? ''
     assert.ok(line.includes(guard), href)
   }
-  for (const href of ['/app', '/app/leads', '/app/clientes', '/app/simulacoes', '/app/propostas', '/app/documentos', '/app/operacao']) assert.ok(!(l.split('\n').find(x => x.includes(`'${href}',`)) ?? '').includes('show:'), href)
+  for (const href of ['/app', '/app/crm', '/app/operacional', '/app/relatorios']) assert.ok(!(l.split(NL).find(x => x.includes(`'${href}',`)) ?? '').includes('show:'), href)
 })
 test('agent dashboard is scoped to the agent own records', () => {
   const d = read('src/app/app/page.tsx')

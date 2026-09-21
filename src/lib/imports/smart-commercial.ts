@@ -1,4 +1,4 @@
-import { normalizeHeader, parseCoefficient, parseRate, parseTerm, parseDecimal } from '@/lib/commercial'
+import { normalizeHeader, parseCoefficient, parseRate, parseTerm, parseDecimal } from '../commercial'
 
 export type SmartImportContractType={id:string;name:string;tech_key:string}
 export type SmartImportGroup={id:string;name:string}

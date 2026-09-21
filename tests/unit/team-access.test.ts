@@ -149,9 +149,8 @@ test('health endpoint exposes no configuration or secrets', () => {
   assert.doesNotMatch(h, /INTEGRATION_WORKER_SECRET|SERVICE_ROLE|createAdminClient/)
   assert.match(read('src/utils/supabase/middleware.ts'), /\/api\/health/)
 })
-test('the menu offers Equipe only to managers and Financeiro only to commission viewers (pages still enforce)', () => {
+test('the menu offers Financeiro only to commission viewers and Configuração (team) only to managers (pages still enforce)', () => {
   const l = read('src/app/app/layout.tsx')
-  assert.match(l, /href: '\/app\/equipe'[^}]*show: canManageTeam/)
+  assert.match(l, /href: '\/app\/configuracao'[^}]*show: canManageTeam/)
   assert.match(l, /href: '\/app\/financeiro'[^}]*show: canViewCommission/)
-  for (const href of ['/app/leads', '/app/clientes', '/app/simulacoes', '/app/propostas', '/app/documentos', '/app/operacao', '/app/integracoes', '/app/financeiro', '/app/equipe']) assert.ok(l.includes(`'${href}'`), href)
 })
