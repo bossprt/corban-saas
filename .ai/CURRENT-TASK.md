@@ -1567,3 +1567,27 @@ Próxima fila:
 3. preparar gerenciamento de Tipo de Contrato no domínio Produtos sem quebrar os tipos globais existentes;
 4. gerar modelo de importação com nomes reais dos grupos de comissão;
 5. só então solicitar novo Human Gate para o DDL adicional.
+
+
+## Human Gate — Componentes de comissão + Tipos de Contrato + índices
+Preparado e validado rollback-only:
+- `20261009_component_commissions_v1.sql`
+- `20261010_tenant_contract_types_v1.sql`
+- `20261011_post_seller_factors_fk_indexes_v1.sql`
+
+Tripla revisão concluída:
+1. completude: cobre componentes À Vista/Diferido/Bônus 1/2/3/Plástico/Seguro, % ou R$, regra por Grupo de Comissão, desconto/imposto e escopo organização/instituição/convênio/tabela;
+2. adversarial: camada aditiva, sem reescrever motor simples; política financeira fail-closed supervisor+; escopo de tabela validado contra rota; tipos globais preservados;
+3. execução: três migrations + contratos SQL executados dentro de transação com ROLLBACK e passaram sem persistência.
+
+`20261010` mantém os tipos globais e permite tipos próprios do tenant, além de configuração habilitado/esteira/comissão.
+
+`20261011` apenas adiciona índices para FKs de Seller/SUB/Fatores apontadas pelo advisor.
+
+Próxima ação exige autorização explícita para DDL LIVE. Depois do apply:
+- rodar contratos e advisors;
+- construir UI Produtos -> Tipos de Contrato;
+- construir política de componentes e importador inteligente;
+- gerar XLSX com nomes reais dos Grupos de Comissão;
+- implementar perguntas condicionais para Diferido/Plástico/Bônus;
+- não usar Claude salvo necessidade real.
