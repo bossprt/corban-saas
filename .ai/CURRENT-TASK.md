@@ -1547,3 +1547,23 @@ Onda 20261008:
 - resolver determinístico para CRM/simulação.
 
 Próxima ação exige Human Gate explícito: aplicar as duas migrations LIVE. Depois do apply, executar contratos, advisors, criar UI de Vendedores/Grupos e Fatores e continuar para importação inteligente.
+
+
+## Pós-LIVE Seller/SUB + Fatores
+LIVE confirmado:
+- `20260920235725 seller_commercial_profile_v1`
+- `20260920235731 commercial_factors_v1`
+
+Contratos pós-apply passaram. Security advisor sem WARN/ERROR novo.
+
+Implementação de aplicação já iniciada sem Claude:
+- Vendedores: Grupo de Vendedor separado de Grupo de Comissão, PF/PJ/SUB, edição, ativação e publicação de regra SUB;
+- Fatores: perfil diário/fixo, cadastro manual, CSV/XLSX determinístico, publicação versionada;
+- Cadastros hub atualizado.
+
+Próxima fila:
+1. confirmar build Vercel do commit de UI;
+2. preparar extensão de componentes de comissão para à vista/diferido/bônus/plástico/seguro e importador guiado;
+3. preparar gerenciamento de Tipo de Contrato no domínio Produtos sem quebrar os tipos globais existentes;
+4. gerar modelo de importação com nomes reais dos grupos de comissão;
+5. só então solicitar novo Human Gate para o DDL adicional.
