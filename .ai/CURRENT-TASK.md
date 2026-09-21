@@ -2199,3 +2199,35 @@ Application UX:
 
 Important remaining domain gap:
 - payout readiness is now in place, but final commission-payment settlement/reporting still requires its own governed payout batch/payment ledger. Do NOT infer `paid to seller` from calculated commission or company financial events.
+
+
+## Seller operations identity + seller UX V1 — LIVE / app rollout
+Applied LIVE:
+- `20260921055340 seller_operations_identity_v1`
+- regression patch under same authorized wave: `seller_branch_default_regression_fix_v1` (new sellers default to active Matriz when branch is omitted by older RPCs).
+
+Database capabilities now LIVE:
+- organization_branches with one Matrix per organization and optional branches;
+- commercial_sellers.branch_id required and backfilled to Matrix;
+- commercial_sellers.commission_payment_frequency = daily|weekly|monthly (default monthly);
+- seller_bank_aliases for deterministic external bank/user identity;
+- normalized imports accept producerExternalUser and store resolved_seller_id;
+- import match candidates carry seller_id when an alias resolves;
+- no guessing: unknown alias stays unresolved/human-required.
+
+Application UX implemented on branch:
+- Cadastros -> Vendedores redirects to compact consultation/list as module entrypoint;
+- Cadastrar vendedor opens /app/cadastros/vendedores/novo;
+- new seller screen is a single structured form with commercial identity, Matrix/Branch, payment frequency, profile/contact, address, direct external login/password, payout account and initial bank-user alias;
+- password goes directly to Supabase Auth admin createUser and is never persisted in seller tables/logs;
+- Auth user is email-confirmed server-side for this controlled admin-created access and invitation acceptance links it automatically to the seller as agent;
+- seller profile edit includes Matrix/Branch, payment frequency and bank-user aliases;
+- Produção e comissão removed from seller registry; that belongs to seller external area and manager/supervisor reports;
+- Matriz e filiais has a dedicated registrations page; no branch-management block pollutes seller registration;
+- 2Tech/generic import adapters now extract producerExternalUser from common columns such as Usuário Banco, Usuário, Login, Operador and Vendedor.
+
+Security:
+- seller direct login remains agent-only and own-commission scoped by existing RLS;
+- passwords remain Auth-only and hashed by Supabase; never persisted as plaintext;
+- seller alias resolution is tenant-scoped and deterministic;
+- Security Advisor after DDL remained unchanged: no new WARN/ERROR, only 2 historical Platform Admin INFO.
