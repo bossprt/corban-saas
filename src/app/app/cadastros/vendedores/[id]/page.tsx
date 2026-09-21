@@ -5,12 +5,14 @@ import { atLeast } from '@/lib/rbac'
 import { SubmitButton } from '@/components/SubmitButton'
 import { SellerAccessScope } from '../SellerAccessScope'
 import {
+  addSellerBankAlias,
   addSubRule,
   saveSellerAddress,
   saveSellerCertification,
   saveSellerPaymentAccount,
   saveSellerProfile,
   setSellerActive,
+  setSellerBankAliasActive,
   updateSeller,
 } from '../actions'
 
@@ -29,11 +31,11 @@ export default async function SellerDetailPage({params}:{params:Promise<{id:stri
   const canEdit=atLeast(membership.role,'manager')
 
   const {data:seller}=await supabase.from('commercial_sellers')
-    .select('id,name,seller_category,tax_id,seller_group_id,commission_group_id,user_id,is_active')
+    .select('id,name,seller_category,tax_id,seller_group_id,commission_group_id,branch_id,commission_payment_frequency,user_id,is_active')
     .eq('id',id).maybeSingle()
   if(!seller)notFound()
 
-  const [profile,address,payments,certifications,sellerGroups,commissionGroups,banks,subRules]=await Promise.all([
+  const [profile,address,payments,certifications,sellerGroups,commissionGroups,banks,subRules,branches,aliases,providers]=await Promise.all([
     supabase.from('seller_profiles').select('*').eq('seller_id',id).maybeSingle(),
     supabase.from('seller_addresses').select('*').eq('seller_id',id).eq('is_current',true).maybeSingle(),
     supabase.from('seller_payment_accounts').select('*').eq('seller_id',id).order('valid_from',{ascending:false}).limit(20),
@@ -42,6 +44,9 @@ export default async function SellerDetailPage({params}:{params:Promise<{id:stri
     supabase.from('commission_groups').select('id,name,is_active').order('sort_order').order('name'),
     supabase.from('banks').select('id,code,name,is_active').eq('is_active',true).order('name'),
     supabase.from('seller_sub_rule_versions').select('id,sub_share_pct,company_share_pct,effective_from,status').eq('seller_id',id).eq('status','published').order('effective_from',{ascending:false}),
+    supabase.from('organization_branches').select('id,code,name,branch_type,is_active').order('branch_type').order('name'),
+    supabase.from('seller_bank_aliases').select('id,source_key,external_user,bank_id,provider_id,is_active,created_at').eq('seller_id',id).order('created_at',{ascending:false}),
+    supabase.from('providers').select('id,name,is_active').eq('is_active',true).order('name'),
   ])
 
   const currentPayment=(payments.data??[]).find(p=>p.is_current)??null
@@ -71,7 +76,9 @@ export default async function SellerDetailPage({params}:{params:Promise<{id:stri
         <label className="text-xs text-slate-400">CPF/CNPJ<input name="tax_id" defaultValue={seller.tax_id??''} className={field+' mt-1 block w-full'}/></label>
         <label className="text-xs text-slate-400">Categoria<select name="seller_category" defaultValue={seller.seller_category} className={field+' mt-1 block w-full'}><option value="pf">PF</option><option value="pj">PJ</option><option value="sub">SUB</option></select></label>
         <label className="text-xs text-slate-400">Grupo de Vendedor<select name="seller_group_id" defaultValue={seller.seller_group_id} className={field+' mt-1 block w-full'}>{(sellerGroups.data??[]).filter(x=>x.is_active||x.id===seller.seller_group_id).map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
-        <label className="text-xs text-slate-400 md:col-span-2">Grupo de Comissão<select name="commission_group_id" defaultValue={seller.commission_group_id} className={field+' mt-1 block w-full'}>{(commissionGroups.data??[]).filter(x=>x.is_active||x.id===seller.commission_group_id).map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
+        <label className="text-xs text-slate-400">Grupo de Comissão<select name="commission_group_id" defaultValue={seller.commission_group_id} className={field+' mt-1 block w-full'}>{(commissionGroups.data??[]).filter(x=>x.is_active||x.id===seller.commission_group_id).map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label>
+        <label className="text-xs text-slate-400">Matriz / Filial<select name="branch_id" defaultValue={seller.branch_id} className={field+' mt-1 block w-full'}>{(branches.data??[]).filter(x=>x.is_active||x.id===seller.branch_id).map(x=><option key={x.id} value={x.id}>{x.branch_type==='matrix'?'Matriz · ':'Filial · '}{x.name}</option>)}</select></label>
+        <label className="text-xs text-slate-400 md:col-span-2">Periodicidade de pagamento<select name="commission_payment_frequency" defaultValue={seller.commission_payment_frequency} className={field+' mt-1 block w-full'}><option value="daily">Diário</option><option value="weekly">Semanal</option><option value="monthly">Mensal</option></select></label>
         {canEdit&&<SubmitButton className={btn}>Salvar identificação comercial</SubmitButton>}
       </form>
       {seller.seller_category==='sub'&&<div className="mt-4 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
@@ -125,8 +132,34 @@ export default async function SellerDetailPage({params}:{params:Promise<{id:stri
       <SellerAccessScope sellerId={seller.id} userId={seller.user_id??null}/>
     </div>
 
+    <div className={card}>
+      <h2 className="text-lg font-semibold">5. Usuários de banco / aliases de produção</h2>
+      <p className="mt-1 text-xs text-slate-500">Quando uma planilha trouxer um destes usuários, o importador poderá reconhecer automaticamente este vendedor.</p>
+      <div className="mt-3 space-y-2">
+        {!(aliases.data??[]).length
+          ? <p className="text-sm text-slate-500">Nenhum usuário externo cadastrado.</p>
+          : (aliases.data??[]).map(a=><div key={a.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800 p-3 text-sm">
+              <div><div className="font-medium">{a.source_key+' · '+a.external_user}</div><div className="mt-1 text-xs text-slate-500">{a.is_active?'Ativo':'Inativo'}</div></div>
+              {canEdit&&<form action={setSellerBankAliasActive}>
+                <input type="hidden" name="seller_id" value={seller.id}/>
+                <input type="hidden" name="alias_id" value={a.id}/>
+                <input type="hidden" name="active" value={a.is_active?'false':'true'}/>
+                <SubmitButton className={ghost}>{a.is_active?'Inativar':'Reativar'}</SubmitButton>
+              </form>}
+            </div>)}
+      </div>
+      {canEdit&&<form action={addSellerBankAlias} className="mt-4 grid gap-3 md:grid-cols-2">
+        <input type="hidden" name="seller_id" value={seller.id}/>
+        <label className="text-xs text-slate-400">Banco<select name="bank_id" defaultValue="" className={field+' mt-1 block w-full'}><option value="">Não informar</option>{(banks.data??[]).map(b=><option key={b.id} value={b.id}>{(b.code?String(b.code)+' · ':'')+b.name}</option>)}</select></label>
+        <label className="text-xs text-slate-400">Provedor / origem<select name="provider_id" defaultValue="" className={field+' mt-1 block w-full'}><option value="">Não informar</option>{(providers.data??[]).map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+        <label className="text-xs text-slate-400">Chave da origem no arquivo<input required name="source_key" placeholder="Ex.: pan, daycoval" className={field+' mt-1 block w-full'}/></label>
+        <label className="text-xs text-slate-400">Usuário/login no banco<input required name="external_user" placeholder="Ex.: cleuton.smart" className={field+' mt-1 block w-full'}/></label>
+        <SubmitButton className={btn}>Adicionar usuário de banco</SubmitButton>
+      </form>}
+    </div>
+
     {atLeast(membership.role,'manager')&&<div className={card}>
-      <h2 className="text-lg font-semibold">5. Dados para pagamento de comissão</h2>
+      <h2 className="text-lg font-semibold">6. Dados para pagamento de comissão</h2>
       <p className="mt-1 text-xs text-slate-500">Conta/Pix é versionado para preservar o histórico usado em fechamento e auditoria.</p>
       <form action={saveSellerPaymentAccount} className="mt-4 grid gap-3 md:grid-cols-2">
         <input type="hidden" name="seller_id" value={seller.id}/>
@@ -149,7 +182,7 @@ export default async function SellerDetailPage({params}:{params:Promise<{id:stri
     </div>}
 
     <div className={card}>
-      <h2 className="text-lg font-semibold">6. Certificações</h2>
+      <h2 className="text-lg font-semibold">7. Certificações</h2>
       <div className="mt-3 space-y-2">{!(certifications.data??[]).length?<p className="text-sm text-slate-500">Nenhuma certificação cadastrada.</p>:(certifications.data??[]).map(c=><div key={c.id} className="rounded-lg border border-slate-800 p-3 text-sm">
         <div className="font-medium">{c.name}</div>
         <div className="mt-1 text-xs text-slate-400">{(c.issuer||'Emissor não informado')+' · '+(c.certificate_number||'sem número')+' · '+(CERT_STATUS[c.status]??c.status)+(c.expires_at?' · validade '+String(c.expires_at):'')}</div>
