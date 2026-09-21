@@ -22,7 +22,10 @@ function fail(path:string,code:string):never{redirect(`${path}?erro=${encodeURIC
 function parseMoney(raw:string):string|null{
  const v=raw.trim().replace(/\s/g,'')
  const normalized=v.includes(',')?v.replace(/\./g,'').replace(',','.'):v
- return /^\d{1,12}(\.\d{1,2})?$/.test(normalized)&&Number(normalized)>0?normalized:null
+ if(!/^\d{1,12}(\.\d{1,2})?$/.test(normalized))return null
+ const [whole,frac='']=normalized.split('.')
+ if(!/[1-9]/.test(whole+frac))return null
+ return normalized
 }
 
 export async function reverseFinancialEvent(formData:FormData){
