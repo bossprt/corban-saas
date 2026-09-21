@@ -1120,3 +1120,22 @@ Continuação autônoma concluída sem Claude e sem DDL:
 - o mesmo mapeamento da prévia é reenviado na aplicação, evitando divergência preview/apply;
 - reutilizar a mesma coluna para dois campos é recusado;
 - Vercel READY no commit `673bc577189c1f05834305382f2a82fd841452c5`.
+
+
+## Human Gate — Smart Import policy scope guard
+Nova proteção preparada após revisão adversarial:
+- app já recusa política de comissão selecionada fora do escopo de Instituição/Convênio/Tabela;
+- precheck LIVE encontrou **0** vínculos existentes fora de escopo;
+- migration `20261013_smart_import_policy_scope_guard_v1.sql` preparada;
+- contract `tests/security/smart-import-policy-scope-contract.sql` preparado;
+- migration + contract passaram juntos em transação `BEGIN ... ROLLBACK`, sem persistência;
+- Vercel do HEAD `113ecd2aba2cc6fbe362dc2a9ed83e8c613cb23c` está READY.
+
+A migration substitui somente a função de guarda já existente e adiciona defesa no banco:
+- policy.org_bank_id deve corresponder à rota da condição;
+- policy.org_agreement_id deve corresponder à rota;
+- policy.product_table_id deve corresponder à Tabela;
+- política inativa/inexistente é recusada;
+- proteções anteriores de draft/imutabilidade/RPC-only permanecem.
+
+**NÃO LIVE ainda.** Próxima ação requer autorização explícita do Owner.
