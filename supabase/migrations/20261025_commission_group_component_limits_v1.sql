@@ -53,7 +53,7 @@ create or replace function public.save_commission_group_configuration(
 )
 returns uuid
 language plpgsql
-security invoker
+security definer
 set search_path=''
 as $$
 declare
