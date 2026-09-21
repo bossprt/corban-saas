@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
 import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedback'
+import { normalizeEmail } from '@/lib/team'
+import { sendInvitationEmail } from '@/lib/team.server'
 
 const PATH='/app/cadastros/vendedores'
 const text=(f:FormData,k:string)=>String(f.get(k)??'').trim()
@@ -26,12 +28,28 @@ export async function createSeller(f:FormData){
   const ctx=await manager(); if(!ctx)return go('erro:sem_permissao')
   const name=text(f,'name'),category=text(f,'seller_category'),sellerGroup=text(f,'seller_group_id'),commissionGroup=text(f,'commission_group_id')
   const taxId=tax(text(f,'tax_id'))
+  const createAccess=text(f,'create_access')==='on'
+  const rawEmail=text(f,'email')
+  const email=createAccess?normalizeEmail(rawEmail):null
   if(name.length<1||name.length>160||!['pf','pj','sub'].includes(category)||!uuid(sellerGroup)||!uuid(commissionGroup)||taxId===undefined)return go('erro:vendedor_invalido')
-  const {error}=await ctx.supabase.from('commercial_sellers').insert({
-    organization_id:ctx.membership.organization_id,name,seller_category:category,tax_id:taxId,
-    seller_group_id:sellerGroup,commission_group_id:commissionGroup
+  if(createAccess&&!email)return go('erro:vendedor_acesso_email')
+
+  const {data,error}=await ctx.supabase.rpc('create_seller_with_access',{
+    p_org:ctx.membership.organization_id,
+    p_name:name,
+    p_seller_category:category,
+    p_tax_id:taxId,
+    p_seller_group_id:sellerGroup,
+    p_commission_group_id:commissionGroup,
+    p_email:email,
   })
-  return error?go(classifyDbFeedback(error)):go('ok:vendedor_cadastrado')
+  if(error)return go(classifyDbFeedback(error))
+
+  const row=Array.isArray(data)?data[0]:null
+  if(!createAccess||!email||!row?.invitation_id)return go('ok:vendedor_cadastrado')
+
+  const outcome=await sendInvitationEmail(email)
+  return go(outcome==='sent'?'ok:vendedor_cadastrado_acesso_enviado':'ok:vendedor_cadastrado_acesso_pendente')
 }
 
 export async function updateSeller(f:FormData){
