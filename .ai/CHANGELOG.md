@@ -365,3 +365,11 @@ Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`)
 ### Segurança — 20/09/2026
 
 - XLSX com mais de 1.000 linhas era cortado em silencio; agora recusado acima do teto. Coluna de dinheiro nao reconhecida recusa o arquivo. Datas de calendario invalidas recusadas.
+
+
+### Integrado — 20/09/2026 (XLS/PDF Smart Import)
+- PR #1 revisado e mesclado.
+- Suporte a XLS legado e PDF textual integrado.
+- Build de produção READY.
+- `/app/comercial` auditado e novamente vinculado a `canViewCommission`.
+- Nenhuma migration nova/reaplicada.
