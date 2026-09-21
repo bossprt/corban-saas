@@ -171,7 +171,7 @@ export function mapConditionRows(rows: readonly (readonly unknown[])[], ctx: { g
     const amountMinRaw=cell(col.amountMin), amountMaxRaw=cell(col.amountMax)
     const amountMin=col.amountMin===undefined||amountMinRaw===''?null:parseDecimal(amountMinRaw,{maxInt:9,scale:2})
     const amountMax=col.amountMax===undefined||amountMaxRaw===''?null:parseDecimal(amountMaxRaw,{maxInt:9,scale:2})
-    const moneyCents=(v:string)=>{const [i,d='']=v.split('.');return BigInt(i)*100n+BigInt((d+'00').slice(0,2))}
+    const moneyCents=(v:string)=>{const [i,d='']=v.split('.');return BigInt(i)*BigInt(100)+BigInt((d+'00').slice(0,2))}
     if((amountMinRaw==='')!==(amountMaxRaw==='')||(amountMinRaw!==''&&(amountMin===null||amountMax===null||moneyCents(amountMin)>moneyCents(amountMax))))return fail(line,'invalid_amount_range')
     const coefficient = cell(col.coefficient) === '' ? null : parseCoefficient(cell(col.coefficient))
     const rate = cell(col.rate) === '' ? null : parseRate(cell(col.rate))
