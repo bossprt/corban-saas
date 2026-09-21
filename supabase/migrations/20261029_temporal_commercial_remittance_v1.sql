@@ -1,5 +1,48 @@
 -- CORBAN OS — Temporal commercial versions + complete/partial remittance V1
 
+create or replace function public.guard_product_table_version_immutable()
+returns trigger
+language plpgsql
+set search_path=''
+as $
+declare
+  v_catalog_governed boolean:=coalesce(current_setting('corban.catalog_rpc',true),'')='on';
+begin
+  if old.status='draft' and new.status not in ('draft','published') then
+    raise exception 'invalid_product_table_version_transition';
+  end if;
+  if old.status='published' and new.status not in ('published','superseded','expired') then
+    raise exception 'invalid_product_table_version_transition';
+  end if;
+  if old.status in ('superseded','expired') and new.status is distinct from old.status then
+    raise exception 'terminal_product_table_version_status';
+  end if;
+
+  if old.status<>'draft' then
+    -- Commercial facts remain immutable after publication.
+    if new.organization_id is distinct from old.organization_id
+       or new.product_table_id is distinct from old.product_table_id
+       or new.version is distinct from old.version
+       or new.effective_from is distinct from old.effective_from
+       or new.term_min is distinct from old.term_min
+       or new.term_max is distinct from old.term_max
+       or new.rate is distinct from old.rate
+       or new.coefficient is distinct from old.coefficient
+       or new.metadata is distinct from old.metadata
+       or new.created_at is distinct from old.created_at
+    then
+      raise exception 'published_product_table_version_is_immutable';
+    end if;
+
+    -- Only governed catalog/remittance code may close a published interval.
+    if new.effective_until is distinct from old.effective_until and not v_catalog_governed then
+      raise exception 'published_product_table_version_is_immutable';
+    end if;
+  end if;
+  return new;
+end
+$;
+
 create or replace function public.publish_product_table_version(p_version_id uuid)
 returns uuid
 language plpgsql
