@@ -232,6 +232,7 @@ export function genericRepassMapFromForm(fd:FormData){
   if(!/^\d{1,2}$/.test(slot)||!value||Array.isArray(value)||typeof value!=='object')throw new Error('invalid_generic_repass_map')
   const v=value as Record<string,unknown>
   if(typeof v.group_id!=='string'||!v.group_id||!['share_of_received','direct'].includes(String(v.rule_hint))||!['percentage','fixed_brl'].includes(String(v.value_kind_hint)))throw new Error('invalid_generic_repass_map')
+  if(v.rule_hint==='share_of_received'&&v.value_kind_hint!=='percentage')throw new Error('invalid_generic_repass_map')
   out[slot]={group_id:v.group_id,rule_hint:v.rule_hint as 'share_of_received'|'direct',value_kind_hint:v.value_kind_hint as 'percentage'|'fixed_brl'}
  }
  return out

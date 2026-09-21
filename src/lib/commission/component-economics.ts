@@ -52,3 +52,7 @@ export function componentEconomics(x:ComponentEconomicsInput):ComponentEconomics
   const compatible=x.directValueKind===x.receivedKind
   return {gross:text(gross),net:text(net),payout:text(direct),retained:compatible?text(net-direct):null,payoutKind:x.directValueKind,compatible}
 }
+
+export function decimalEqual(a:string,b:string):boolean{
+  try{return scaled(a)===scaled(b)}catch{return false}
+}
