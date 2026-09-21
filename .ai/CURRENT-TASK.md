@@ -1732,3 +1732,20 @@ Próxima fila permanece:
 1. mapeamento manual para arquivos que exigem revisão;
 2. preview econômico determinístico;
 3. teste com XLS/PDF comercial real quando houver amostra adequada.
+
+
+## Smart Import — estado após prévia econômica/mapeamento
+Concluído diretamente pelo ChatGPT:
+- prévia financeira component-aware usando a versão selecionada da política;
+- cálculo determinístico sem IA/float;
+- empresa recebe / após imposto / grupo recebe / empresa retém;
+- mapeamento manual de cabeçalhos para arquivos com nomenclatura externa;
+- preview/apply compartilham exatamente o mesmo header_map;
+- mapeamento inválido falha fechado;
+- upload agora descreve corretamente CSV/XLSX/XLS/PDF;
+- Vercel READY.
+
+Próxima fila autônoma:
+1. mapear valores de Tipo de Contrato desconhecidos (ex.: “Refin-Portabilidade” → “Refin/Portabilidade”) sem criar tipo silenciosamente;
+2. sugerir automaticamente regra de comissão por escopo de Instituição/Convênio/Tabela, mas exigir escolha quando houver ambiguidade;
+3. depois comparar Repasse 1/2/3 externo com política interna somente quando o usuário mapear explicitamente o slot ao grupo — nunca inferir.
