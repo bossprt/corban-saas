@@ -22,6 +22,6 @@ export function canManageMemberRole(actor:string|null|undefined,current:string|n
 export const rolesAssignableBy=(actor:string|null|undefined):Role[]=>ROLES.filter(r=>canManageMemberRole(actor,null,r))
 export const canManageTeam=(role:string|null|undefined)=>atLeast(role,'manager')
 
-// Commission visibility (PENDING BUSINESS DECISION: may an agent see expected commission?). Until the Owner decides, the answer is
-// fail-closed: supervisor and above only. Every screen asks this function, so the decision is changed in ONE place (plus the DB, see docs/PILOT-GAP-ANALYSIS.md).
-export const canViewCommission=(role:string|null|undefined)=>atLeast(role,'supervisor')
+// Company financial truth / ledger is restricted to manager+.
+// Seller commission has its own scoped RLS surface: seller=own, supervisor=supervised sellers, manager/admin=all.
+export const canViewCommission=(role:string|null|undefined)=>atLeast(role,'manager')
