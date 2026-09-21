@@ -136,30 +136,32 @@ Aplicação financeira:
 - validação de valor de reversão e comparação de saldo reversível foram ajustadas para não usar ponto flutuante;
 - commit funcional em validação/READY no Vercel antes do encerramento desta sessão.
 
-## HUMAN GATE ATUAL — Simulation lifecycle V1
+## Simulation lifecycle V1 — LIVE
+LIVE:
+- `20260921032402 simulation_lifecycle_v1`.
+
+Pós-apply:
+- contract passou;
+- `selected` é terminal;
+- fechamento governado somente `calculated -> cancelled|expired` para supervisor/manager/admin;
+- UI de Cancelar/Expirar está READY no Vercel.
+
+## HUMAN GATE ATUAL — Organization direct-write privilege hardening V1
 Preparada e **NÃO LIVE**:
-- `20261016_simulation_lifecycle_v1.sql`
-- `tests/security/simulation-lifecycle-contract.sql`
+- `20261017_organization_direct_write_privilege_hardening_v1.sql`
+- `tests/security/organization-direct-write-privilege-contract.sql`
 
 Objetivo:
-fechar o lifecycle de simulações sem permitir que uma simulação que já virou proposta seja cancelada/expirada depois.
-
-Regras preparadas:
-- somente `calculated -> cancelled|expired`;
-- supervisor/manager/admin;
-- simulação com proposta vinculada falha fechado;
-- `selected` torna-se terminal;
-- `expired/cancelled` continuam terminais;
-- RPC governada, anon sem EXECUTE.
-
-A camada de aplicação já foi corrigida para não usar float no valor/exibição da simulação e está READY no Vercel.
+remover privilégios diretos de mutação de `public.organizations` do papel `authenticated`. O bootstrap real já usa Admin client + RPC de Platform Admin e não depende desses grants.
 
 Validação:
-- migration + contract verdes em `BEGIN ... ROLLBACK`;
+- migration + contract passaram em `BEGIN ... ROLLBACK`;
+- authenticated preserva SELECT;
+- authenticated continua sem EXECUTE em `bootstrap_organization_admin`;
 - migration não consta em `list_migrations`;
 - Security Advisor sem WARN/ERROR novo.
 
-**Ao retomar, perguntar somente se o Owner autoriza aplicar `20261016_simulation_lifecycle_v1` LIVE, salvo outra instrução explícita.**
+**Ao retomar, perguntar somente se o Owner autoriza aplicar `20261017_organization_direct_write_privilege_hardening_v1` LIVE, salvo outra instrução explícita.**
 
 ## Ambiente
 - GitHub: `bossprt/corban-saas`
