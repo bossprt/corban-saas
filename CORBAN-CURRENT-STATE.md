@@ -998,3 +998,28 @@ A 20261010 transforma Tipo de Contrato em catálogo global + extensões/configur
 A 20261011 fecha índices de FKs introduzidas por Seller/SUB/Fatores.
 
 Nenhuma dessas migrations foi aplicada ainda.
+
+
+## Componentes/Tipos de Contrato — LIVE
+Aplicadas em produção com autorização explícita do Owner:
+- `component_commissions_v1`
+- `tenant_contract_types_v1`
+- `post_seller_factors_fk_indexes_v1`
+
+Incluído no catálogo global:
+- Novo
+- Refinanciamento
+- Compra de Dívida
+- Portabilidade
+- **Refin/Portabilidade** — usado para refinanciamento de contrato oriundo de portabilidade.
+
+Validação pós-apply:
+- três contratos SQL passaram;
+- security advisor sem WARN/ERROR novo, apenas os 2 INFO históricos de Platform Admin;
+- Refin/Portabilidade confirmado no catálogo LIVE;
+- índices de FK de Seller/SUB/Fatores aplicados.
+
+Aplicação em andamento sem Claude:
+- gerenciamento de Tipos de Contrato por tenant;
+- flags Habilitado / Usar na esteira / Usar em comissão;
+- regras de comissão por componentes e por Grupo de Comissão.
