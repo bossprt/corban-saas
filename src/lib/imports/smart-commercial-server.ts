@@ -1,5 +1,6 @@
 
 import { readSmartFile, type SmartFormat } from '@/lib/imports/smart-file'
+import { normalizeHeader } from '@/lib/commercial'
 import { effectiveContractTypes } from '@/lib/contract-types'
 import { applySmartHeaderMap, mapSmartCommercialRows, type SmartHeaderMap, type SmartImportResult } from '@/lib/imports/smart-commercial'
 
@@ -118,4 +119,45 @@ export function contractTypeMapFromForm(fd:FormData){
   out[source.trim()]=target
  }
  return out
+}
+
+
+export async function validateSmartPolicyScope(ctx:Ctx,organizationId:string,policyVersionId:string,rows:SmartImportResult['rows']){
+ if(!policyVersionId)return {ok:true as const}
+ const versionQ=await ctx.supabase.from('component_payout_policy_versions').select('id,policy_id,organization_id').eq('id',policyVersionId).eq('organization_id',organizationId).maybeSingle()
+ const version=versionQ.data as {id:string;policy_id:string;organization_id:string}|null
+ if(!version)return {ok:false as const,error:'Regra de comissão não encontrada para esta empresa.'}
+ const policyQ=await ctx.supabase.from('component_payout_policies').select('id,org_bank_id,org_agreement_id,product_table_id,is_active').eq('id',version.policy_id).eq('organization_id',organizationId).maybeSingle()
+ const policy=policyQ.data as {id:string;org_bank_id:string|null;org_agreement_id:string|null;product_table_id:string|null;is_active:boolean}|null
+ if(!policy||!policy.is_active)return {ok:false as const,error:'Regra de comissão está inativa ou indisponível.'}
+ const same=(a:string,b:string)=>normalizeHeader(a)===normalizeHeader(b)
+ if(policy.org_bank_id){
+  const q=await ctx.supabase.from('organization_banks').select('id,name').eq('id',policy.org_bank_id).eq('organization_id',organizationId).maybeSingle()
+  const bank=q.data as {id:string;name:string}|null
+  if(!bank||rows.some(r=>!same(r.bank_name,bank.name)))return {ok:false as const,error:'A regra de comissão selecionada pertence a outra Instituição/Origem.'}
+ }
+ if(policy.org_agreement_id){
+  const q=await ctx.supabase.from('organization_agreements').select('id,name').eq('id',policy.org_agreement_id).eq('organization_id',organizationId).maybeSingle()
+  const agreement=q.data as {id:string;name:string}|null
+  if(!agreement||rows.some(r=>!same(r.agreement_name,agreement.name)))return {ok:false as const,error:'A regra de comissão selecionada pertence a outro Convênio.'}
+ }
+ if(policy.product_table_id){
+  const q=await ctx.supabase.from('product_tables').select('id,name,route_id').eq('id',policy.product_table_id).eq('organization_id',organizationId).maybeSingle()
+  const table=q.data as {id:string;name:string;route_id:string}|null
+  if(!table||rows.some(r=>!same(r.table_name,table.name)))return {ok:false as const,error:'A regra de comissão selecionada pertence a outra Tabela.'}
+  const routeQ=await ctx.supabase.from('organization_product_routes').select('org_bank_id,org_agreement_id').eq('id',table.route_id).eq('organization_id',organizationId).maybeSingle()
+  const route=routeQ.data as {org_bank_id:string|null;org_agreement_id:string|null}|null
+  if(!route)return {ok:false as const,error:'Não foi possível validar o escopo da Tabela da regra de comissão.'}
+  if(route.org_bank_id){
+   const bq=await ctx.supabase.from('organization_banks').select('name').eq('id',route.org_bank_id).eq('organization_id',organizationId).maybeSingle()
+   const b=bq.data as {name:string}|null
+   if(!b||rows.some(r=>!same(r.bank_name,b.name)))return {ok:false as const,error:'A Tabela da regra pertence a outra Instituição/Origem.'}
+  }
+  if(route.org_agreement_id){
+   const aq=await ctx.supabase.from('organization_agreements').select('name').eq('id',route.org_agreement_id).eq('organization_id',organizationId).maybeSingle()
+   const a=aq.data as {name:string}|null
+   if(!a||rows.some(r=>!same(r.agreement_name,a.name)))return {ok:false as const,error:'A Tabela da regra pertence a outro Convênio.'}
+  }
+ }
+ return {ok:true as const}
 }

@@ -1,7 +1,7 @@
 
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
-import { contractTypeMapFromForm, headerMapFromForm, parseSmartCommercialFile, SMART_IMPORT_ISSUES } from '@/lib/imports/smart-commercial-server'
+import { contractTypeMapFromForm, headerMapFromForm, parseSmartCommercialFile, SMART_IMPORT_ISSUES, validateSmartPolicyScope } from '@/lib/imports/smart-commercial-server'
 import { safeFileName } from '@/lib/imports/file-guards'
 import { componentEconomics } from '@/lib/commission/component-economics'
 
@@ -21,6 +21,8 @@ export async function POST(req:Request){
   type Econ={table:string;contract:string;term:number;component:string;group:string;receivedKind:'percentage'|'fixed_brl';gross:string;net:string;payout:string;retained:string|null;payoutKind:'percentage'|'fixed_brl'|null;compatible:boolean}
   const economics:Econ[]=[]
   if(policyId){
+    const scope=await validateSmartPolicyScope(ctx,ctx.membership.organization_id,policyId,parsed.rows)
+    if(!scope.ok)return Response.json({error:scope.error},{status:400})
     const [versionQ,itemsQ,groupsQ,componentsQ]=await Promise.all([
       ctx.supabase.from('component_payout_policy_versions').select('id,organization_id,discount_pct').eq('id',policyId).eq('organization_id',ctx.membership.organization_id).maybeSingle(),
       ctx.supabase.from('component_payout_policy_items').select('group_id,component_type_id,mode,share_pct,direct_value_kind,direct_value').eq('version_id',policyId),

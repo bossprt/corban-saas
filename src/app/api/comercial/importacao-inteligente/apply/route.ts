@@ -1,7 +1,7 @@
 
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
-import { contractTypeMapFromForm, headerMapFromForm, parseSmartCommercialFile, SMART_IMPORT_ISSUES } from '@/lib/imports/smart-commercial-server'
+import { contractTypeMapFromForm, headerMapFromForm, parseSmartCommercialFile, SMART_IMPORT_ISSUES, validateSmartPolicyScope } from '@/lib/imports/smart-commercial-server'
 
 export const dynamic='force-dynamic'
 const uuid=(v:string)=>/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v)
@@ -30,6 +30,10 @@ export async function POST(req:Request){
   if(hard.length)return Response.json({error:'O arquivo ainda possui erros.',issues:hard.map(x=>({...x,message:SMART_IMPORT_ISSUES[x.code]??x.code}))},{status:400})
   if(generic&&!ignoreLegacy)return Response.json({error:'Confirme que os campos Repasse 1/2/3 serão ignorados e que a regra interna do Corban será usada.'},{status:400})
   if(!parsed.rows.length)return Response.json({error:'Nenhuma linha válida para importar.'},{status:400})
+  if(policy){
+    const scope=await validateSmartPolicyScope(ctx,ctx.membership.organization_id,policy,parsed.rows)
+    if(!scope.ok)return Response.json({error:scope.error},{status:400})
+  }
 
   const payload=parsed.rows.map(r=>({
     bank_name:r.bank_name,agreement_name:r.agreement_name,table_name:r.table_name,external_table_code:r.external_table_code,
