@@ -1245,7 +1245,7 @@ Concluído diretamente pelo ChatGPT, sem Claude:
 - filtros de vigência também aplicados na camada de aplicação;
 - comissão esperada não oferece nova publicação quando já existe evento esperado;
 - perfis sem `canViewCommission` não fazem consulta de ledger na página;
-- percentual SUB validado sem ponto flutuante no servidor.
+- percentual SUB validado por string no servidor, sem ponto flutuante.
 
 Vercel:
 - fluxo de freeze UI READY em `97bf2548f360429a2f52c66af385295d04e5ba06`.
