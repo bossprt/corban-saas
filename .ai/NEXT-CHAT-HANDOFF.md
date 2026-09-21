@@ -550,3 +550,98 @@ Validation/security:
 - rollback test proved 1–120 persists as one row and overlapping 60–120 is rejected.
 - rollback tests proved both normal bulk import and Smart Import preserve 1–120 as one condition.
 - Supabase security advisor returned to only the 2 historical INFO items after moving btree_gist to schema extensions; no new WARN/ERROR.
+
+
+# START HERE — NEW CHAT HANDOFF 2026-09-21
+
+## Environment
+- Repo: bossprt/corban-saas
+- Branch: architecture/corban-os-master-v2
+- Current documented HEAD at handoff creation: f9b20a22df2cd2c85509fd6b9c5635179f6c4566
+- Vercel project: corban-saas
+- Public URL: https://corban-saas.vercel.app
+- Latest checked production deployment for HEAD: READY
+- Supabase project: nhjfrcttzxnphhizlnmc
+- Do NOT touch main.
+
+## Owner execution protocol
+- Continue autonomously on reversible/safe work.
+- Triple check before relevant execution: completeness, adversarial/security, then execution/validation.
+- Human Gate only for secrets, spend, destructive/irreversible external actions, unrelated new LIVE DDL, or publication with material external consequence.
+- Do not invent bank rules. File-specific mappings stay file-specific unless Owner explicitly globalizes them.
+- Prefer versioning/history over destructive edits.
+
+## Commercial catalog — authoritative model
+Hierarchy/navigation:
+Banco -> Origem/Promotora -> Convênio -> Tabela -> Versão -> Condições.
+The same bank/agreement can exist through several providers, e.g. Daycoval/Gov AC through Efetivamais and Bevicred, each independent for commission tables and remittance updates.
+
+Each table condition uses Prazo Inicial + Prazo Final:
+- 1–120 = ONE condition valid for any chosen term in that interval.
+- 120–120 = single-term condition.
+- Never expand 1–120 into 120 rows again.
+- commercial_conditions has term_min/term_max; legacy term is compatibility only and equals term_min.
+- overlapping ranges for the same table version + contract type are rejected by DB.
+- simulation resolves requested term using BETWEEN term_min AND term_max and snapshots the selected range.
+
+Performance rule:
+- Do NOT load the entire catalog's conditions/shares into one Vercel render.
+- /app/comercial/tabelas is lightweight hierarchy only.
+- /app/comercial/tabelas/[id] loads details on demand for one table; history only on explicit request.
+
+## Commission display
+Grid detail columns:
+Tipo | Prazo inicial | Prazo final | Coef. | Taxa | Comissão empresa | Base | Afiliado | Balcão | Call Center | Corretor | Parceiro | Smart Promotora.
+Percentages display with 2 decimals; calculations retain higher precision.
+
+## Current real catalogs
+HOPE / Governo do Acre / own-Smart:
+- 13 tables / 44 conditions.
+- Novo uses LÍQUIDO; Refin-Port COMBO uses BRUTO.
+- HOPE policy: 6% discount/tax first, then group shares Afiliado 10, Balcão 50, Call Center 25, Corretor 65, Parceiro 80, Smart 100.
+
+Daycoval / Governo do Acre / Efetivamais:
+- third_party provider Efetivamais.
+- no tax/discount.
+- 40 tables / 106 conditions.
+- same group shares 10/50/25/65/80/100 for this case.
+
+Daycoval / Governo do Acre / Bevicred:
+- third_party provider Bevicred.
+- no tax/discount.
+- same group shares 10/50/25/65/80/100 for this case only.
+- file-specific mappings: NOVO->Novo/LÍQUIDO; REFIN->Refinanciamento/LÍQUIDO; TRANSFERENCIA->Compra de Dívida/BRUTO; PORTABILIDADE->Portabilidade/BRUTO; REFIN DA PORTABILIDADE->Refin/Portabilidade/LÍQUIDO.
+- corrected through versioning: 43 current tables with exactly 135 current source-range conditions; 10 are ranged conditions.
+- old 1325-row expanded versions are historical, no longer current, and must not be deleted/rewrite history.
+- validated sample: Portabilidade Tabelão 1 = 1–120, rate 2.50%, company commission 3.00% BRUTO, Corretor effective 1.95%.
+
+## Remittance/version behavior
+- New commission updates create new versions; never overwrite proposal history.
+- Published version applies only inside [effective_from,effective_until).
+- Proposal/simulation keeps original pricing version/snapshot.
+- Complete remittance: scoped to same Banco + Convênio + Origem/Provider; absent tables end vigency at cutover, never delete history.
+- Partial update: only present tables change; absent tables are untouched.
+- One provider's remittance must never retire another provider's tables for the same bank/agreement.
+
+## LIVE database migrations relevant to this work
+- temporal_commercial_remittance_v1
+- commercial_condition_term_ranges_v1 (LIVE schema version 20260921194857)
+- term_range_import_paths_v1
+- move_btree_gist_extension_v1
+
+## UI/import status
+- Hierarchical catalog is implemented and production READY.
+- Table detail page exists and loads one table on demand.
+- Term-range columns are shown in detail and Smart Import preview.
+- Standard and Smart Import preserve ranges instead of expanding them.
+- Prior pagination-only approach is superseded by on-demand table detail architecture.
+
+## Files to read first in a new chat
+1. .ai/NEXT-CHAT-HANDOFF.md
+2. .ai/CURRENT-TASK.md
+3. CORBAN-CURRENT-STATE.md
+4. .ai/CHANGELOG.md
+5. supabase/migrations/20261030_commercial_condition_term_ranges_v1.sql
+
+## Immediate continuation rule
+Do not re-import HOPE, Efetivamais, or Bevicred and do not rebuild the term-range model. First verify current branch HEAD and production deployment, read the files above, then continue from the Owner's next requested block.
