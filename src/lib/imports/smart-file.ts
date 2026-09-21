@@ -26,7 +26,12 @@ export async function readSmartFile(bytes: Uint8Array, fileName: string): Promis
   if (kind === 'zip') {
     const z = inspectZip(bytes)
     if (!z.ok) return fail(z.reason, 'xlsx')
-    try { return { format: 'xlsx', rows: await xlsxRows(Buffer.from(bytes), SMART_LIMITS.sourceRows + 2), issues: [] } } catch { return fail('xlsx_unreadable', 'xlsx') }
+    try {
+      return { format: 'xlsx', rows: await xlsxRows(Buffer.from(bytes), SMART_LIMITS.sourceRows + 2, { rejectPercentFormat: true }), issues: [] }
+    } catch (e) {
+      if (e instanceof Error && e.message === 'xlsx_percent_number_format') return fail('percent_number_format', 'xlsx')
+      return fail('xlsx_unreadable', 'xlsx')
+    }
   }
   if (kind === 'ole') {
     const r = xlsRows(bytes)
