@@ -66,3 +66,23 @@ export async function addSubRule(f:FormData){
   const pub=await ctx.supabase.rpc('publish_seller_sub_rule',{p_rule:ins.data.id})
   return pub.error?go(classifyDbFeedback(pub.error)):go('ok:sub_regra_publicada')
 }
+
+
+export async function bindSellerUser(f:FormData){
+  const ctx=await manager(); if(!ctx)return go('erro:sem_permissao')
+  const sellerId=text(f,'seller_id'),userRaw=text(f,'user_id')
+  const userId=userRaw===''?null:userRaw
+  if(!uuid(sellerId)||(userId!==null&&!uuid(userId)))return go('erro:vendedor_usuario')
+  const {error}=await ctx.supabase.rpc('set_seller_user',{p_seller_id:sellerId,p_user_id:userId})
+  return error?go(/forbidden|not_authorized/.test(error.message??'')?'erro:sem_permissao':'erro:vendedor_usuario'):go('ok:vendedor_usuario_vinculado')
+}
+
+export async function setSellerSupervision(f:FormData){
+  const ctx=await manager(); if(!ctx)return go('erro:sem_permissao')
+  const sellerId=text(f,'seller_id'),supervisorId=text(f,'supervisor_user_id'),active=text(f,'active')!=='false'
+  if(!uuid(sellerId)||!uuid(supervisorId))return go('erro:supervisao_vendedor')
+  const {error}=await ctx.supabase.rpc('set_seller_supervision',{
+    p_seller_id:sellerId,p_supervisor_user_id:supervisorId,p_active:active
+  })
+  return error?go(/forbidden|not_authorized/.test(error.message??'')?'erro:sem_permissao':'erro:supervisao_vendedor'):go('ok:supervisao_vendedor_atualizada')
+}
