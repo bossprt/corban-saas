@@ -212,6 +212,12 @@ test('limits: file size, source rows, expanded rows, columns and text length', a
   assert.equal(map([HEAD, ['H'.repeat(201), 'G', 'T', 'Novo', '84', '1', '7']]).issues[0].code, 'text_too_long')
   assert.equal((await readSmartFile(enc(csv(ROWS)), 'x.csv')).format, 'csv')
 })
+test('XLSX percent formatting is also refused because 0.15 vs 15 must not be guessed', async () => {
+  const bytes = await xlsxBytes([['Taxa'], [0.15]], ws => { ws.getCell('A2').numFmt = '0%' })
+  const r = await readSmartFile(bytes, 'a.xlsx')
+  assert.equal(r.issues[0].code, 'percent_number_format')
+  assert.equal(r.rows.length, 0)
+})
 test('legacy XLS specifics: dates become ISO, % formatted numbers are refused (unit unknown), numbers keep full precision, no exponent', async () => {
   const dates = xlsBytes([['Data'], [46206]], ws => { (ws['A2'] as XLSX.CellObject).z = 'dd/mm/yyyy' })
   assert.equal((await readSmartFile(dates, 'a.xls')).rows[1][0], '2026-07-03')
