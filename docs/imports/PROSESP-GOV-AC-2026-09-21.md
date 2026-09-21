@@ -19,7 +19,7 @@ Linhas fonte: 203
 - Corretor e Parceiro:
   - quando Smart recebe 8%: pagamento efetivo direto = 3% da operação (equivale a share 37,5% da comissão recebida);
   - quando Smart recebe 5%: pagamento efetivo direto = 2% da operação (equivale a share 40% da comissão recebida);
-  - quando Smart recebe 7%: **PENDENTE confirmação do Owner**.
+  - quando Smart recebe 7%: pagamento efetivo direto = 3% da operação (equivale a share interno de 42,857143% da comissão recebida).
 - Sem imposto/desconto informado nesta carga.
 - Base da comissão no arquivo: LÍQUIDO.
 - A planilha não publica taxa/coeficiente confiável para estas condições; não inventar 0%. São condições de comissão.
@@ -61,5 +61,23 @@ Não preencher lacunas de prazo. Exemplo: 6,7,8,9,10 e 12 não vira 6-12; fica 6
 
 Total após consolidação: **16 condições**.
 
-## Gate restante
-Não persistir a carga PROSESP até o Owner definir o pagamento de **Corretor e Parceiro nas condições de 7%**.
+## Carga LIVE concluída
+Decisão final do Owner: **7% recebido → Corretor 3% efetivo e Parceiro 3% efetivo**.
+
+Carga persistida em 21/09/2026 como **rascunho**:
+- Instituição: PROSESP
+- Origem: Própria / Smart
+- Convênio: Governo do Acre
+- 3 tabelas: Temporário, Efetivo e Comissionado
+- 16 condições
+- 16 componentes À Vista / base LÍQUIDO
+- 96 repasses de grupo
+- faixa consolidada de valor: R$ 300,00 a R$ 10.000,00
+- nenhuma taxa ou coeficiente inventado
+- mensalidade ignorada conforme orientação do Owner
+
+Validação pós-carga:
+- recebido 8% → Corretor 3%, Parceiro 3%
+- recebido 7% → Corretor 3%, Parceiro 3%
+- recebido 5% → Corretor 2%, Parceiro 2%
+- status das versões: `draft`; ainda não entram em simulação até publicação.
