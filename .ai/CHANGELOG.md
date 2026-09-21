@@ -356,3 +356,12 @@ Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`)
 - Experimento de cálculo econômico detalhado na prévia revertido após erro de build; core Smart Import preservado.
 - Banco LIVE não sofreu rollback nem alteração adicional.
 - Próximo trabalho transferido para Claude apenas por necessidade real de ambiente local: XLS legado/PDF + dependências + testes com arquivos reais.
+
+### Adicionado — 20/09/2026 (Smart Import XLS + PDF)
+
+- Leitura de `.xls` legado (`@e965/xlsx`) e de PDF com camada de texto (`unpdf`) para o Smart Commercial Import, reaproveitando o mesmo parser.
+- Guardas de arquivo: formato por magic bytes, inspecao de zip, limites de tamanho/linhas/colunas, nome seguro.
+
+### Segurança — 20/09/2026
+
+- XLSX com mais de 1.000 linhas era cortado em silencio; agora recusado acima do teto. Coluna de dinheiro nao reconhecida recusa o arquivo. Datas de calendario invalidas recusadas.

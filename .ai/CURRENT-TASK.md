@@ -1689,3 +1689,14 @@ Estado antes do handoff:
 - nenhuma DDL pendente imediata;
 - Claude deve trabalhar somente em branch própria derivada da branch atual e não tocar main;
 - usar ferramentas/plugins locais já instalados e leitura seletiva para economizar tokens.
+
+## Smart Import: XLS legado + PDF (Claude local) - 20/09/2026
+**Branch:** `feature/smart-import-xls-pdf` (derivada de `architecture/corban-os-master-v2`; main intocada). Sem DDL, sem secret, sem gasto.
+
+**Feito:** `smart-file.ts` (leitor unico por conteudo), `legacy-xls.ts` (@e965/xlsx), `smart-pdf.ts` (unpdf + geometria deterministica, recusa quando ambiguo), `file-guards.ts` (zip/nome/magic bytes); teto de linhas no XLSX (antes cortava em 1.000 em silencio); fator DIARIO exige data; Fator 0 = sem fator; coluna de dinheiro desconhecida recusa; slots Repasse 1..N listados e nunca mapeados. Validado com HOPE real (54 condicoes, 5 slots de repasse ignorados) e relatorio 2Tech real. Detalhes: `docs/SMART-COMMERCIAL-IMPORT-V1.md`.
+
+**Testes:** unit 329/329, tsc, eslint, build verdes. (4 testes de UI estavam desatualizados desde a reformulacao da navegacao e o teste do parser smart nem rodava por causa do alias `@/`; corrigidos.)
+
+**Falta / follow-ups:** UI mostrar `needsReview` do PDF com CTA de mapeamento manual; deteccao de formato `%` tambem no XLSX; OCR/IA para PDF escaneado (exige gate de custo/secret); auditar visibilidade de comissao nas novas paginas de `/app/comercial/*` (as assercoes antigas de `canViewCommission` na pagina principal foram removidas porque a pagina foi reescrita).
+
+**Human Gate:** nenhum. Proximo passo sugerido: revisar e mesclar `feature/smart-import-xls-pdf` em `architecture/corban-os-master-v2`.

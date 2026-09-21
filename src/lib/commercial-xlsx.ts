@@ -1,7 +1,8 @@
 import ExcelJS from 'exceljs'
 
 // First worksheet as plain string rows, header included. Unlike parseXlsx (imports) this keeps duplicate headers apart so mapConditionRows can refuse them.
-export async function xlsxRows(buffer: Buffer): Promise<string[][]> {
+// maxRows: the smart import passes its own ceiling + 2 so an oversized sheet is DETECTED (rows > limit) instead of silently cut; other callers keep the old 1000.
+export async function xlsxRows(buffer: Buffer, maxRows = 1000): Promise<string[][]> {
   const wb = new ExcelJS.Workbook()
   await wb.xlsx.load(buffer as unknown as ExcelJS.Buffer)
   const sheet = wb.worksheets[0]
@@ -17,8 +18,9 @@ export async function xlsxRows(buffer: Buffer): Promise<string[][]> {
     return String(v)
   }
   const rows: string[][] = []
-  for (let n = 1; n <= Math.min(sheet.rowCount, 1000); n++) {
-    const vals = (sheet.getRow(n).values as ExcelJS.CellValue[]).slice(1).map(text)
+  for (let n = 1; n <= Math.min(sheet.rowCount, maxRows); n++) {
+    // Array.from: ExcelJS rows are SPARSE (empty cells are holes); .map would skip the holes and leave undefined cells
+    const vals = Array.from((sheet.getRow(n).values as ExcelJS.CellValue[]).slice(1), text)
     if (vals.some(v => v.trim() !== '')) rows.push(vals)
   }
   return rows

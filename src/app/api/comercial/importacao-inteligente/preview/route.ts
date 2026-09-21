@@ -2,6 +2,7 @@
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
 import { parseSmartCommercialFile, SMART_IMPORT_ISSUES } from '@/lib/imports/smart-commercial-server'
+import { safeFileName } from '@/lib/imports/file-guards'
 
 export const dynamic='force-dynamic'
 
@@ -16,7 +17,9 @@ export async function POST(req:Request){
   const hard=parsed.issues.filter(x=>x.code!=='generic_repass_requires_mapping')
   return Response.json({
    ok:hard.length===0,
-   fileName:file.name,
+   fileName:safeFileName(file.name),
+   format:parsed.format,
+   needsReview:parsed.issues.some(x=>x.code.startsWith('pdf_')),
    summary:parsed.summary,
    issues:parsed.issues.map(x=>({...x,message:SMART_IMPORT_ISSUES[x.code]??x.code})),
    sample:parsed.rows.slice(0,8).map(r=>({
@@ -26,6 +29,6 @@ export async function POST(req:Request){
   })
  }catch(e){
   const m=e instanceof Error?e.message:'unexpected'
-  return Response.json({error:m==='unsupported_file'?'Use CSV ou XLSX.':m==='invalid_file'?'Arquivo vazio ou maior que 2 MB.':'Não foi possível ler o arquivo.'},{status:400})
+  return Response.json({error:m==='invalid_file'?'Arquivo vazio ou maior que 5 MB.':'Não foi possível ler o arquivo.'},{status:400})
  }
 }
