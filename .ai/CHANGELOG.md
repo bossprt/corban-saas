@@ -1005,3 +1005,13 @@ Validation/security:
 - rollback test proved 1–120 persists as one row and overlapping 60–120 is rejected.
 - rollback tests proved both normal bulk import and Smart Import preserve 1–120 as one condition.
 - Supabase security advisor returned to only the 2 historical INFO items after moving btree_gist to schema extensions; no new WARN/ERROR.
+
+
+## 2026-09-21 — commercial amount ranges / PROSESP prep
+- Added `commercial_condition_amount_ranges_v1`; applied LIVE as Supabase `20260921210534` after rollback-only validation.
+- commercial conditions now support amount_min/amount_max together with term_min/term_max; conflict prevention is 2D (term + amount).
+- Legacy rows remain unbounded by amount; no existing commercial data rewritten.
+- Commission-only conditions may omit rate/coefficient; no fake 0% pricing required.
+- Added explicit amount-aware simulation overload and fail-closed legacy behavior.
+- UI/import work in branch adds Valor Inicial/Valor Final support.
+- PROSESP source (203 rows) analyzed and safely consolidated to 16 commission conditions; business load held only for Owner decision on 7% Corretor/Parceiro payout.
