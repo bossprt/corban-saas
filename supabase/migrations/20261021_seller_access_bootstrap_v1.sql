@@ -212,7 +212,7 @@ returns uuid
 language plpgsql
 security invoker
 set search_path=''
-as $
+as $seller_user$
 declare
   v_org uuid;
 begin
@@ -253,7 +253,7 @@ begin
 
   return p_seller_id;
 end
-$;
+$seller_user$;
 
 create or replace function public.set_seller_supervision(
   p_seller_id uuid,
@@ -264,7 +264,7 @@ returns uuid
 language plpgsql
 security invoker
 set search_path=''
-as $
+as $seller_supervision$
 declare
   v_org uuid;
   v_id uuid;
@@ -310,7 +310,7 @@ begin
 
   return v_id;
 end
-$;
+$seller_supervision$;
 
 revoke all on function public.create_seller_with_access(uuid,text,text,text,uuid,uuid,text) from public,anon;
 grant execute on function public.create_seller_with_access(uuid,text,text,text,uuid,uuid,text) to authenticated;
