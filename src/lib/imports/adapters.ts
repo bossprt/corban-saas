@@ -5,7 +5,7 @@ const val=(r:Record<string,unknown>,...keys:string[])=>{for(const k of keys)if(r
 const text=(v:unknown)=>v==null?null:String(v).trim()||null
 
 function base(r:Record<string,unknown>,overrides:Partial<NormalizedImportRow>):NormalizedImportRow{
- return {recordKind:'table_offer',bankKey:null,externalProposalNumber:null,producerTaxId:null,externalTableCode:null,externalTableName:null,operationType:null,term:null,rate:null,commissionUpfront:null,commissionDeferred:null,amount:null,normalizedPayload:r,...overrides}
+ return {recordKind:'table_offer',bankKey:null,externalProposalNumber:null,producerTaxId:null,producerExternalUser:null,externalTableCode:null,externalTableName:null,operationType:null,term:null,rate:null,commissionUpfront:null,commissionDeferred:null,amount:null,normalizedPayload:r,...overrides}
 }
 
 export const bevicredAdapter:ImportAdapter={
@@ -61,6 +61,8 @@ function financialStatementAdapter(key:string,semantic:'commission_statement'|'p
    bankKey:text(val(r,'Banco','banco','bank','institution')),
    externalProposalNumber:text(val(r,'Proposta','proposta','proposal','proposal_number','numero_proposta')),
    producerTaxId:text(val(r,'CNPJ Produtor','cnpj_produtor','producer_tax_id','cnpj')),
+  producerExternalUser:text(val(r,'Usuário Banco','Usuario Banco','usuario_banco','Usuário','Usuario','usuario','Login','login','Operador','operador','Vendedor','vendedor','seller_user')),
+   producerExternalUser:text(val(r,'Usuário Banco','Usuario Banco','usuario_banco','Usuário','Usuario','usuario','Login','login','Operador','operador','Vendedor','vendedor','seller_user')),
    externalTableCode:text(val(r,'Código Tabela','Codigo Tabela','codigo_tabela','table_code')),
    operationType:text(val(r,'Operação','Operacao','operacao','operation')),
    amount:decimalString(val(r,'Valor','valor','amount','commission_amount','payment_amount')),
