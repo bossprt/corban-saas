@@ -1749,3 +1749,22 @@ Próxima fila autônoma:
 1. mapear valores de Tipo de Contrato desconhecidos (ex.: “Refin-Portabilidade” → “Refin/Portabilidade”) sem criar tipo silenciosamente;
 2. sugerir automaticamente regra de comissão por escopo de Instituição/Convênio/Tabela, mas exigir escolha quando houver ambiguidade;
 3. depois comparar Repasse 1/2/3 externo com política interna somente quando o usuário mapear explicitamente o slot ao grupo — nunca inferir.
+
+
+## Human Gate atual — policy scope DB guard
+Antes do gate, concluído:
+- mapeamento explícito de valor de Tipo de Contrato externo → tipo existente/habilitado;
+- app-layer policy-scope validation em preview e apply;
+- Vercel READY;
+- migration `20261013_smart_import_policy_scope_guard_v1.sql` validada rollback-only;
+- zero vínculos LIVE incompatíveis detectados;
+- migration ainda não consta em `list_migrations`.
+
+Próxima ação irreversível/produção:
+**aplicar `20261013_smart_import_policy_scope_guard_v1` LIVE**.
+
+Depois do apply:
+1. rodar contract pós-apply;
+2. rodar Security Advisor;
+3. persistir versão da migration LIVE;
+4. continuar política sugerida automática e comparação explícita de Repasse 1/2/3.
