@@ -2111,3 +2111,36 @@ Fix:
 - Security Advisor unchanged: no new WARN/ERROR, only 2 historical Platform Admin INFO.
 
 No rollback-test business rows persisted in LIVE.
+
+
+## Seller access bootstrap V1 — PREPARED / NOT LIVE
+Owner requirement:
+- seller/corretor should not require a second manual "login binding" step;
+- when system access is desired, seller creation and access invitation must be one business flow;
+- seller-linked login must be role `agent` and can see only own seller commission;
+- supervisor/manager/admin scopes remain unchanged.
+
+Prepared:
+- `supabase/migrations/20261021_seller_access_bootstrap_v1.sql`;
+- `tests/security/seller-access-bootstrap-contract.sql`.
+
+Design:
+- `organization_invitations.seller_id` links access invitation to seller;
+- `create_seller_with_access(...,p_email)` atomically creates seller + agent invitation when email is supplied;
+- access can remain absent for external sellers by passing null email;
+- invite acceptance automatically binds `commercial_sellers.user_id` to the verified Auth user;
+- existing active non-agent member cannot be silently reused as seller login (`seller_access_requires_agent_role` fail-closed);
+- manual `set_seller_user` now accepts only active agent membership;
+- seller audit event types are added to the existing append-only admin audit allow-list;
+- seller user/supervision audit writes use governed membership context.
+
+Rollback validation:
+- several pre-LIVE defects were found and corrected: audit gate context, audit event CHECK, SQL dollar quoting, ambiguous column reference;
+- final full harness passed: create seller + create linked agent invitation + simulated service-role acceptance + automatic seller/user binding + own-commission RLS access;
+- all test changes rolled back; no synthetic LIVE rows persisted.
+
+Important deployment sequencing:
+- do NOT switch production UI to `create_seller_with_access` until this migration is LIVE;
+- after LIVE apply, update seller form to default `Criar acesso ao sistema` ON, require email when checked, call new RPC, and attempt invitation email without failing seller creation when SMTP is unavailable.
+
+**Human Gate required before applying this new DDL LIVE.**
