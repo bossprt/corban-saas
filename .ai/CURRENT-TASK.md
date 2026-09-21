@@ -1835,3 +1835,34 @@ Próximo passo autônomo:
 1. confirmar Vercel READY do seletor de vendedor;
 2. revisar se a rota comercial/freeze já tem UI completa para seller/SUB ou se falta somente apresentação do snapshot supervisor+;
 3. seguir apenas até o próximo DDL/Human Gate real.
+
+
+## Fluxo Seller/SUB + rota comercial — aplicação concluída
+- seletor de Vendedor/SUB em proposta draft está integrado à RPC governada;
+- snapshot SUB/empresa por componente aparece somente para perfis com `canViewCommission`;
+- card de congelamento de rota comercial foi adicionado; o canal é derivado da regra escolhida para impedir combinação manual regra/canal inválida;
+- server action de freeze valida UUID, RBAC supervisor+, regra publicada e vigência também no app;
+- publicação de comissão esperada usa feedback sanitizado e fica oculta quando já existe `commission_expected`;
+- consulta de `financial_events` deixou de ser feita para perfis sem visibilidade de comissão;
+- Vercel READY no commit funcional `97bf2548f360429a2f52c66af385295d04e5ba06`;
+- validação do percentual SUB no app foi alterada para decimal escalado/BigInt, sem `float`.
+
+## Human Gate atual — Proposal/Financial integrity hardening V1
+Preparada e **NÃO LIVE**:
+- `supabase/migrations/20261015_proposal_financial_integrity_hardening_v1.sql`;
+- `tests/security/proposal-financial-integrity-hardening-contract.sql`.
+
+Achados adversariais corrigidos no pacote preparado:
+1. `freeze_proposal_commercial_route` hoje exige status published, mas no LIVE ainda não valida `effective_from/effective_until` no próprio banco; a nova versão falha fechado fora da vigência;
+2. `publish_expected_commission` passa a atualizar/criar a conciliação de cada componente imediatamente;
+3. `publish_financial_evidence_event` passa a atualizar conciliação também quando usado diretamente para comissão reportada/pagamento recebido;
+4. UPDATE/DELETE desnecessários são revogados das tabelas imutáveis de snapshot comercial para authenticated/anon.
+
+Validação:
+- migration + contract passaram juntos em `BEGIN -> testes -> ROLLBACK`;
+- nenhuma alteração do pacote ficou persistida;
+- `list_migrations` confirma que `proposal_financial_integrity_hardening_v1` ainda NÃO está LIVE;
+- precheck LIVE continua com 0 propostas, 0 snapshots, 0 eventos financeiros e 0 casos de conciliação;
+- Security Advisor continua sem WARN/ERROR novo; somente 2 INFO históricos de Platform Admin.
+
+**Próxima ação requer autorização explícita do Owner para aplicar `20261015_proposal_financial_integrity_hardening_v1` LIVE.**
