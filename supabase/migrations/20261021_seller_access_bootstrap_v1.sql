@@ -14,6 +14,24 @@ create unique index organization_invitations_pending_seller_key
   on public.organization_invitations(organization_id,seller_id)
   where seller_id is not null and status='pending';
 
+
+alter table public.organization_admin_events
+  drop constraint organization_admin_events_event_type_check;
+
+alter table public.organization_admin_events
+  add constraint organization_admin_events_event_type_check
+  check (event_type in (
+    'invite_created',
+    'invite_revoked',
+    'invite_accepted',
+    'member_role_changed',
+    'member_deactivated',
+    'member_reactivated',
+    'seller_created',
+    'seller_user_binding_updated',
+    'seller_supervision_updated'
+  ));
+
 create or replace function public.create_seller_with_access(
   p_org uuid,
   p_name text,
@@ -140,6 +158,9 @@ begin
 
     if i.seller_id is not null then
       if i.role <> 'agent' then raise exception 'seller_invitation_must_be_agent'; end if;
+      if m.id is not null and m.status='active' and m.role<>'agent' then
+        raise exception 'seller_access_requires_agent_role';
+      end if;
       if exists(
         select 1 from public.commercial_sellers s
         where s.organization_id=i.organization_id
@@ -182,5 +203,118 @@ begin
 end
 $$;
 
+
+create or replace function public.set_seller_user(
+  p_seller_id uuid,
+  p_user_id uuid
+)
+returns uuid
+language plpgsql
+security invoker
+set search_path=''
+as $
+declare
+  v_org uuid;
+begin
+  if auth.uid() is null then raise exception 'not_authorized'; end if;
+
+  select s.organization_id into v_org
+  from public.commercial_sellers s
+  where s.id=p_seller_id
+  for update;
+
+  if v_org is null then raise exception 'seller_not_found'; end if;
+  if not public.has_active_organization_role(v_org,array['admin','manager']) then
+    raise exception 'forbidden';
+  end if;
+
+  if p_user_id is not null and not exists(
+    select 1 from public.organization_memberships m
+    where m.organization_id=v_org
+      and m.user_id=p_user_id
+      and m.role='agent'
+      and m.status='active'
+  ) then raise exception 'active_agent_membership_required'; end if;
+
+  perform set_config('corban.seller_access_rpc','on',true);
+  update public.commercial_sellers
+  set user_id=p_user_id,updated_at=now()
+  where organization_id=v_org and id=p_seller_id;
+  perform set_config('corban.seller_access_rpc','off',true);
+
+  perform set_config('corban.membership_rpc','on',true);
+  insert into public.organization_admin_events(
+    organization_id,actor_user_id,event_type,target_user_id,details
+  ) values(
+    v_org,auth.uid(),'seller_user_binding_updated',p_user_id,
+    jsonb_build_object('seller_id',p_seller_id,'bound_user_id',p_user_id)
+  );
+  perform set_config('corban.membership_rpc','off',true);
+
+  return p_seller_id;
+end
+$;
+
+create or replace function public.set_seller_supervision(
+  p_seller_id uuid,
+  p_supervisor_user_id uuid,
+  p_active boolean default true
+)
+returns uuid
+language plpgsql
+security invoker
+set search_path=''
+as $
+declare
+  v_org uuid;
+  v_id uuid;
+begin
+  if auth.uid() is null then raise exception 'not_authorized'; end if;
+
+  select s.organization_id into v_org
+  from public.commercial_sellers s
+  where s.id=p_seller_id;
+
+  if v_org is null then raise exception 'seller_not_found'; end if;
+  if not public.has_active_organization_role(v_org,array['admin','manager']) then
+    raise exception 'forbidden';
+  end if;
+
+  if not exists(
+    select 1 from public.organization_memberships m
+    where m.organization_id=v_org
+      and m.user_id=p_supervisor_user_id
+      and m.role='supervisor'
+      and m.status='active'
+  ) then raise exception 'active_supervisor_membership_required'; end if;
+
+  perform set_config('corban.seller_access_rpc','on',true);
+  insert into public.seller_supervisions(
+    organization_id,supervisor_user_id,seller_id,is_active,created_by,updated_by
+  ) values(
+    v_org,p_supervisor_user_id,p_seller_id,coalesce(p_active,true),auth.uid(),auth.uid()
+  )
+  on conflict(organization_id,supervisor_user_id,seller_id)
+  do update set is_active=excluded.is_active,updated_by=auth.uid(),updated_at=now()
+  returning id into v_id;
+  perform set_config('corban.seller_access_rpc','off',true);
+
+  perform set_config('corban.membership_rpc','on',true);
+  insert into public.organization_admin_events(
+    organization_id,actor_user_id,event_type,target_user_id,details
+  ) values(
+    v_org,auth.uid(),'seller_supervision_updated',p_supervisor_user_id,
+    jsonb_build_object('seller_id',p_seller_id,'active',coalesce(p_active,true))
+  );
+  perform set_config('corban.membership_rpc','off',true);
+
+  return v_id;
+end
+$;
+
 revoke all on function public.create_seller_with_access(uuid,text,text,text,uuid,uuid,text) from public,anon;
 grant execute on function public.create_seller_with_access(uuid,text,text,text,uuid,uuid,text) to authenticated;
+revoke all on function public.set_seller_user(uuid,uuid) from public,anon;
+grant execute on function public.set_seller_user(uuid,uuid) to authenticated;
+revoke all on function public.set_seller_supervision(uuid,uuid,boolean) from public,anon;
+grant execute on function public.set_seller_supervision(uuid,uuid,boolean) to authenticated;
