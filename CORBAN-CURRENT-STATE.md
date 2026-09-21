@@ -1041,3 +1041,27 @@ Proteções:
 - IA não calcula nem inventa valores.
 
 Nenhum objeto de 20261012 está LIVE ainda.
+
+
+## Smart Commercial Import V1 — LIVE
+Aplicada em produção com autorização explícita do Owner:
+- `20260921003829 smart_commercial_import_v1`
+
+Validação pós-apply:
+- contrato SQL passou;
+- security advisor sem WARN/ERROR novo;
+- permanecem apenas os 2 INFO históricos de Platform Admin.
+
+Aplicação adicionada:
+- `/app/comercial/importacao-inteligente`;
+- prévia sem gravar;
+- parser determinístico CSV/XLSX;
+- perguntas condicionais para Diferido/Plástico/Bônus;
+- escolha explícita de produção Própria/Terceiro;
+- escolha explícita de regra interna versionada;
+- confirmação obrigatória quando o arquivo legado usa Repasse 1/2/3;
+- aplicação por RPC atômica;
+- Tabelas permanecem em rascunho para revisão antes da publicação.
+
+Limitação consciente:
+- XLS legado e PDF ainda não são suportados por esta primeira UI. A próxima etapa deve tratar esses formatos sem degradar as regras de segurança e prévia.
