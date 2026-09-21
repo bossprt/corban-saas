@@ -11,14 +11,15 @@ import { isUuid } from '@/lib/team'
 const go = (code: FeedbackCode, path = '/app/simulacoes'): never => redirect(feedbackUrl(path, code))
 
 function money(value: FormDataEntryValue | null) {
-  const normalized = String(value ?? '').trim().replace(',', '.')
-  const parsed = Number(normalized)
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null
+  return parseDecimal(value, { maxInt: 9, scale: 2 })
 }
 
 function integer(value: FormDataEntryValue | null) {
-  const parsed = Number.parseInt(String(value ?? ''), 10)
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null
+  const raw = String(value ?? '').trim()
+  if (!/^\d{1,3}$/.test(raw)) return null
+  const normalized = raw.replace(/^0+(?=\d)/, '')
+  if (normalized === '' || normalized === '0' || normalized.length > 3 || normalized > '600') return null
+  return normalized
 }
 
 export async function createSimulation(formData: FormData) {
@@ -28,7 +29,7 @@ export async function createSimulation(formData: FormData) {
   const tableVersionId = String(formData.get('product_table_version_id') ?? '')
   const requestedAmount = money(formData.get('requested_amount'))
   const term = integer(formData.get('term'))
-  if (!customerId || !tableVersionId || requestedAmount === null || requestedAmount <= 0 || !term) return go('erro:requisicao_invalida')
+  if (!customerId || !tableVersionId || requestedAmount === null || !/[1-9]/.test(requestedAmount.replace('.', '')) || !term) return go('erro:requisicao_invalida')
 
   // The database derives the tenant from the customer, checks that the table version is published for THAT tenant, applies the table rate and
   // coefficient, computes the installment and records the actor. Nothing but the four ids/numbers above comes from the browser.
@@ -51,7 +52,7 @@ async function createSimulationForCondition(formData: FormData) {
   const customerId = String(formData.get('customer_id') ?? ''), versionId = String(formData.get('product_table_version_id') ?? ''), typeId = String(formData.get('contract_type_id') ?? '')
   const amount = parseDecimal(formData.get('requested_amount'), { maxInt: 9, scale: 2 })
   const term = integer(formData.get('term'))
-  if (!isUuid(customerId) || !isUuid(versionId) || !isUuid(typeId) || amount === null || Number(amount) <= 0 || !term) return go('erro:requisicao_invalida')
+  if (!isUuid(customerId) || !isUuid(versionId) || !isUuid(typeId) || amount === null || !/[1-9]/.test(amount.replace('.', '')) || !term) return go('erro:requisicao_invalida')
   const { error } = await supabase.rpc('create_simulation_for_condition', { p_customer_id: customerId, p_table_version_id: versionId, p_contract_type_id: typeId, p_requested_amount: amount, p_term: term })
   if (error) {
     if (/condition_not_found/.test(error.message ?? '')) return go('erro:sim_condition_not_found')
