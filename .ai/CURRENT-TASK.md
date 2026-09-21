@@ -2308,3 +2308,37 @@ Important correction:
 Seller groups cleanup requested by Owner:
 - only seller group Padrão remains;
 - existing seller LUCIANE DO NASCIMENTO BRAGA was reassigned from Corretor to Padrão before old seller groups were deleted.
+
+
+## Temporal commercial versions + complete/partial remittance
+Implemented after Owner requirement that commission updates must never retroactively change proposals and that tables absent from a new complete bank remittance should stop being offered without being deleted.
+
+LIVE migration: 20260921182114 temporal_commercial_remittance_v1.
+Source: supabase/migrations/20261029_temporal_commercial_remittance_v1.sql.
+
+Authoritative behavior:
+- Published commercial versions are effective only inside [effective_from, effective_until).
+- Publishing a future version schedules it; it does not become selectable before effective_from.
+- The prior published version remains historical and gets effective_until equal to the new version's effective_from.
+- Commercial facts on published versions remain immutable; only the governed catalog/remittance path may close effective_until or change lifecycle status.
+- New simulations require a currently effective published version.
+- Proposal creation from an existing simulation validates the version against the simulation's original pricing_effective_at/created_at, so a later commission update does not reprice the old simulation/proposal.
+- Proposal commercial snapshot now records pricing_effective_at and version validity.
+- Smart Import now has two explicit modes:
+  * partial: only tables present in the file are versioned; absent tables are untouched;
+  * complete: scoped to one Institution + Agreement; absent currently-effective tables are not deleted, but their published interval ends at the declared remittance cutover. Future scheduled versions of absent tables are superseded so they cannot resurrect after cutoff.
+- Complete remittance requires an explicit new-vigency date and preview shows current tables missing from the new file before apply.
+- Apply is atomic and publishes/schedules touched draft versions only after user confirmation of the preview.
+
+Validation:
+- rollback complete-remittance test: 1 touched HOPE table got v2 future, v1 closed at cutoff, other 12 absent tables closed at cutoff, then full rollback;
+- rollback partial-update test: touched table versioned, 12 absent HOPE tables remained untouched, then rollback;
+- post-LIVE contract test passed;
+- Supabase Advisor remains only 2 historical INFO (platform admin tables), no new WARN/ERROR;
+- existing HOPE data remains 13 tables / 44 conditions / 13 open published versions after migration.
+
+UI/API:
+- Smart Import screen exposes Atualização parcial vs Remessa completa and asks new vigency date for complete mode;
+- preview shows impact, new tables, and missing tables that would have their vigency ended;
+- apply route uses governed apply_smart_commercial_remittance RPC.
+- production deploy for UI commit 5bb809d754115a0b43e06e3ab758acd226a05f51 is READY.
