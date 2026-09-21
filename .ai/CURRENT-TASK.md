@@ -1845,7 +1845,7 @@ Próximo passo autônomo:
 - publicação de comissão esperada usa feedback sanitizado e fica oculta quando já existe `commission_expected`;
 - consulta de `financial_events` deixou de ser feita para perfis sem visibilidade de comissão;
 - Vercel READY no commit funcional `97bf2548f360429a2f52c66af385295d04e5ba06`;
-- validação do percentual SUB no app foi alterada para decimal escalado/BigInt, sem `float`.
+- validação do percentual SUB no app foi alterada para parsing decimal por string, sem `float`.
 
 ## Human Gate atual — Proposal/Financial integrity hardening V1
 Preparada e **NÃO LIVE**:
