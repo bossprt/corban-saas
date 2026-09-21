@@ -1,6 +1,6 @@
 # Wave B/C — Vendedor, SUB e Fatores
 
-**Status:** preparado, não LIVE.  
+**Status:** schema base LIVE; UI de Vendedores e Fatores LIVE. Integração Vendedor/SUB → proposta/financeiro ainda pendente.  
 **Data:** 2026-09-20.
 
 ## Resultado da tripla revisão
@@ -59,11 +59,19 @@ Resolução:
 - diário vence fixo em empate;
 - intervalos de prazo sobrepostos são recusados na publicação.
 
-## Não incluído ainda
-- UI final de Vendedores;
-- upload/parsing PDF/XLSX de fatores;
-- componentes de comissão estendidos (plástico/seguro/bônus 2/3);
-- snapshot de vendedor/SUB na proposta;
-- automação de importação inteligente.
+## Estado atual após implementação
 
-Esses itens vêm após o schema base estar LIVE e validado.
+LIVE:
+- `seller_commercial_profile_v1` sob versão Supabase `20260920235725`;
+- `commercial_factors_v1` sob versão Supabase `20260920235731`;
+- UI `/app/cadastros/vendedores` com Grupo de Vendedor + Grupo de Comissão + PF/PJ/SUB;
+- regra SUB versionada/publicada, inclusive 100/0 e 90/10;
+- UI `/app/comercial/fatores` para fator diário/fixo;
+- Smart Import consegue ingerir fatores por arquivo.
+
+Ainda não incluído:
+- congelar o vendedor e a versão da regra SUB na proposta;
+- aplicar `company_share_pct` do SUB ao fato `commission_expected`;
+- payout financeiro do vendedor/grupo (continua separado da receita esperada da empresa).
+
+Essa integração deve ser nova migration aditiva, preservar propostas antigas como company share 100%, congelar a regra SUB por componente e nunca recalcular histórico pela regra atual.
