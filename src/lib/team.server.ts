@@ -37,3 +37,29 @@ export async function memberEmails(userIds:string[]):Promise<Map<string,string>>
  }))
  return out
 }
+
+
+export type PasswordAccessOutcome='ready'|'existing_user'|'failed'
+export async function createPasswordAccess(email:string,password:string,fullName:string):Promise<{outcome:PasswordAccessOutcome;userId?:string}>{
+ const admin=createAdminClient()
+ try{
+  const created=await admin.auth.admin.createUser({
+   email,
+   password,
+   email_confirm:true,
+   user_metadata:{full_name:fullName},
+  })
+  if(created.error||!created.data.user){
+   return {outcome:isExistingUserError(created.error)?'existing_user':'failed'}
+  }
+  const user=created.data.user
+  const accepted=await admin.rpc('accept_organization_invitations',{p_user_id:user.id,p_email:email})
+  if(accepted.error){
+   try{await admin.auth.admin.deleteUser(user.id)}catch{/* compensating cleanup best effort */}
+   return {outcome:'failed'}
+  }
+  return {outcome:'ready',userId:user.id}
+ }catch{
+  return {outcome:'failed'}
+ }
+}
