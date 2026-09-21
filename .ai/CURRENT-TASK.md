@@ -2432,3 +2432,9 @@ PROSESP: Instituição/Banco da rota; produção Própria/Smart (Smart é corres
 LIVE aplicado: `20260921210534 commercial_condition_amount_ranges_v1`. commercial_conditions agora tem amount_min/amount_max; NULL/NULL = qualquer valor; exclusão considera sobreposição simultânea de prazo + valor; condições commission-only podem ficar sem taxa/coeficiente; caminho de simulação legado falha com contract_value_required quando a condição depende de valor e há overload com p_contract_value explícito. Rollback test antes do apply: ALL PASS. Security Advisor pós-apply: sem WARN/ERROR novo, somente 2 INFO históricos de Platform Admin.
 
 Plano/fonte: `docs/imports/PROSESP-GOV-AC-2026-09-21.md`. Não persistir a carga PROSESP até o Owner responder a regra das condições de 7%.
+
+
+### PROSESP concluída — 21/09/2026 18:24 -05
+Owner confirmou a última regra pendente: **quando Smart recebe 7%, Corretor e Parceiro recebem 3% efetivo da operação cada**. Como esses grupos usam `percent_of_received_commission`, o share interno gravado é 42,857143%, resultando em effective_pct 3,000000.
+
+Carga LIVE concluída em rascunho: PROSESP + Governo do Acre + produção Própria/Smart; 3 tabelas (Temporário/Efetivo/Comissionado), 16 condições, faixa R$ 300,00–10.000,00, 16 componentes upfront com base LÍQUIDO, 96 shares. Mensalidade ignorada. Regra validada: 8%→3%, 7%→3%, 5%→2% para Corretor e Parceiro. Não publicar automaticamente; versões permanecem draft para revisão visual.
