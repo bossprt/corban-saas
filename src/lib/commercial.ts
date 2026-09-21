@@ -177,7 +177,7 @@ export function mapConditionRows(rows: readonly (readonly unknown[])[], ctx: { g
     }
     const res = resolveShares(ctx.groups, shares, received, ctx.policy)
     if (res.error) return fail(line, res.error)
-    const key = `${type.id}|${term}|${coefficient ?? ""}|${rate ?? ""}`
+    const key = `${type.id}|${term}`
     if (seen.has(key)) return fail(line, 'duplicate_row')
     seen.add(key)
     conditions.push({ line, contractTypeId: type.id, term, coefficient, rate, received, shares, resolved: res.rows })
@@ -232,7 +232,7 @@ export const IMPORT_ISSUE_TEXT: Record<string, string> = {
   commission_group_not_found: 'Grupo de comissão não encontrado ou inativo.',
   production_shares_exceed_received_commission: 'Um grupo recebe mais do que a comissão recebida pela empresa.',
   policy_group_inactive: 'Um grupo da política de repasse está inativo.',
-  duplicate_row: 'Mesmo Tipo de Contrato, prazo e taxa/coeficiente repetidos no arquivo.',
+  duplicate_row: 'Mesmo Tipo de Contrato e prazo repetidos no arquivo.',
   policy_not_found: 'Política de repasse não encontrada ou inativa.',
   contract_type_not_found: 'Tipo de Contrato não encontrado.',
   invalid_row: 'Linha malformada.',
