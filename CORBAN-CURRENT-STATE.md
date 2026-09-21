@@ -1139,3 +1139,15 @@ A migration substitui somente a função de guarda já existente e adiciona defe
 - proteções anteriores de draft/imutabilidade/RPC-only permanecem.
 
 **NÃO LIVE ainda.** Próxima ação requer autorização explícita do Owner.
+
+
+## Policy scope guard — LIVE
+Autorização explícita recebida e migration aplicada:
+- `20260921021027 smart_import_policy_scope_guard_v1`
+
+Pós-apply:
+- contract de segurança passou sem exceções;
+- função de guarda mantém draft/immutability/RPC-only e agora valida escopo de Instituição, Convênio e Tabela;
+- Security Advisor: 0 WARN/ERROR novos; permanecem apenas 2 INFO históricos das tabelas de Platform Admin sem policy pública;
+- migration consta em `list_migrations`;
+- não reaplicar.
