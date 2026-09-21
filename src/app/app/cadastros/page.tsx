@@ -22,6 +22,7 @@ export default async function RegistrationsHubPage() {
     ]],
     ['Rede e acesso', [
       ['Vendedores', 'Consulta, cadastro, acesso, filial, pagamento e identidades bancárias dos vendedores.', '/app/cadastros/vendedores'],
+      ['Grupos de vendedores', 'Classificação interna dos vendedores: Básico, Bronze, Prata, Ouro, Diamante ou qualquer outra nomenclatura.', '/app/cadastros/grupos-vendedores'],
       ['Matriz e filiais', 'Unidades usadas para vincular vendedores à estrutura da organização.', '/app/cadastros/filiais'],
       ['Rede comercial', 'Entidades, relações e canais comerciais.', '/app/rede'],
       ...(manageTeam ? [['Equipe e acessos', 'Usuários, papéis e ciclo de acesso.', '/app/equipe']] : []),
