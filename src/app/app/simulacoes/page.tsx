@@ -1,6 +1,7 @@
 import { requireAppContext } from '@/lib/appContext'
 import { createProposalFromSimulation, createSimulation } from './actions'
 import { SubmitButton } from '@/components/SubmitButton'
+import { effectiveContractTypes } from '@/lib/contract-types'
 
 const SIM_STATUS: Record<string, string> = { draft: 'Rascunho', calculated: 'Calculada', selected: 'Virou proposta', expired: 'Expirada', cancelled: 'Cancelada' }
 
@@ -10,7 +11,7 @@ function brl(value: number | string | null) {
 
 export default async function SimulationsPage() {
   const { supabase } = await requireAppContext()
-  const [tablesResult, customersResult, versionsResult, simulationsResult, proposalsResult, typesResult, conditionsResult] = await Promise.all([
+  const [tablesResult, customersResult, versionsResult, simulationsResult, proposalsResult, typesResult, typeSettingsResult, conditionsResult] = await Promise.all([
     supabase.from('product_tables').select('id,name,code'),
     supabase.from('clients').select('id,full_name').is('deleted_at', null).order('full_name').limit(200),
     supabase.from('product_table_versions')
@@ -20,9 +21,11 @@ export default async function SimulationsPage() {
       .select('id,customer_id,product_table_version_id,status,requested_amount,installment_amount,term,rate,created_at')
       .order('created_at', { ascending: false }).limit(100),
     supabase.from('proposals_v2').select('id,simulation_id').not('simulation_id', 'is', null),
-    supabase.from('contract_types').select('id,name').eq('is_active', true).order('sort_order'),
+    supabase.from('contract_types').select('id,name,tech_key,is_active,organization_id').order('sort_order'),
+    supabase.from('organization_contract_type_settings').select('contract_type_id,is_enabled,use_in_pipeline,use_in_commission'),
     supabase.from('commercial_conditions').select('product_table_version_id'),
   ])
+  const enabledTypes=effectiveContractTypes((typesResult.data ?? []) as {id:string;name:string;tech_key:string;is_active:boolean;organization_id:string|null}[], (typeSettingsResult.data ?? []) as {contract_type_id:string;is_enabled:boolean;use_in_pipeline:boolean;use_in_commission:boolean}[], 'general')
   const conditionCount = new Map<string, number>()
   for (const c of conditionsResult.data ?? []) conditionCount.set(c.product_table_version_id, (conditionCount.get(c.product_table_version_id) ?? 0) + 1)
 
@@ -49,7 +52,7 @@ export default async function SimulationsPage() {
       </select>
       <select name="contract_type_id" defaultValue="" className="field md:col-span-2">
         <option value="">Tipo de Contrato (tabelas com condições)</option>
-        {typesResult.data?.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+        {enabledTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
       </select>
       <input required name="requested_amount" inputMode="decimal" placeholder="Valor solicitado" className="field md:col-span-2"/>
       <input required name="term" inputMode="numeric" placeholder="Prazo" className="field"/>

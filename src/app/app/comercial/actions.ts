@@ -9,6 +9,7 @@ import { isLabel } from '@/lib/catalog'
 import { isUuid } from '@/lib/team'
 import { IMPORT_ISSUE_TEXT, mapConditionRows, parseCoefficient, parseDelimited, parsePercent, parseRate, parseTerm, resolveShares, type Basis, type PolicyRef, type ShareInput } from '@/lib/commercial'
 import { xlsxRows } from '@/lib/commercial-xlsx'
+import { effectiveContractTypes } from '@/lib/contract-types'
 import { parseBulkRefusal } from '@/lib/commercial'
 
 const PATH = '/app/comercial'
@@ -233,12 +234,17 @@ export async function importConditions(f: FormData) {
   } catch { return go('erro:import_arquivo') }
   const [groups, types, existing, policy] = await Promise.all([
     loadGroups(ctx),
-    ctx.supabase.from('contract_types').select('id,name,tech_key').eq('is_active', true),
+    Promise.all([
+      ctx.supabase.from('contract_types').select('id,name,tech_key,is_active,organization_id').order('sort_order'),
+      ctx.supabase.from('organization_contract_type_settings').select('contract_type_id,is_enabled,use_in_pipeline,use_in_commission')
+    ]),
     ctx.supabase.from('commercial_conditions').select('id,contract_type_id,term').eq('product_table_version_id', version),
     policyVersion ? loadPolicy(ctx, policyVersion) : Promise.resolve(undefined),
   ])
   if (policyVersion && !policy) return go('erro:com_policy_not_found')
-  const { conditions, issues } = mapConditionRows(rows, { groups, contractTypes: (types.data ?? []) as { id: string; name: string; tech_key: string }[], policy: policy ?? undefined })
+  const [typeRows,typeSettings]=types
+  const enabledTypes=effectiveContractTypes((typeRows.data ?? []) as {id:string;name:string;tech_key:string;is_active:boolean;organization_id:string|null}[], (typeSettings.data ?? []) as {contract_type_id:string;is_enabled:boolean;use_in_pipeline:boolean;use_in_commission:boolean}[], 'commission')
+  const { conditions, issues } = mapConditionRows(rows, { groups, contractTypes: enabledTypes, policy: policy ?? undefined })
   if (issues.length) {
     const first = issues[0]
     const code = Object.prototype.hasOwnProperty.call(IMPORT_ISSUE_TEXT, first.code) ? first.code : 'invalid_shares'

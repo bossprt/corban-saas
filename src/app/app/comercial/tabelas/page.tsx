@@ -3,6 +3,7 @@ import { requireAppContext } from '@/lib/appContext'
 import { atLeast, canViewCommission } from '@/lib/rbac'
 import { SubmitButton } from '@/components/SubmitButton'
 import { IMPORT_ISSUE_TEXT } from '@/lib/commercial'
+import { effectiveContractTypes } from '@/lib/contract-types'
 import { createCommercialTable, importConditions, newDraftVersion, publishCommercialVersion, saveCondition } from '../actions'
 
 const field = 'rounded-lg border border-slate-700 bg-slate-950 p-2 text-sm'
@@ -44,12 +45,13 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
   const seeCommission = canViewCommission(membership.role)
   if (!atLeast(membership.role, 'supervisor')) return <section><p>Sem permissão.</p></section>
 
-  const [banks, providers, agreements, groups, contractTypes, routes, tables, versions, conditions, commissions, shares, polRows, polVersions] = await Promise.all([
+  const [banks, providers, agreements, groups, contractTypes, contractTypeSettings, routes, tables, versions, conditions, commissions, shares, polRows, polVersions] = await Promise.all([
     supabase.from('organization_banks').select('id,name,is_active').order('name'),
     supabase.from('organization_providers').select('id,name,is_active').order('name'),
     supabase.from('organization_agreements').select('id,name,is_active').order('name'),
     supabase.from('commission_groups').select('id,name,calculation_basis,is_active').order('sort_order').order('name'),
-    supabase.from('contract_types').select('id,name').eq('is_active', true).order('sort_order'),
+    supabase.from('contract_types').select('id,name,tech_key,is_active,organization_id').order('sort_order'),
+    supabase.from('organization_contract_type_settings').select('contract_type_id,is_enabled,use_in_pipeline,use_in_commission'),
     supabase.from('organization_product_routes').select('id,org_bank_id,org_provider_id,org_agreement_id,status').not('org_bank_id','is',null),
     supabase.from('product_tables').select('id,route_id,name,status').order('name'),
     supabase.from('product_table_versions').select('id,product_table_id,version,status').order('version',{ascending:false}),
@@ -60,8 +62,9 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
     supabase.from('payout_policy_versions').select('id,policy_id,version').order('version',{ascending:false}),
   ])
 
+  const enabledContractTypes=effectiveContractTypes((contractTypes.data ?? []) as {id:string;name:string;tech_key:string;is_active:boolean;organization_id:string|null}[], (contractTypeSettings.data ?? []) as {contract_type_id:string;is_enabled:boolean;use_in_pipeline:boolean;use_in_commission:boolean}[], 'commission')
   const nameOf = (rows:{id:string;name:string}[]|null) => new Map((rows ?? []).map(r => [r.id,r.name]))
-  const bankN=nameOf(banks.data), provN=nameOf(providers.data), agrN=nameOf(agreements.data), typeN=nameOf(contractTypes.data), groupN=nameOf(groups.data)
+  const bankN=nameOf(banks.data), provN=nameOf(providers.data), agrN=nameOf(agreements.data), typeN=nameOf(enabledContractTypes), groupN=nameOf(groups.data)
   const routeLabel = new Map((routes.data ?? []).map(r => [r.id, `${bankN.get(r.org_bank_id) ?? 'Instituição'} · ${agrN.get(r.org_agreement_id) ?? 'Convênio'}${r.org_provider_id ? ` · origem terceira: ${provN.get(r.org_provider_id) ?? 'Empresa'}` : ''}`]))
   const v3Tables=(tables.data ?? []).filter(t => routeLabel.has(t.route_id))
   const activeGroups=(groups.data ?? []).filter(g => g.is_active) as Group[]
@@ -82,8 +85,8 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
 
   return <section>
     <Link href="/app/comercial" className="text-sm text-slate-400 underline">← Voltar ao Comercial</Link>
-    <h1 className="mt-3 text-3xl font-semibold">Tabelas e condições</h1>
-    <p className="mt-2 text-sm text-slate-400">Aqui ficam as tabelas comerciais. Para cada versão rascunho você pode importar uma planilha inteira ou adicionar uma condição manualmente.</p>
+    <div className="flex flex-wrap items-end justify-between gap-3"><div><h1 className="mt-3 text-3xl font-semibold">Tabelas e condições</h1>
+    <p className="mt-2 text-sm text-slate-400">Aqui ficam as tabelas comerciais. Para cada versão rascunho você pode importar uma planilha inteira ou adicionar uma condição manualmente.</p></div><a href="/api/comercial/modelo" className="rounded-lg border border-emerald-500/50 px-3 py-2 text-sm text-emerald-300">Baixar modelo inteligente XLSX</a></div>
     {sp.f === 'ok:previa_validada' && typeof sp.n === 'string' && /^\d{1,5}$/.test(sp.n) && <p className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm text-emerald-200">Prévia validada: {sp.n} condição(ões). Nada foi gravado.</p>}
     {importIssue && <p role="alert" className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-200">Importação recusada{importLine ? ` — linha ${importLine}` : ''}: {importIssue}</p>}
 
@@ -107,9 +110,9 @@ export default async function TablesPage({ searchParams }: { searchParams: Promi
             <div className="mt-3 overflow-x-auto"><table className="w-full min-w-[760px] text-left text-xs"><thead className="text-slate-500"><tr><th className="py-2">Tipo</th><th>Prazo</th><th>Coef.</th><th>Taxa</th>{seeCommission && <><th>Comissão empresa</th><th>Comissões dos grupos</th></>}</tr></thead><tbody>{conds.map(c => <tr key={c.id} className="border-t border-slate-800 align-top"><td className="py-2">{typeN.get(c.contract_type_id) ?? 'Tipo'}</td><td>{c.term}x</td><td>{show(c.coefficient)}</td><td>{show(c.rate)}</td>{seeCommission && <><td>{show(receivedBy.get(c.id))}%</td><td>{(shownBy.get(c.id) ?? []).map(s => <div key={s.group_id}>{groupN.get(s.group_id) ?? 'grupo'}: {s.share_pct}% → {s.effective_pct}% efetivo <span className="text-slate-500">({SOURCE[s.source] ?? s.source})</span></div>)}</td></>}</tr>)}</tbody></table></div>
             {v.status==='draft' && canEdit && <div className="mt-4 grid gap-3 lg:grid-cols-2">
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4"><strong className="text-emerald-200">Importar várias condições</strong><p className="mt-1 text-xs text-slate-400">CSV ou XLSX. O arquivo inteiro é validado antes e a gravação é atômica.</p><form action={importConditions} className="mt-3 space-y-2 text-xs text-slate-400"><input type="hidden" name="version_id" value={v.id}/><input required type="file" name="file" accept=".csv,.xlsx,text/csv" className="block w-full text-xs"/><select name="policy_version_id" defaultValue="" className={`${field} w-full`}><option value="">Sem regra padrão</option>{policyOpts.map(p=><option key={p.versionId} value={p.versionId}>Regra padrão: {p.name}</option>)}</select><div className="flex flex-wrap gap-2"><button name="mode" value="preview" className={ghost}>Ver prévia</button><button name="mode" value="apply" className={btn}>Importar planilha</button></div><p>Colunas: Tipo de Contrato, Prazo, Coeficiente, Taxa, Comissão recebida e uma coluna por grupo ({activeGroups.map(g=>g.name).join(', ') || 'nenhum grupo'}).</p></form></div>
-              <details className="rounded-xl border border-slate-800 p-4"><summary className="cursor-pointer font-medium">Adicionar condição manualmente</summary><div className="mt-3"><ConditionForm versionId={v.id} contractTypes={contractTypes.data ?? []} groups={activeGroups} policies={policyOpts}/></div></details>
+              <details className="rounded-xl border border-slate-800 p-4"><summary className="cursor-pointer font-medium">Adicionar condição manualmente</summary><div className="mt-3"><ConditionForm versionId={v.id} contractTypes={enabledContractTypes} groups={activeGroups} policies={policyOpts}/></div></details>
             </div>}
-            {v.status==='draft' && canEdit && conds.map(c => <details key={`edit-${c.id}`} className="mt-2"><summary className="cursor-pointer text-xs text-slate-400">Editar {typeN.get(c.contract_type_id) ?? 'condição'} {c.term}x</summary><div className="mt-2"><ConditionForm versionId={v.id} contractTypes={contractTypes.data ?? []} groups={activeGroups} policies={policyOpts} cond={c} received={receivedBy.get(c.id)} shares={sharesBy.get(c.id)} policyVersion={policyOf.get(c.id)}/></div></details>)}
+            {v.status==='draft' && canEdit && conds.map(c => <details key={`edit-${c.id}`} className="mt-2"><summary className="cursor-pointer text-xs text-slate-400">Editar {typeN.get(c.contract_type_id) ?? 'condição'} {c.term}x</summary><div className="mt-2"><ConditionForm versionId={v.id} contractTypes={enabledContractTypes} groups={activeGroups} policies={policyOpts} cond={c} received={receivedBy.get(c.id)} shares={sharesBy.get(c.id)} policyVersion={policyOf.get(c.id)}/></div></details>)}
           </div>
         })}
         {canEdit && <form action={newDraftVersion} className="mt-3"><input type="hidden" name="table_id" value={t.id}/><SubmitButton className={ghost}>Nova versão (rascunho)</SubmitButton></form>}
