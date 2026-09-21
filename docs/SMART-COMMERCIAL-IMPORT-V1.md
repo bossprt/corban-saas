@@ -1,6 +1,6 @@
 # Smart Commercial Import V1
 
-**Status:** preparado, não LIVE.
+**Status:** LIVE na fundação de banco e integrado ao fluxo de aplicação. CSV/XLSX/XLS legado/PDF textual suportados; PDF escaneado permanece fora do escopo.
 
 ## Objetivo
 Receber uma planilha já validada no aplicativo e, em uma única transação:
