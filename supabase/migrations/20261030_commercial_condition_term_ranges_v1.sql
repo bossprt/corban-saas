@@ -6,10 +6,16 @@ alter table public.commercial_conditions
   add column if not exists term_min integer,
   add column if not exists term_max integer;
 
+-- Structural backfill only: copy the immutable legacy term into the new range columns.
+-- The table is locked by the preceding ALTER; disable only the condition write guard for this equivalent backfill.
+alter table public.commercial_conditions disable trigger commercial_conditions_00_guard;
+
 update public.commercial_conditions
 set term_min=coalesce(term_min,term),
     term_max=coalesce(term_max,term)
 where term_min is null or term_max is null;
+
+alter table public.commercial_conditions enable trigger commercial_conditions_00_guard;
 
 alter table public.commercial_conditions
   alter column term_min set not null,
