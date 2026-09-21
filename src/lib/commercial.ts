@@ -108,13 +108,15 @@ export function parseDelimited(text: string): string[][] {
   return rows.filter(r => r.some(x => x.trim() !== ''))
 }
 
-export type ParsedCondition = { line: number; contractTypeId: string; term: number; coefficient: string | null; rate: string | null; received: string; shares: ShareInput[]; resolved: ResolvedShare[] }
+export type ParsedCondition = { line: number; contractTypeId: string; termMin: number; termMax: number; coefficient: string | null; rate: string | null; received: string; shares: ShareInput[]; resolved: ResolvedShare[] }
 export type ImportIssue = { line: number; code: string; detail?: string }
 export const IMPORT_MAX_ROWS = 500
 
 const ALIASES = {
   contract: ['tipo_de_contrato', 'tipo_contrato', 'contrato'],
   term: ['prazo', 'prazo_meses', 'prazo_em_meses'],
+  termMin: ['prazo_inicial', 'prazo_minimo', 'prazo_min'],
+  termMax: ['prazo_final', 'prazo_maximo', 'prazo_max'],
   coefficient: ['coeficiente'],
   rate: ['taxa', 'taxa_mensal'],
   received: ['comissao_recebida', 'comissao', 'comissao_do_banco'],
@@ -146,7 +148,8 @@ export function mapConditionRows(rows: readonly (readonly unknown[])[], ctx: { g
     // an unknown column is refused, never silently ignored: a typo in a group name would otherwise drop that group's commission
     if (g) groupCols.set(i, g); else fail(1, 'unknown_column', String(rows[0][i]))
   })
-  for (const f of ['contract', 'term', 'received'] as const) if (col[f] === undefined) fail(1, `missing_column_${f}`)
+  for (const f of ['contract', 'received'] as const) if (col[f] === undefined) fail(1, `missing_column_${f}`)
+  if (col.term === undefined && (col.termMin === undefined || col.termMax === undefined)) fail(1, 'missing_column_term')
   if (col.coefficient === undefined && col.rate === undefined) fail(1, 'missing_column_coefficient_or_rate')
   if (issues.length) return { conditions: [], issues }
 
@@ -159,8 +162,10 @@ export function mapConditionRows(rows: readonly (readonly unknown[])[], ctx: { g
     const cell = (i: number | undefined) => (i === undefined ? '' : String(r[i] ?? '').trim())
     const type = typeKey.get(normalizeHeader(cell(col.contract)))
     if (!type) return fail(line, 'unknown_contract_type', cell(col.contract))
-    const term = parseTerm(cell(col.term))
-    if (term === null) return fail(line, 'invalid_term', cell(col.term))
+    const singleTerm = col.term === undefined ? null : parseTerm(cell(col.term))
+    const termMin = singleTerm ?? (col.termMin === undefined ? null : parseTerm(cell(col.termMin)))
+    const termMax = singleTerm ?? (col.termMax === undefined ? null : parseTerm(cell(col.termMax)))
+    if (termMin === null || termMax === null || termMin > termMax) return fail(line, 'invalid_term_range')
     const coefficient = cell(col.coefficient) === '' ? null : parseCoefficient(cell(col.coefficient))
     const rate = cell(col.rate) === '' ? null : parseRate(cell(col.rate))
     if ((cell(col.coefficient) !== '' && coefficient === null) || (cell(col.rate) !== '' && rate === null)) return fail(line, 'invalid_number')
@@ -177,10 +182,10 @@ export function mapConditionRows(rows: readonly (readonly unknown[])[], ctx: { g
     }
     const res = resolveShares(ctx.groups, shares, received, ctx.policy)
     if (res.error) return fail(line, res.error)
-    const key = `${type.id}|${term}`
+    const key = `${type.id}|${termMin}|${termMax}`
     if (seen.has(key)) return fail(line, 'duplicate_row')
     seen.add(key)
-    conditions.push({ line, contractTypeId: type.id, term, coefficient, rate, received, shares, resolved: res.rows })
+    conditions.push({ line, contractTypeId: type.id, termMin, termMax, coefficient, rate, received, shares, resolved: res.rows })
   })
   return { conditions: issues.length ? [] : conditions, issues }
 }
@@ -219,7 +224,7 @@ export const IMPORT_ISSUE_TEXT: Record<string, string> = {
   duplicate_column: 'Coluna repetida.',
   unknown_column: 'Coluna desconhecida (não é um campo nem um grupo de comissão ativo).',
   missing_column_contract: 'Falta a coluna Tipo de Contrato.',
-  missing_column_term: 'Falta a coluna Prazo.',
+  missing_column_term: 'Informe a coluna Prazo ou as colunas Prazo Inicial e Prazo Final.',
   missing_column_received: 'Falta a coluna Comissão recebida.',
   missing_column_coefficient_or_rate: 'Falta a coluna Coeficiente ou Taxa.',
   unknown_contract_type: 'Tipo de Contrato desconhecido.',
