@@ -349,3 +349,10 @@ Achados: esteira gravável por qualquer membro (forjar histórico / caso `paid`)
 - Repasse 1/2/3 legado nunca é associado silenciosamente a Grupo de Comissão.
 - Tabela fica em rascunho após a carga.
 - Claude não utilizado até este ponto.
+
+
+### Estabilizado — 20/09/2026 (Smart Import build)
+- Produção Vercel novamente READY.
+- Experimento de cálculo econômico detalhado na prévia revertido após erro de build; core Smart Import preservado.
+- Banco LIVE não sofreu rollback nem alteração adicional.
+- Próximo trabalho transferido para Claude apenas por necessidade real de ambiente local: XLS legado/PDF + dependências + testes com arquivos reais.
