@@ -38,6 +38,7 @@ create table public.commercial_condition_components(
 );
 create index commercial_condition_components_org_condition_idx on public.commercial_condition_components(organization_id,condition_id);
 create index commercial_condition_components_type_idx on public.commercial_condition_components(component_type_id);
+create index commercial_condition_components_created_by_idx on public.commercial_condition_components(created_by) where created_by is not null;
 
 create table public.component_payout_policies(
   id uuid primary key default gen_random_uuid(),
@@ -57,6 +58,10 @@ create table public.component_payout_policies(
   foreign key (organization_id,org_agreement_id) references public.organization_agreements(organization_id,id) on delete restrict,
   foreign key (organization_id,product_table_id) references public.product_tables(organization_id,id) on delete restrict
 );
+create index component_payout_policies_bank_idx on public.component_payout_policies(organization_id,org_bank_id) where org_bank_id is not null;
+create index component_payout_policies_agreement_idx on public.component_payout_policies(organization_id,org_agreement_id) where org_agreement_id is not null;
+create index component_payout_policies_table_idx on public.component_payout_policies(organization_id,product_table_id) where product_table_id is not null;
+create index component_payout_policies_created_by_idx on public.component_payout_policies(created_by) where created_by is not null;
 create unique index component_payout_policies_scope_name_key
 on public.component_payout_policies(
   organization_id,lower(btrim(name)),org_bank_id,org_agreement_id,product_table_id
@@ -75,6 +80,7 @@ create table public.component_payout_policy_versions(
   unique (policy_id,version),
   foreign key (organization_id,policy_id) references public.component_payout_policies(organization_id,id) on delete restrict
 );
+create index component_payout_policy_versions_created_by_idx on public.component_payout_policy_versions(created_by) where created_by is not null;
 create index component_payout_policy_versions_lookup_idx
 on public.component_payout_policy_versions(organization_id,policy_id,effective_from desc,version desc);
 
@@ -138,6 +144,23 @@ create trigger commercial_condition_components_00_guard before insert or update 
 create trigger component_payout_policy_versions_00_guard before insert or update or delete on public.component_payout_policy_versions for each row execute function public.guard_component_commission_write();
 create trigger component_payout_policy_items_00_guard before insert or update or delete on public.component_payout_policy_items for each row execute function public.guard_component_commission_write();
 create trigger component_payout_policies_00_guard before insert or update on public.component_payout_policies for each row execute function public.guard_org_catalog_row();
+
+create or replace function public.guard_component_payout_policy_scope()
+returns trigger language plpgsql set search_path='' as $
+declare v_bank uuid; v_agreement uuid;
+begin
+  if new.product_table_id is not null then
+    select r.org_bank_id,r.org_agreement_id into v_bank,v_agreement
+    from public.product_tables t
+    join public.organization_product_routes r on r.id=t.route_id and r.organization_id=t.organization_id
+    where t.id=new.product_table_id and t.organization_id=new.organization_id;
+    if not found then raise exception 'component_policy_table_not_found'; end if;
+    if new.org_bank_id is not null and new.org_bank_id is distinct from v_bank then raise exception 'component_policy_bank_mismatch'; end if;
+    if new.org_agreement_id is not null and new.org_agreement_id is distinct from v_agreement then raise exception 'component_policy_agreement_mismatch'; end if;
+  end if;
+  return new;
+end $;
+create trigger component_payout_policies_01_scope before insert or update on public.component_payout_policies for each row execute function public.guard_component_payout_policy_scope();
 
 create or replace function public.replace_commercial_condition_components(p_condition uuid,p_components jsonb)
 returns void language plpgsql set search_path='' as $$
@@ -249,7 +272,7 @@ with candidate as (
   from public.component_payout_policies p
   join public.component_payout_policy_versions v on v.policy_id=p.id and v.organization_id=p.organization_id
   where p.organization_id=p_organization and p.is_active
-    and public.is_active_organization_member(p.organization_id)
+    and public.has_active_organization_role(p.organization_id,array['admin','manager','supervisor'])
     and (p.org_bank_id is null or p.org_bank_id=p_bank)
     and (p.org_agreement_id is null or p.org_agreement_id=p_agreement)
     and (p.product_table_id is null or p.product_table_id=p_table)
@@ -288,6 +311,7 @@ create policy component_payout_policy_items_select on public.component_payout_po
 create policy component_payout_policy_items_insert on public.component_payout_policy_items for insert to authenticated with check (public.has_active_organization_role(organization_id,array['admin','manager']));
 
 revoke all on function public.guard_component_commission_write() from public,anon,authenticated;
+revoke all on function public.guard_component_payout_policy_scope() from public,anon,authenticated;
 revoke all on function public.replace_commercial_condition_components(uuid,jsonb) from public,anon;
 grant execute on function public.replace_commercial_condition_components(uuid,jsonb) to authenticated;
 revoke all on function public.save_component_payout_policy(uuid,text,uuid,uuid,uuid,numeric,timestamptz,jsonb,uuid) from public,anon;
