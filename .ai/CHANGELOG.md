@@ -750,3 +750,35 @@ New business flow:
 - old manual login-binding UI is removed from the normal path; access panel now reports active/pending/no-access state and keeps supervisor management.
 
 Application commits include unified seller creation and automatic access state UI. Latest application HEAD before documentation: `afe22a296ec21baedad0384e017cc41333244920`; Vercel build was still BUILDING at last check.
+
+
+## Seller full profile + payout readiness V1 — LIVE
+Applied LIVE as `20260921052901 seller_full_profile_payout_readiness_v1` after explicit Owner authorization.
+Post-apply contract passed. Security Advisor unchanged: no new WARN/ERROR; only the 2 historical Platform Admin INFO findings.
+
+Authoritative product rule:
+- Corban OS seller registry must be equal-or-better than useful 2Tech seller registration capability, never worse;
+- simplification is allowed only when the OS automates/normalizes the same capability without losing information;
+- seller registration must support operations, access control, supervision, production, commission and payout readiness.
+
+LIVE seller data model now includes:
+- seller_profiles: legal/trade name, e-mail, phone, WhatsApp, birth/opening date, identity/registration, issuer, occupation, notes;
+- seller_addresses: versioned current + historical address;
+- seller_payment_accounts: versioned bank/Pix payout destination, holder, verification status and effective dates;
+- seller_certifications: issuer, number, issue/expiry, status and notes;
+- RLS: manager/admin manage; seller can see own profile/payment; supervisor can see supervised seller profile but NOT payout account;
+- all writes go through governed RPCs; direct writes are trigger-blocked;
+- payment destination replacement closes old version instead of overwriting history.
+
+Application UX:
+- /app/cadastros/vendedores remains focused on NEW seller registration and seller-group creation;
+- button opens /app/cadastros/vendedores/consulta;
+- consultation is compact: search name/CPF-CNPJ + active status + one summary row per seller + Abrir cadastro;
+- each seller has dedicated /app/cadastros/vendedores/[id] profile page;
+- profile is separated into blocks: Identificação comercial, Dados cadastrais/contato, Endereço, Acesso/supervisão, Dados para pagamento de comissão, Produção/comissão, Certificações;
+- payment account history is visible only to manager/admin;
+- production block shows seller-linked proposals and calculated seller commission, explicitly warning calculated != paid;
+- new seller creation redirects to the dedicated profile page so the operator can complete the full registration immediately.
+
+Important remaining domain gap:
+- payout readiness is now in place, but final commission-payment settlement/reporting still requires its own governed payout batch/payment ledger. Do NOT infer `paid to seller` from calculated commission or company financial events.
