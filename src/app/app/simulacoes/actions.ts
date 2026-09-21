@@ -77,3 +77,25 @@ export async function createProposalFromSimulation(formData: FormData) {
   revalidatePath('/app/simulacoes'); revalidatePath('/app/propostas'); revalidatePath('/app')
   return go('ok:proposta_criada', '/app/propostas')
 }
+
+
+export async function closeSimulation(formData: FormData) {
+  const { supabase } = await requireAppContext()
+  const simulationId = String(formData.get('simulation_id') ?? '')
+  const target = String(formData.get('target_status') ?? '')
+  if (!isUuid(simulationId) || !['cancelled','expired'].includes(target)) return go('erro:requisicao_invalida')
+
+  const { error } = await supabase.rpc('close_simulation', {
+    p_simulation_id: simulationId,
+    p_target_status: target,
+  })
+  if (error) {
+    if (/forbidden|not_authorized/.test(error.message ?? '')) return go('erro:sem_permissao')
+    if (/simulation_not_closable|simulation_has_proposal|selected_simulation_is_terminal|terminal_simulation_status/.test(error.message ?? '')) return go('erro:simulacao_encerramento')
+    return go(classifyDbFeedback(error))
+  }
+
+  revalidatePath('/app/simulacoes')
+  revalidatePath('/app')
+  return go(target === 'cancelled' ? 'ok:simulacao_cancelada' : 'ok:simulacao_expirada')
+}
