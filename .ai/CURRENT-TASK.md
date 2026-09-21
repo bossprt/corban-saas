@@ -1700,3 +1700,22 @@ Estado antes do handoff:
 **Falta / follow-ups:** UI mostrar `needsReview` do PDF com CTA de mapeamento manual; deteccao de formato `%` tambem no XLSX; OCR/IA para PDF escaneado (exige gate de custo/secret); auditar visibilidade de comissao nas novas paginas de `/app/comercial/*` (as assercoes antigas de `canViewCommission` na pagina principal foram removidas porque a pagina foi reescrita).
 
 **Human Gate:** nenhum. Proximo passo sugerido: revisar e mesclar `feature/smart-import-xls-pdf` em `architecture/corban-os-master-v2`.
+
+
+## Pós-merge Smart Import XLS/PDF
+Revisão independente concluída:
+- PR #1 mesclado na branch arquitetural;
+- branch estava 2 commits à frente e 0 atrás, sem DDL;
+- merge e correção de visibilidade passaram no build Vercel;
+- produção está READY no commit `fbca952839551254dc0990a8b969e476934ed191`.
+
+Achado de segurança/arquitetura corrigido:
+- `/app/comercial` voltou a obedecer a política central `canViewCommission`;
+- comportamento atual continua supervisor+;
+- decisão futura de visibilidade permanece centralizada em RBAC + RLS.
+
+Próxima fila:
+1. testar fluxo com um XLS/PDF comercial real quando houver amostra sem dados pessoais;
+2. adicionar mapeamento manual para arquivos que retornem “Necessita revisão/mapeamento”;
+3. resolver formatação percentual de XLSX de forma determinística;
+4. depois retomar preview econômico empresa recebe / grupo recebe / empresa retém, sem delegar cálculo à IA.
