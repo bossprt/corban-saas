@@ -1211,3 +1211,26 @@ Validação:
 ## Handoff de sessão — próximo chat
 Estado consolidado para retomada gravado em `.ai/NEXT-CHAT-HANDOFF.md`.
 O próximo Human Gate é `20261014_seller_sub_proposal_snapshot_v1.sql` (preparada/testada rollback-only, NÃO LIVE).
+
+
+## Seller/SUB → proposta/receita esperada — LIVE
+Aplicada em produção com autorização explícita do Owner:
+- `20260921025320 seller_sub_proposal_snapshot_v1`.
+
+Validação pós-apply:
+- contract `seller-sub-proposal-snapshot-contract.sql` passou;
+- migration consta em `list_migrations`;
+- Security Advisor sem WARN/ERROR novo; permanecem somente 2 INFO históricos de Platform Admin.
+
+Efeito funcional:
+- proposta draft pode receber vendedor por `assign_proposal_seller`;
+- seller fica congelado antes do snapshot comercial;
+- SUB resolve regra publicada por componente ou fallback `all`;
+- snapshot congela seller, regra SUB, share do SUB e share da empresa;
+- expected commission usa o share da empresa já congelado;
+- commission group permanece fora do attribution snapshot member-visible.
+
+Aplicação:
+- proposal detail ganhou seletor supervisor+ de vendedor/SUB em draft;
+- a ação chama somente a RPC governada;
+- nenhuma escrita direta em `seller_id` foi adicionada.
