@@ -24,4 +24,25 @@ begin
     select 1 from public.commission_groups
     where calculation_basis<>'percent_of_received_commission'
   ) then raise exception 'legacy_direct_basis_still_present'; end if;
+
+  if not exists(
+    select 1 from information_schema.triggers
+    where trigger_schema='public'
+      and event_object_table='commercial_condition_shares'
+      and trigger_name='commercial_condition_shares_15_group_limit'
+  ) then raise exception 'condition_share_limit_trigger_missing'; end if;
+
+  if not exists(
+    select 1 from information_schema.triggers
+    where trigger_schema='public'
+      and event_object_table='payout_policy_items'
+      and trigger_name='payout_policy_items_15_group_limit'
+  ) then raise exception 'policy_share_limit_trigger_missing'; end if;
+
+  if not exists(
+    select 1 from information_schema.triggers
+    where trigger_schema='public'
+      and event_object_table='component_payout_policy_items'
+      and trigger_name='component_payout_policy_items_15_group_limit'
+  ) then raise exception 'component_share_limit_trigger_missing'; end if;
 end $$;
