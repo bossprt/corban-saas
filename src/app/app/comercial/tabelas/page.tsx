@@ -50,7 +50,7 @@ export default async function TablesPage({searchParams}:{searchParams:Promise<Re
   const bankFilter=typeof sp.bank==='string'?sp.bank:''
   const providerFilter=typeof sp.provider==='string'?sp.provider:''
   const agreementFilter=typeof sp.agreement==='string'?sp.agreement:''
-  const statusFilter=typeof sp.status==='string'?sp.status:'current'
+  const statusFilter=typeof sp.status==='string'?sp.status:'all'
 
   const filtered=allTables.filter(t=>{
     const m=routeMeta.get(t.route_id)!
@@ -109,7 +109,7 @@ export default async function TablesPage({searchParams}:{searchParams:Promise<Re
       <select name="bank" defaultValue={bankFilter} className={field}><option value="">Todos os bancos</option>{bankOptions.map(x=><option key={x}>{x}</option>)}</select>
       <select name="provider" defaultValue={providerFilter} className={field}><option value="">Todas as origens/promotoras</option>{providerOptions.map(x=><option key={x}>{x}</option>)}</select>
       <select name="agreement" defaultValue={agreementFilter} className={field}><option value="">Todos os convênios</option>{agreementOptions.map(x=><option key={x}>{x}</option>)}</select>
-      <select name="status" defaultValue={statusFilter} className={field}><option value="current">Somente vigentes</option><option value="all">Todas</option><option value="draft">Com rascunho</option><option value="inactive">Inativas</option></select>
+      <select name="status" defaultValue={statusFilter} className={field}><option value="all">Todas</option><option value="current">Somente vigentes</option><option value="draft">Com rascunho</option><option value="inactive">Inativas</option></select>
       <div className="flex flex-wrap gap-2 md:col-span-5"><button type="submit" className={btn}>Pesquisar</button><Link href="/app/comercial/tabelas" className={ghost}>Limpar filtros</Link><span className="self-center text-xs text-slate-500">{filtered.length} tabela(s)</span></div>
     </form>
 
