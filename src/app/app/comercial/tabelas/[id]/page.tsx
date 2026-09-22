@@ -71,6 +71,7 @@ export default async function CommercialTableDetail({
   const canEdit=atLeast(membership.role,'manager')
   const seeCommission=canViewCommission(membership.role)
   const showHistory=sp.history==='1'
+  const conditionSearch=typeof sp.q==='string'?sp.q.trim().toLocaleLowerCase('pt-BR'):''
 
   const tableQ=await supabase.from('product_tables').select('id,route_id,name,status').eq('id',id).maybeSingle()
   if(!tableQ.data)notFound()
@@ -153,6 +154,24 @@ export default async function CommercialTableDetail({
     return v?{versionId:v.id,name:p.name}:null
   }).filter((x):x is PolicyOpt=>Boolean(x))
 
+  const normalized=(value:unknown)=>String(value??'').toLocaleLowerCase('pt-BR').replace(',', '.')
+  const filteredConditions=conditionSearch
+    ?conditions.filter(c=>{
+        const effective=[...(effectiveBy.get(c.id)?.values()??[])].join(' ')
+        const haystack=[
+          typeN.get(c.contract_type_id)??'',
+          c.term_min,c.term_max,`${c.term_min}-${c.term_max}`,`${c.term_min} a ${c.term_max}`,
+          c.amount_min??'',c.amount_max??'',
+          receivedBy.get(c.id)??'',baseBy.get(c.id)??'',effective
+        ].map(normalized).join(' ')
+        return haystack.includes(normalized(conditionSearch))
+      })
+    :conditions
+  const clearSearchHref=showHistory?`/app/comercial/tabelas/${id}?history=1`:`/app/comercial/tabelas/${id}`
+  const historyHref=showHistory
+    ?`/app/comercial/tabelas/${id}${conditionSearch?`?q=${encodeURIComponent(conditionSearch)}`:''}`
+    :`/app/comercial/tabelas/${id}?history=1${conditionSearch?`&q=${encodeURIComponent(conditionSearch)}`:''}`
+
   return <section>
     <Link href="/app/comercial/tabelas" className="text-sm text-slate-400 underline">← Voltar às tabelas</Link>
     <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
@@ -160,14 +179,28 @@ export default async function CommercialTableDetail({
         <h1 className="text-2xl font-semibold">{table.name}</h1>
         <p className="mt-1 text-sm text-slate-400">{bankName} · {providerName} · {agreementName}</p>
       </div>
-      <Link href={showHistory?'/app/comercial/tabelas/'+id:'/app/comercial/tabelas/'+id+'?history=1'} className={ghost}>
+      <Link href={historyHref} className={ghost}>
         {showHistory?'Ocultar histórico':'Ver histórico'}
       </Link>
     </div>
 
+    <form method="get" className="mt-5 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900 p-4">
+      {showHistory&&<input type="hidden" name="history" value="1"/>}
+      <input
+        type="search"
+        name="q"
+        defaultValue={typeof sp.q==='string'?sp.q:''}
+        placeholder="Pesquisar condições por tipo, prazo, valor ou comissão"
+        className={field+' min-w-[280px] flex-1'}
+      />
+      <button type="submit" className={btn}>Pesquisar</button>
+      <Link href={clearSearchHref} className={ghost}>Limpar</Link>
+      <span className="text-xs text-slate-500">{filteredConditions.length} de {conditions.length} condição(ões)</span>
+    </form>
+
     <div className="mt-5 space-y-4">
       {visibleVersions.map(v=>{
-        const conds=conditions.filter(c=>c.product_table_version_id===v.id)
+        const conds=filteredConditions.filter(c=>c.product_table_version_id===v.id)
         return <div key={v.id} className={card}>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -196,6 +229,7 @@ export default async function CommercialTableDetail({
                 </>}
               </tr></thead>
               <tbody>
+                {!conds.length&&<tr><td colSpan={seeCommission?9+activeGroups.length:7} className="border-t border-slate-800 py-5 text-center text-slate-500">Nenhuma condição encontrada para esta versão.</td></tr>}
                 {conds.map(c=><tr key={c.id} className="border-t border-slate-800">
                   <td className="py-2 pr-4 whitespace-nowrap">{typeN.get(c.contract_type_id)??'Tipo'}</td>
                   <td className="pr-4">{c.term_min}</td>
