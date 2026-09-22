@@ -105,12 +105,12 @@ export default async function TablesPage({searchParams}:{searchParams:Promise<Re
     </details>}
 
     <form method="get" className="mt-5 grid gap-2 rounded-2xl border border-slate-800 bg-slate-900 p-4 md:grid-cols-5">
-      <input name="q" defaultValue={typeof sp.q==='string'?sp.q:''} placeholder="Buscar tabela, banco ou promotora" className={field}/>
+      <input name="q" defaultValue={typeof sp.q==='string'?sp.q:''} placeholder="Pesquisar tabela, banco, origem ou convênio" className={field}/>
       <select name="bank" defaultValue={bankFilter} className={field}><option value="">Todos os bancos</option>{bankOptions.map(x=><option key={x}>{x}</option>)}</select>
       <select name="provider" defaultValue={providerFilter} className={field}><option value="">Todas as origens/promotoras</option>{providerOptions.map(x=><option key={x}>{x}</option>)}</select>
       <select name="agreement" defaultValue={agreementFilter} className={field}><option value="">Todos os convênios</option>{agreementOptions.map(x=><option key={x}>{x}</option>)}</select>
       <select name="status" defaultValue={statusFilter} className={field}><option value="current">Somente vigentes</option><option value="all">Todas</option><option value="draft">Com rascunho</option><option value="inactive">Inativas</option></select>
-      <div className="flex flex-wrap gap-2 md:col-span-5"><button className={btn}>Filtrar</button><Link href="/app/comercial/tabelas" className={ghost}>Limpar filtros</Link><span className="self-center text-xs text-slate-500">{filtered.length} tabela(s)</span></div>
+      <div className="flex flex-wrap gap-2 md:col-span-5"><button type="submit" className={btn}>Pesquisar</button><Link href="/app/comercial/tabelas" className={ghost}>Limpar filtros</Link><span className="self-center text-xs text-slate-500">{filtered.length} tabela(s)</span></div>
     </form>
 
     <div className="mt-5 space-y-3">
