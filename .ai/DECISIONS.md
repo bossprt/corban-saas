@@ -338,3 +338,13 @@
 - **Decisão 3:** páginas antigas continuam acessíveis; esta onda não migra nem apaga dados e não altera RLS.
 - **Decisão 4:** toda execução relevante passa por revisão de completude, adversarial e validação real antes de ser aceita.
 - **Decisão 5:** Claude não é executor padrão; só entra quando houver capacidade local necessária, sempre com fila longa e disciplina de contexto.
+
+## ADR-0027 - Product reset: owner-validated operation map replaces ChatGPT-era docs as product truth
+- **Data:** 24/09/2026 - **Status:** aceita.
+- **Contexto:** read-only audit (24/09/2026) found a solid technical base (RLS on all 109 tables, exact BigInt money math, commercial catalog) but no operational use: clients, leads, simulations, proposals_v2, contracts and financial_events hold 0 rows. Tax, received-commission settlement and seller payout do not close a cycle. Production has 4 applied migrations absent from every Git branch (commercial_condition_amount_ranges_v1, commercial_condition_term_ranges_v1, term_range_import_paths_v1, move_btree_gist_extension_v1).
+- **Decisão 1:** `.ai/MAPA-OPERACAO.md` (v2, approved by the owner) is the product source of truth. CORBAN-OS-* documents become hypotheses to verify against code and database.
+- **Decisão 2:** Corban works standalone. DeskcommCRM is an optional client of Corban's public API (`/api/v1`, per-tenant keys, signed outbound webhooks); nothing in Corban depends on it.
+- **Decisão 3:** no percentage or policy is hard-coded. Commission, tax, company margin, split, deferred payout, negative-balance and payout-period policies are owner-configurable, versioned and frozen on the proposal. Rule precedence: global < bank/table < commission group < seller < exception.
+- **Decisão 4:** seller payout runs on an immutable debit/credit ledger per seller; chargebacks debit everyone who received from the contract proportionally; payout only after bank receipt and reconciliation; money leaves only with human approval.
+- **Decisão 5:** visual layer is rebuilt with an own design system (Radix Primitives, TanStack Table, cmdk, Recharts, IBM Plex), light theme by default, pluggable brand tokens, mobile-first seller screens. A static mockup is approved before any UI code.
+- **Decisão 6:** execution follows phases F0–F11 in MAPA-OPERACAO.md, starting with F0 (bring production-only migrations into Git). Every phase needs owner approval before starting and ends proven on screen with real data.

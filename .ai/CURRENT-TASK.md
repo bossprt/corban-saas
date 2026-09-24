@@ -1,4 +1,25 @@
-# CURRENT TASK — CORBAN OS V2
+# CURRENT TASK — CORBAN SaaS (reset de produto)
+
+**Atualização:** 24/09/2026
+**Branch:** `feature/smart-import-xls-pdf`
+
+## Estado
+- Auditoria só leitura concluída (ver ADR-0027).
+- Mapa real da operação v2 aprovado pelo dono: `.ai/MAPA-OPERACAO.md`. Fonte de verdade de produto.
+- Fases F0–F11 aprovadas em princípio; cada fase exige aprovação explícita antes de começar.
+
+## Próximo
+1. Maquete visual estática (4 telas: dashboard gestor, dashboard vendedor mobile, esteira, conciliação) para aprovação do dono.
+2. F0: ler as 4 migrations que existem só em produção e mostrar ao dono antes de gravar no Git.
+
+## Bloqueios / riscos
+- Drift de migrations: produção tem 4 migrations fora do Git. Nenhuma migration nova antes de resolver.
+- Telas atuais nunca rodaram com dados operacionais reais; tratar como não provadas.
+
+---
+
+# HISTÓRICO ANTERIOR (CORBAN OS V2)
+
 
 **Atualização:** 18/09/2026
 **Branch:** `architecture/corban-os-master-v2`
