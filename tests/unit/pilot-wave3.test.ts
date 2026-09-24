@@ -173,7 +173,7 @@ test('access check fails closed', async () => {
 })
 test('plan module catalog in the app matches the database catalog', async () => {
   const { PLAN_MODULES } = await import('../../src/lib/access')
-  const m = read('supabase/migrations/20260924220000_organization_modules_v1.sql')
+  const m = read('supabase/migrations/20260924114956_organization_modules_v1.sql')
   const body = /select array\[([^\]]+)\]/.exec(m)?.[1] ?? ''
   assert.deepEqual(body.replace(/'/g, '').split(',').map(s => s.trim()), [...PLAN_MODULES])
 })

@@ -24,8 +24,8 @@
 ## F1 — andamento (24/09/2026)
 - Etapas 1–4 prontas: tokens e componentes, casca por jornada, ponte de paleta, busca Ctrl+K (server action, CPF nunca em URL), tela Hoje.
 - 5a papéis e permissões: **aplicada em produção** (`20260924071259_organization_roles_permissions_v1`, md5 igual ao arquivo). 7 papéis padrão por empresa, papéis personalizados, `has_permission`, tela Configurações > Papéis.
-- 5b alcance dos dados: migration `20260924210000_data_scope_visibility_v1` pronta e testada localmente (contrato 16/16). **Não aplicada em produção** — aguarda aprovação.
-- 5c módulos por plano: migration `20260924220000_organization_modules_v1` pronta e testada localmente (contrato 8/8). **Não aplicada em produção** — aguarda aprovação.
+- 5b alcance dos dados: **aplicada em produção** (`20260924114941_data_scope_visibility_v1`, md5 igual). Contrato 16/16.
+- 5c módulos por plano: **aplicada em produção** (`20260924114956_organization_modules_v1`, md5 igual). Contrato 8/8. F1 concluída; próxima: F2.
 - Testes: unit 318/318, Playwright público 8/8 e logado 19/19 (banco local), três contratos SQL em `tests/security/`.
 - Ambiente local: `supabase` em portas 544xx (workdir em %TEMP%/f0/localsb), app `next dev --webpack -p 3200` com env apontando para o local; usuários de teste admin/supervisor/vendedor/vendedor2@corban-teste.local.
 

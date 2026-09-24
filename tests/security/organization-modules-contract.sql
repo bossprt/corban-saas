@@ -1,4 +1,4 @@
--- Contract test for 20260924220000_organization_modules_v1 (same local test company and users as the other contracts).
+-- Contract test for 20260924114956_organization_modules_v1 (same local test company and users as the other contracts).
 -- One transaction, rolled back.  psql -v ON_ERROR_STOP=1 -f tests/security/organization-modules-contract.sql
 
 begin;

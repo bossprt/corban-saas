@@ -1,4 +1,4 @@
--- Contract test for 20260924210000_data_scope_visibility_v1. Runs on a local or test database seeded with
+-- Contract test for 20260924114941_data_scope_visibility_v1. Runs on a local or test database seeded with
 -- supabase/seed/f0-test-tenant.sql and four users of the test company:
 --   admin@corban-teste.local (Administrador), supervisor@corban-teste.local (Supervisor, scope team),
 --   vendedor@corban-teste.local and vendedor2@corban-teste.local (Vendedor, scope own).
