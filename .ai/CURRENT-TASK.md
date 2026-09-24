@@ -21,18 +21,18 @@
 - Seed da empresa fictícia: `supabase/seed/f0-test-tenant.sql`, com trava `corban.env = 'test'` (validada: aborta sem a trava) e CPFs com dígito verificador válido.
 - graphify gerado em `graphify-out/` (local, fora do Git): 998 nós, 2666 arestas, 45 comunidades. Usar `graphify query` antes de ler arquivos.
 
-## Precisa do dono (bloqueios da F0)
-1. Connection string do banco (Supabase > Connect > Session pooler) exportada como `SUPABASE_DB_URL` só no terminal do dono, para rodar:
-   - `bash scripts/f0/fetch-prod-migrations.sh` (21 arquivos verificados por md5);
-   - `pg_dump --schema-only` para o baseline (proposta: um arquivo baseline + marcar as migrations antigas como aplicadas).
-   Nenhuma credencial vai para o repositório.
-2. Aprovar a estratégia de baseline antes de gravar.
-3. Depois: subir Supabase local (Docker disponível), aplicar baseline + migrations, rodar seed, habilitar testes de tela logados.
+## F0 — concluído em 24/09/2026 (dia)
+- 21 migrations de produção trazidas ao Git byte a byte (21/21 md5), via `scripts/f0/export-baseline.ps1` (senha em prompt oculto, só leitura).
+- Baseline `supabase/baseline/20260924_prod_schema_baseline.sql` restaurado em Supabase local e comparado com produção: tabelas, funções, policies, triggers e índices idênticos (md5 de policies e corpos de funções iguais).
+- Seed da empresa fictícia roda no banco local (1 org, 2 filiais, 5 clientes, 3 leads).
+- Supabase local de teste usa portas 544xx (543xx pertencem a outro projeto local; não mexer).
+- **Grupo A aplicado em produção** (`20260924063004_remove_unused_group_a_v1`, md5 igual ao arquivo): 11 tabelas vazias e 11 funções removidas; produção com 94 tabelas e 145 funções. A trava da migration barrou a 1ª tentativa porque `seller_profiles` tinha 1 registro real; essa tabela saiu da lista.
+- Código morto removido: `src/lib/ai-import` e seus testes. Unit 312/312, tsc, lint, build, Playwright 8/8.
 
 ## Limpeza aprovada pelo dono (24/09/2026)
-- **Grupo A — remover logo após o baseline** (migration versionada + backup antes): `ai_credit_ledger`, `ai_usage_events`, `ai_usage_jobs`, `organization_ai_limits`, `import_jobs`, `import_layout_mappings`, `contracts`, `lead_events`, `seller_addresses`, `seller_bank_aliases`, `seller_certifications`, `seller_payment_accounts`, `seller_profiles` (13 tabelas) e as funções só delas: `ai_credit_balance`, `guard_ai_write`, `platform_grant_ai_credits`, `platform_set_ai_limits`, `reserve_ai_job`, `settle_ai_job`, `confirm_import_mapping`, `replace_seller_address`, `resolve_seller_bank_alias`, `set_seller_payment_account`, `upsert_seller_certification`, `upsert_seller_profile`. Nenhuma é chamada pelo app.
+- **Grupo A — remover logo após o baseline** (migration versionada + backup antes): `ai_credit_ledger`, `ai_usage_events`, `ai_usage_jobs`, `organization_ai_limits`, `import_jobs`, `import_layout_mappings`, `contracts`, `seller_addresses`, `seller_bank_aliases`, `seller_certifications`, `seller_payment_accounts` (11 tabelas; `lead_events` e `seller_profiles` saíram) e as funções só delas: `ai_credit_balance`, `guard_ai_write`, `platform_grant_ai_credits`, `platform_set_ai_limits`, `reserve_ai_job`, `settle_ai_job`, `confirm_import_mapping`, `replace_seller_address`, `resolve_seller_bank_alias`, `set_seller_payment_account`, `upsert_seller_certification`. Nenhuma é chamada pelo app.
 - `seller_supervisions` saiu do grupo A: a função `can_view_seller_commission` (lê essa tabela) está nas policies RLS de `financial_events` e `financial_reconciliation_cases`. Remover quebraria o financeiro. Vai para o grupo B junto com a hierarquia (F1/F4).
-- **Grupo B — remover na fase que substitui:** modelo rede/canais (`commercial_entities`, `commercial_relationships`, `commercial_channels`, `channel_commission_rule_versions`, `network_split_rule_versions`, `commission_rule_components`, tela `/app/rede`), políticas de repasse duplicadas, snapshots de comissão não usados, `seller_supervisions`, `profiles` (legado, verificar funções).
+- **Grupo B — remover na fase que substitui:** modelo rede/canais (`commercial_entities`, `commercial_relationships`, `commercial_channels`, `channel_commission_rule_versions`, `network_split_rule_versions`, `commission_rule_components`, tela `/app/rede`), políticas de repasse duplicadas, snapshots de comissão não usados, `seller_supervisions`, `seller_profiles` (1 registro real), `lead_events` (usada por `private.lead_write`), `profiles` (legado, verificar funções).
 - Base legada de clientes: nova seção 16a e fase F5.5 no mapa.
 
 ## Observação de segurança para F1
