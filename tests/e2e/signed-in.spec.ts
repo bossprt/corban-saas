@@ -109,3 +109,22 @@ test('registering an existing CPF recognizes the client instead of duplicating',
   await expect(page.getByText('(68) 99911-0001')).toBeVisible()
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-cliente-ficha.png`, fullPage: true })
 })
+
+test('administrator creates an API key and an external system sends a lead with it', async ({ page, request }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  await page.goto('/app/configuracao/api')
+  await page.getByLabel('Nome da chave').fill(`E2E ${Date.now()}`)
+  await page.getByRole('button', { name: 'Criar chave' }).click()
+  const key = (await page.getByTestId('new-api-key').textContent())?.trim() ?? ''
+  expect(key).toMatch(/^ck_live_/)
+  const ref = `e2e-ui-${Date.now()}`
+  const body = { full_name: 'Lead via API', phone: `6899${String(Date.now()).slice(-7)}`, external_ref: ref, campaign: 'e2e' }
+  const first = await request.post('/api/v1/leads', { headers: { authorization: `Bearer ${key}` }, data: body })
+  expect(first.status()).toBe(201)
+  const again = await request.post('/api/v1/leads', { headers: { authorization: `Bearer ${key}` }, data: body })
+  expect(again.status()).toBe(200)
+  expect((await again.json()).duplicate).toBe(true)
+  const wrong = await request.post('/api/v1/leads', { headers: { authorization: 'Bearer ck_live_invalidinvalidinvalidinvalid' }, data: body })
+  expect(wrong.status()).toBe(401)
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-api.png`, fullPage: true })
+})

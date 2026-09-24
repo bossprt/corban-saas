@@ -197,3 +197,11 @@ test('CPF and phone formatting', async () => {
   assert.equal(formatPhone('5568999000101'), '(68) 99900-0101')
   assert.equal(formatPhone('6832240000'), '(68) 3224-0000')
 })
+test('public API route authenticates only through the database and logs nothing from the request', () => {
+  const r = read('src/app/api/v1/leads/route.ts')
+  assert.match(r, /rpc\('api_ingest_lead'/)
+  assert.doesNotMatch(r, /console\.(log|info|warn|error)/)
+  assert.doesNotMatch(r, /organization_id|p_org/)
+  const a = read('src/app/app/configuracao/api/actions.ts')
+  assert.doesNotMatch(a, /redirect\(|console\./)
+})
