@@ -1,268 +1,63 @@
-# RULES — CORBAN ENTERPRISE
+# RULES — CORBAN
 
-Regras operacionais para IAs e desenvolvedores que atuam neste projeto.
-
-**Versão:** 1.0
-**Data:** 11/09/2026
-**Compatível com Master:** v1.1
-**Aplica-se a:** Qualquer IA (DeepSeek, ChatGPT, Claude, Gemini, Llama local, etc.) e qualquer desenvolvedor humano
+Operating rules for any AI or developer working in this repository. Rewritten on 2026-09-24 during the product reset; the
+earlier version pointed to ChatGPT-era master documents that described an architecture the code never had (removed,
+recoverable from the tag `backup/docs-pre-cleanup`).
 
 ---
 
-# 0. LEIA ISTO PRIMEIRO
+# 0. Read first
 
-Antes de qualquer ação, leia na ordem:
+Before changing architecture, schema, authorization, financial logic or domain behavior, read in this order:
 
-1. `/CORBAN-ENTERPRISE-MEMORIA-MASTER-v1.1.md` — como o sistema DEVE ser
-2. `/CORBAN-CURRENT-STATE.md` — o que EXISTE no código agora
-3. `/.ai/RULES.md` — este arquivo — como operar
-4. `/.ai/CURRENT-TASK.md` — foco da sessão atual
+1. `/.ai/MAPA-OPERACAO.md` — product source of truth (owner interview, approved by the owner).
+2. `/.ai/DECISIONS.md` — architectural decisions (ADRs); the latest ADR on a topic wins.
+3. `/.ai/CURRENT-TASK.md` — current phase and its state.
+4. This file.
 
-Não pule nenhum. Não assuma. Não invente.
-
----
-
-# 1. REGRA FUNDAMENTAL
-
-**MASTER ≠ CURRENT-STATE**
-
-- O master descreve o que **deve** existir.
-- O current-state descreve o que **existe**.
-- Nunca tratar como implementado algo que só está no master.
-- Nunca assumir que algo existe sem verificar o current-state.
+What is implemented is decided only by the code, the versioned migrations and the live database. Documents describe
+intent; never describe planned capability as implemented.
 
 ---
 
-# 2. ANTES DE AGIR
+# 1. Human Gate
 
-Checklist obrigatório:
-
-- [ ] Li o master v1.1
-- [ ] Li o current-state
-- [ ] Li estas regras
-- [ ] Li o CURRENT-TASK
-- [ ] Verifiquei se o código real bate com o current-state
-- [ ] Se há divergência, atualizei o current-state ANTES de codar
-- [ ] Confirmei com o usuário o que vou fazer
-
-Se algum item acima está ❌, **pare e resolva antes**.
+- Explain before executing and wait for the owner's approval: code changes, migrations, commands with side effects.
+- Plans or summaries pasted into the chat are for reading and discussion, not orders.
+- No destructive migration, production publication, secret, significant spend or irreversible external action without
+  explicit approval.
+- Removal of legacy objects: listed proposal, owner approval, backup, versioned migration (or commit for files).
+- Never modify `main` directly; work in feature branches with stacked PRs.
 
 ---
 
-# 3. DURANTE O TRABALHO
+# 2. Non-negotiable rules
 
-## 3.1 Regras invioláveis
-
-1. Nenhuma tabela de negócio sem `organization_id`
-2. Nenhuma query sem filtro de tenant
-3. Nenhuma autorização apenas no frontend
-4. Nenhuma operação financeira sem idempotência
-5. Nenhuma ação da IA sem auditoria
-6. Nenhuma migration sem teste de rollback
-7. Nenhum `DELETE` em `audit_logs` nem em comissões pagas
-8. Nenhuma alteração em `ProductTableVersion` após publicada
-9. Nenhum uso de `any` sem justificativa em comentário
-10. Nenhuma lógica de negócio em componente React
-
-## 3.2 Regra de Ouro
-
-Toda nova funcionalidade deve responder às 12 perguntas (master, seção 55):
-
-1. Quem pode acessar?
-2. Qual tenant possui os dados?
-3. Qual regra de negócio?
-4. Qual evento é gerado?
-5. Precisa de auditoria?
-6. Precisa de SLA?
-7. Pode ser automatizada?
-8. A IA poderá atuar futuramente?
-9. Como será testada?
-10. Como será retomada por outra IA?
-11. Qual o custo operacional (storage, IA, filas)?
-12. Como se comporta com 10.000 tenants e 1M de propostas?
-
-Se não souber responder, **não implemente ainda**.
-
-## 3.3 Escopo
-
-- Não criar feature fora do CURRENT-TASK
-- Não instalar dependências sem aprovação
-- Não alterar `package.json` sem avisar
-- Não alterar `next.config.ts`, `tsconfig.json`, `drizzle.config.ts` sem avisar
-- Não commitar sem o usuário pedir
+1. Every business table carries `organization_id`; tenant isolation is fail-closed through RLS. Never weaken RLS to
+   make a feature work.
+2. Authorization lives in the database (RLS, `has_permission`, SECURITY DEFINER RPCs); the screen only hides.
+3. Writes to governed tables go through RPCs that set a governed flag (`corban.*_rpc`); guard triggers refuse direct
+   writes and deletes.
+4. Money is `numeric` in the database and exact decimal strings / rationals in TypeScript. Never floating point.
+5. Financial history is immutable; corrections are new compensating entries.
+6. Every database change is a versioned migration, tested on the local database rebuilt from scratch, with a security
+   contract in `tests/security/`. A migration applied in production is never edited.
+7. CPF never in a URL; personal data (CPF, salary, margin) only for who needs it.
+8. Corban works standalone. The DeskcommCRM integration is optional and never a dependency.
+9. AI suggestions never publish financial truth without deterministic validation and the Human Gates above.
 
 ---
 
-# 4. AO FINAL DE CADA SESSÃO
+# 3. Each phase
 
-Checklist obrigatório:
-
-- [ ] Atualizei `CORBAN-CURRENT-STATE.md` se algo mudou no código
-- [ ] Registrei decisões novas em `/.ai/DECISIONS.md`
-- [ ] Registrei mudanças em `/.ai/CHANGELOG.md`
-- [ ] Atualizei `/.ai/CURRENT-TASK.md` para a próxima sessão
-- [ ] Informei o usuário claramente: o que foi feito, o que não foi, qual o próximo passo
-- [ ] O código está commitado e o push foi feito
-
-Se algum item acima está ❌, **avise o usuário antes de encerrar**.
+- Ends working end to end and proven on screen (Playwright), plus unit tests, `tsc`, lint and build.
+- Updates `/.ai/CURRENT-TASK.md` and `/.ai/CHANGELOG.md`; new architectural decisions go to `/.ai/DECISIONS.md`.
+- Reports clearly what was done, what was not, and the next step.
 
 ---
 
-# 5. COMUNICAÇÃO
+# 4. Stack facts
 
-- Sempre dizer o que foi feito e o que NÃO foi
-- Nunca confundir "planejado" com "implementado"
-- Nunca inventar arquitetura sem registrar em `DECISIONS.md`
-- Nunca assumir decisão do usuário — perguntar
-- Nunca usar linguagem vaga como "acho que", "talvez", "deve funcionar"
-- Se não sabe, dizer "não sei" — não inventar
-
----
-
-# 6. CÓDIGO
-
-## 6.1 Estilo
-
-- TypeScript estrito
-- Sem `any` sem justificativa
-- Sem `console.log` em produção (usar pino)
-- Sem código comentado sem motivo
-- Sem `TODO` sem dono
-
-## 6.2 Estrutura
-
-- `src/app/` é a raiz da aplicação Next.js (decisão oficial)
-- `src/lib/` para bibliotecas internas
-- `src/utils/` para utilitários
-- `src/server/` para Domain Services e Server Actions (a criar)
-- `migrations/` para migrations SQL (a criar)
-- `tests/` para testes (a criar)
-
-## 6.3 Convenções
-
-| Item | Convenção |
-|---|---|
-| Tabelas | `snake_case` plural |
-| Colunas | `snake_case` |
-| Tipos TS | `PascalCase` |
-| Eventos | `PascalCase` |
-| Arquivos TS | `kebab-case` |
-| Componentes React | `PascalCase` |
-| Rotas | `kebab-case` |
-| Migrations | `YYYYMMDDHHMMSS_descricao.sql` |
-
-## 6.4 Camadas
-
-- Frontend: só apresentação
-- API/BFF: validação + orquestração
-- Domain Services: regras de negócio
-- Repository: acesso a dados via Drizzle
-- Nunca chamar banco direto de componente React
-
----
-
-# 7. SEGURANÇA
-
-- RLS sempre ativado
-- Backend é soberano em autorização
-- Storage privado
-- Segredos nunca no repositório
-- Toda ação sensível: auditoria
-- Toda entrada: validada com Zod
-- Toda sessão: gerenciada corretamente
-
----
-
-# 8. IA
-
-- IA nunca tem acesso irrestrito
-- Toda ação da IA registrada (prompt, contexto, output, decisão)
-- Toda ação reversível quando possível
-- Motor de regras determinísticas controla bloqueios críticos
-- IA recomenda, humano decide em ações críticas
-- Interface `LLMProvider` obrigatória desde o início
-
----
-
-# 9. PROIBIÇÕES EXPLÍCITAS
-
-- ❌ Introduzir dependência de um único fornecedor de IA
-- ❌ Criar feature isolada sem considerar multi-tenant
-- ❌ Alterar migration já aplicada em produção
-- ❌ Sobrescrever `ProductTableVersion` ou comissão paga
-- ❌ Confiar em validação de frontend para segurança
-- ❌ Misturar conceitos de outros projetos
-- ❌ Usar `DELETE` onde deve ser soft delete
-- ❌ Fazer `git push --force` em `main`
-- ❌ Commitar `.env` com segredos reais
-- ❌ Rodar comandos destrutivos sem confirmar com o usuário
-
----
-
-# 10. QUANDO EM DÚVIDA
-
-Ordem de consulta:
-
-1. Master v1.1
-2. Current-state
-3. DECISIONS.md
-4. Este arquivo
-5. **Perguntar ao usuário**
-
-Nunca assumir.
-
----
-
-# 11. SOBRE MÚLTIPLAS IAs
-
-Este projeto pode ser trabalhado por várias IAs ao mesmo tempo:
-
-- DeepSeek (chat)
-- ChatGPT (chat)
-- Claude (chat + Code)
-- Gemini (chat + VS Code)
-- Llama 3 (local no Continue)
-
-**Regras para convivência:**
-
-- Nenhuma IA sobrescreve decisão de outra sem registrar em `DECISIONS.md`
-- Toda IA registra o que fez em `CHANGELOG.md`
-- Toda IA atualiza `CURRENT-STATE.md` ao terminar
-- Se houver conflito, o master vence
-- Se o master for omisso, quem decidiu por último **deve documentar**
-
----
-
-# 12. HANDOFF ENTRE IAs
-
-Ao passar o projeto para outra IA:
-
-1. Garantir que `master` e `current-state` estão no repositório e atualizados
-2. Garantir que `CHANGELOG.md` reflete a última sessão
-3. Garantir que `CURRENT-TASK.md` aponta para o próximo passo
-4. Informar à nova IA: "leia master + current-state + rules antes de agir"
-
----
-
-# FIM
-
-# 13. PROTOCOLO DE TRIPLA REVISÃO
-
-Antes de executar qualquer mudança relevante, fazer três gates:
-
-1. **Completude:** escopo, dependências, tenant/RBAC, dados, rollback, histórico e Definition of Done.
-2. **Adversarial:** tentar quebrar/refutar a solução, buscar alternativa mais simples/segura/barata, procurar regressões de segurança, finanças, idempotência e UX.
-3. **Execução/validação:** confrontar código/schema real, executar somente o autorizado, testar/buildar, revisar o resultado e atualizar os arquivos de estado.
-
-Trabalho reversível, sem custo e sem impacto externo irreversível pode ser executado autonomamente na branch autorizada. DDL LIVE, secrets, gasto, publicação financeira, dados destrutivos e decisões de negócio não resolvidas continuam Human Gate.
-
-# 14. ECONOMIA DE CLAUDE
-
-ChatGPT deve executar diretamente tudo que conseguir com GitHub, Supabase, Vercel e demais ferramentas conectadas.
-
-Claude Code só deve ser acionado quando houver uma necessidade real de ambiente local ou capacidade ausente. Quando necessário:
-- enviar uma **tarefa longa/coerente**, não várias microtarefas;
-- lembrar Claude de usar ferramentas/plugins/skills já instalados, índices e caches;
-- evitar releitura de arquivos grandes e dumps repetidos;
-- trabalhar na branch, nunca na main;
-- atualizar docs/handoff e continuar até Human Gate real.
+- Next.js 16 (App Router; read `node_modules/next/dist/docs/` before writing Next code), Tailwind v4 tokens.
+- Supabase Postgres with RLS; migrations in `supabase/migrations/` named `YYYYMMDDHHMMSS_description.sql`.
+- Tests: `tests/unit` (`npm run test:unit`), `tests/security/*.sql` (contracts), `tests/e2e` (Playwright).

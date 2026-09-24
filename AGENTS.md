@@ -12,14 +12,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 Before changing architecture, schema, authorization, financial logic or domain behavior, read:
 
-1. `/CORBAN-OS-PROJECT-CONTEXT-V2.md`
-2. `/CORBAN-OS-MASTER-V2.md`
-3. `/.ai/RULES.md`
-4. `/.ai/DECISIONS.md`
-5. `/.ai/CURRENT-TASK.md`
-6. `/CORBAN-CURRENT-STATE.md` only as historical evidence to reconcile with code, Git and the live database.
+1. `/.ai/MAPA-OPERACAO.md` — product source of truth (approved by the owner)
+2. `/.ai/RULES.md`
+3. `/.ai/DECISIONS.md`
+4. `/.ai/CURRENT-TASK.md`
 
-V2 master is the conceptual source of truth. Live code, migrations and database are evidence of what is implemented. Never describe planned capability as implemented.
+Live code, migrations and the database are the only evidence of what is implemented. Never describe planned capability as implemented. Explain every action and wait for the owner's approval before executing it.
 
 Tenant isolation is fail-closed. Never weaken RLS to make a feature work. Never use floating point for money. Financial history is immutable except explicit compensating/reversal records. AI suggestions do not publish financial truth without deterministic validation and required Human Gates.
 
