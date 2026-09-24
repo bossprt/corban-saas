@@ -32,25 +32,30 @@ export default function LoginForm({ notice }: { notice?: string }) {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-slate-900 px-4">
-      <div className="max-w-md w-full bg-slate-800 rounded-xl shadow-2xl p-8 border border-slate-700">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-white tracking-wide">Corban OS</h1>
-          <p className="text-sm text-slate-400 mt-2">Acesse sua operação</p>
+    <main className="flex min-h-screen items-center justify-center bg-canvas px-4 py-10">
+      <div className="w-full max-w-[400px]">
+        <div className="mb-8 flex items-center gap-3">
+          <div className="flex size-10 items-center justify-center rounded-xl bg-brand text-lg font-bold text-white" aria-hidden>C</div>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-ink">Corban</h1>
+            <p className="text-sm text-muted">Acesse sua operação</p>
+          </div>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5 rounded-[16px] border border-line bg-surface p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">E-mail</label>
-            <input name="email" type="email" autoComplete="email" required className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white text-sm" />
+            <label htmlFor="login-email" className="mb-1.5 block text-[13px] font-medium text-ink-soft">E-mail</label>
+            <input id="login-email" name="email" type="email" autoComplete="email" required className="field h-11" />
           </div>
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">Senha</label>
-            <input name="password" type="password" autoComplete="current-password" required className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white text-sm" />
+            <div className="mb-1.5 flex items-center justify-between">
+              <label htmlFor="login-password" className="block text-[13px] font-medium text-ink-soft">Senha</label>
+              <Link href="/login/recuperar" className="text-[13px] text-brand hover:text-brand-strong">Esqueci minha senha</Link>
+            </div>
+            <input id="login-password" name="password" type="password" autoComplete="current-password" required className="field h-11" />
           </div>
-          {error ? <p role="alert" className="text-sm text-red-300">{error}</p> : null}
-          <p className="text-right text-xs"><Link href="/login/recuperar" className="text-slate-400 underline hover:text-slate-200">Esqueci minha senha</Link></p>
-          <button disabled={loading} type="submit" className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white font-medium py-3 rounded-lg text-sm">
-            {loading ? 'Entrando...' : 'Entrar no Sistema'}
+          {error ? <p role="alert" className="rounded-lg bg-[#FDE2E1] px-3 py-2 text-sm text-[#991B1B]">{error}</p> : null}
+          <button disabled={loading} type="submit" className="h-11 w-full rounded-[10px] bg-brand text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-60">
+            {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
       </div>

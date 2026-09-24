@@ -1,48 +1,69 @@
 import Link from 'next/link'
-import { LayoutDashboard, Users, Workflow, Landmark, LogOut, WalletCards, Settings, Library, BarChart3 } from 'lucide-react'
+import { LogOut, Search } from 'lucide-react'
+import { Suspense } from 'react'
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast, canManageTeam, canViewCommission } from '@/lib/rbac'
 import { ROLE_LABEL } from '@/lib/team'
-import { Suspense } from 'react'
 import { FlashBanner } from '@/components/FlashBanner'
+import { Kbd } from '@/components/ui'
+import { BottomNav, SideNav, type NavItem } from '@/components/shell/NavLinks'
 import { signOut } from './actions'
 
-// `show` only decides what is offered in the menu; every page, action and RPC enforces the role again (a hidden link is not authorization).
-const nav: { href: string; label: string; icon: typeof Users; show?: (role: string) => boolean }[] = [
-  { href: '/app', label: 'Visão geral', icon: LayoutDashboard },
-  { href: '/app/crm', label: 'CRM', icon: Users },
-  { href: '/app/operacional', label: 'Operacional', icon: Workflow },
-  { href: '/app/financeiro', label: 'Financeiro', icon: WalletCards, show: canViewCommission },
-  { href: '/app/cadastros', label: 'Cadastros', icon: Library, show: r => atLeast(r, 'supervisor') },
-  { href: '/app/relatorios', label: 'Relatórios', icon: BarChart3 },
-  { href: '/app/configuracao', label: 'Configuração', icon: Settings, show: canManageTeam },
+// `show` only decides what the menu offers; every page, action and RPC enforces the role again (a hidden link is not authorization).
+const NAV: (NavItem & { show?: (role: string) => boolean })[] = [
+  { key: 'hoje', href: '/app/atencao', label: 'Hoje' },
+  { key: 'dashboard', href: '/app', label: 'Dashboard' },
+  { key: 'clientes', href: '/app/clientes', label: 'Clientes' },
+  { key: 'esteira', href: '/app/propostas', label: 'Esteira' },
+  { key: 'financeiro', href: '/app/financeiro', label: 'Financeiro', show: canViewCommission },
+  { key: 'comercial', href: '/app/comercial', label: 'Comercial', show: r => atLeast(r, 'supervisor') },
+  { key: 'relatorios', href: '/app/relatorios', label: 'Relatórios' },
+  { key: 'configuracoes', href: '/app/configuracao', label: 'Configurações', show: canManageTeam },
 ]
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { organization, membership, membershipCount } = await requireAppContext()
+  const items: NavItem[] = NAV.filter(n => !n.show || n.show(membership.role)).map(({ key, href, label }) => ({ key, href, label }))
+  const initial = (organization.name ?? 'C').trim().charAt(0).toUpperCase()
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 md:flex">
-      <aside className="border-b border-slate-800 bg-slate-900/70 p-5 md:min-h-screen md:w-64 md:border-b-0 md:border-r">
-        <div className="mb-8 flex items-center gap-3">
-          <div className="rounded-xl bg-emerald-500/15 p-2 text-emerald-400"><Landmark size={22}/></div>
-          <div><div className="font-semibold">Corban OS</div><div className="text-xs text-slate-400">{organization.name}</div></div>
+    <div className="min-h-screen bg-canvas text-ink md:flex">
+      <aside className="hidden w-[232px] shrink-0 flex-col gap-1 border-r border-line bg-surface px-3.5 py-5 md:sticky md:top-0 md:flex md:h-screen">
+        <div className="mb-4 flex items-center gap-2.5 px-2">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-brand text-[15px] font-bold text-white" aria-hidden>C</div>
+          <div className="min-w-0">
+            <div className="text-[15px] font-bold tracking-tight">Corban</div>
+            <div className="truncate text-[11px] text-muted" title={organization.name}>{organization.name}</div>
+          </div>
         </div>
-        <nav className="grid grid-cols-2 gap-2 md:grid-cols-1">
-          {nav.filter(n => !n.show || n.show(membership.role)).map(({ href, label, icon: Icon }) => (
-            <Link key={href} href={href} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-300 hover:bg-slate-800 hover:text-white">
-              <Icon size={17}/>{label}
-            </Link>
-          ))}
-        </nav>
-        <div className="mt-8 border-t border-slate-800 pt-4 text-xs text-slate-500">Perfil: {ROLE_LABEL[membership.role] ?? membership.role}{membershipCount > 1 && <> · <Link href="/organizacao" className="underline">trocar organização</Link></>}</div>
-        <form action={signOut} className="mt-3">
-          <button type="submit" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-white">
-            <LogOut size={16}/>Sair
-          </button>
-        </form>
+        <SideNav items={items} />
+        <div className="mt-auto border-t border-line px-2 pt-3 text-xs text-muted">
+          <div>{ROLE_LABEL[membership.role] ?? membership.role}</div>
+          {membershipCount > 1 && <Link href="/organizacao" className="underline hover:text-ink">Trocar empresa</Link>}
+          <form action={signOut} className="mt-2">
+            <button type="submit" className="flex items-center gap-2 rounded-lg py-1.5 text-sm text-ink-soft hover:text-ink">
+              <LogOut size={15} aria-hidden />Sair
+            </button>
+          </form>
+        </div>
       </aside>
-      <main className="min-w-0 flex-1 p-4 md:p-8"><Suspense fallback={null}><FlashBanner /></Suspense>{children}</main>
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-line bg-canvas/90 px-4 backdrop-blur md:px-8">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-brand text-sm font-bold text-white md:hidden" aria-hidden>{initial}</div>
+          <button type="button" data-command-trigger className="flex h-10 max-w-[520px] flex-1 items-center gap-2.5 rounded-[10px] border border-line bg-surface px-3.5 text-left text-sm text-muted hover:border-line-strong">
+            <Search size={16} aria-hidden />
+            <span className="flex-1 truncate">Buscar CPF, ADE, cliente ou vendedor</span>
+            <span className="hidden sm:inline"><Kbd>Ctrl K</Kbd></span>
+          </button>
+        </header>
+        <main className="min-w-0 flex-1 px-4 pb-24 pt-6 md:px-8 md:pb-10">
+          <Suspense fallback={null}><FlashBanner /></Suspense>
+          {children}
+        </main>
+      </div>
+
+      <BottomNav items={items} />
     </div>
   )
 }

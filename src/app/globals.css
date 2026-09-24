@@ -1,31 +1,123 @@
 @import "tailwindcss";
 
+/*
+ * Corban design tokens.
+ * Semantic names are the contract for new components (bg-canvas, bg-surface, text-ink, text-muted, border-line, bg-brand...).
+ * --brand is pluggable: each company's accent color is set on the app shell at runtime.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --brand: #0e5e5a;
+  --brand-strong: #0a4744;
+  --brand-soft: #e8f0ef;
+
+  --canvas: #f6f5f1;
+  --surface: #ffffff;
+  --surface-muted: #faf9f6;
+  --line: #e4e2db;
+  --line-strong: #d9d6cc;
+  --ink: #1b1d1f;
+  --ink-soft: #3c4043;
+  --muted: #5f6368;
+
+  /* Money and pipeline states: differ in lightness as well as hue. */
+  --expected: #5b6b7f;
+  --received: #0e7a5f;
+  --diverged: #b45309;
+  --reversed: #b42318;
+  --paid-out: #1d4ed8;
+  --pending: #6d28d9;
+}
+
+:root[data-theme="dark"] {
+  --brand-soft: #16302e;
+  --canvas: #111314;
+  --surface: #1a1d1f;
+  --surface-muted: #202326;
+  --line: #2c3033;
+  --line-strong: #3a3f43;
+  --ink: #eceae4;
+  --ink-soft: #c9c6bd;
+  --muted: #9aa0a6;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-soft: var(--brand-soft);
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-muted: var(--muted);
+  --color-expected: var(--expected);
+  --color-received: var(--received);
+  --color-diverged: var(--diverged);
+  --color-reversed: var(--reversed);
+  --color-paid-out: var(--paid-out);
+  --color-pending: var(--pending);
+
+  /*
+   * Transitional palette bridge (F1). Screens written for the old dark theme use slate/emerald/amber/red
+   * utilities. Remapping those scales here turns every existing screen light and on-brand at once.
+   * Each screen moves to the semantic tokens above when its phase rebuilds it; then this block goes away.
+   */
+  --color-slate-50: #111314;
+  --color-slate-100: var(--ink);
+  --color-slate-200: #2a2d30;
+  --color-slate-300: var(--ink-soft);
+  --color-slate-400: var(--muted);
+  --color-slate-500: #6b7075;
+  --color-slate-600: #b9b5aa;
+  --color-slate-700: var(--line-strong);
+  --color-slate-800: var(--line);
+  --color-slate-900: var(--surface);
+  --color-slate-950: var(--surface);
+
+  --color-emerald-100: var(--brand-strong);
+  --color-emerald-200: var(--brand-strong);
+  --color-emerald-300: var(--brand-strong);
+  --color-emerald-400: var(--brand);
+  --color-emerald-500: var(--brand);
+  --color-emerald-600: var(--brand-strong);
+
+  --color-amber-100: #92400e;
+  --color-amber-200: #92400e;
+  --color-amber-300: #92400e;
+  --color-amber-400: #b45309;
+  --color-amber-500: #b45309;
+
+  --color-red-100: #991b1b;
+  --color-red-200: #991b1b;
+  --color-red-300: #991b1b;
+  --color-red-400: #b42318;
+  --color-red-500: #b42318;
+
+  --color-sky-200: #1e3a8a;
+  --color-sky-300: #1e3a8a;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--canvas);
+  color: var(--ink);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  font-feature-settings: "tnum" 0;
 }
 
+.num {
+  font-variant-numeric: tabular-nums;
+}
 
 @layer components {
-  .field { @apply rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-100 outline-none placeholder:text-slate-600 focus:border-emerald-500; }
+  .field {
+    @apply w-full rounded-lg border border-line-strong bg-surface px-3 py-2.5 text-sm text-ink outline-none placeholder:text-muted focus:border-brand focus:ring-2 focus:ring-brand/20;
+  }
 }
