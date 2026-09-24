@@ -1,4 +1,4 @@
--- Contract test for 20260930090000_seller_payout_v1: credits from reconciled receipts with the frozen split, seller
+-- Contract test for 20260924190449_seller_payout_v1: credits from reconciled receipts with the frozen split, seller
 -- without login paid on the seller account, divergent receipts only after acceptance, proportional chargeback never
 -- beyond what was received, manual entries with two eyes and installments, closing with the 30% debt limit,
 -- withdrawal up to the available balance, model switch without paying twice, visibility and immutability.

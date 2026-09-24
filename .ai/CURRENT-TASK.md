@@ -23,9 +23,9 @@
 
 ## F6 — andamento (branch `feature/f6-repasse`)
 - Decisões do dono: modelo por pessoa (padrão da empresa + exceção), negativo carrega e desconta no máximo 30% por repasse, dois olhos (quem lança não aprova), conta por vendedor cadastrado com ou sem login. Desenho e exemplo numérico aprovados (ADR-0029).
-- Migration `20260930090000_seller_payout_v1`: contas, lançamentos imutáveis, crédito automático na conciliação (divergente só após aceite), estorno proporcional com teto, vale/desconto parcelados, fechamento com limite de desconto, saque até o disponível, troca de modelo sem pagar duas vezes, aprovação por outra pessoa, `payout_alerts`. Inclui correção da F4 (originador = vendedor da proposta; vendedor sem login não herda hierarquia de quem digitou). Contrato `tests/security/seller-payout-contract.sql` 24/24.
+- Migration `20260924190449_seller_payout_v1`: contas, lançamentos imutáveis, crédito automático na conciliação (divergente só após aceite), estorno proporcional com teto, vale/desconto parcelados, fechamento com limite de desconto, saque até o disponível, troca de modelo sem pagar duas vezes, aprovação por outra pessoa, `payout_alerts`. Inclui correção da F4 (originador = vendedor da proposta; vendedor sem login não herda hierarquia de quem digitou). Contrato `tests/security/seller-payout-contract.sql` 24/24.
 - Telas: Repasse (contas, fechar período, abrir conta, aprovações, repasses em aberto), extrato da conta (lançamento avulso, saque, modelo da pessoa, aprovar/pagar), Configurações > Repasse, 2 regras na Central de atenção/Hoje.
-- Banco local recriado do zero: 18 contratos de segurança passando; unit 184/184; e2e 31/31 (bônus e extrato com segunda pessoa, pago com comprovante). **Não aplicada em produção.**
+- Banco local recriado do zero: 18 contratos de segurança passando; unit 184/184; e2e 31/31 (bônus e extrato com segunda pessoa, pago com comprovante). Aplicada em produção em 2026-09-24 (versão 20260924190449, md5 conferido; 0 recebimentos, sem backfill).
 - Local: usuário de teste `financeiro@corban-teste.local` (papel Financeiro) para os testes com duas pessoas (`E2E_FINANCE_EMAIL`).
 
 ## F5 — andamento (branch `feature/f5-recebimento`)
