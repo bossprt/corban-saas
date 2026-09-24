@@ -132,7 +132,7 @@ test('menu: modules are role-aware (F1 journey navigation: 8 entries)', () => {
     const line = l.split(NL).find(x => x.includes(`'${href}'`)) ?? ''
     assert.ok(line.includes(guard), href)
   }
-  for (const href of ['/app', '/app/atencao', '/app/clientes', '/app/propostas', '/app/relatorios']) assert.ok(!(l.split(NL).find(x => x.includes(`'${href}',`)) ?? '').includes('show:'), href)
+  for (const href of ['/app', '/app/hoje', '/app/clientes', '/app/propostas', '/app/relatorios']) assert.ok(!(l.split(NL).find(x => x.includes(`'${href}',`)) ?? '').includes('show:'), href)
 })
 test('agent dashboard is scoped to the agent own records', () => {
   const d = read('src/app/app/page.tsx')

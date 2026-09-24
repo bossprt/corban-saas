@@ -65,7 +65,7 @@ test('rules never say anything about people or performance (objective signals on
   assert.ok(!/produtiv|desempenh|preguiç|ocios|performance de/i.test(src))
 })
 test('page and actions: supervisor+, decisions only through the governed RPC, dismissal needs a reason, no direct table write, no business data changed', () => {
-  const a = read('src/app/app/atencao/actions.ts'), p = read('src/app/app/atencao/page.tsx')
+  const a = read('src/app/app/atencao/actions.ts'), p = read('src/app/app/atencao/page.tsx') + read('src/lib/attention.server.ts')
   assert.ok(/atLeast\(membership\.role, 'supervisor'\)/.test(a) && /atLeast\(membership\.role, 'supervisor'\)/.test(p))
   assert.ok(/rpc\('decide_attention_item'/.test(a) && /rpc\('sync_attention_items'/.test(p))
   assert.ok(/note\.length < 3/.test(a))

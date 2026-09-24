@@ -1,17 +1,17 @@
 import Link from 'next/link'
-import { LogOut, Search } from 'lucide-react'
+import { LogOut } from 'lucide-react'
 import { Suspense } from 'react'
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast, canManageTeam, canViewCommission } from '@/lib/rbac'
 import { ROLE_LABEL } from '@/lib/team'
 import { FlashBanner } from '@/components/FlashBanner'
-import { Kbd } from '@/components/ui'
 import { BottomNav, SideNav, type NavItem } from '@/components/shell/NavLinks'
+import { CommandPalette } from '@/components/shell/CommandPalette'
 import { signOut } from './actions'
 
 // `show` only decides what the menu offers; every page, action and RPC enforces the role again (a hidden link is not authorization).
 const NAV: (NavItem & { show?: (role: string) => boolean })[] = [
-  { key: 'hoje', href: '/app/atencao', label: 'Hoje' },
+  { key: 'hoje', href: '/app/hoje', label: 'Hoje' },
   { key: 'dashboard', href: '/app', label: 'Dashboard' },
   { key: 'clientes', href: '/app/clientes', label: 'Clientes' },
   { key: 'esteira', href: '/app/propostas', label: 'Esteira' },
@@ -51,11 +51,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-line bg-canvas/90 px-4 backdrop-blur md:px-8">
           <div className="flex size-8 items-center justify-center rounded-lg bg-brand text-sm font-bold text-white md:hidden" aria-hidden>{initial}</div>
-          <button type="button" data-command-trigger className="flex h-10 max-w-[520px] flex-1 items-center gap-2.5 rounded-[10px] border border-line bg-surface px-3.5 text-left text-sm text-muted hover:border-line-strong">
-            <Search size={16} aria-hidden />
-            <span className="flex-1 truncate">Buscar CPF, ADE, cliente ou vendedor</span>
-            <span className="hidden sm:inline"><Kbd>Ctrl K</Kbd></span>
-          </button>
+          <CommandPalette nav={items} />
         </header>
         <main className="min-w-0 flex-1 px-4 pb-24 pt-6 md:px-8 md:pb-10">
           <Suspense fallback={null}><FlashBanner /></Suspense>

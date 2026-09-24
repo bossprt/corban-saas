@@ -20,7 +20,8 @@ test.beforeEach(async ({ page }) => {
 
 const pages = [
   { path: '/app', name: 'dashboard' },
-  { path: '/app/atencao', name: 'hoje' },
+  { path: '/app/hoje', name: 'hoje' },
+  { path: '/app/atencao', name: 'atencao' },
   { path: '/app/clientes', name: 'clientes' },
   { path: '/app/propostas', name: 'esteira' },
   { path: '/app/comercial', name: 'comercial' },
@@ -34,3 +35,17 @@ for (const { path, name } of pages) {
     if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-${name}.png`, fullPage: true })
   })
 }
+
+test('Ctrl+K finds a client by name and opens it', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'keyboard shortcut is a desktop feature')
+  await page.goto('/app/hoje')
+  await page.keyboard.press('Control+k')
+  const input = page.getByPlaceholder('CPF, telefone, nome, ADE ou vendedor')
+  await expect(input).toBeVisible()
+  await input.fill('Maria')
+  const hit = page.getByRole('option', { name: /Maria Teste Silva/ })
+  await expect(hit).toBeVisible()
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-busca.png` })
+  await hit.click()
+  await page.waitForURL(/\/app\/clientes\//)
+})
