@@ -171,3 +171,16 @@ test('access check fails closed', async () => {
   assert.equal(can({ roleId: 'x', roleKey: 'vendedor', roleName: 'Vendedor', tier: 'agent', scope: 'own', permissions: new Set(['clientes.view']) }, 'clientes.view'), true)
   assert.equal(can({ roleId: 'x', roleKey: 'vendedor', roleName: 'Vendedor', tier: 'agent', scope: 'own', permissions: new Set(['clientes.view']) }, 'repasse.approve'), false)
 })
+test('plan module catalog in the app matches the database catalog', async () => {
+  const { PLAN_MODULES } = await import('../../src/lib/access')
+  const m = read('supabase/migrations/20260924220000_organization_modules_v1.sql')
+  const body = /select array\[([^\]]+)\]/.exec(m)?.[1] ?? ''
+  assert.deepEqual(body.replace(/'/g, '').split(',').map(s => s.trim()), [...PLAN_MODULES])
+})
+test('platform module switch is gated, validated and audited', () => {
+  const a = read('src/app/platform/actions.ts')
+  const fn = a.slice(a.indexOf('export async function setOrganizationModule'))
+  assert.match(fn, /await gate\(\)/)
+  assert.match(fn, /isPlanModule\(moduleKey\)/)
+  assert.match(fn, /platform_admin_audit_events/)
+})

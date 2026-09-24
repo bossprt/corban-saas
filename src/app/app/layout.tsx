@@ -10,20 +10,21 @@ import { CommandPalette } from '@/components/shell/CommandPalette'
 import { signOut } from './actions'
 
 // `show` only decides what the menu offers; every page, action and RPC enforces the role again (a hidden link is not authorization).
-const NAV: (NavItem & { show?: (role: string) => boolean })[] = [
+// `module`: the item appears only while that module is on for the company (plan).
+const NAV: (NavItem & { show?: (role: string) => boolean; module?: string })[] = [
   { key: 'hoje', href: '/app/hoje', label: 'Hoje' },
   { key: 'dashboard', href: '/app', label: 'Dashboard' },
-  { key: 'clientes', href: '/app/clientes', label: 'Clientes' },
-  { key: 'esteira', href: '/app/propostas', label: 'Esteira' },
-  { key: 'financeiro', href: '/app/financeiro', label: 'Financeiro', show: canViewCommission },
-  { key: 'comercial', href: '/app/comercial', label: 'Comercial', show: r => atLeast(r, 'supervisor') },
-  { key: 'relatorios', href: '/app/relatorios', label: 'Relatórios' },
+  { key: 'clientes', href: '/app/clientes', label: 'Clientes', module: 'clientes' },
+  { key: 'esteira', href: '/app/propostas', label: 'Esteira', module: 'esteira' },
+  { key: 'financeiro', href: '/app/financeiro', label: 'Financeiro', show: canViewCommission, module: 'financeiro' },
+  { key: 'comercial', href: '/app/comercial', label: 'Comercial', show: r => atLeast(r, 'supervisor'), module: 'comercial' },
+  { key: 'relatorios', href: '/app/relatorios', label: 'Relatórios', module: 'relatorios' },
   { key: 'configuracoes', href: '/app/configuracao', label: 'Configurações', show: canManageTeam },
 ]
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const { organization, membership, membershipCount } = await requireAppContext()
-  const items: NavItem[] = NAV.filter(n => !n.show || n.show(membership.role)).map(({ key, href, label }) => ({ key, href, label }))
+  const { organization, membership, membershipCount, modules } = await requireAppContext()
+  const items: NavItem[] = NAV.filter(n => (!n.show || n.show(membership.role)) && (!n.module || modules.has(n.module))).map(({ key, href, label }) => ({ key, href, label }))
   const initial = (organization.name ?? 'C').trim().charAt(0).toUpperCase()
 
   return (

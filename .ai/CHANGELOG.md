@@ -15,6 +15,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### F1 — Design system, casca, papéis (24/09/2026)
+- Tokens, IBM Plex, componentes base, ponte de paleta: app inteiro claro e na cor da marca.
+- Casca por jornada, navegação mobile, busca Ctrl+K, tela Hoje.
+- Papéis e permissões por empresa (em produção); alcance dos dados e módulos por plano (prontos, aguardando produção).
+
 ### F0 — Saneamento (24/09/2026)
 - Mapa real da operação v2 e ADR-0027 (reset de produto).
 - Manifesto md5 + script verificado para as 21 migrations que existem só em produção.

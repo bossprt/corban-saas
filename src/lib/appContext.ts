@@ -50,5 +50,8 @@ export async function requireAppContext() {
   const access: Access | null = a && isScope(a.scope)
     ? { roleId: a.role_id, roleKey: a.role_key, roleName: a.role_name, tier: a.tier as Tier, scope: a.scope, permissions: new Set<string>(a.permissions ?? []) }
     : null
-  return { supabase, user, membership, organization, access, membershipCount: (rows ?? []).length }
+  // Modules switched on for this company (plan). A failure leaves the set empty, which hides every module.
+  const { data: moduleRows } = await rawClient.rpc('my_modules', { p_org: organization.id })
+  const modules = new Set<string>(Array.isArray(moduleRows) ? (moduleRows as string[]) : [])
+  return { supabase, user, membership, organization, access, modules, membershipCount: (rows ?? []).length }
 }

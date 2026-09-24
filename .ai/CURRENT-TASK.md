@@ -3,7 +3,7 @@
 **Atualização:** 24/09/2026
 **Branch:** `feature/smart-import-xls-pdf`
 
-**Branch ativa:** `feature/f0-saneamento` (criada a partir de `feature/smart-import-xls-pdf`).
+**Branch ativa:** `feature/f1-design-system` (a partir de `feature/f0-saneamento`; PR da F0: bossprt/corban-saas#2).
 
 ## Estado
 - Auditoria só leitura concluída (ADR-0027). Mapa v2 aprovado: `.ai/MAPA-OPERACAO.md`.
@@ -20,6 +20,14 @@
 - Playwright instalado (`npm run test:e2e`), desktop + mobile, 8/8 passando (rotas públicas).
 - Seed da empresa fictícia: `supabase/seed/f0-test-tenant.sql`, com trava `corban.env = 'test'` (validada: aborta sem a trava) e CPFs com dígito verificador válido.
 - graphify gerado em `graphify-out/` (local, fora do Git): 998 nós, 2666 arestas, 45 comunidades. Usar `graphify query` antes de ler arquivos.
+
+## F1 — andamento (24/09/2026)
+- Etapas 1–4 prontas: tokens e componentes, casca por jornada, ponte de paleta, busca Ctrl+K (server action, CPF nunca em URL), tela Hoje.
+- 5a papéis e permissões: **aplicada em produção** (`20260924071259_organization_roles_permissions_v1`, md5 igual ao arquivo). 7 papéis padrão por empresa, papéis personalizados, `has_permission`, tela Configurações > Papéis.
+- 5b alcance dos dados: migration `20260924210000_data_scope_visibility_v1` pronta e testada localmente (contrato 16/16). **Não aplicada em produção** — aguarda aprovação.
+- 5c módulos por plano: migration `20260924220000_organization_modules_v1` pronta e testada localmente (contrato 8/8). **Não aplicada em produção** — aguarda aprovação.
+- Testes: unit 318/318, Playwright público 8/8 e logado 19/19 (banco local), três contratos SQL em `tests/security/`.
+- Ambiente local: `supabase` em portas 544xx (workdir em %TEMP%/f0/localsb), app `next dev --webpack -p 3200` com env apontando para o local; usuários de teste admin/supervisor/vendedor/vendedor2@corban-teste.local.
 
 ## F0 — concluído em 24/09/2026 (dia)
 - 21 migrations de produção trazidas ao Git byte a byte (21/21 md5), via `scripts/f0/export-baseline.ps1` (senha em prompt oculto, só leitura).

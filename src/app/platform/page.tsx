@@ -3,7 +3,8 @@ import { Building2, Landmark, Network, Package, Files, Layers3, LogOut } from 'l
 import { requirePlatformAdmin } from '@/lib/platform.server'
 import { createAdminClient } from '@/lib/supabaseAdmin'
 import { signOut } from '@/app/app/actions'
-import { addAgreement, addBank, addDocumentType, addModality, addProduct, addProvider, updateBank } from './actions'
+import { addAgreement, addBank, addDocumentType, addModality, addProduct, addProvider, setOrganizationModule, updateBank } from './actions'
+import { PLAN_MODULE_LABEL, PLAN_MODULES } from '@/lib/access'
 
 const field='rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white'
 const card='rounded-2xl border border-slate-800 bg-slate-900 p-5'
@@ -13,14 +14,15 @@ export default async function PlatformPage({searchParams}:{searchParams:Promise<
   const gate=await requirePlatformAdmin()
   if(!gate.ok) redirect('/login')
   const admin=createAdminClient()
-  const [banks,providers,products,modalities,agreements,docs,orgs]=await Promise.all([
+  const [banks,providers,products,modalities,agreements,docs,orgs,orgModules]=await Promise.all([
     admin.from('banks').select('id,code,name,is_active').order('name'),
     admin.from('providers').select('id,code,name,provider_type,is_active').order('name'),
     admin.from('products').select('id,code,name,is_active').order('name'),
     admin.from('modalities').select('id,product_id,code,name,is_active').order('name'),
     admin.from('agreements').select('id,bank_id,code,name,is_active').order('name'),
     admin.from('document_types').select('id,code,name,is_active').order('name'),
-    admin.from('organizations').select('id,name,document,is_active').order('name')
+    admin.from('organizations').select('id,name,document,is_active').order('name'),
+    admin.from('organization_modules').select('organization_id,module_key,enabled')
   ])
   const sp=await searchParams
   const productNames=new Map((products.data??[]).map(x=>[x.id,x.name]))
@@ -93,6 +95,12 @@ export default async function PlatformPage({searchParams}:{searchParams:Promise<
         <h2 className="text-xl font-semibold">Organizações</h2>
         <div className="mt-3 overflow-hidden rounded-2xl border border-slate-800">
           <table className="w-full text-left text-sm"><thead className="bg-slate-900 text-slate-400"><tr><th className="p-3">Empresa</th><th className="p-3">Documento</th><th className="p-3">Status</th></tr></thead><tbody>{orgs.data?.map(o=><tr key={o.id} className="border-t border-slate-800"><td className="p-3">{o.name}</td><td className="p-3 text-slate-400">{o.document}</td><td className="p-3">{o.is_active?'Ativa':'Inativa'}</td></tr>)}</tbody></table>
+        </div>
+        <h3 className="mt-6 text-lg font-semibold">Módulos por empresa</h3>
+        <p className="mt-1 text-sm text-slate-400">Liga e desliga módulos de cada empresa conforme o plano. Módulo desligado some do menu e nenhuma permissão dele vale.</p>
+        <div className="mt-3 space-y-3">{orgs.data?.map(o=>{const on=new Map((orgModules.data??[]).filter(m=>m.organization_id===o.id).map(m=>[m.module_key,m.enabled]));return <details key={o.id} className="rounded-xl border border-slate-800 bg-slate-900 p-4"><summary className="cursor-pointer text-sm font-semibold">{o.name} <span className="font-normal text-slate-400">· {PLAN_MODULES.filter(k=>on.get(k)).length} de {PLAN_MODULES.length} módulos ligados</span></summary>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{PLAN_MODULES.map(k=>{const enabled=on.get(k)===true;return <form key={k} action={setOrganizationModule} className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 px-3 py-2 text-sm"><input type="hidden" name="organization_id" value={o.id}/><input type="hidden" name="module_key" value={k}/><input type="hidden" name="enabled" value={enabled?'false':'true'}/><span>{PLAN_MODULE_LABEL[k]}</span><button className={`rounded px-2 py-1 text-xs font-semibold ${enabled?'bg-emerald-500 text-slate-950':'border border-slate-700 text-slate-400'}`} aria-label={`${enabled?'Desligar':'Ligar'} ${PLAN_MODULE_LABEL[k]} em ${o.name}`}>{enabled?'Ligado':'Desligado'}</button></form>})}</div>
+        </details>})}
         </div>
       </section>
     </div>

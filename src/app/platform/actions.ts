@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabaseAdmin'
 import { requirePlatformAdmin } from '@/lib/platform.server'
+import { isPlanModule } from '@/lib/access'
 
 const clean = (v: FormDataEntryValue | null) => String(v ?? '').trim()
 const code = (v: string) => v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40)
@@ -139,4 +140,19 @@ export async function addDocumentType(f: FormData) {
   const {error}=await admin.from('document_types').insert({code:generated,name,is_active:true})
   if(error) go('erro','Não foi possível cadastrar o tipo de documento.')
   go('ok','Tipo de documento cadastrado. O identificador técnico foi gerado automaticamente.')
+}
+
+// Switches one module for one company (plan limits). Platform administrators only; every change is audited.
+export async function setOrganizationModule(f: FormData) {
+  const g = await gate()
+  const org = clean(f.get('organization_id'))
+  const moduleKey = clean(f.get('module_key'))
+  const enabled = clean(f.get('enabled')) === 'true'
+  if (!/^[0-9a-f-]{36}$/i.test(org) || !isPlanModule(moduleKey)) go('erro', 'Dados inválidos.')
+  const admin = createAdminClient()
+  const { error } = await admin.from('organization_modules')
+    .upsert({ organization_id: org, module_key: moduleKey, enabled, updated_by: g.userId, updated_at: new Date().toISOString() }, { onConflict: 'organization_id,module_key' })
+  if (error) go('erro', 'Não foi possível alterar o módulo.')
+  await admin.from('platform_admin_audit_events').insert({ actor_user_id: g.userId, organization_id: org, action: 'organization_module.set', metadata: { module_key: moduleKey, enabled } })
+  go('ok', `Módulo ${enabled ? 'ligado' : 'desligado'}.`)
 }

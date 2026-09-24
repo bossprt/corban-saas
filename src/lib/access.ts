@@ -40,3 +40,16 @@ export const isScope = (v: unknown): v is Scope => typeof v === 'string' && (SCO
 export function can(access: Access | null | undefined, permission: Permission): boolean {
   return !!access && (access.tier === 'admin' || access.permissions.has(permission))
 }
+
+// Modules the platform switches per company (plans). MUST match private.module_catalog(); a unit test pins it.
+export const PLAN_MODULES = [...MODULES, 'portal_corretor', 'campanhas', 'ia', 'api'] as const
+export type PlanModule = (typeof PLAN_MODULES)[number]
+export const PLAN_MODULE_LABEL: Record<PlanModule, string> = {
+  ...MODULE_LABEL,
+  comercial: 'Comercial',
+  portal_corretor: 'Portal do corretor',
+  campanhas: 'Campanhas (SMS/URA)',
+  ia: 'Assistente de IA',
+  api: 'API pública',
+}
+export const isPlanModule = (v: unknown): v is PlanModule => typeof v === 'string' && (PLAN_MODULES as readonly string[]).includes(v)
