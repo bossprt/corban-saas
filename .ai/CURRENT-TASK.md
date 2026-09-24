@@ -22,9 +22,9 @@
 - graphify gerado em `graphify-out/` (local, fora do Git): 998 nós, 2666 arestas, 45 comunidades. Usar `graphify query` antes de ler arquivos.
 
 ## F2 — andamento (branch `feature/f2-cliente-unico`)
-- Cliente único por CPF + histórico de contatos: migration `20260925090000_client_identity_v1`, contrato `tests/security/client-identity-contract.sql` 17/17. Telas novas de lista, cadastro e ficha 360 (CPF sem máscara).
-- API pública v1: migration `20260925100000_public_api_leads_v1` (chaves com hash, escopo, limite/minuto, log sem dados pessoais, módulo api+leads), rota `POST /api/v1/leads`, `/api/v1/openapi.json`, tela Configurações > API. Corrige índice que permitia só um lead por cliente na vida.
-- Testado no banco local (curl: 401/201/200/422/403/429 corretos; log do servidor sem chave, telefone ou CPF). **Nenhuma das duas aplicada em produção** — aguarda aprovação.
+- Cliente único por CPF + histórico de contatos: migration `20260924124257_client_identity_v1`, contrato `tests/security/client-identity-contract.sql` 17/17. Telas novas de lista, cadastro e ficha 360 (CPF sem máscara).
+- API pública v1: migration `20260924124341_public_api_leads_v1` (chaves com hash, escopo, limite/minuto, log sem dados pessoais, módulo api+leads), rota `POST /api/v1/leads`, `/api/v1/openapi.json`, tela Configurações > API. Corrige índice que permitia só um lead por cliente na vida.
+- Testado no banco local (curl: 401/201/200/422/403/429 corretos; log do servidor sem chave, telefone ou CPF). **Ambas aplicadas em produção** (md5 igual aos arquivos).
 - Pendente: leads da API entram sem dono (visíveis para admin/gerente/filial); distribuição automática fica para a F3.
 
 ## F1 — andamento (24/09/2026)

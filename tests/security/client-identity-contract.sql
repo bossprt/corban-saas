@@ -1,4 +1,4 @@
--- Contract test for 20260925090000_client_identity_v1 (local test company and users, see data-scope-contract.sql).
+-- Contract test for 20260924124257_client_identity_v1 (local test company and users, see data-scope-contract.sql).
 -- One transaction, rolled back.  psql -v ON_ERROR_STOP=1 -f tests/security/client-identity-contract.sql
 
 begin;
