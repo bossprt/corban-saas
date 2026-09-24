@@ -8,8 +8,8 @@
 -- Users are not created here. Create them through Supabase Auth (Studio or admin API) and then
 -- insert organization_memberships rows for the ids Auth returns.
 --
--- Status: written against the production schema captured on 2026-09-24; not yet executed, because
--- a local database cannot be rebuilt until the baseline schema is exported (see .ai/CURRENT-TASK.md).
+-- Validated on the local Supabase restored from supabase/baseline (F0). Includes a minimal commercial structure
+-- (bank, agreement, route, published table version) so proposals can be created in tests.
 
 begin;
 
@@ -71,5 +71,22 @@ where not exists (
   select 1 from public.leads l
   where l.organization_id = '00000000-0000-4000-8000-00000000c0b1' and l.phone = v.phone
 );
+
+-- Minimal commercial structure: one bank, one agreement, one route and one published table version.
+insert into public.organization_banks (id, organization_id, name, tech_key, is_active)
+values ('00000000-0000-4000-8000-0000000b0001', '00000000-0000-4000-8000-00000000c0b1', 'Banco Teste', 'banco_teste', true)
+on conflict (id) do nothing;
+insert into public.organization_agreements (id, organization_id, name)
+values ('00000000-0000-4000-8000-0000000a0001', '00000000-0000-4000-8000-00000000c0b1', 'INSS Teste')
+on conflict (id) do nothing;
+insert into public.organization_product_routes (id, organization_id, org_bank_id, org_agreement_id, production_origin, status)
+values ('00000000-0000-4000-8000-0000000c0101', '00000000-0000-4000-8000-00000000c0b1', '00000000-0000-4000-8000-0000000b0001', '00000000-0000-4000-8000-0000000a0001', 'own', 'active')
+on conflict (id) do nothing;
+insert into public.product_tables (id, organization_id, route_id, code, name, status)
+values ('00000000-0000-4000-8000-0000000c0201', '00000000-0000-4000-8000-00000000c0b1', '00000000-0000-4000-8000-0000000c0101', 'TT1', 'Tabela Teste INSS', 'active')
+on conflict (id) do nothing;
+insert into public.product_table_versions (id, organization_id, product_table_id, version, status, published_at, term_min, term_max)
+values ('00000000-0000-4000-8000-0000000c0301', '00000000-0000-4000-8000-00000000c0b1', '00000000-0000-4000-8000-0000000c0201', 1, 'published', now(), 12, 96)
+on conflict (id) do nothing;
 
 commit;
