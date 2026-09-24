@@ -150,3 +150,24 @@ test('submit buttons disable themselves while pending on the main forms', () => 
   for (const f of ['src/app/app/leads/page.tsx', 'src/app/app/clientes/page.tsx', 'src/app/app/simulacoes/page.tsx', 'src/app/app/documentos/page.tsx']) assert.match(read(f), /<SubmitButton/, f)
   assert.match(read('src/components/SubmitButton.tsx'), /useFormStatus/)
 })
+
+test('permission catalog in the app matches the database catalog', async () => {
+  const { MODULES, ACTIONS } = await import('../../src/lib/access')
+  const m = read('supabase/migrations/20260924200000_organization_roles_permissions_v1.sql')
+  const mods = /unnest\(array\[([^\]]+)\]\) m/.exec(m)?.[1].replace(/'/g, '').split(',').map(s => s.trim())
+  const acts = /unnest\(array\[([^\]]+)\]\) a/.exec(m)?.[1].replace(/'/g, '').split(',').map(s => s.trim())
+  assert.deepEqual(mods, [...MODULES])
+  assert.deepEqual(acts, [...ACTIONS])
+})
+test('team errors pick the most specific code', async () => {
+  const { classifyTeamError } = await import('../../src/lib/team')
+  assert.equal(classifyTeamError({ message: 'invalid_role_name' }), 'invalid_role_name')
+  assert.equal(classifyTeamError({ message: 'invalid_role' }), 'invalid_role')
+  assert.equal(classifyTeamError({ message: 'role_in_use' }), 'role_in_use')
+})
+test('access check fails closed', async () => {
+  const { can } = await import('../../src/lib/access')
+  assert.equal(can(null, 'clientes.view'), false)
+  assert.equal(can({ roleId: 'x', roleKey: 'vendedor', roleName: 'Vendedor', tier: 'agent', scope: 'own', permissions: new Set(['clientes.view']) }, 'clientes.view'), true)
+  assert.equal(can({ roleId: 'x', roleKey: 'vendedor', roleName: 'Vendedor', tier: 'agent', scope: 'own', permissions: new Set(['clientes.view']) }, 'repasse.approve'), false)
+})

@@ -129,7 +129,7 @@ test('team actions never take the tenant from the form and always go through gov
   const a = read('src/app/app/equipe/actions.ts')
   assert.doesNotMatch(a, /get\(['"]organization/)
   assert.match(a, /p_org:organization\.id/)
-  for (const rpc of ['create_organization_invitation', 'revoke_organization_invitation', 'set_member_role', 'set_member_status']) assert.match(a, new RegExp(rpc))
+  for (const rpc of ['create_organization_invitation', 'revoke_organization_invitation', 'assign_member_access_role', 'set_member_status']) assert.match(a, new RegExp(rpc))
   assert.doesNotMatch(a, /\.from\(['"]organization_memberships['"]\)\s*\.(insert|update|delete)/)
 })
 test('acceptance only trusts a confirmed address and never runs for an unconfirmed one', () => {
@@ -153,4 +153,11 @@ test('the menu offers Financeiro only to commission viewers and Configuração (
   const l = read('src/app/app/layout.tsx')
   assert.match(l, /href: '\/app\/configuracao'[^}]*show: canManageTeam/)
   assert.match(l, /href: '\/app\/financeiro'[^}]*show: canViewCommission/)
+})
+test('role actions go through the governed RPC and never take the tenant from the form', () => {
+  const a = read('src/app/app/configuracao/papeis/actions.ts')
+  assert.doesNotMatch(a, /get\(['"]organization/)
+  assert.match(a, /p_org: organization\.id/)
+  assert.match(a, /rpc\('save_organization_role'/)
+  assert.doesNotMatch(a, /\.from\(['"]organization_roles['"]\)\s*\.(insert|update|delete)/)
 })

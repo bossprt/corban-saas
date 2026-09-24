@@ -25,6 +25,8 @@ const pages = [
   { path: '/app/clientes', name: 'clientes' },
   { path: '/app/propostas', name: 'esteira' },
   { path: '/app/comercial', name: 'comercial' },
+  { path: '/app/equipe', name: 'equipe' },
+  { path: '/app/configuracao/papeis', name: 'papeis' },
 ]
 
 for (const { path, name } of pages) {
@@ -48,4 +50,19 @@ test('Ctrl+K finds a client by name and opens it', async ({ page }, info) => {
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-busca.png` })
   await hit.click()
   await page.waitForURL(/\/app\/clientes\//)
+})
+
+test('administrator creates a custom role from the roles screen', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  const name = `Digitador ${Date.now().toString().slice(-6)}`
+  await page.goto('/app/configuracao/papeis?papel=novo')
+  await page.getByLabel('Nome').fill(name)
+  await page.getByLabel('Enxerga os dados de').selectOption('all')
+  await page.getByLabel('Ver Propostas').check()
+  await page.getByLabel('Editar Esteira').check()
+  await page.getByRole('button', { name: 'Salvar papel' }).click()
+  await expect(page.getByRole('status')).toHaveText('Papel salvo.')
+  await expect(page.getByRole('navigation', { name: 'Papéis' }).getByText(name)).toBeVisible()
+  await expect(page.getByLabel('Editar Esteira')).toBeChecked()
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-papel-criado.png`, fullPage: true })
 })

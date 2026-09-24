@@ -1,7 +1,7 @@
 // Team administration: pure helpers (no I/O) shared by the server actions, the page and the unit tests.
 // The database is the authority (RPCs in migration 20260925_team_access_lifecycle_v1); this only turns its governed errors into operator language.
 
-export const ROLE_LABEL:Record<string,string>={admin:'Administrador',manager:'Gerente',supervisor:'Supervisor',agent:'Operador'}
+export const ROLE_LABEL:Record<string,string>={admin:'Administrador',manager:'Gerente',supervisor:'Supervisor',agent:'Vendedor'}
 export const STATUS_LABEL:Record<string,string>={active:'Ativo',inactive:'Desativado',revoked:'Removido'}
 export const INVITE_STATUS_LABEL:Record<string,string>={pending:'Pendente',accepted:'Aceito',revoked:'Cancelado',expired:'Expirado'}
 
@@ -19,6 +19,15 @@ export const TEAM_ERROR_MESSAGES={
  invalid_status:'Situação inválida.',
  no_change:'Nada mudou: o membro já está nesta situação.',
  invalid_input:'Dados inválidos.',
+ organization_role_not_found:'Este papel não existe ou está desativado.',
+ role_in_use:'Este papel ainda está atribuído a membros ativos. Mova-os antes de desativar.',
+ invalid_role_name:'Informe um nome de papel com 2 a 60 caracteres.',
+ invalid_role_key:'Código do papel inválido.',
+ invalid_role_scope:'Escolha o alcance dos dados deste papel.',
+ invalid_role_tier:'Nível de acesso inválido para este papel.',
+ unknown_permission:'Uma das permissões não existe.',
+ admin_role_is_fixed:'O papel Administrador não pode ser alterado.',
+ system_role_tier_immutable:'O nível de acesso de um papel padrão não pode mudar.',
  unexpected:'Não foi possível concluir. Nada foi alterado; tente novamente.'
 } as const
 export type TeamErrorCode=keyof typeof TEAM_ERROR_MESSAGES
@@ -31,7 +40,8 @@ export const TEAM_OK_MESSAGES={
  resent:'E-mail reenviado.',
  revoked:'Convite cancelado.',
  role_changed:'Perfil atualizado.',
- status_changed:'Situação do acesso atualizada.'
+ status_changed:'Situação do acesso atualizada.',
+ role_saved:'Papel salvo.'
 } as const
 export type TeamOkCode=keyof typeof TEAM_OK_MESSAGES
 export const isTeamOkCode=(v:unknown):v is TeamOkCode=>typeof v==='string'&&Object.prototype.hasOwnProperty.call(TEAM_OK_MESSAGES,v)
@@ -40,10 +50,11 @@ export const isTeamOkCode=(v:unknown):v is TeamOkCode=>typeof v==='string'&&Obje
 export function classifyTeamError(err:{message?:string;code?:string}|null|undefined):TeamErrorCode{
  const m=String(err?.message??'')
  if(err?.code==='42501'||/permission denied|row-level security/i.test(m))return 'not_authorized'
- for(const code of Object.keys(TEAM_ERROR_MESSAGES) as TeamErrorCode[]){
-  if(code!=='unexpected'&&code!=='invalid_input'&&m.includes(code))return code
- }
- return 'unexpected'
+ // Longest match wins, so invalid_role_name is not read as invalid_role.
+ const hit=(Object.keys(TEAM_ERROR_MESSAGES) as TeamErrorCode[])
+  .filter(code=>code!=='unexpected'&&code!=='invalid_input'&&m.includes(code))
+  .sort((a,b)=>b.length-a.length)[0]
+ return hit??'unexpected'
 }
 
 const EMAIL=/^[^@\s]+@[^@\s]+$/
@@ -54,7 +65,8 @@ export function normalizeEmail(raw:unknown):string|null{
 
 export const AUDIT_LABEL:Record<string,string>={
  invite_created:'Convite criado',invite_revoked:'Convite cancelado',invite_accepted:'Convite aceito',
- member_role_changed:'Perfil alterado',member_deactivated:'Acesso desativado',member_reactivated:'Acesso reativado'
+ member_role_changed:'Perfil alterado',member_deactivated:'Acesso desativado',member_reactivated:'Acesso reativado',
+ role_created:'Papel criado',role_updated:'Papel alterado',member_access_role_changed:'Papel do membro alterado'
 }
 
 const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i

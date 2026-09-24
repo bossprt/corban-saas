@@ -33,6 +33,10 @@ export default async function ConfigurationPage() {
   return <section>
     <h1 className="text-3xl font-semibold">Configuração do piloto</h1>
     <p className="mt-2 text-sm text-slate-400">{organization.name}: o que já está configurado e o que falta antes de o operador trabalhar. Conta apenas dados reais desta organização.</p>
+    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      <Link href="/app/equipe" className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm hover:border-slate-600"><strong>Equipe</strong><span className="mt-1 block text-xs text-slate-400">Quem acessa a empresa, convites e papel de cada pessoa.</span></Link>
+      <Link href="/app/configuracao/papeis" className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm hover:border-slate-600"><strong>Papéis e permissões</strong><span className="mt-1 block text-xs text-slate-400">O que cada papel pode fazer em cada módulo e quais dados enxerga.</span></Link>
+    </div>
     <p className="mt-4 text-sm"><strong>{done}</strong> de {items.length} itens prontos.</p>
     <ul className="mt-3 space-y-2">{items.map(i => <li key={i.key}><Link href={i.href} className="flex items-start justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm hover:border-slate-600">
       <span><span className="font-medium">{i.label}</span><span className="block text-xs text-slate-400">{i.hint}</span></span>

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/lib/supabaseAdmin'
 import { ACTIVE_ORG_COOKIE,resolveActiveMembership,scopeToOrganization,type MembershipRow } from '@/lib/tenant'
+import { isScope, type Access, type Tier } from '@/lib/access'
 
 export async function requireAppContext() {
   const rawClient = await createClient()
@@ -43,5 +44,11 @@ export async function requireAppContext() {
   if (organizationError || !organization) redirect('/access-pending')
 
   const supabase = scopeToOrganization(rawClient, organization.id)
-  return { supabase, user, membership, organization, membershipCount: (rows ?? []).length }
+  // Role, scope and permissions of the caller in this company. A failure leaves `access` null, which denies every permission.
+  const { data: accessRows } = await rawClient.rpc('my_access', { p_org: organization.id })
+  const a = Array.isArray(accessRows) ? accessRows[0] : null
+  const access: Access | null = a && isScope(a.scope)
+    ? { roleId: a.role_id, roleKey: a.role_key, roleName: a.role_name, tier: a.tier as Tier, scope: a.scope, permissions: new Set<string>(a.permissions ?? []) }
+    : null
+  return { supabase, user, membership, organization, access, membershipCount: (rows ?? []).length }
 }

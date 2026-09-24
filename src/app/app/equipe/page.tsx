@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { requireAppContext } from '@/lib/appContext'
 import { canManageMemberRole, canManageTeam, rolesAssignableBy } from '@/lib/rbac'
 import { AUDIT_LABEL, INVITE_STATUS_LABEL, ROLE_LABEL, STATUS_LABEL, TEAM_ERROR_MESSAGES, TEAM_OK_MESSAGES, isTeamErrorCode, isTeamOkCode } from '@/lib/team'
@@ -15,8 +16,9 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
     <p role="alert" className="mt-3 rounded-xl border border-slate-800 p-5 text-sm text-slate-300">A gestão da equipe é restrita aos perfis administrador e gerente.</p>
   </section>
 
-  const [members, invitations, events] = await Promise.all([
-    supabase.from('organization_memberships').select('id,user_id,role,status,created_at').order('created_at'),
+  const [members, roles, invitations, events] = await Promise.all([
+    supabase.from('organization_memberships').select('id,user_id,role,role_id,status,created_at').order('created_at'),
+    supabase.from('organization_roles').select('id,name,tier,is_active').eq('is_active', true).order('is_system', { ascending: false }).order('name'),
     supabase.from('organization_invitations').select('id,email,role,status,expires_at,created_at').order('created_at', { ascending: false }).limit(50),
     supabase.from('organization_admin_events').select('id,event_type,target_email,details,occurred_at').order('occurred_at', { ascending: false }).limit(15),
   ])
@@ -27,13 +29,14 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
   </section>
   const emails = await memberEmails((members.data ?? []).map(m => m.user_id))
   const assignable = rolesAssignableBy(membership.role)
+  const roleName = new Map((roles.data ?? []).map(r => [r.id, r.name]))
   const rows = [...(members.data ?? [])].sort((a, b) => (a.status === 'active' ? 0 : 1) - (b.status === 'active' ? 0 : 1) || ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role))
   const pending = (invitations.data ?? []).filter(i => i.status === 'pending' && new Date(i.expires_at) > new Date())
   const past = (invitations.data ?? []).filter(i => !pending.includes(i)).slice(0, 10)
 
   return <section>
     <h1 className="text-3xl font-semibold">Equipe</h1>
-    <p className="mt-2 text-sm text-slate-400">{organization.name}: quem acessa esta organização e com qual perfil. Desativar um acesso bloqueia a pessoa imediatamente; o histórico é preservado.</p>
+    <p className="mt-2 text-sm text-slate-400">{organization.name}: quem acessa esta organização e com qual papel (<Link href="/app/configuracao/papeis" className="underline">ver papéis e permissões</Link>). Desativar um acesso bloqueia a pessoa imediatamente; o histórico é preservado.</p>
     {isTeamErrorCode(sp.erro) && <p role="alert" className="mt-4 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200">{TEAM_ERROR_MESSAGES[sp.erro]}</p>}
     {isTeamOkCode(sp.ok) && <p role="status" className="mt-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-200">{TEAM_OK_MESSAGES[sp.ok]}</p>}
 
@@ -50,11 +53,11 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
       const manageable = !self && canManageMemberRole(membership.role, m.role, m.role)
       return <div key={m.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm">
         <div><strong>{emails.get(m.user_id) ?? 'Usuário'}</strong>{self && <span className="ml-2 text-xs text-slate-500">(você)</span>}
-          <div className="mt-1 text-xs text-slate-400">{ROLE_LABEL[m.role] ?? m.role} · <span className={m.status === 'active' ? 'text-emerald-400' : 'text-amber-300'}>{STATUS_LABEL[m.status] ?? m.status}</span></div></div>
+          <div className="mt-1 text-xs text-slate-400">{(m.role_id && roleName.get(m.role_id)) ?? ROLE_LABEL[m.role] ?? m.role} · <span className={m.status === 'active' ? 'text-emerald-400' : 'text-amber-300'}>{STATUS_LABEL[m.status] ?? m.status}</span></div></div>
         {manageable && <div className="flex flex-wrap items-center gap-2">
           <form action={changeMemberRole} className="flex gap-1"><input type="hidden" name="membership_id" value={m.id} />
-            <select name="role" defaultValue={m.role} aria-label="Perfil" className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs">{assignable.map(r => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}</select>
-            <button className={btn}>Alterar perfil</button></form>
+            <select name="role_id" defaultValue={m.role_id ?? ''} aria-label="Papel" className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs">{(roles.data ?? []).filter(r => canManageMemberRole(membership.role, m.role, r.tier)).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select>
+            <button className={btn}>Alterar papel</button></form>
           <form action={changeMemberStatus}><input type="hidden" name="membership_id" value={m.id} />
             {m.status === 'active'
               ? <><input type="hidden" name="status" value="inactive" /><button className={btn} title="Bloqueia o acesso imediatamente; pode ser reativado">Desativar acesso</button></>

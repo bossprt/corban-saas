@@ -48,11 +48,13 @@ export async function revokeInvitation(formData:FormData){
  return error?fail(classifyTeamError(error)):done('revoked')
 }
 
+// Assigns one of the company's roles (system or custom). The database checks the actor against the role's tier.
 export async function changeMemberRole(formData:FormData){
  const { supabase }=await requireAppContext()
  const id=text(formData,'membership_id')
- if(!isUuid(id))return fail('invalid_input')
- const { error }=await supabase.rpc('set_member_role',{p_membership_id:id,p_role:text(formData,'role')})
+ const roleId=text(formData,'role_id')
+ if(!isUuid(id)||!isUuid(roleId))return fail('invalid_input')
+ const { error }=await supabase.rpc('assign_member_access_role',{p_membership_id:id,p_role_id:roleId})
  return error?fail(classifyTeamError(error)):done('role_changed')
 }
 
