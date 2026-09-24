@@ -97,10 +97,9 @@ test('the catalog migration is INVOKER-only, guarded and additive', () => {
 // ---- deployment: env, origin, preflight
 const GOOD = { NEXT_PUBLIC_SUPABASE_URL: 'https://x.supabase.co', NEXT_PUBLIC_SUPABASE_ANON_KEY: 'anon', SUPABASE_SERVICE_ROLE_KEY: 'service', NEXT_PUBLIC_SITE_URL: 'https://app.example.com', NODE_ENV: 'production' }
 const ALL_FILES = () => true
-test('preflight: a complete production environment passes; the worker never blocks', () => {
-  const c = preflight(GOOD, ALL_FILES, 'v22.1.0', ['a.sql'])
-  assert.equal(worstLevel(c), 'WARN')
-  assert.ok(c.some(x => x.level === 'WARN' && /INTEGRATION_WORKER_SECRET absent/.test(x.message)))
+test('preflight: a complete production environment passes', () => {
+  const c = preflight(GOOD, p => p !== 'vercel.json', 'v22.1.0', ['a.sql'])
+  assert.equal(worstLevel(c), 'PASS')
   assert.equal(c.some(x => x.level === 'BLOCKED'), false)
 })
 test('preflight: every missing critical value is BLOCKED and no value is ever printed', () => {
@@ -109,14 +108,14 @@ test('preflight: every missing critical value is BLOCKED and no value is ever pr
     const env: Record<string, string | undefined> = { ...GOOD }; delete env[k]
     assert.equal(worstLevel(preflight(env, ALL_FILES, 'v22.0.0')), 'BLOCKED', k)
   }
-  const c = preflight({ ...GOOD, SUPABASE_SERVICE_ROLE_KEY: secretish, INTEGRATION_WORKER_SECRET: secretish + secretish }, ALL_FILES, 'v22.0.0')
+  const c = preflight({ ...GOOD, SUPABASE_SERVICE_ROLE_KEY: secretish }, ALL_FILES, 'v22.0.0')
   assert.ok(!JSON.stringify(c).includes(secretish))
 })
 test('preflight: origin shape, https in production, swapped keys, leaked NEXT_PUBLIC secrets, old node, missing files', () => {
   assert.equal(worstLevel(preflight({ ...GOOD, NEXT_PUBLIC_SITE_URL: 'https://app.example.com/login' }, ALL_FILES, 'v22.0.0')), 'BLOCKED')
   assert.equal(worstLevel(preflight({ ...GOOD, NEXT_PUBLIC_SITE_URL: 'http://app.example.com' }, ALL_FILES, 'v22.0.0')), 'BLOCKED')
   assert.equal(worstLevel(preflight({ ...GOOD, SUPABASE_SERVICE_ROLE_KEY: 'anon' }, ALL_FILES, 'v22.0.0')), 'BLOCKED')
-  assert.equal(worstLevel(preflight({ ...GOOD, NEXT_PUBLIC_INTEGRATION_WORKER_SECRET: 'x' }, ALL_FILES, 'v22.0.0')), 'BLOCKED')
+  assert.equal(worstLevel(preflight({ ...GOOD, NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY: 'x' }, ALL_FILES, 'v22.0.0')), 'BLOCKED')
   assert.equal(worstLevel(preflight(GOOD, ALL_FILES, 'v18.0.0')), 'BLOCKED')
   assert.equal(worstLevel(preflight(GOOD, p => p !== 'proxy.ts', 'v22.0.0')), 'BLOCKED')
   assert.equal(worstLevel(preflight({ ...GOOD, NODE_ENV: 'development', NEXT_PUBLIC_SITE_URL: undefined }, ALL_FILES, 'v22.0.0')), 'WARN')
@@ -140,5 +139,5 @@ test('server secrets are read only by server code', () => {
 })
 test('the env document lists every variable the code reads', () => {
   const doc = read('docs/deployment/ENVIRONMENT-VARIABLES.md')
-  for (const v of ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'NEXT_PUBLIC_SITE_URL', 'INTEGRATION_WORKER_SECRET', 'CORBAN_ALLOW_LOCAL_PROVIDERS', 'NODE_ENV']) assert.ok(doc.includes(v), v)
+  for (const v of ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'NEXT_PUBLIC_SITE_URL', 'NODE_ENV']) assert.ok(doc.includes(v), v)
 })

@@ -30,12 +30,7 @@ export function preflight(env: Env, fileExists: (p: string) => boolean, nodeVers
     else add('PASS', 'NEXT_PUBLIC_SITE_URL is a valid origin')
   }
 
-  // ---- worker (does NOT block the first operator)
-  if (!has(env, 'INTEGRATION_WORKER_SECRET')) add('WARN', 'INTEGRATION_WORKER_SECRET absent: worker dispatch is disabled (not needed for the first operator)')
-  else if ((env.INTEGRATION_WORKER_SECRET ?? '').length < 24) add('WARN', 'INTEGRATION_WORKER_SECRET shorter than 24 characters: the dispatch route stays disabled')
-  else add('PASS', 'INTEGRATION_WORKER_SECRET present and long enough')
-  if (production && env.CORBAN_ALLOW_LOCAL_PROVIDERS === '1') add('WARN', 'CORBAN_ALLOW_LOCAL_PROVIDERS=1 in production is ignored by the code, but remove it')
-  if (has(env, 'NEXT_PUBLIC_INTEGRATION_WORKER_SECRET') || has(env, 'NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY')) add('BLOCKED', 'a server secret is exposed through a NEXT_PUBLIC_ variable')
+  if (has(env, 'NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY')) add('BLOCKED', 'a server secret is exposed through a NEXT_PUBLIC_ variable')
 
   // ---- runtime / files
   const major = Number(nodeVersion.replace(/^v/, '').split('.')[0])
