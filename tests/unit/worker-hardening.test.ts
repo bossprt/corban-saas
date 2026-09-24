@@ -326,7 +326,7 @@ test('contract: the migrations keep every worker RPC service_role-only and free 
   assert.equal(/security definer/i.test(body),false,fn)
  }
  assert.match(sqlText,/grant execute on function public\.claim_integration_run[^;]*to service_role/i)
- assert.equal(/grant execute on function public\.(claim|complete|fail|cancel|enqueue|list_dispatchable|create_integration)[^;]*to (authenticated|anon|public)/i.test(sqlText),false)
+ assert.equal(/grant execute on function public\.(claim_integration_run|complete_integration_run|fail_integration_run|cancel_integration_run|enqueue_integration_run|list_dispatchable_integration_runs|create_integration_reexecution)[^;]*to (authenticated|anon|public)/i.test(sqlText),false)
 })
 
 // ============ H. operator feedback ============
