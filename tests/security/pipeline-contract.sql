@@ -1,4 +1,4 @@
--- Contract test for 20260926090000_pipeline_direct_proposals_v1. Local test company (seed with commercial structure)
+-- Contract test for 20260924142925_pipeline_direct_proposals_v1. Local test company (seed with commercial structure)
 -- and users admin / supervisor / vendedor / vendedor2 @corban-teste.local. One transaction, rolled back.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/pipeline-contract.sql
 

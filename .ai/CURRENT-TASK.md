@@ -22,7 +22,7 @@
 - graphify gerado em `graphify-out/` (local, fora do Git): 998 nós, 2666 arestas, 45 comunidades. Usar `graphify query` antes de ler arquivos.
 
 ## F3 — andamento (branch `feature/f3-esteira`)
-- Banco: `20260926090000_pipeline_direct_proposals_v1` (proposta direta com junção banco+ADE, etapa Paga, pendência com motivo/prazo e volta à análise, Paga manual com nota por quem tem esteira.edit, distribuição de leads rodízio/fila/manual, metas por valor pago). Contrato `tests/security/pipeline-contract.sql` 19/19. **Não aplicada em produção** — aguarda aprovação.
+- Banco: `20260924142925_pipeline_direct_proposals_v1` (proposta direta com junção banco+ADE, etapa Paga, pendência com motivo/prazo e volta à análise, Paga manual com nota por quem tem esteira.edit, distribuição de leads rodízio/fila/manual, metas por valor pago). Contrato `tests/security/pipeline-contract.sql` 19/19. **Aplicada em produção** (md5 igual).
 - Telas: Esteira nova (abas por etapa da empresa, alertas de pendência/prazo), Nova proposta, cartão Esteira na proposta, Metas (+ distribuição de leads), meta do mês no Hoje, Assumir lead.
 - Decisões do dono: etapas padrão + configuráveis; distribuição decidida pelo dono; meta = valor pago; Paga manual por qualquer operador com nota.
 - Pendentes da F3: kanban (hoje só tabela), edição das etapas pela tela (nome/ordem/prazo), alerta de pendência na Central de atenção (hoje só na Esteira), alertas de comissão ficam para a F5.
