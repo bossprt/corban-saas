@@ -95,7 +95,7 @@ insert into public.commission_component_types (tech_key, name, sort_order, is_ac
 select v.k, v.n, v.o, true from (values ('upfront', 'À Vista', 10), ('deferred', 'Diferido', 20), ('bonus_1', 'Bônus 1', 30)) v(k, n, o)
 where not exists (select 1 from public.commission_component_types t where t.tech_key = v.k);
 insert into public.contract_types (id, organization_id, tech_key, name, sort_order, is_active)
-values ('00000000-0000-4000-8000-0000000c0401', '00000000-0000-4000-8000-00000000c0b1', 'novo', 'Novo', 10, true)
+values ('00000000-0000-4000-8000-0000000c0401', '00000000-0000-4000-8000-00000000c0b1', 'teste_novo', 'Novo (teste)', 10, true)
 on conflict (id) do nothing;
 -- Conditions can only be written while the version is a draft: version 2 is created as a draft, filled, then published.
 insert into public.product_table_versions (id, organization_id, product_table_id, version, status, term_min, term_max)

@@ -176,12 +176,6 @@ test('migration is additive and safe: no definer, no destructive statement, no f
   // every new table has RLS enabled
   for (const t of ['contract_types', 'national_agreement_templates', 'commercial_conditions', 'commercial_condition_commissions', 'commercial_condition_shares']) assert.ok(new RegExp(`alter table public\\.${t} enable row level security`).test(src), t)
 })
-test('the rollback harness covers the adversarial surface and ends with RAISE (never commits)', () => {
-  const h = read('tests/security/commercial-model-v3-rollback.sql')
-  for (const needle of ['forged token', 'tenant B', 'FAIL CLOSED', 'DEFINER inventory', 'no floating point', 'RESULTS:']) assert.ok(h.includes(needle), needle)
-  assert.ok(/raise exception 'RESULTS:/.test(h))
-  assert.ok(!/^\s*commit\s*;/im.test(code(h)))
-})
 
 // ---- application wiring
 test('feedback: every database code the actions can surface has an operator message, and import/whitelist codes exist', () => {

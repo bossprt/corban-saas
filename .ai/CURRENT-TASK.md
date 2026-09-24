@@ -29,6 +29,14 @@
   - Resolvido (ADR-0031): cabeçalho do cálculo só com `financeiro.view`; coluna `expected_commission_amount` removida. Migration `20260924204503_commission_visibility_v1` (branch `fix/commission-visibility`), contrato 10/10, e2e 32/32 com login de vendedor. Aplicada em produção em 24/09/2026 (md5 conferido; 0 propostas e 0 simulações, nada a salvar).
   - Código legado: `INTEGRATION_WORKER_SECRET` e `CORBAN_ALLOW_LOCAL_PROVIDERS` ainda são checados em `src/lib/preflight.ts`, testes e `ENVIRONMENT-VARIABLES.md`, mas a rota do worker foi removida na F5.
 
+## Testes antigos e paridade local ↔ produção (24/09/2026, branch `chore/legacy-tests-cleanup`)
+- Preflight sem as checagens do worker removido na F5; middleware não libera mais `/api/integrations/dispatch` sem sessão.
+- 17 contratos SQL da era ChatGPT apagados (testavam modelos removidos, fotos únicas de migrations antigas ou regra substituída).
+- Banco local agora igual a produção: `scripts/f0/baseline-acl-parity.sh` (permissões da base, sem os grants automáticos do Supabase), `supabase/baseline/20260924_prod_reference_data.sql` (tipos de componente, tipos de contrato globais, 53 convênios nacionais) e `supabase/baseline/20260924_prod_storage.sql` (bucket e políticas de documentos). O rebuild local roda os três logo após a base. Impressão digital de permissões local = produção (292 permissões, mesmo md5) antes da migration abaixo.
+- A paridade revelou bug de produção da F1: `set_member_hierarchy` e `assign_member_access_role` falhavam por falta de permissão de coluna (Equipe não conseguia definir supervisor, filial, escopo nem papel personalizado). Migration `20260924213000_grants_hygiene_v1` corrige e tira de `anon` 5 funções. **Não aplicada em produção.**
+- Consertados: `security-definer-inventory` (regra atual: toda função com privilégio de dono exposta confere quem chama), `tenant-ab-adversarial` (reescrito com comissão, recebimento e repasse; 28 checagens), `vertical-slice-workflow` (passa com o Storage). Novo `grants-hygiene-contract.sql`.
+- Resultado com banco recriado do zero: 26/26 contratos, unit 183/183, e2e 32/32.
+
 ## F6 — andamento (branch `feature/f6-repasse`)
 - Decisões do dono: modelo por pessoa (padrão da empresa + exceção), negativo carrega e desconta no máximo 30% por repasse, dois olhos (quem lança não aprova), conta por vendedor cadastrado com ou sem login. Desenho e exemplo numérico aprovados (ADR-0029).
 - Migration `20260924190449_seller_payout_v1`: contas, lançamentos imutáveis, crédito automático na conciliação (divergente só após aceite), estorno proporcional com teto, vale/desconto parcelados, fechamento com limite de desconto, saque até o disponível, troca de modelo sem pagar duas vezes, aprovação por outra pessoa, `payout_alerts`. Inclui correção da F4 (originador = vendedor da proposta; vendedor sem login não herda hierarquia de quem digitou). Contrato `tests/security/seller-payout-contract.sql` 24/24.
