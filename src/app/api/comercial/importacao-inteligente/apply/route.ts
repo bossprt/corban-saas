@@ -15,12 +15,10 @@ export async function POST(req:Request){
   if(!(file instanceof File))return Response.json({error:'Envie um arquivo.'},{status:400})
   const origin=String(fd.get('production_origin')??'')
   const provider=String(fd.get('provider_id')??'').trim()
-  const policy=String(fd.get('policy_version_id')??'').trim()
   const ignoreLegacy=String(fd.get('ignore_legacy_repasses')??'')==='true'
   if(!['own','third_party'].includes(origin))return Response.json({error:'Escolha a origem da produção.'},{status:400})
   if(origin==='third_party'&&!uuid(provider))return Response.json({error:'Escolha a empresa de origem.'},{status:400})
   if(origin==='own'&&provider)return Response.json({error:'Produção própria não usa empresa de origem.'},{status:400})
-  if(policy&&!uuid(policy))return Response.json({error:'Regra de comissão inválida.'},{status:400})
 
   const parsed=await parseSmartCommercialFile(ctx,file)
   const generic=parsed.issues.some(x=>x.code==='generic_repass_requires_mapping')
@@ -39,7 +37,7 @@ export async function POST(req:Request){
    p_organization:ctx.membership.organization_id,
    p_production_origin:origin,
    p_provider:origin==='third_party'?provider:null,
-   p_policy_version:policy||null,
+   p_policy_version:null,
    p_rows:payload
   })
   if(error)return Response.json({error:error.message||'Importação recusada pelo banco de dados.'},{status:400})

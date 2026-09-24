@@ -3,7 +3,6 @@
 import { useMemo, useState } from 'react'
 
 type Provider={id:string;name:string;provider_type:string}
-type Policy={versionId:string;name:string;version:number;discount:string}
 type Preview={
  ok:boolean
  fileName:string
@@ -15,11 +14,10 @@ const field='rounded-lg border border-slate-700 bg-slate-950 p-2 text-sm'
 const btn='rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 disabled:opacity-50'
 const ghost='rounded-lg border border-slate-700 px-3 py-2 text-sm disabled:opacity-50'
 
-export function SmartImportClient({providers,policies}:{providers:Provider[];policies:Policy[]}){
+export function SmartImportClient({providers}:{providers:Provider[]}){
  const [file,setFile]=useState<File|null>(null)
  const [origin,setOrigin]=useState<'own'|'third_party'>('own')
  const [provider,setProvider]=useState('')
- const [policy,setPolicy]=useState('')
  const [preview,setPreview]=useState<Preview|null>(null)
  const [busy,setBusy]=useState(false)
  const [message,setMessage]=useState('')
@@ -52,7 +50,7 @@ export function SmartImportClient({providers,policies}:{providers:Provider[];pol
   try{
    const fd=new FormData()
    fd.set('file',file);fd.set('production_origin',origin);fd.set('provider_id',origin==='third_party'?provider:'')
-   fd.set('policy_version_id',policy);fd.set('ignore_legacy_repasses',String(ignoreLegacy))
+   fd.set('policy_version_id','');fd.set('ignore_legacy_repasses',String(ignoreLegacy))
    const res=await fetch('/api/comercial/importacao-inteligente/apply',{method:'POST',body:fd})
    const body=await res.json()
    if(!res.ok){setMessage(body.error??'Importação recusada.');return}
@@ -86,12 +84,11 @@ export function SmartImportClient({providers,policies}:{providers:Provider[];pol
    <div className="mt-3 grid gap-2 md:grid-cols-2">
     <select value={origin} onChange={e=>setOrigin(e.target.value as 'own'|'third_party')} className={field}><option value="own">Produção própria</option><option value="third_party">Produção de terceiro</option></select>
     <select disabled={origin==='own'} value={provider} onChange={e=>setProvider(e.target.value)} className={field}><option value="">Empresa de origem</option>{providers.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>
-    <select value={policy} onChange={e=>setPolicy(e.target.value)} className={field+' md:col-span-2'}><option value="">Importar sem regra interna agora</option>{policies.map(p=><option key={p.versionId} value={p.versionId}>{p.name} · v{p.version} · imposto/desconto {p.discount}%</option>)}</select>
    </div>
 
    {!!optionalQuestions.length&&<div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
     <strong className="text-sm text-amber-200">O arquivo trouxe componentes que exigem confirmação</strong>
-    <div className="mt-2 space-y-2 text-sm">{optionalQuestions.map(([k,label])=><label key={k} className="block"><input type="checkbox" checked={answers[k]} onChange={e=>setAnswers(a=>({...a,[k]:e.target.checked}))} className="mr-2"/>Confirmo que o <b>{label}</b> será importado como componente recebido. {policy?'A regra interna selecionada ficará vinculada à condição.':'Nenhum repasse interno será definido agora.'}</label>)}</div>
+    <div className="mt-2 space-y-2 text-sm">{optionalQuestions.map(([k,label])=><label key={k} className="block"><input type="checkbox" checked={answers[k]} onChange={e=>setAnswers(a=>({...a,[k]:e.target.checked}))} className="mr-2"/>Confirmo que o <b>{label}</b> será importado como componente recebido. Nenhum repasse interno será definido agora.</label>)}</div>
    </div>}
 
    {preview.summary.hasGenericRepasseColumns&&<label className="mt-4 block rounded-xl border border-amber-500/30 p-4 text-sm text-amber-100"><input type="checkbox" checked={ignoreLegacy} onChange={e=>setIgnoreLegacy(e.target.checked)} className="mr-2"/>Confirmo que <b>Repasse 1/2/3...</b> da planilha não será usado como regra interna. O Corban usará somente a política selecionada acima.</label>}

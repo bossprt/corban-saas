@@ -7,7 +7,7 @@ type Env = Record<string, string | undefined>
 const has = (e: Env, k: string) => (e[k] ?? '').trim().length > 0
 const isHttpUrl = (v: string | undefined) => { try { const u = new URL(v ?? ''); return u.protocol === 'https:' || u.protocol === 'http:' } catch { return false } }
 
-export const REQUIRED_FILES = ['package.json', 'next.config.ts', 'proxy.ts', 'src/app/api/health/route.ts', 'src/app/auth/confirm/route.ts', 'src/app/auth/definir-senha/page.tsx', 'src/app/login/recuperar/page.tsx', 'src/app/api/integrations/dispatch/route.ts', 'src/app/api/admin/organizations/route.ts', 'src/app/api/admin/reference-catalog/route.ts']
+export const REQUIRED_FILES = ['package.json', 'next.config.ts', 'proxy.ts', 'src/app/api/health/route.ts', 'src/app/auth/confirm/route.ts', 'src/app/auth/definir-senha/page.tsx', 'src/app/login/recuperar/page.tsx', 'src/app/api/admin/organizations/route.ts', 'src/app/api/admin/reference-catalog/route.ts']
 
 export function preflight(env: Env, fileExists: (p: string) => boolean, nodeVersion: string, migrations: string[] = []): Check[] {
   const out: Check[] = []

@@ -11,7 +11,6 @@ const text=(f:FormData,k:string)=>String(f.get(k)??'').trim()
 const go=(code:FeedbackCode):never=>{revalidatePath(PATH);return redirect(feedbackUrl(PATH,code))}
 const manager=async()=>{const ctx=await requireAppContext();return atLeast(ctx.membership.role,'manager')?ctx:null}
 const uuid=(v:string)=>/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v)
-const pct=(v:string)=>{const n=Number(v.replace(',','.'));return Number.isFinite(n)&&n>=0&&n<=100?String(n):null}
 const tax=(v:string)=>{const d=v.replace(/\D/g,'');return d===''?null:(d.length===11||d.length===14?d:undefined)}
 
 export async function createSellerGroup(f:FormData){
@@ -51,18 +50,4 @@ export async function setSellerActive(f:FormData){
   if(!uuid(id))return go('erro:vendedor_invalido')
   const {error}=await ctx.supabase.from('commercial_sellers').update({is_active:active}).eq('id',id)
   return error?go(classifyDbFeedback(error)):go('ok:vendedor_atualizado')
-}
-
-export async function addSubRule(f:FormData){
-  const ctx=await manager(); if(!ctx)return go('erro:sem_permissao')
-  const seller=text(f,'seller_id'),share=pct(text(f,'sub_share_pct')),effective=text(f,'effective_from'),component=text(f,'component_key')||'all'
-  if(!uuid(seller)||share===null||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(effective)||component.length>80)return go('erro:sub_regra_invalida')
-  const latest=await ctx.supabase.from('seller_sub_rule_versions').select('version').eq('seller_id',seller).eq('component_key',component).order('version',{ascending:false}).limit(1).maybeSingle()
-  const ins=await ctx.supabase.from('seller_sub_rule_versions').insert({
-    organization_id:ctx.membership.organization_id,seller_id:seller,version:(latest.data?.version??0)+1,
-    component_key:component,sub_share_pct:share,effective_from:`${effective}T00:00:00Z`,status:'draft'
-  }).select('id').single()
-  if(ins.error||!ins.data)return go(ins.error?classifyDbFeedback(ins.error):'erro:inesperado')
-  const pub=await ctx.supabase.rpc('publish_seller_sub_rule',{p_rule:ins.data.id})
-  return pub.error?go(classifyDbFeedback(pub.error)):go('ok:sub_regra_publicada')
 }

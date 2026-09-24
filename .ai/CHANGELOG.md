@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### F5 passo 0 — Limpeza de modelos antigos (24/09/2026)
+- Removidos (aprovação do dono): modelo de rede/canais, snapshots de rota, sub-regras e supervisões, políticas de repasse por componente, `profiles`, pipeline de importação antigo, eventos/evidências/casos financeiros antigos e hub de integrações, com suas telas e testes.
+
 ### F1 — Design system, casca, papéis (24/09/2026)
 - Tokens, IBM Plex, componentes base, ponte de paleta: app inteiro claro e na cor da marca.
 - Casca por jornada, navegação mobile, busca Ctrl+K, tela Hoje.

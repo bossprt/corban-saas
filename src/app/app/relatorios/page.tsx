@@ -1,17 +1,15 @@
 import Link from 'next/link'
 import { requireAppContext } from '@/lib/appContext'
-import { atLeast, canViewCommission } from '@/lib/rbac'
+import { atLeast } from '@/lib/rbac'
 
 const card = 'block rounded-2xl border border-slate-800 bg-slate-900 p-5 hover:border-emerald-500/40 hover:bg-slate-900/80'
 
 export default async function ReportsHubPage() {
   const { membership } = await requireAppContext()
-  const finance = canViewCommission(membership.role)
   const supervisor = atLeast(membership.role, 'supervisor')
   const items = [
     ['Visão geral', 'Indicadores atuais de leads, clientes, propostas e operação.', '/app', true],
     ['Operacional', 'Fila e situação atual da operação.', '/app/operacao', true],
-    ['Financeiro e conciliação', 'Comissões, recebimentos comprovados e divergências.', '/app/financeiro', finance],
     ['Central de atenção', 'Pendências e sinais objetivos da organização.', '/app/atencao', supervisor],
   ] as const
   return <section>

@@ -68,6 +68,6 @@ test('global catalog tables are not filtered; insert and rpc pass through untouc
 })
 
 test('the free-table list matches the live schema (tables WITHOUT organization_id)',()=>{
- assert.equal(TENANT_FREE_TABLES.size,12) // + contract_types, national_agreement_templates (Commercial Model V3)
+ assert.equal(TENANT_FREE_TABLES.size,10) // + contract_types, national_agreement_templates (Commercial Model V3); integration_adapters/integration_field_mappings removed with F5 step 0
  assert.ok(TENANT_FREE_TABLES.has('organizations')&&!TENANT_FREE_TABLES.has('clients')&&!TENANT_FREE_TABLES.has('organization_memberships'))
 })

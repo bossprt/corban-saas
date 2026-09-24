@@ -9,12 +9,6 @@ import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedba
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const idOf = (formData: FormData) => { const id = String(formData.get('proposal_id') ?? ''); return UUID.test(id) ? id : null }
 const back = (id: string | null, code: FeedbackCode): never => redirect(feedbackUrl(id ? `/app/propostas/${id}` : '/app/propostas', code))
-// Kept for the supervisor-only financial actions below (they still throw; the error boundary shows a sanitized message).
-function proposalId(formData: FormData) {
-  const id = String(formData.get('proposal_id') ?? '')
-  if (!id) throw new Error('Proposta inválida.')
-  return id
-}
 
 export async function prepareDocuments(formData: FormData) {
   const id = idOf(formData)
@@ -69,40 +63,4 @@ export async function validateRequirement(formData: FormData) {
   if (error) return back(id, 'erro:requisito')
   revalidatePath(`/app/propostas/${id}`)
   return back(id, 'ok:requisito_validado')
-}
-
-export async function publishExpectedCommission(formData: FormData) {
-  const id = proposalId(formData)
-  const { supabase, membership } = await requireAppContext()
-  if (!atLeast(membership.role,'supervisor')) throw new Error('Seu perfil não pode publicar comissão esperada.')
-  const { error } = await supabase.rpc('publish_expected_commission', { p_proposal_id: id })
-  if (error) throw new Error('Não foi possível publicar a comissão esperada. Verifique snapshot e regras comerciais publicadas.')
-  revalidatePath(`/app/propostas/${id}`)
-  revalidatePath('/app/financeiro')
-}
-
-
-export async function refreshFinancialReconciliation(formData: FormData) {
-  const id = proposalId(formData)
-  const component = String(formData.get('component_type') ?? '') || null
-  const { supabase, membership } = await requireAppContext()
-  if (!atLeast(membership.role,'supervisor')) throw new Error('Seu perfil não pode reconciliar fatos financeiros.')
-  const { error } = await supabase.rpc('refresh_financial_reconciliation', { p_proposal_id: id, p_component_type: component })
-  if (error) throw new Error('Não foi possível atualizar a reconciliação financeira.')
-  revalidatePath(`/app/propostas/${id}`)
-  revalidatePath('/app/financeiro')
-}
-
-
-export async function freezeCommercialRoute(formData:FormData){
- const id=proposalId(formData)
- const channelId=String(formData.get('channel_id')??'')
- const ruleId=String(formData.get('commission_rule_version_id')??'')
- const producerId=String(formData.get('producer_entity_id')??'')||null
- const {supabase,membership}=await requireAppContext()
- if(!atLeast(membership.role,'supervisor'))throw new Error('Seu perfil não pode congelar a rota comercial.')
- if(!channelId||!ruleId)throw new Error('Canal e regra de comissão são obrigatórios.')
- const {error}=await supabase.rpc('freeze_proposal_commercial_route',{p_proposal_id:id,p_channel_id:channelId,p_commission_rule_version_id:ruleId,p_producer_entity_id:producerId})
- if(error)throw new Error('Não foi possível congelar a rota. Verifique canal, tabela, vigência e regra publicada.')
- revalidatePath(`/app/propostas/${id}`)
 }

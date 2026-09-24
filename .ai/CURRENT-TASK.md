@@ -21,6 +21,12 @@
 - Seed da empresa fictícia: `supabase/seed/f0-test-tenant.sql`, com trava `corban.env = 'test'` (validada: aborta sem a trava) e CPFs com dígito verificador válido.
 - graphify gerado em `graphify-out/` (local, fora do Git): 998 nós, 2666 arestas, 45 comunidades. Usar `graphify query` antes de ler arquivos.
 
+## F5 — andamento (branch `feature/f5-recebimento`)
+- Decisões do dono: remover blocos 1 (rede + `profiles`), 2 (importação/financeiro antigos) e 3 (hub de integrações); tolerância de conciliação zero; alerta "paga sem recebimento" em 30 dias; confirmação de relatório por quem tem `financeiro.edit` (admin/gerente).
+- Passo 0 feito: migration `20260928090000_remove_legacy_models_v1` (34 tabelas, 48 funções, 8 funções reescritas). Testada no banco local recriado do zero (baseline + migrations + seed): testes de segurança das fases F1–F4 iguais antes/depois; 19 testes SQL de modelos removidos apagados; unit 177/177; tsc e lint limpos; e2e 25/25 (4 fluxos só passam em série no dev server, por tempo). Telas antigas removidas: rede, financeiro, importações, integrações, regras-comissão antigas; cartões antigos da proposta. **Não aplicada em produção.**
+- Testes SQL antigos que já falhavam antes da limpeza (herança) seguem falhando; não fazem parte do contrato das fases novas.
+- Próximo: modelo de recebimento (fonte pagadora com modelo de colunas, relatório à vista/diferido/estorno, conciliação contrato a contrato, lançamento imutável, alertas).
+
 ## F4 — andamento (branch `feature/f4-motor-comissao`)
 - Motor único: migration `20260924154942_commission_engine_v1` (regras versionadas com precedência, imposto por regime + isenção da fonte pagadora, modos Cascata e Tabela por grupo, diferido em parcelas com resíduo na última, cálculo congelado e imutável por proposta). `src/lib/commission/distribution.ts` espelha a aritmética. Contrato `tests/security/commission-engine-contract.sql` 18/18; unit com o exemplo do dono. Aplicada em produção em 2026-09-24 (md5 conferido).
 - Telas: Configurações > Comissão (regra padrão, regras específicas, fontes isentas), cartão Comissão na proposta (linhas por componente e totais do contrato; vendedor vê só a própria parte).

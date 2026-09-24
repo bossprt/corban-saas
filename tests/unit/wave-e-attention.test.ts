@@ -9,8 +9,8 @@ const read = (p: string) => readFileSync(join(process.cwd(), p), 'utf8')
 const NOW = Date.parse('2026-09-20T12:00:00Z')
 const H = 3_600_000
 const sig = (count: number, hoursOld = 1, ids: string[] = ['a', 'b']): Signal => ({ count, ids, oldest: new Date(NOW - hoursOld * H).toISOString() })
-const none: AttentionData = { overdueCases: null, staleLeads: null, draftProposals: null, failedRuns: null, importReviews: null, reconciliations: null }
-const zero: AttentionData = { overdueCases: sig(0), staleLeads: sig(0), draftProposals: sig(0), failedRuns: sig(0), importReviews: sig(0), reconciliations: sig(0), pendenciesDue: sig(0) }
+const none: AttentionData = { overdueCases: null, staleLeads: null, draftProposals: null }
+const zero: AttentionData = { overdueCases: sig(0), staleLeads: sig(0), draftProposals: sig(0), pendenciesDue: sig(0) }
 
 test('rules: nothing detected = evaluated but empty (so cleared conditions can be auto-resolved)', () => {
   const r = evaluateRules('supervisor', zero, NOW)
@@ -18,14 +18,14 @@ test('rules: nothing detected = evaluated but empty (so cleared conditions can b
   assert.deepEqual([...r.evaluated].sort(), [...ALL_RULE_KEYS].sort())
 })
 test('rules: a signal that could not be read is NOT evaluated (never treated as zero)', () => {
-  const r = evaluateRules('supervisor', { ...zero, overdueCases: null, failedRuns: null }, NOW)
-  assert.ok(!r.evaluated.includes('overdue_cases') && !r.evaluated.includes('failed_runs'))
+  const r = evaluateRules('supervisor', { ...zero, overdueCases: null }, NOW)
+  assert.ok(!r.evaluated.includes('overdue_cases'))
   assert.ok(r.evaluated.includes('stale_leads'))
   assert.deepEqual(evaluateRules('supervisor', none, NOW), { candidates: [], evaluated: [] })
 })
 test('rules: operators (agent) see and evaluate nothing; supervisor and above evaluate everything they may read', () => {
   assert.deepEqual(evaluateRules('agent', { ...zero, overdueCases: sig(50) }, NOW), { candidates: [], evaluated: [] })
-  for (const role of ['supervisor', 'manager', 'admin']) assert.equal(evaluateRules(role, { ...zero, reconciliations: sig(2) }, NOW).candidates.length, 1, role)
+  for (const role of ['supervisor', 'manager', 'admin']) assert.equal(evaluateRules(role, { ...zero, overdueCases: sig(2) }, NOW).candidates.length, 1, role)
   for (const role of [undefined, null, '', 'owner', '__proto__']) assert.deepEqual(evaluateRules(role as string, { ...zero, overdueCases: sig(5) }, NOW).candidates, [], String(role))
 })
 test('severity: overdue cases escalate by age and volume', () => {
@@ -36,16 +36,13 @@ test('severity: overdue cases escalate by age and volume', () => {
   assert.equal(sev(sig(1, 73)), 'critical')
   assert.equal(sev(sig(10, 1)), 'critical')
 })
-test('severity: failed runs, reconciliations, imports, leads, drafts', () => {
+test('severity: leads, drafts', () => {
   const one = (k: keyof AttentionData, s: Signal) => evaluateRules('admin', { ...none, [k]: s }, NOW).candidates[0].severity
-  assert.equal(one('failedRuns', sig(1)), 'high'); assert.equal(one('failedRuns', sig(3)), 'critical')
-  assert.equal(one('reconciliations', sig(1)), 'high'); assert.equal(one('reconciliations', sig(5)), 'critical')
-  assert.equal(one('importReviews', sig(1)), 'medium'); assert.equal(one('importReviews', sig(20)), 'high')
   assert.equal(one('staleLeads', sig(2, 60)), 'medium'); assert.equal(one('staleLeads', sig(2, 24 * 8)), 'high'); assert.equal(one('staleLeads', sig(20)), 'high')
   assert.equal(one('draftProposals', sig(2)), 'low'); assert.equal(one('draftProposals', sig(10)), 'medium')
 })
 test('candidates carry the fields the Action Center must show, sorted by severity, with bounded evidence', () => {
-  const r = evaluateRules('admin', { ...zero, overdueCases: sig(2, 80, ['1', '2', '3', '4', '5', '6', '7']), draftProposals: sig(1), failedRuns: sig(1) }, NOW)
+  const r = evaluateRules('admin', { ...zero, overdueCases: sig(2, 80, ['1', '2', '3', '4', '5', '6', '7']), draftProposals: sig(1), staleLeads: sig(1, 200) }, NOW)
   assert.deepEqual(r.candidates.map(c => c.severity), ['critical', 'high', 'low'])
   for (const c of r.candidates) {
     assert.ok(c.title && c.reason && c.impact && c.recommendation && /^\/app(\/[a-z0-9_-]+)*$/.test(c.href), c.rule_key)

@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { LogOut } from 'lucide-react'
 import { Suspense } from 'react'
 import { requireAppContext } from '@/lib/appContext'
-import { atLeast, canManageTeam, canViewCommission } from '@/lib/rbac'
+import { atLeast, canManageTeam } from '@/lib/rbac'
 import { ROLE_LABEL } from '@/lib/team'
 import { FlashBanner } from '@/components/FlashBanner'
 import { BottomNav, SideNav, type NavItem } from '@/components/shell/NavLinks'
@@ -17,7 +17,6 @@ const NAV: (NavItem & { show?: (role: string) => boolean; module?: string })[] =
   { key: 'clientes', href: '/app/clientes', label: 'Clientes', module: 'clientes' },
   { key: 'esteira', href: '/app/propostas', label: 'Esteira', module: 'esteira' },
   { key: 'metas', href: '/app/metas', label: 'Metas' },
-  { key: 'financeiro', href: '/app/financeiro', label: 'Financeiro', show: canViewCommission, module: 'financeiro' },
   { key: 'comercial', href: '/app/comercial', label: 'Comercial', show: r => atLeast(r, 'supervisor'), module: 'comercial' },
   { key: 'relatorios', href: '/app/relatorios', label: 'Relatórios', module: 'relatorios' },
   { key: 'configuracoes', href: '/app/configuracao', label: 'Configurações', show: canManageTeam },

@@ -1,6 +1,6 @@
 // Action Center rules (NEXT-WAVE-PLAN-V3, wave E). PURE and deterministic: rows in, candidate items out, with evidence. No AI, no I/O, no cost.
 // A rule whose data could not be read is NOT evaluated (never treated as "zero"): the database only auto-resolves the rules that were evaluated.
-import { atLeast, canViewCommission } from './rbac'
+import { atLeast } from './rbac'
 
 export type Severity = 'critical' | 'high' | 'medium' | 'low'
 export const SEVERITY_ORDER: readonly Severity[] = ['critical', 'high', 'medium', 'low']
@@ -13,9 +13,6 @@ export type AttentionData = {
   staleLeads: Signal | null        // new leads waiting more than 2 days
   pendenciesDue?: Signal | null    // pendencies due within 24 hours or already late
   draftProposals: Signal | null    // proposals in draft for more than 3 days
-  failedRuns: Signal | null        // integration runs failed for good
-  importReviews: Signal | null     // import matches waiting for a human
-  reconciliations: Signal | null   // divergent / human-required financial reconciliations
 }
 export type Candidate = { rule_key: string; dedupe_key: string; severity: Severity; title: string; reason: string; evidence: { count: number; oldest_at: string | null; sample_ids: string[] }; impact: string; recommendation: string; href: string }
 
@@ -28,18 +25,6 @@ const RULES: Rule[] = [
     severity: ageHours(s.oldest, now) > 72 || s.count >= 10 ? 'critical' : ageHours(s.oldest, now) > 24 || s.count >= 3 ? 'high' : 'medium',
     title: `${s.count} caso(s) da operação com o prazo vencido`, reason: 'O prazo de atendimento da etapa passou e o caso continua parado na esteira.',
     impact: 'Proposta sem andamento pode ser perdida ou vencer no banco.', recommendation: 'Abra a operação, veja o caso mais antigo e cobre o responsável ou reatribua.', href: '/app/operacao' }) },
-  { key: 'failedRuns', rule_key: 'failed_runs', allowed: r => atLeast(r, 'supervisor'), build: s => ({
-    severity: s.count >= 3 ? 'critical' : 'high',
-    title: `${s.count} integração(ões) com falha definitiva`, reason: 'A execução falhou e não será tentada de novo sozinha.',
-    impact: 'Dados do banco/provedor deixam de chegar; propostas podem ficar sem retorno.', recommendation: 'Veja a causa em Integrações, corrija e crie uma nova execução.', href: '/app/integracoes' }) },
-  { key: 'reconciliations', rule_key: 'reconciliations', allowed: canViewCommission, build: s => ({
-    severity: s.count >= 5 ? 'critical' : 'high',
-    title: `${s.count} conciliação(ões) divergente(s) ou aguardando decisão`, reason: 'O valor esperado, informado e recebido não fecham para estas propostas.',
-    impact: 'Comissão pode estar sendo paga a menos ou repassada acima do recebido.', recommendation: 'Abra Financeiro, revise cada divergência e registre a decisão (nada é alterado automaticamente).', href: '/app/financeiro' }) },
-  { key: 'importReviews', rule_key: 'import_reviews', allowed: r => atLeast(r, 'supervisor'), build: s => ({
-    severity: s.count >= 20 ? 'high' : 'medium',
-    title: `${s.count} vínculo(s) de importação aguardando revisão humana`, reason: 'A planilha trouxe linhas que o sistema não conseguiu ligar a uma proposta com certeza.',
-    impact: 'Enquanto ninguém decide, esses valores não entram na conciliação.', recommendation: 'Abra Importações e confirme ou rejeite cada vínculo.', href: '/app/importacoes' }) },
   { key: 'staleLeads', rule_key: 'stale_leads', allowed: r => atLeast(r, 'supervisor'), build: (s, now) => ({
     severity: s.count >= 20 || ageHours(s.oldest, now) > 24 * 7 ? 'high' : 'medium',
     title: `${s.count} lead(s) novo(s) sem primeiro contato há mais de 2 dias`, reason: 'O lead entrou e ninguém registrou contato.',

@@ -29,6 +29,10 @@ const pages = [
   { path: '/app/configuracao/papeis', name: 'papeis' },
   { path: '/app/metas', name: 'metas' },
   { path: '/app/propostas/nova', name: 'nova-proposta' },
+  { path: '/app/cadastros/vendedores', name: 'vendedores' },
+  { path: '/app/comercial/importacao-inteligente', name: 'importacao-inteligente' },
+  { path: '/app/operacional', name: 'operacional' },
+  { path: '/app/relatorios', name: 'relatorios' },
 ]
 
 for (const { path, name } of pages) {

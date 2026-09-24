@@ -11,6 +11,6 @@
     "plugins": [],
     "types": ["node"]
   },
-  "include": ["./**/*.ts", "../../src/lib/imports/**/*.ts", "../../src/lib/rbac.ts", "../../src/lib/tenant.ts", "../../src/lib/integrations/**/*.ts", "../../src/lib/commission/**/*.ts", "../../src/lib/finance/**/*.ts", "../../src/lib/commercial.ts"],
+  "include": ["./**/*.ts", "../../src/lib/imports/**/*.ts", "../../src/lib/rbac.ts", "../../src/lib/tenant.ts", "../../src/lib/commission/**/*.ts", "../../src/lib/commercial.ts"],
   "exclude": ["../../node_modules"]
 }

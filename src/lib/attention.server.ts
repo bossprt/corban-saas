@@ -6,7 +6,7 @@ type Ctx = Awaited<ReturnType<typeof requireAppContext>>
 export type AttentionRow = { id: string; rule_key: string; severity: string; title: string; reason: string; evidence: { count?: number; oldest_at?: string | null } | null; impact: string; recommendation: string; href: string; status: string; snoozed_until: string | null; first_detected_at: string; assigned_to: string | null }
 export type AttentionEvent = { item_id: string; event: string; note: string | null; created_at: string }
 
-export const ATTENTION_RULE_KEYS = ['overdue_cases', 'failed_runs', 'reconciliations', 'import_reviews', 'stale_leads', 'draft_proposals', 'pendencies_due'] as const
+export const ATTENTION_RULE_KEYS = ['overdue_cases', 'stale_leads', 'draft_proposals', 'pendencies_due'] as const
 
 const isoAgo = (ms: number) => new Date(Date.now() - ms).toISOString()
 
@@ -26,16 +26,13 @@ function liveRow(c: Candidate): AttentionRow {
 // and returns the items to show. Used by the Hoje screen and the Central de atenção.
 export async function loadAttention({ supabase, membership }: Ctx, opts: { withEvents?: boolean } = {}) {
   const exact = { count: 'exact' } as const
-  const [overdue, stale, drafts, failed, reviews, recs, pendencies] = await Promise.all([
+  const [overdue, stale, drafts, pendencies] = await Promise.all([
     supabase.from('operational_cases').select('id,due_at', exact).not('canonical_state', 'in', '("paid","cancelled","rejected")').lt('due_at', isoAgo(0)).order('due_at').limit(200),
     supabase.from('leads').select('id,created_at', exact).eq('status', 'new').lt('created_at', isoAgo(2 * 24 * 3600 * 1000)).order('created_at').limit(200),
     supabase.from('proposals_v2').select('id,created_at', exact).eq('status', 'draft').lt('created_at', isoAgo(3 * 24 * 3600 * 1000)).order('created_at').limit(200),
-    supabase.from('integration_runs').select('id', exact).eq('status', 'failed').eq('terminal', true).limit(200),
-    supabase.from('import_match_candidates').select('id', exact).eq('status', 'human_required').limit(200),
-    supabase.from('financial_reconciliation_cases').select('id,created_at', exact).in('status', ['divergent', 'human_required']).order('created_at').limit(200),
     supabase.from('operational_cases').select('id,pendency_due_at', exact).eq('canonical_state', 'pending_external').lt('pendency_due_at', isoAgo(-24 * 3600 * 1000)).order('pendency_due_at').limit(200),
   ])
-  const data: AttentionData = { overdueCases: signal(overdue, 'due_at'), staleLeads: signal(stale, 'created_at'), draftProposals: signal(drafts, 'created_at'), failedRuns: signal(failed), importReviews: signal(reviews), reconciliations: signal(recs, 'created_at'), pendenciesDue: signal(pendencies, 'pendency_due_at') }
+  const data: AttentionData = { overdueCases: signal(overdue, 'due_at'), staleLeads: signal(stale, 'created_at'), draftProposals: signal(drafts, 'created_at'), pendenciesDue: signal(pendencies, 'pendency_due_at') }
   const { candidates, evaluated } = evaluateRules(membership.role, data)
 
   // Persist the lifecycle (history, decisions). Without the Action Center migration the live signals are still shown, without history.

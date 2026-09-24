@@ -4,7 +4,6 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { atLeast, canManageMemberRole, canManageTeam, canViewCommission, rolesAssignableBy } from '../../src/lib/rbac'
 import { classifyTeamError, isExistingUserError, isTeamErrorCode, isUuid, normalizeEmail, TEAM_ERROR_MESSAGES } from '../../src/lib/team'
-import { ENVIRONMENT_LABEL, providerEnvironment, workerReadiness } from '../../src/lib/integrations/readiness'
 
 const ROOT = process.cwd()
 const read = (p: string) => readFileSync(join(ROOT, p), 'utf8')
@@ -55,7 +54,7 @@ test('canViewCommission is fail-closed until the Owner decides (supervisor and a
   assert.equal(atLeast('supervisor', 'supervisor'), canViewCommission('supervisor'))
 })
 test('screens ask canViewCommission instead of hard-coding the role', () => {
-  for (const f of ['src/app/app/page.tsx', 'src/app/app/financeiro/page.tsx', 'src/app/app/financeiro/casos/[id]/page.tsx', 'src/app/app/importacoes/[id]/page.tsx']) assert.match(read(f), /canViewCommission\(/, f)
+  for (const f of ['src/app/app/comercial/tabelas/page.tsx']) assert.match(read(f), /canViewCommission\(/, f)
 })
 
 // ---- error classification and input hygiene
@@ -88,31 +87,6 @@ test('an already registered address is not an invitation failure', () => {
   assert.equal(isExistingUserError({ message: 'A user with this email address has already been registered' }), true)
   assert.equal(isExistingUserError({ message: 'SMTP down' }), false)
   assert.equal(isExistingUserError(null), false)
-})
-
-// ---- worker readiness / provider environment
-test('workerReadiness: secret strength, local guard, no values leaked', () => {
-  const secret = 'S'.repeat(30)
-  const r = workerReadiness({ INTEGRATION_WORKER_SECRET: secret, NODE_ENV: 'production', CORBAN_ALLOW_LOCAL_PROVIDERS: '1' })
-  assert.equal(r.secretConfigured, true)
-  assert.equal(r.localProvidersAllowed, false)
-  assert.deepEqual(r.runnableProviders, [])
-  assert.equal(r.realProviderAvailable, false)
-  assert.ok(!JSON.stringify(r).includes(secret))
-  assert.equal(workerReadiness({ INTEGRATION_WORKER_SECRET: 'short' }).secretConfigured, false)
-  assert.equal(workerReadiness({}).secretConfigured, false)
-  const dev = workerReadiness({ NODE_ENV: 'development', CORBAN_ALLOW_LOCAL_PROVIDERS: '1' })
-  assert.equal(dev.localProvidersAllowed, true)
-  assert.ok(dev.runnableProviders.every(k => providerEnvironment(k) === 'local_test'))
-  assert.equal(dev.realProviderAvailable, false)
-})
-test('the fake provider can never be labelled as a bank/real provider; blocked providers are not homologated', () => {
-  assert.equal(providerEnvironment('local/fake'), 'local_test')
-  assert.match(ENVIRONMENT_LABEL.local_test, /LOCAL/)
-  assert.doesNotMatch(ENVIRONMENT_LABEL.local_test, /BANCO REAL|PRODU|HOMOLOGADO/)
-  assert.equal(providerEnvironment('bevi/webservice_agente'), 'not_homologated')
-  assert.equal(providerEnvironment('2tech/busca_contrato_file'), 'not_homologated')
-  assert.equal(providerEnvironment('nope/unknown'), 'not_homologated')
 })
 
 // ---- architecture: where the service role may live, what the team module may trust
@@ -149,10 +123,9 @@ test('health endpoint exposes no configuration or secrets', () => {
   assert.doesNotMatch(h, /INTEGRATION_WORKER_SECRET|SERVICE_ROLE|createAdminClient/)
   assert.match(read('src/utils/supabase/middleware.ts'), /\/api\/health/)
 })
-test('the menu offers Financeiro only to commission viewers and Configuração (team) only to managers (pages still enforce)', () => {
+test('the menu offers Configuração (team) only to managers (pages still enforce)', () => {
   const l = read('src/app/app/layout.tsx')
   assert.match(l, /href: '\/app\/configuracao'[^}]*show: canManageTeam/)
-  assert.match(l, /href: '\/app\/financeiro'[^}]*show: canViewCommission/)
 })
 test('role actions go through the governed RPC and never take the tenant from the form', () => {
   const a = read('src/app/app/configuracao/papeis/actions.ts')

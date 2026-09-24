@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { classifyAuthProbe, classifyRestProbe, failureProbe, type Probe } from '@/lib/health'
 
 // Liveness + Supabase reachability for uptime monitors. Deliberately minimal and unauthenticated: no secrets, no configuration values, no provider or
-// worker state (business readiness is shown only to signed-in supervisors on /app/integracoes). Probe semantics: see src/lib/health.ts.
+// worker state. Probe semantics: see src/lib/health.ts.
 export const dynamic = 'force-dynamic'
 
 async function probes(): Promise<{ database: Probe; auth: Probe }> {
