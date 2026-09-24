@@ -390,3 +390,24 @@ $$;
 
 revoke all on function public.calculate_proposal_commission(uuid, uuid) from public, anon;
 grant execute on function public.calculate_proposal_commission(uuid, uuid) to authenticated;
+
+-- Marks a paying source (bank, or promoter) as tax exempt. Administrators and managers.
+create or replace function public.set_paying_source_tax_exempt(p_kind text, p_id uuid, p_exempt boolean)
+returns void
+language plpgsql
+security definer
+set search_path to ''
+as $$
+declare v_org uuid;
+begin
+  if p_kind = 'bank' then select organization_id into v_org from public.organization_banks where id = p_id;
+  elsif p_kind = 'provider' then select organization_id into v_org from public.organization_providers where id = p_id;
+  else raise exception 'invalid_kind'; end if;
+  if v_org is null or auth.uid() is null or private.caller_role_in(v_org) not in ('admin','manager') then raise exception 'not_authorized'; end if;
+  if p_kind = 'bank' then update public.organization_banks set tax_exempt = coalesce(p_exempt, false) where id = p_id;
+  else update public.organization_providers set tax_exempt = coalesce(p_exempt, false) where id = p_id; end if;
+end
+$$;
+
+revoke all on function public.set_paying_source_tax_exempt(text, uuid, boolean) from public, anon;
+grant execute on function public.set_paying_source_tax_exempt(text, uuid, boolean) to authenticated;

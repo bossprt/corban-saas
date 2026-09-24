@@ -67,3 +67,13 @@ test('the example deferred installment in cascade', () => {
   assert.deepEqual([l.tax, l.manager, l.supervisor, l.originator, l.company], ['0.70', '0.66', '0.99', '4.94', '4.38'])
   assert.equal(sum(l), '11.67')
 })
+
+test('percent input stays a decimal string within 0..100', async () => {
+  const { parsePercentInput } = await import('../../src/lib/percent-input')
+  assert.equal(parsePercentInput('6'), '6')
+  assert.equal(parsePercentInput('6,5'), '6.5')
+  assert.equal(parsePercentInput('12.2500'), '12.2500')
+  assert.equal(parsePercentInput('100'), '100')
+  assert.equal(parsePercentInput(''), null)
+  for (const bad of ['100,01', '101', '-1', 'abc', '6,12345', '1.000,00']) assert.equal(parsePercentInput(bad), 'invalid', bad)
+})

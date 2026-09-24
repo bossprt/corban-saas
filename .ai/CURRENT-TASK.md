@@ -21,6 +21,12 @@
 - Seed da empresa fictícia: `supabase/seed/f0-test-tenant.sql`, com trava `corban.env = 'test'` (validada: aborta sem a trava) e CPFs com dígito verificador válido.
 - graphify gerado em `graphify-out/` (local, fora do Git): 998 nós, 2666 arestas, 45 comunidades. Usar `graphify query` antes de ler arquivos.
 
+## F4 — andamento (branch `feature/f4-motor-comissao`)
+- Motor único: migration `20260927090000_commission_engine_v1` (regras versionadas com precedência, imposto por regime + isenção da fonte pagadora, modos Cascata e Tabela por grupo, diferido em parcelas com resíduo na última, cálculo congelado e imutável por proposta). `src/lib/commission/distribution.ts` espelha a aritmética. Contrato `tests/security/commission-engine-contract.sql` 18/18; unit com o exemplo do dono. **Não aplicada em produção.**
+- Telas: Configurações > Comissão (regra padrão, regras específicas, fontes isentas), cartão Comissão na proposta (linhas por componente e totais do contrato; vendedor vê só a própria parte).
+- Decisões do dono: dois modos (escolha do dono), sem gerente/supervisor a parte fica com a empresa, diferido repassado ou não por escolha do dono, todos os % do dono. Exemplo aprovado; correção: vendedor na parcela de 11,67 é 4,94 (não 4,93).
+- Pendente: aposentar o grupo B (modelo rede/canais, payout_policies antigas, snapshots antigos e os cartões antigos da proposta) e ligar o cálculo ao financeiro (F5).
+
 ## F3 — andamento (branch `feature/f3-esteira`)
 - Banco: `20260924142925_pipeline_direct_proposals_v1` (proposta direta com junção banco+ADE, etapa Paga, pendência com motivo/prazo e volta à análise, Paga manual com nota por quem tem esteira.edit, distribuição de leads rodízio/fila/manual, metas por valor pago). Contrato `tests/security/pipeline-contract.sql` 19/19. **Aplicada em produção** (md5 igual).
 - Telas: Esteira nova (abas por etapa da empresa, alertas de pendência/prazo), Nova proposta, cartão Esteira na proposta, Metas (+ distribuição de leads), meta do mês no Hoje, Assumir lead.

@@ -5,6 +5,7 @@ import { attachDocument, prepareDocuments, sendToDigitization, validateRequireme
 import { atLeast, canViewCommission } from '@/lib/rbac'
 import { proposalStatusLabel } from '@/lib/operational'
 import { PipelineCard } from './PipelineCard'
+import { CommissionCard } from './CommissionCard'
 
 function brl(value: number | string | null) {
   return value === null ? 'Não calculado' : Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -63,6 +64,7 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
     </div>
 
     <PipelineCard supabase={supabase} access={access} proposalId={proposal.id} />
+    <CommissionCard supabase={supabase} access={access} proposalId={proposal.id} closed={['paid', 'rejected', 'cancelled'].includes(proposal.status)} />
 
     <div className="mt-6 flex flex-wrap gap-3">
       {['draft','documents_pending'].includes(proposal.status) && <form action={prepareDocuments}>
