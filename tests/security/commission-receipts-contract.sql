@@ -1,4 +1,4 @@
--- Contract test for 20260929090000_commission_receipts_v1: matching by ADE within the paying source, zero tolerance,
+-- Contract test for 20260924173938_commission_receipts_v1: matching by ADE within the paying source, zero tolerance,
 -- deferred installments (next pending and the last one with the residual), duplicates, chargeback limit, file once,
 -- confirmation rules, immutable ledger, divergence acceptance, alerts and finance-only visibility.
 -- Uses the local test company and the commission seed (condition 6% upfront + 14% deferred on the gross amount).
