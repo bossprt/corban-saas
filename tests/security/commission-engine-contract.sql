@@ -1,4 +1,4 @@
--- Contract test for 20260927090000_commission_engine_v1: the owner-approved example to the cent, both modes,
+-- Contract test for 20260924154942_commission_engine_v1: the owner-approved example to the cent, both modes,
 -- precedence, exemption, deferred opt-out, visibility and immutability. Local test company with the commission seed
 -- (condition 6% upfront + 14% deferred on the gross amount, group Ouro 50%, seller bound to vendedor@).
 -- One transaction, rolled back.  psql -v ON_ERROR_STOP=1 -f tests/security/commission-engine-contract.sql

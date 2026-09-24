@@ -22,7 +22,7 @@
 - graphify gerado em `graphify-out/` (local, fora do Git): 998 nós, 2666 arestas, 45 comunidades. Usar `graphify query` antes de ler arquivos.
 
 ## F4 — andamento (branch `feature/f4-motor-comissao`)
-- Motor único: migration `20260927090000_commission_engine_v1` (regras versionadas com precedência, imposto por regime + isenção da fonte pagadora, modos Cascata e Tabela por grupo, diferido em parcelas com resíduo na última, cálculo congelado e imutável por proposta). `src/lib/commission/distribution.ts` espelha a aritmética. Contrato `tests/security/commission-engine-contract.sql` 18/18; unit com o exemplo do dono. **Não aplicada em produção.**
+- Motor único: migration `20260924154942_commission_engine_v1` (regras versionadas com precedência, imposto por regime + isenção da fonte pagadora, modos Cascata e Tabela por grupo, diferido em parcelas com resíduo na última, cálculo congelado e imutável por proposta). `src/lib/commission/distribution.ts` espelha a aritmética. Contrato `tests/security/commission-engine-contract.sql` 18/18; unit com o exemplo do dono. Aplicada em produção em 2026-09-24 (md5 conferido).
 - Telas: Configurações > Comissão (regra padrão, regras específicas, fontes isentas), cartão Comissão na proposta (linhas por componente e totais do contrato; vendedor vê só a própria parte).
 - Decisões do dono: dois modos (escolha do dono), sem gerente/supervisor a parte fica com a empresa, diferido repassado ou não por escolha do dono, todos os % do dono. Exemplo aprovado; correção: vendedor na parcela de 11,67 é 4,94 (não 4,93).
 - Pendente: aposentar o grupo B (modelo rede/canais, payout_policies antigas, snapshots antigos e os cartões antigos da proposta) e ligar o cálculo ao financeiro (F5).
