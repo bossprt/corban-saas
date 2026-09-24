@@ -33,6 +33,8 @@ const pages = [
   { path: '/app/comercial/importacao-inteligente', name: 'importacao-inteligente' },
   { path: '/app/operacional', name: 'operacional' },
   { path: '/app/relatorios', name: 'relatorios' },
+  { path: '/app/financeiro', name: 'financeiro' },
+  { path: '/app/financeiro/conciliacao', name: 'conciliacao' },
 ]
 
 for (const { path, name } of pages) {
@@ -215,4 +217,66 @@ test('owner configures the commission and the proposal shows the approved exampl
   await expect(upfront).toContainText('R$ 36,00')
   await expect(upfront).toContainText('R$ 253,80')
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-comissao.png`, fullPage: true })
+})
+
+test('finance imports a bank report, resolves the lines and confirms the receipt', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  const ade = `E2E-REC-${Date.now()}`
+  await page.goto('/app/configuracao/comissao')
+  await page.getByLabel('Cascata: imposto').check()
+  await page.getByLabel('Imposto do regime (%)').fill('6')
+  await page.getByLabel(/Lucro da empresa/).fill('40')
+  await page.getByLabel('Gerente (%)').first().fill('10')
+  await page.getByLabel('Supervisor (%)').first().fill('15')
+  await page.getByLabel(/Vendedor \(%\)/).first().fill('75')
+  await page.getByRole('button', { name: 'Salvar nova versão' }).click()
+  await expect(page.getByText('Regra de comissão salva')).toBeVisible()
+
+  await page.goto('/app/propostas/nova')
+  await page.getByLabel('Cliente').selectOption({ index: 1 })
+  await page.getByLabel('Banco e tabela').selectOption({ label: 'Banco Teste · Tabela Teste INSS (v2)' })
+  await page.getByLabel('Valor solicitado (R$)').fill('10.000,00')
+  await page.getByLabel('Prazo (meses)').fill('120')
+  await page.getByLabel('Vendedor').selectOption({ label: 'Vendedor Teste' })
+  await page.getByLabel('Já digitada no banco').check()
+  await page.getByLabel('Número da proposta no banco (ADE)').fill(ade)
+  await page.getByRole('button', { name: 'Registrar proposta' }).click()
+  await expect(page.getByText('Proposta registrada na esteira.')).toBeVisible()
+  await page.getByRole('button', { name: 'Calcular comissão' }).click()
+  await expect(page.getByText('Comissão calculada e congelada nesta proposta.')).toBeVisible()
+  const proposalUrl = page.url().split('?')[0]
+
+  // The bank report: the contract above (exact 600,00), a contract of another company, a title block.
+  const csv = `Relatório de comissão - Banco Teste\n\nContrato;Cliente;Valor comissão;Pago em\n${ade};Cliente;600,00;10/09/2026\nOUTRA-${ade};Outro;50,00;10/09/2026\n`
+  await page.goto('/app/financeiro/importar')
+  await page.getByLabel('Fonte pagadora').selectOption({ label: 'Banco Teste · banco' })
+  await page.getByLabel('Tipo do relatório').selectOption('upfront')
+  await page.getByLabel(/Total do relatório/).fill('650,00')
+  await page.getByLabel(/Arquivo/).setInputFiles({ name: `avista-${ade}.csv`, mimeType: 'text/csv', buffer: Buffer.from(csv, 'utf-8') })
+  await page.getByRole('button', { name: 'Ler colunas do arquivo' }).click()
+  await page.getByLabel(/Contrato \(ADE/).selectOption('Contrato')
+  await page.getByLabel(/Valor da comissão/).selectOption('Valor comissão')
+  await page.getByLabel(/Data do pagamento/).selectOption('Pago em')
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-recebimento-importar.png`, fullPage: true })
+  await page.getByRole('button', { name: 'Importar para conferência' }).click()
+  await expect(page.getByText('Relatório importado.')).toBeVisible({ timeout: 20_000 })
+
+  const mine = page.getByRole('row').filter({ hasText: ade }).filter({ hasNotText: 'OUTRA' })
+  await expect(mine).toContainText('Confere')
+  await expect(mine).toContainText('R$ 600,00')
+  const other = page.getByRole('row').filter({ hasText: `OUTRA-${ade}` })
+  await expect(other).toContainText('Não encontrado')
+  await expect(page.getByRole('button', { name: 'Confirmar e lançar recebimentos' })).toBeDisabled()
+  await other.getByPlaceholder('Motivo').fill('Contrato de outra empresa')
+  await other.getByRole('button', { name: 'Ignorar' }).click()
+  await expect(page.getByText('Linha ignorada.')).toBeVisible()
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-recebimento-conferencia.png`, fullPage: true })
+  await page.getByRole('button', { name: 'Confirmar e lançar recebimentos' }).click()
+  await expect(page.getByText('Relatório confirmado.')).toBeVisible()
+
+  await page.goto(proposalUrl)
+  await expect(page.getByText(/Recebido do banco: à vista R\$\s600,00/)).toBeVisible()
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-recebimento-proposta.png`, fullPage: true })
+  await page.goto('/app/financeiro')
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-financeiro.png`, fullPage: true })
 })

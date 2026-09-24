@@ -15,6 +15,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### F5 — Recebimento e conciliação (24/09/2026)
+- Importação de relatórios de comissão (à vista, diferido, estorno) por banco ou promotora, com modelo de colunas salvo.
+- Conferência linha a linha contra a comissão congelada (tolerância zero), vínculo manual por ADE, ignorar com motivo, confirmação com lançamento imutável.
+- Conciliação por contrato, aceite de divergência com motivo, recebido no cartão da proposta, alertas financeiros no Hoje.
+
 ### F5 passo 0 — Limpeza de modelos antigos (24/09/2026)
 - Removidos (aprovação do dono): modelo de rede/canais, snapshots de rota, sub-regras e supervisões, políticas de repasse por componente, `profiles`, pipeline de importação antigo, eventos/evidências/casos financeiros antigos e hub de integrações, com suas telas e testes.
 

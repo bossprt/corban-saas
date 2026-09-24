@@ -13,6 +13,11 @@ export type AttentionData = {
   staleLeads: Signal | null        // new leads waiting more than 2 days
   pendenciesDue?: Signal | null    // pendencies due within 24 hours or already late
   draftProposals: Signal | null    // proposals in draft for more than 3 days
+  // Receipt reconciliation (finance_alerts; null when the caller has no finance access)
+  paidWithoutReceipt?: Signal | null  // paid more than 30 days ago and no upfront received
+  divergenceOpen?: Signal | null      // received amount different from the frozen commission, not accepted
+  deferredMissing?: Signal | null     // deferred installments due and not received
+  chargebacks?: Signal | null         // chargebacks registered in the last 30 days
 }
 export type Candidate = { rule_key: string; dedupe_key: string; severity: Severity; title: string; reason: string; evidence: { count: number; oldest_at: string | null; sample_ids: string[] }; impact: string; recommendation: string; href: string }
 
@@ -33,6 +38,22 @@ const RULES: Rule[] = [
     severity: s.oldest && new Date(s.oldest).getTime() < now ? 'high' : 'medium',
     title: `${s.count} pendência(s) vencendo ou vencida(s)`, reason: 'O prazo para resolver a pendência pedida pelo banco termina em menos de 24 horas ou já passou.',
     impact: 'Pendência vencida pode fazer o banco cancelar a proposta.', recommendation: 'Abra a esteira na etapa Pendência e resolva as mais antigas.', href: '/app/propostas' }) },
+  { key: 'paidWithoutReceipt', rule_key: 'paid_without_receipt', allowed: r => atLeast(r, 'supervisor'), build: s => ({
+    severity: s.count >= 5 ? 'critical' : 'high',
+    title: `${s.count} contrato(s) pago(s) sem recebimento da comissão há mais de 30 dias`, reason: 'O banco pagou o cliente, mas a comissão ainda não apareceu em nenhum relatório confirmado.',
+    impact: 'Comissão que não chega é receita perdida e trava o repasse da equipe.', recommendation: 'Cobre o banco ou a promotora e importe o relatório de pagos.', href: '/app/financeiro' }) },
+  { key: 'divergenceOpen', rule_key: 'receipt_divergence_open', allowed: r => atLeast(r, 'supervisor'), build: s => ({
+    severity: 'high',
+    title: `${s.count} recebimento(s) com valor diferente do esperado`, reason: 'O valor pago pelo banco não bate, ao centavo, com a comissão calculada na proposta.',
+    impact: 'Diferença sem explicação distorce o repasse e o resultado da empresa.', recommendation: 'Abra a conciliação, confira e aceite com o motivo ou cobre a diferença.', href: '/app/financeiro/conciliacao' }) },
+  { key: 'deferredMissing', rule_key: 'deferred_missing', allowed: r => atLeast(r, 'supervisor'), build: s => ({
+    severity: s.count >= 10 ? 'high' : 'medium',
+    title: `${s.count} contrato(s) com parcela do diferido faltando`, reason: 'Já passou o mês da parcela e ela não veio em nenhum relatório de diferido.',
+    impact: 'Parcelas esquecidas somam dinheiro relevante ao longo do contrato.', recommendation: 'Confira o relatório de diferido do banco e importe o que faltar.', href: '/app/financeiro' }) },
+  { key: 'chargebacks', rule_key: 'chargebacks', allowed: r => atLeast(r, 'supervisor'), build: s => ({
+    severity: 'medium',
+    title: `${s.count} estorno(s) registrado(s) nos últimos 30 dias`, reason: 'O banco devolveu comissão de contrato cancelado, quitado ou portado.',
+    impact: 'O estorno será descontado de quem recebeu por esses contratos.', recommendation: 'Veja os contratos estornados no financeiro.', href: '/app/financeiro' }) },
   { key: 'draftProposals', rule_key: 'draft_proposals', allowed: r => atLeast(r, 'supervisor'), build: s => ({
     severity: s.count >= 10 ? 'medium' : 'low',
     title: `${s.count} proposta(s) em rascunho há mais de 3 dias`, reason: 'A proposta foi criada mas não foi enviada para a operação.',

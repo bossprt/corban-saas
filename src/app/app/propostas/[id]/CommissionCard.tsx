@@ -1,6 +1,6 @@
 import { Badge, Card, CardHeader } from '@/components/ui'
 import { can, type Access } from '@/lib/access'
-import { add, fromDecimalString, mul, toDecimalString, type Rational } from '@/lib/commission/money'
+import { add, fromDecimalString, mul, sub, toDecimalString, type Rational } from '@/lib/commission/money'
 import { calculateCommission } from './commission-actions'
 
 type Supa = Awaited<ReturnType<typeof import('@/lib/appContext').requireAppContext>>['supabase']
@@ -20,6 +20,14 @@ export async function CommissionCard({ supabase, access, proposalId, closed }: {
   const { data: lineRows } = calc ? await supabase.from('proposal_commission_lines').select('component_key,part,multiplier,line_kind,amount').eq('calc_id', calc.id) : { data: [] as Line[] }
   const lines = (lineRows ?? []) as Line[]
   const finance = can(access, 'financeiro.view')
+  // What the paying source actually paid for this contract (confirmed reports), for finance.
+  const { data: receiptRows } = finance ? await supabase.from('commission_receipts').select('entry_kind,component_key,amount,reconciliation').eq('proposal_id', proposalId) : { data: [] }
+  const receipts = (receiptRows ?? []) as { entry_kind: string; component_key: string | null; amount: string; reconciliation: string }[]
+  const sumOf = (f: (r: (typeof receipts)[number]) => boolean) => receipts.filter(f).reduce((acc, r) => add(acc, fromDecimalString(String(r.amount))), ZERO)
+  const recUpfront = sumOf(r => r.entry_kind === 'receipt' && r.component_key === 'upfront')
+  const recDeferred = sumOf(r => r.entry_kind === 'receipt' && r.component_key === 'deferred')
+  const recChargeback = sumOf(r => r.entry_kind === 'chargeback')
+  const deferredCount = receipts.filter(r => r.entry_kind === 'receipt' && r.component_key === 'deferred').length
   const canCalc = (can(access, 'propostas.edit') || can(access, 'financeiro.edit')) && !(closed && calc)
 
   const totals = new Map<string, Rational>()
@@ -70,6 +78,12 @@ export async function CommissionCard({ supabase, access, proposalId, closed }: {
               </table>
             </div>
             {!finance && <p className="mt-2 text-xs text-muted">Você vê apenas a sua parte (Vendedor). O restante é visível para o financeiro.</p>}
+            {finance && (
+              <p className="mt-3 border-t border-line pt-3 text-[13px] text-ink-soft">
+                Recebido do banco: à vista {brl(toDecimalString(recUpfront, 2))} · diferido {brl(toDecimalString(recDeferred, 2))} ({deferredCount}{calc.installments ? ` de ${calc.installments}` : ''} parcelas) · estornos {brl(toDecimalString(recChargeback, 2))} · líquido <span className="font-semibold text-ink">{brl(toDecimalString(sub(add(recUpfront, recDeferred), recChargeback), 2))}</span>
+                {receipts.some(r => r.reconciliation === 'divergent') && <span className="ml-1 text-[#92400E]">(há recebimento divergente; veja a conciliação)</span>}
+              </p>
+            )}
           </>
         )}
       </div>

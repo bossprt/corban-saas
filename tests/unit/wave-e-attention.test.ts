@@ -10,7 +10,7 @@ const NOW = Date.parse('2026-09-20T12:00:00Z')
 const H = 3_600_000
 const sig = (count: number, hoursOld = 1, ids: string[] = ['a', 'b']): Signal => ({ count, ids, oldest: new Date(NOW - hoursOld * H).toISOString() })
 const none: AttentionData = { overdueCases: null, staleLeads: null, draftProposals: null }
-const zero: AttentionData = { overdueCases: sig(0), staleLeads: sig(0), draftProposals: sig(0), pendenciesDue: sig(0) }
+const zero: AttentionData = { overdueCases: sig(0), staleLeads: sig(0), draftProposals: sig(0), pendenciesDue: sig(0), paidWithoutReceipt: sig(0), divergenceOpen: sig(0), deferredMissing: sig(0), chargebacks: sig(0) }
 
 test('rules: nothing detected = evaluated but empty (so cleared conditions can be auto-resolved)', () => {
   const r = evaluateRules('supervisor', zero, NOW)
@@ -79,4 +79,12 @@ test('Action Center migration: invoker, RLS, append-only history, resolved is fi
   assert.ok(/href ~ '\^\/app/.test(m))
   assert.ok(!/\b(financial_events|commission_groups|payout_|ai_credit_ledger)\b/.test(m)) // it never touches financial or commission data
   assert.ok(!/grant[^;]*delete[^;]*operational_attention/i.test(m))
+})
+test('rules: finance alerts are skipped without finance access and raised with it', () => {
+  const none = evaluateRules('supervisor', { ...zero, paidWithoutReceipt: null, divergenceOpen: null, deferredMissing: null, chargebacks: null }, NOW)
+  assert.ok(!none.evaluated.includes('paid_without_receipt'))
+  const r = evaluateRules('supervisor', { ...zero, paidWithoutReceipt: sig(2) }, NOW)
+  const item = r.candidates.find(c => c.rule_key === 'paid_without_receipt')
+  assert.equal(item?.severity, 'high')
+  assert.equal(item?.href, '/app/financeiro')
 })

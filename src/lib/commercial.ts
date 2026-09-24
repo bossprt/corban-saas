@@ -88,11 +88,12 @@ export const validateShares = (groups: readonly GroupRef[], shares: readonly Sha
 export const normalizeHeader = (s: unknown) => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
 
 // Minimal RFC-4180 reader: BOM, CRLF, quoted fields with "" escapes, delimiter chosen from the header (; , or tab).
-export function parseDelimited(text: string): string[][] {
+// `delimiter` overrides the choice (bank reports start with a title line that has no delimiter at all).
+export function parseDelimited(text: string, delimiter?: ';' | ',' | '\t'): string[][] {
   const src = text.replace(/^\uFEFF/, '')
   const firstLine = src.split(/\r?\n/, 1)[0] ?? ''
   const count = (c: string) => firstLine.split(c).length - 1
-  const delim = count(';') >= count(',') && count(';') >= count('\t') && count(';') > 0 ? ';' : count('\t') > count(',') ? '\t' : ','
+  const delim = delimiter ?? (count(';') >= count(',') && count(';') >= count('\t') && count(';') > 0 ? ';' : count('\t') > count(',') ? '\t' : ',')
   const rows: string[][] = []
   let row: string[] = [], cell = '', quoted = false
   for (let i = 0; i < src.length; i++) {
