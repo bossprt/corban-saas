@@ -43,7 +43,7 @@ export function preflight(env: Env, fileExists: (p: string) => boolean, nodeVers
   for (const f of REQUIRED_FILES) if (!fileExists(f)) add('BLOCKED', `required file missing: ${f}`)
   if (REQUIRED_FILES.every(fileExists)) add('PASS', 'all required routes and config files exist')
   if (fileExists('vercel.json')) add('WARN', 'vercel.json exists: review it (none is needed)')
-  if (migrations.length) add('PASS', `${migrations.length} migration files in the repository (compare with the LIVE list in docs/deployment/MIGRATION-DRIFT.md; never applied by this script)`)
+  if (migrations.length) add('PASS', `${migrations.length} migration files in the repository (compare with the LIVE list from list_migrations; never applied by this script)`)
   return out
 }
 

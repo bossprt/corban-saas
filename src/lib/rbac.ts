@@ -23,5 +23,5 @@ export const rolesAssignableBy=(actor:string|null|undefined):Role[]=>ROLES.filte
 export const canManageTeam=(role:string|null|undefined)=>atLeast(role,'manager')
 
 // Commission visibility (PENDING BUSINESS DECISION: may an agent see expected commission?). Until the Owner decides, the answer is
-// fail-closed: supervisor and above only. Every screen asks this function, so the decision is changed in ONE place (plus the DB, see docs/PILOT-GAP-ANALYSIS.md).
+// fail-closed: supervisor and above only. Every screen asks this function, so the decision is changed in ONE place (plus the DB: see the pending item in .ai/CURRENT-TASK.md).
 export const canViewCommission=(role:string|null|undefined)=>atLeast(role,'supervisor')

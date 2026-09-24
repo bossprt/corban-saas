@@ -19,7 +19,15 @@
 - Testes unitários: 329/329 passando. Lint: ok. Build: ok. `tsc --noEmit`: ok.
 - Playwright instalado (`npm run test:e2e`), desktop + mobile, 8/8 passando (rotas públicas).
 - Seed da empresa fictícia: `supabase/seed/f0-test-tenant.sql`, com trava `corban.env = 'test'` (validada: aborta sem a trava) e CPFs com dígito verificador válido.
-- graphify gerado em `graphify-out/` (local, fora do Git): 998 nós, 2666 arestas, 45 comunidades. Usar `graphify query` antes de ler arquivos.
+- graphify atualizado em 24/09/2026 (local, fora do Git): 2853 nós, 5390 arestas, código TS + 166 migrations SQL + 6 documentos de `.ai/`. Usar `graphify query` antes de ler arquivos.
+
+## Limpeza de documentos (24/09/2026, branch `chore/docs-cleanup`)
+- Removidos 65 arquivos (grupo A: 44; grupo B: 21); backup na tag `backup/docs-pre-cleanup`. ADR-0030 lista os documentos em vigor.
+- Deploy consolidado em `docs/DEPLOY.md`.
+- Pendências herdadas dos documentos removidos:
+  - **Decisão do dono:** o vendedor (papel `agent`) pode ver comissão esperada? Hoje não (`canViewCommission` = supervisor ou acima, em `src/lib/rbac.ts`).
+  - **Segurança a verificar:** `simulations.expected_commission_amount` e `proposals_v2.expected_commission_amount` eram legíveis por qualquer membro via API (RLS é por linha, não por coluna). Conferir se ainda vale e, conforme a decisão acima, fechar com migration (privilégio de coluna ou view).
+  - Código legado: `INTEGRATION_WORKER_SECRET` e `CORBAN_ALLOW_LOCAL_PROVIDERS` ainda são checados em `src/lib/preflight.ts`, testes e `ENVIRONMENT-VARIABLES.md`, mas a rota do worker foi removida na F5.
 
 ## F6 — andamento (branch `feature/f6-repasse`)
 - Decisões do dono: modelo por pessoa (padrão da empresa + exceção), negativo carrega e desconta no máximo 30% por repasse, dois olhos (quem lança não aprova), conta por vendedor cadastrado com ou sem login. Desenho e exemplo numérico aprovados (ADR-0029).
