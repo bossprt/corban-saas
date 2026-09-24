@@ -25,8 +25,8 @@
 - Removidos 65 arquivos (grupo A: 44; grupo B: 21); backup na tag `backup/docs-pre-cleanup`. ADR-0030 lista os documentos em vigor.
 - Deploy consolidado em `docs/DEPLOY.md`.
 - Pendências herdadas dos documentos removidos:
-  - **Decisão do dono:** o vendedor (papel `agent`) pode ver comissão esperada? Hoje não (`canViewCommission` = supervisor ou acima, em `src/lib/rbac.ts`).
-  - **Segurança a verificar:** `simulations.expected_commission_amount` e `proposals_v2.expected_commission_amount` eram legíveis por qualquer membro via API (RLS é por linha, não por coluna). Conferir se ainda vale e, conforme a decisão acima, fechar com migration (privilégio de coluna ou view).
+  - Resolvido (ADR-0031): vendedor vê só a parte dele, só nas propostas dele.
+  - Resolvido (ADR-0031): cabeçalho do cálculo só com `financeiro.view`; coluna `expected_commission_amount` removida. Migration `20260924210000_commission_visibility_v1` (branch `fix/commission-visibility`), contrato 10/10, e2e 32/32 com login de vendedor. **Não aplicada em produção.**
   - Código legado: `INTEGRATION_WORKER_SECRET` e `CORBAN_ALLOW_LOCAL_PROVIDERS` ainda são checados em `src/lib/preflight.ts`, testes e `ENVIRONMENT-VARIABLES.md`, mas a rota do worker foi removida na F5.
 
 ## F6 — andamento (branch `feature/f6-repasse`)

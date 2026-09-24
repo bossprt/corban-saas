@@ -22,6 +22,6 @@ export function canManageMemberRole(actor:string|null|undefined,current:string|n
 export const rolesAssignableBy=(actor:string|null|undefined):Role[]=>ROLES.filter(r=>canManageMemberRole(actor,null,r))
 export const canManageTeam=(role:string|null|undefined)=>atLeast(role,'manager')
 
-// Commission visibility (PENDING BUSINESS DECISION: may an agent see expected commission?). Until the Owner decides, the answer is
-// fail-closed: supervisor and above only. Every screen asks this function, so the decision is changed in ONE place (plus the DB: see the pending item in .ai/CURRENT-TASK.md).
+// Commission rates of the tables (what the bank pays the company): supervisor and above only. Owner decision (ADR-0031):
+// a seller sees only their own share, on their own proposals, through proposal_commission_mine; never the company's rates.
 export const canViewCommission=(role:string|null|undefined)=>atLeast(role,'supervisor')

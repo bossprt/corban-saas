@@ -191,7 +191,7 @@ test('pipeline kanban and stage settings', async ({ page }, info) => {
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-etapas.png`, fullPage: true })
 })
 
-test('owner configures the commission and the proposal shows the approved example', async ({ page }, info) => {
+test('owner configures the commission and the proposal shows the approved example', async ({ page, browser }, info) => {
   test.skip(info.project.name === 'mobile', 'one run is enough')
   await page.goto('/app/configuracao/comissao')
   await page.getByLabel('Cascata: imposto').check()
@@ -219,6 +219,25 @@ test('owner configures the commission and the proposal shows the approved exampl
   await expect(upfront).toContainText('R$ 36,00')
   await expect(upfront).toContainText('R$ 253,80')
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-comissao.png`, fullPage: true })
+
+  // ADR-0031: the seller of the proposal sees only their own share, never what the company receives or the percentages.
+  const sellerEmail = process.env.E2E_SELLER_EMAIL
+  if (!sellerEmail) return
+  const proposalUrl = page.url().split('?')[0]
+  const seller = await (await browser.newContext({ storageState: { cookies: [], origins: [] } })).newPage()
+  await seller.goto(new URL('/login', info.project.use.baseURL).toString())
+  await seller.locator('input[type="email"]').fill(sellerEmail)
+  await seller.locator('input[type="password"]').fill(password!)
+  await seller.locator('button[type="submit"]').click()
+  await seller.waitForURL(/\/app(\/|$)/)
+  await seller.goto(proposalUrl)
+  const sellerRow = seller.getByRole('row', { name: /^À vista/ })
+  await expect(sellerRow).toContainText('R$ 253,80')
+  await expect(sellerRow).not.toContainText('R$ 600,00')
+  await expect(seller.getByText('Você vê apenas a sua parte (Vendedor).')).toBeVisible()
+  await expect(seller.getByText(/imposto 6%/)).toHaveCount(0)
+  await expect(seller.getByText('Recebido do banco', { exact: false })).toHaveCount(0)
+  if (shots) await seller.screenshot({ path: `${shots}/${info.project.name}-comissao-vendedor.png`, fullPage: true })
 })
 
 test('finance imports a bank report, resolves the lines and confirms the receipt', async ({ page }, info) => {

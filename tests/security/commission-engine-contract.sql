@@ -113,7 +113,8 @@ reset role;
 -- Visibility: the seller sees only his own originator lines; another seller sees nothing.
 select pg_temp.act_as((select v1 from ids));
 set local role authenticated;
-insert into results select 'originator sees his calc', exists (select 1 from public.proposal_commission_calcs where proposal_id = (select id from made where label = 'p') and status = 'active');
+-- ADR-0031: the calculation header (company percentages) is finance-only; the originator sees only his lines.
+insert into results select 'originator does not see the calc header', not exists (select 1 from public.proposal_commission_calcs where proposal_id = (select id from made where label = 'p') and status = 'active');
 insert into results select 'originator sees only originator lines', not exists (select 1 from public.proposal_commission_lines where line_kind <> 'originator')
   and exists (select 1 from public.proposal_commission_lines where line_kind = 'originator');
 reset role;
