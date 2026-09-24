@@ -89,4 +89,42 @@ insert into public.product_table_versions (id, organization_id, product_table_id
 values ('00000000-0000-4000-8000-0000000c0301', '00000000-0000-4000-8000-00000000c0b1', '00000000-0000-4000-8000-0000000c0201', 1, 'published', now(), 12, 96)
 on conflict (id) do nothing;
 
+-- Commission structure matching the owner-approved example: 6% upfront + 14% deferred on the gross amount,
+-- commission group "Ouro" with a 50% share, a seller bound to vendedor@corban-teste.local when that user exists.
+insert into public.commission_component_types (tech_key, name, sort_order, is_active)
+select v.k, v.n, v.o, true from (values ('upfront', 'À Vista', 10), ('deferred', 'Diferido', 20), ('bonus_1', 'Bônus 1', 30)) v(k, n, o)
+where not exists (select 1 from public.commission_component_types t where t.tech_key = v.k);
+insert into public.contract_types (id, organization_id, tech_key, name, sort_order, is_active)
+values ('00000000-0000-4000-8000-0000000c0401', '00000000-0000-4000-8000-00000000c0b1', 'novo', 'Novo', 10, true)
+on conflict (id) do nothing;
+-- Conditions can only be written while the version is a draft: version 2 is created as a draft, filled, then published.
+insert into public.product_table_versions (id, organization_id, product_table_id, version, status, term_min, term_max)
+values ('00000000-0000-4000-8000-0000000c0302', '00000000-0000-4000-8000-00000000c0b1', '00000000-0000-4000-8000-0000000c0201', 2, 'draft', 12, 120)
+on conflict (id) do nothing;
+insert into public.commercial_conditions (id, organization_id, product_table_version_id, contract_type_id, term, term_min, term_max, coefficient, rate)
+values ('00000000-0000-4000-8000-0000000c0501', '00000000-0000-4000-8000-00000000c0b1', '00000000-0000-4000-8000-0000000c0302', '00000000-0000-4000-8000-0000000c0401', 12, 12, 120, 0.02, 1.8)
+on conflict (id) do nothing;
+insert into public.commercial_condition_components (organization_id, condition_id, component_type_id, value_kind, received_value, calculation_base, source)
+select '00000000-0000-4000-8000-00000000c0b1', '00000000-0000-4000-8000-0000000c0501', t.id, 'percentage', v.pct, 'BRUTO', 'manual'
+from (values ('upfront', 6.0), ('deferred', 14.0)) v(k, pct) join public.commission_component_types t on t.tech_key = v.k
+where not exists (select 1 from public.commercial_condition_components x where x.condition_id = '00000000-0000-4000-8000-0000000c0501' and x.component_type_id = t.id);
+insert into public.commission_groups (id, organization_id, tech_key, name, kind, calculation_basis, is_active, sort_order)
+values ('00000000-0000-4000-8000-0000000c0601', '00000000-0000-4000-8000-00000000c0b1', 'ouro', 'Ouro', 'broker', 'percent_of_received_commission', true, 10)
+on conflict (id) do nothing;
+insert into public.commercial_condition_shares (organization_id, condition_id, group_id, share_pct, effective_pct, source)
+select '00000000-0000-4000-8000-00000000c0b1', '00000000-0000-4000-8000-0000000c0501', '00000000-0000-4000-8000-0000000c0601', 50, 3, 'manual'
+where not exists (select 1 from public.commercial_condition_shares x where x.condition_id = '00000000-0000-4000-8000-0000000c0501' and x.group_id = '00000000-0000-4000-8000-0000000c0601');
+update public.product_table_versions set status = 'published', published_at = now()
+where id = '00000000-0000-4000-8000-0000000c0302' and status = 'draft';
+
+insert into public.seller_groups (id, organization_id, tech_key, name, is_active)
+values ('00000000-0000-4000-8000-0000000c0701', '00000000-0000-4000-8000-00000000c0b1', 'equipe_teste', 'Equipe Teste', true)
+on conflict (id) do nothing;
+insert into public.commercial_sellers (id, organization_id, tech_key, name, seller_category, seller_group_id, commission_group_id, branch_id, user_id, is_active)
+select '00000000-0000-4000-8000-0000000c0801', '00000000-0000-4000-8000-00000000c0b1', 'vendedor_teste', 'Vendedor Teste', 'pf',
+       '00000000-0000-4000-8000-0000000c0701', '00000000-0000-4000-8000-0000000c0601',
+       (select id from public.organization_branches where organization_id = '00000000-0000-4000-8000-00000000c0b1' and code = 'MTZ'),
+       (select id from auth.users where email = 'vendedor@corban-teste.local'), true
+where not exists (select 1 from public.commercial_sellers where id = '00000000-0000-4000-8000-0000000c0801');
+
 commit;
