@@ -1,5 +1,5 @@
 import { requireAppContext } from '@/lib/appContext'
-import { convertLead, createLead, setLeadStatus } from './actions'
+import { claimLead, convertLead, createLead, setLeadStatus } from './actions'
 import { SubmitButton } from '@/components/SubmitButton'
 import { digitsOnly, searchTerm } from '@/lib/search'
 
@@ -8,7 +8,7 @@ const STATUS: Record<string, string> = { new: 'Novo', contacted: 'Contatado', qu
 export default async function LeadsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const { supabase } = await requireAppContext()
   const q = searchTerm((await searchParams).q)
-  let query = supabase.from('leads').select('id,status,channel,campaign,full_name,phone,created_at,customer_id').order('created_at', { ascending: false }).limit(100)
+  let query = supabase.from('leads').select('id,status,channel,campaign,full_name,phone,created_at,customer_id,owner_user_id').order('created_at', { ascending: false }).limit(100)
   if (q) { const d = digitsOnly(q); query = query.or(d.length >= 4 ? `full_name.ilike.%${q}%,phone.ilike.%${q}%,phone.ilike.%${d}%` : `full_name.ilike.%${q}%`) }
   const { data: leads, error } = await query
   // The leads module needs 20260920_leads_v1 (not applied yet): explicit state, never a silent empty list.
@@ -32,6 +32,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
       <div className="mt-4 space-y-2">{leads.map(l => <div key={l.id} className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm">
         <div className="flex flex-wrap items-baseline justify-between gap-2"><strong>{l.full_name}</strong><span className="text-slate-400">{STATUS[l.status] ?? l.status} · {l.channel}{l.campaign ? ` · ${l.campaign}` : ''}</span></div>
         {l.phone && <div className="mt-1 text-xs text-slate-400">{l.phone}</div>}
+        {!l.owner_user_id && l.status !== 'converted' && l.status !== 'lost' && <form action={claimLead} className="mt-2 flex items-center gap-2"><input type="hidden" name="lead_id" value={l.id} /><span className="rounded bg-amber-500/10 px-2 py-0.5 text-xs text-amber-300">Sem responsável</span><button className="rounded bg-emerald-500 px-2 py-1 text-xs font-semibold text-slate-950">Assumir lead</button></form>}
         {l.customer_id && <div className="mt-1 text-xs"><a href={`/app/clientes/${l.customer_id}`} className="text-emerald-400 hover:underline">Ver cliente</a></div>}
         {l.status !== 'converted' && <div className="mt-3 flex flex-wrap gap-2">
           {['contacted', 'qualified'].map(s => <form key={s} action={setLeadStatus}><input type="hidden" name="lead_id" value={l.id} /><button name="status" value={s} className="rounded border border-slate-700 px-2 py-1 text-xs">Marcar {STATUS[s].toLowerCase()}</button></form>)}

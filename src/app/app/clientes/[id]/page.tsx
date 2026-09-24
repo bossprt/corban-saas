@@ -45,7 +45,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
             <span>Origem: {source(customer.original_source)}</span>
           </p>
         </div>
-        <ButtonLink href="/app/simulacoes"><FilePlus2 size={16} aria-hidden />Nova proposta</ButtonLink>
+        <ButtonLink href={`/app/propostas/nova?cliente=${customer.id}`}><FilePlus2 size={16} aria-hidden />Nova proposta</ButtonLink>
       </header>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">

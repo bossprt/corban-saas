@@ -12,6 +12,7 @@ const LEAD_STATUS: Record<string, string> = { new: 'Novo', contacted: 'Em contat
 const OPEN_PROPOSAL = ['draft', 'documents_pending', 'ready_for_digitization', 'digitization', 'submitted', 'approved']
 
 const brl = (v: unknown) => (v === null || v === undefined || v === '' ? '—' : Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }))
+const monthStart = () => `${new Date().toISOString().slice(0, 7)}-01`
 const daysSince = (iso: string) => Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000))
 const ago = (iso: string) => {
   const d = daysSince(iso)
@@ -24,11 +25,16 @@ export default async function TodayPage() {
   const ctx = await requireAppContext()
   const { supabase, user, membership } = ctx
 
-  const [attention, leads, proposals] = await Promise.all([
+  const [attention, leads, proposals, goals] = await Promise.all([
     loadAttention(ctx),
     supabase.from('leads').select('id,full_name,status,channel,created_at').eq('owner_user_id', user.id).in('status', ['new', 'contacted', 'qualified']).order('created_at', { ascending: true }).limit(6),
     supabase.from('proposals_v2').select('id,status,requested_amount,updated_at,customer_snapshot').eq('created_by', user.id).in('status', OPEN_PROPOSAL).order('updated_at', { ascending: true }).limit(6),
+    supabase.rpc('goal_progress', { p_org: ctx.organization.id, p_month: monthStart() }),
   ])
+  const myGoal = ((goals.data ?? []) as { user_id: string; target_amount: string; paid_amount: string; paid_count: number }[]).find(g => g.user_id === user.id)
+  const goalTarget = Number(myGoal?.target_amount ?? 0)
+  const goalPaid = Number(myGoal?.paid_amount ?? 0)
+  const goalPct = goalTarget > 0 ? Math.min(100, Math.round((goalPaid / goalTarget) * 100)) : 0
 
   const open = attention.items
     .filter(i => i.status === 'open')
@@ -50,6 +56,17 @@ export default async function TodayPage() {
           </>
         }
       />
+
+      {goalTarget > 0 && (
+        <Card className="mb-4 p-5">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <span className="text-sm font-medium text-ink-soft">Meta do mês</span>
+            <span className="num text-sm text-muted">{goalPct}% · {myGoal?.paid_count ?? 0} contrato(s) pago(s)</span>
+          </div>
+          <div className="num mt-1 text-2xl font-semibold text-ink">{brl(goalPaid)} <span className="text-base font-normal text-muted">de {brl(goalTarget)}</span></div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#F3F1EC]"><div className="h-2 rounded-full bg-brand" style={{ width: `${goalPct}%` }} /></div>
+        </Card>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         <Card>

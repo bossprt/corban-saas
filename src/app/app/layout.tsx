@@ -16,6 +16,7 @@ const NAV: (NavItem & { show?: (role: string) => boolean; module?: string })[] =
   { key: 'dashboard', href: '/app', label: 'Dashboard' },
   { key: 'clientes', href: '/app/clientes', label: 'Clientes', module: 'clientes' },
   { key: 'esteira', href: '/app/propostas', label: 'Esteira', module: 'esteira' },
+  { key: 'metas', href: '/app/metas', label: 'Metas' },
   { key: 'financeiro', href: '/app/financeiro', label: 'Financeiro', show: canViewCommission, module: 'financeiro' },
   { key: 'comercial', href: '/app/comercial', label: 'Comercial', show: r => atLeast(r, 'supervisor'), module: 'comercial' },
   { key: 'relatorios', href: '/app/relatorios', label: 'Relatórios', module: 'relatorios' },

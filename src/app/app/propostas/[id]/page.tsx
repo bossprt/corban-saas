@@ -4,6 +4,7 @@ import { requireAppContext } from '@/lib/appContext'
 import { attachDocument, prepareDocuments, sendToDigitization, validateRequirement, publishExpectedCommission } from './actions'
 import { atLeast, canViewCommission } from '@/lib/rbac'
 import { proposalStatusLabel } from '@/lib/operational'
+import { PipelineCard } from './PipelineCard'
 
 function brl(value: number | string | null) {
   return value === null ? 'Não calculado' : Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -11,7 +12,7 @@ function brl(value: number | string | null) {
 
 export default async function ProposalDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const { supabase, membership } = await requireAppContext()
+  const { supabase, membership, access } = await requireAppContext()
 
   const { data: proposal } = await supabase.from('proposals_v2')
     .select('id,status,customer_id,simulation_id,requested_amount,released_amount,installment_amount,term,rate,customer_snapshot,commercial_snapshot,created_at')
@@ -60,6 +61,8 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
       </div>
       <div className="text-right"><span className="rounded-full bg-slate-800 px-3 py-1.5 text-sm">{proposalStatusLabel(proposal.status).label}</span><p className="mt-2 max-w-xs text-xs text-slate-400">{proposalStatusLabel(proposal.status).next}</p></div>
     </div>
+
+    <PipelineCard supabase={supabase} access={access} proposalId={proposal.id} />
 
     <div className="mt-6 flex flex-wrap gap-3">
       {['draft','documents_pending'].includes(proposal.status) && <form action={prepareDocuments}>

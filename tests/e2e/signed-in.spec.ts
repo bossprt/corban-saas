@@ -27,6 +27,8 @@ const pages = [
   { path: '/app/comercial', name: 'comercial' },
   { path: '/app/equipe', name: 'equipe' },
   { path: '/app/configuracao/papeis', name: 'papeis' },
+  { path: '/app/metas', name: 'metas' },
+  { path: '/app/propostas/nova', name: 'nova-proposta' },
 ]
 
 for (const { path, name } of pages) {
@@ -127,4 +129,42 @@ test('administrator creates an API key and an external system sends a lead with 
   const wrong = await request.post('/api/v1/leads', { headers: { authorization: 'Bearer ck_live_invalidinvalidinvalidinvalid' }, data: body })
   expect(wrong.status()).toBe(401)
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-api.png`, fullPage: true })
+})
+
+test('direct proposal runs through the pipeline to paid and counts in the goal', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  const ade = `E2E-${Date.now()}`
+  await page.goto('/app/propostas/nova')
+  await page.getByLabel('Cliente').selectOption({ index: 1 })
+  await page.getByLabel('Banco e tabela').selectOption({ index: 1 })
+  await page.getByLabel('Valor liberado (R$)').fill('9.500,00')
+  await page.getByLabel('Prazo (meses)').fill('84')
+  await page.getByLabel('Já digitada no banco').check()
+  await page.getByLabel('Número da proposta no banco (ADE)').fill(ade)
+  await page.getByRole('button', { name: 'Registrar proposta' }).click()
+  await expect(page.getByText('Proposta registrada na esteira.')).toBeVisible()
+
+  const due = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10)
+  await page.getByLabel('Mover para').selectOption('pending_external')
+  await page.getByLabel('Observação').fill('Falta comprovante de residência')
+  await page.getByLabel('Prazo da pendência').fill(due)
+  await page.getByRole('button', { name: 'Salvar etapa' }).click()
+  await expect(page.getByText('Pendência:', { exact: false })).toBeVisible()
+
+  await page.getByLabel('Mover para').selectOption('submitted')
+  await page.getByRole('button', { name: 'Salvar etapa' }).click()
+  await expect(page.getByText('Etapa atualizada.')).toBeVisible()
+
+  await page.getByLabel('Mover para').selectOption('paid')
+  await page.getByRole('button', { name: 'Salvar etapa' }).click()
+  await expect(page.getByText('Escreva uma observação')).toBeVisible()
+  await page.getByLabel('Mover para').selectOption('paid')
+  await page.getByLabel('Observação').fill('Pago no portal do Banco Teste')
+  await page.getByRole('button', { name: 'Salvar etapa' }).click()
+  await expect(page.getByText('Etapa atualizada.')).toBeVisible()
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-proposta-paga.png`, fullPage: true })
+
+  await page.goto('/app/propostas?etapa=paga')
+  await expect(page.getByText(ade)).toBeVisible()
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-esteira.png`, fullPage: true })
 })

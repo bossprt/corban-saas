@@ -54,3 +54,15 @@ export async function convertLead(formData: FormData) {
   revalidatePath('/app/leads'); revalidatePath('/app/clientes'); revalidatePath('/app')
   return go('ok:lead_convertido')
 }
+
+// Takes an unassigned lead (open queue, or a supervisor handing it to themselves). The database decides who may.
+export async function claimLead(formData: FormData) {
+  const { supabase } = await requireAppContext()
+  const id = String(formData.get('lead_id') ?? '')
+  if (!UUID.test(id)) return go('erro:requisicao_invalida')
+  const { error } = await supabase.rpc('claim_lead', { p_lead: id })
+  if (error) return go(/lead_already_taken/.test(error.message ?? '') ? 'erro:lead_ja_assumido' : classifyDbFeedback(error))
+  revalidatePath('/app/leads')
+  revalidatePath('/app/hoje')
+  return go('ok:lead_assumido')
+}
