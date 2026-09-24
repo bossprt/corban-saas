@@ -135,6 +135,15 @@ comissão recebida
 - Dashboard do vendedor: meta e produção, quanto vou ganhar (previsto/liberado/saldo), minhas pendências, oportunidades.
 - Dashboards ligados a dados reais fase a fase; nenhum número falso em tela.
 
+## 16a. Onboarding de base legada
+
+- Corban que compra o sistema pode trazer clientes e contratos históricos do sistema antigo.
+- Entram marcados como "legado", com sistema de origem e data de corte por empresa (início de uso do Corban).
+- Somente consulta: aparecem na ficha do cliente e na busca; não entram em dashboards, metas, rankings, comissão, conciliação, repasse nem financeiro; não são editáveis.
+- Usados no dedup por CPF: cliente legado que volta é reconhecido, nunca duplicado.
+- Uso em oportunidades (refin/portabilidade) fica desligado por padrão; o dono liga se quiser.
+- Importação por lote com prévia, relatório de erros e desfazer o lote inteiro, sobre o pipeline de importação existente.
+
 ## 17. Fases
 
 | Fase | Entrega |
@@ -145,6 +154,7 @@ comissão recebida
 | F3 | Proposta (antes/depois da digitação, dedup banco + ADE), esteira kanban, status manual e por relatório, pendências, alertas, metas. |
 | F4 | Motor de regras de comissão: precedência, versões, imposto por regime e isenção por fonte, lucro, rateio, diferido. |
 | F5 | Recebimento e conciliação: relatórios à vista e diferido, conciliação contrato a contrato, estorno, alertas financeiros. |
+| F5.5 | Onboarding de base legada (clientes e contratos históricos, só consulta). |
 | F6 | Repasse e conta corrente do vendedor: fechamento ou conta interna, avulsos, estorno proporcional, saldo negativo, pagamento manual. |
 | F6.5 | Financeiro da empresa: contas a pagar/receber, plano de contas, centro de custo, fluxo de caixa, DRE, OFX. |
 | F7 | Portal do corretor. |

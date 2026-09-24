@@ -29,6 +29,12 @@
 2. Aprovar a estratégia de baseline antes de gravar.
 3. Depois: subir Supabase local (Docker disponível), aplicar baseline + migrations, rodar seed, habilitar testes de tela logados.
 
+## Limpeza aprovada pelo dono (24/09/2026)
+- **Grupo A — remover logo após o baseline** (migration versionada + backup antes): `ai_credit_ledger`, `ai_usage_events`, `ai_usage_jobs`, `organization_ai_limits`, `import_jobs`, `import_layout_mappings`, `contracts`, `lead_events`, `seller_addresses`, `seller_bank_aliases`, `seller_certifications`, `seller_payment_accounts`, `seller_profiles` (13 tabelas) e as funções só delas: `ai_credit_balance`, `guard_ai_write`, `platform_grant_ai_credits`, `platform_set_ai_limits`, `reserve_ai_job`, `settle_ai_job`, `confirm_import_mapping`, `replace_seller_address`, `resolve_seller_bank_alias`, `set_seller_payment_account`, `upsert_seller_certification`, `upsert_seller_profile`. Nenhuma é chamada pelo app.
+- `seller_supervisions` saiu do grupo A: a função `can_view_seller_commission` (lê essa tabela) está nas policies RLS de `financial_events` e `financial_reconciliation_cases`. Remover quebraria o financeiro. Vai para o grupo B junto com a hierarquia (F1/F4).
+- **Grupo B — remover na fase que substitui:** modelo rede/canais (`commercial_entities`, `commercial_relationships`, `commercial_channels`, `channel_commission_rule_versions`, `network_split_rule_versions`, `commission_rule_components`, tela `/app/rede`), políticas de repasse duplicadas, snapshots de comissão não usados, `seller_supervisions`, `profiles` (legado, verificar funções).
+- Base legada de clientes: nova seção 16a e fase F5.5 no mapa.
+
 ## Observação de segurança para F1
 - `createAdminClient()` (service role) aparece em `appContext.ts` (checagem de admin da plataforma), `team.server.ts` (convites) e rotas de plataforma. Uso parece legítimo; revisar na F1 junto com papéis.
 
