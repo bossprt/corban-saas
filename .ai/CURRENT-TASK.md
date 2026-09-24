@@ -3,18 +3,34 @@
 **Atualização:** 24/09/2026
 **Branch:** `feature/smart-import-xls-pdf`
 
+**Branch ativa:** `feature/f0-saneamento` (criada a partir de `feature/smart-import-xls-pdf`).
+
 ## Estado
-- Auditoria só leitura concluída (ver ADR-0027).
-- Mapa real da operação v2 aprovado pelo dono: `.ai/MAPA-OPERACAO.md`. Fonte de verdade de produto.
-- Fases F0–F11 aprovadas em princípio; cada fase exige aprovação explícita antes de começar.
+- Auditoria só leitura concluída (ADR-0027). Mapa v2 aprovado: `.ai/MAPA-OPERACAO.md`.
+- Maquete visual aprovada pelo dono (Design canvas privado: dashboard gestor, vendedor mobile, esteira, conciliação).
+- F0 em andamento (execução noturna aprovada, itens 1–7, sem escrita em produção).
 
-## Próximo
-1. Maquete visual estática (4 telas: dashboard gestor, dashboard vendedor mobile, esteira, conciliação) para aprovação do dono.
-2. F0: ler as 4 migrations que existem só em produção e mostrar ao dono antes de gravar no Git.
+## F0 — feito em 24/09/2026 (noite)
+- Divergência real de migrations: **21** migrations aplicadas em produção sem arquivo em nenhuma branch (não 4).
+  Manifesto com versão, nome e md5: `scripts/f0/prod-migrations-manifest.txt`.
+  Script determinístico de exportação e verificação: `scripts/f0/fetch-prod-migrations.sh` (só leitura no banco).
+- Descoberta: não existe migration que crie `organizations`, `profiles`, `clients`, `contracts` (tabelas legadas criadas fora do Git).
+  O repositório não reconstrói o banco do zero mesmo com as 21 migrations; falta um **baseline de schema**.
+- Testes unitários: 329/329 passando. Lint: ok. Build: ok. `tsc --noEmit`: ok.
+- Playwright instalado (`npm run test:e2e`), desktop + mobile, 8/8 passando (rotas públicas).
+- Seed da empresa fictícia: `supabase/seed/f0-test-tenant.sql`, com trava `corban.env = 'test'` (validada: aborta sem a trava) e CPFs com dígito verificador válido.
+- graphify gerado em `graphify-out/` (local, fora do Git): 998 nós, 2666 arestas, 45 comunidades. Usar `graphify query` antes de ler arquivos.
 
-## Bloqueios / riscos
-- Drift de migrations: produção tem 4 migrations fora do Git. Nenhuma migration nova antes de resolver.
-- Telas atuais nunca rodaram com dados operacionais reais; tratar como não provadas.
+## Precisa do dono (bloqueios da F0)
+1. Connection string do banco (Supabase > Connect > Session pooler) exportada como `SUPABASE_DB_URL` só no terminal do dono, para rodar:
+   - `bash scripts/f0/fetch-prod-migrations.sh` (21 arquivos verificados por md5);
+   - `pg_dump --schema-only` para o baseline (proposta: um arquivo baseline + marcar as migrations antigas como aplicadas).
+   Nenhuma credencial vai para o repositório.
+2. Aprovar a estratégia de baseline antes de gravar.
+3. Depois: subir Supabase local (Docker disponível), aplicar baseline + migrations, rodar seed, habilitar testes de tela logados.
+
+## Observação de segurança para F1
+- `createAdminClient()` (service role) aparece em `appContext.ts` (checagem de admin da plataforma), `team.server.ts` (convites) e rotas de plataforma. Uso parece legítimo; revisar na F1 junto com papéis.
 
 ---
 

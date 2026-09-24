@@ -15,6 +15,13 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### F0 — Saneamento (24/09/2026)
+- Mapa real da operação v2 e ADR-0027 (reset de produto).
+- Manifesto md5 + script verificado para as 21 migrations que existem só em produção.
+- Playwright (desktop + mobile) com testes de rotas públicas.
+- Seed guardado da empresa fictícia de teste.
+- LF forçado para scripts shell; saídas locais do graphify e do Playwright ignoradas.
+
 ### Adicionado — 26/09/2026 (Commercial Model V3)
 
 - Migration preparada `20261002_commercial_model_v3_foundation_v1` (aditiva; não aplicada): `contract_types`, `national_agreement_templates` (27 governos/DF + 26 prefeituras de capitais), catálogo do tenant (`organization_banks/providers/agreements`, `commission_groups`), rota V3, `commercial_conditions` + comissão/participações por grupo, `save_commercial_condition`, `create_simulation_for_condition`.
