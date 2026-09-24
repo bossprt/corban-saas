@@ -1,4 +1,4 @@
--- Contract test for 20260924213000_grants_hygiene_v1: anon executes no project function and holds no table privilege;
+-- Contract test for 20260924221914_grants_hygiene_v1: anon executes no project function and holds no table privilege;
 -- the Equipe member RPCs can set hierarchy and custom role, while a direct API update of the same columns is refused.
 -- One transaction, rolled back.  psql -v ON_ERROR_STOP=1 -f tests/security/grants-hygiene-contract.sql
 
