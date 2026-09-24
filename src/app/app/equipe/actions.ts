@@ -66,3 +66,15 @@ export async function changeMemberStatus(formData:FormData){
  const { error }=await supabase.rpc('set_member_status',{p_membership_id:id,p_status:status})
  return error?fail(classifyTeamError(error)):done('status_changed')
 }
+
+// Branch, team leader and per-person scope exception. Empty fields clear the value (scope then follows the role).
+export async function changeMemberHierarchy(formData:FormData){
+ const { supabase }=await requireAppContext()
+ const id=text(formData,'membership_id')
+ const branch=text(formData,'branch_id')
+ const leader=text(formData,'team_leader_user_id')
+ const scope=text(formData,'scope_override')
+ if(!isUuid(id)||(branch&&!isUuid(branch))||(leader&&!isUuid(leader))||(scope&&!['own','team','branch','all'].includes(scope)))return fail('invalid_input')
+ const { error }=await supabase.rpc('set_member_hierarchy',{p_membership_id:id,p_branch_id:branch||null,p_team_leader_user_id:leader||null,p_scope_override:scope||null})
+ return error?fail(classifyTeamError(error)):done('hierarchy_changed')
+}

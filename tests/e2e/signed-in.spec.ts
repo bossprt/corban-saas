@@ -66,3 +66,22 @@ test('administrator creates a custom role from the roles screen', async ({ page 
   await expect(page.getByLabel('Editar Esteira')).toBeChecked()
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-papel-criado.png`, fullPage: true })
 })
+
+// A seller (scope "own") sees only the clients that are his. Runs when E2E_SELLER_EMAIL is set.
+test.describe('seller scope', () => {
+  const sellerEmail = process.env.E2E_SELLER_EMAIL
+  test.skip(!sellerEmail, 'E2E_SELLER_EMAIL is not set')
+  test.use({ storageState: { cookies: [], origins: [] } })
+  test('seller does not see other people clients', async ({ browser }, info) => {
+    test.skip(info.project.name === 'mobile', 'one run is enough')
+    const page = await (await browser.newContext()).newPage()
+    await page.goto(new URL('/login', info.project.use.baseURL).toString())
+    await page.locator('input[type="email"]').fill(sellerEmail!)
+    await page.locator('input[type="password"]').fill(password!)
+    await page.locator('button[type="submit"]').click()
+    await page.waitForURL(/\/app(\/|$)/)
+    await page.goto(new URL('/app/clientes', info.project.use.baseURL).toString())
+    await expect(page.getByText('Maria Teste Silva')).toHaveCount(0)
+    if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-vendedor-clientes.png`, fullPage: true })
+  })
+})

@@ -27,7 +27,7 @@ where m.organization_id = (select org from ids);
 select set_config('request.jwt.claims', json_build_object('sub', (select seller_user from ids), 'role', 'authenticated')::text, true);
 set local role authenticated;
 
-insert into results select 'seller sees the company roles', count(*) = 7 from public.organization_roles where organization_id = (select org from ids);
+insert into results select 'seller sees the company roles', count(*) = 7 from public.organization_roles where organization_id = (select org from ids) and is_system;
 insert into results select 'seller may create clients', public.has_permission((select org from ids), 'clientes.create');
 insert into results select 'seller may not approve payouts', not public.has_permission((select org from ids), 'repasse.approve');
 insert into results select 'seller access is own scope', (select scope = 'own' and role_key = 'vendedor' from public.my_access((select org from ids)));

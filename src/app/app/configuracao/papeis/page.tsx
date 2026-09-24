@@ -108,7 +108,7 @@ export default async function RolesPage({ searchParams }: { searchParams: Promis
             </div>
 
             <p className="text-xs text-muted">
-              O nível de acesso decide o que as telas antigas liberam enquanto elas migram para permissões. O alcance dos dados passa a valer na próxima etapa da F1.
+              O nível de acesso decide o que as telas antigas liberam enquanto elas migram para permissões. O alcance vale para clientes, leads, propostas e tudo o que pertence a eles; uma pessoa pode ter exceção de alcance na tela Equipe.
             </p>
 
             {editable && (

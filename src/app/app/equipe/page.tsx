@@ -3,7 +3,8 @@ import { requireAppContext } from '@/lib/appContext'
 import { canManageMemberRole, canManageTeam, rolesAssignableBy } from '@/lib/rbac'
 import { AUDIT_LABEL, INVITE_STATUS_LABEL, ROLE_LABEL, STATUS_LABEL, TEAM_ERROR_MESSAGES, TEAM_OK_MESSAGES, isTeamErrorCode, isTeamOkCode } from '@/lib/team'
 import { memberEmails } from '@/lib/team.server'
-import { changeMemberRole, changeMemberStatus, inviteMember, resendInvitation, revokeInvitation } from './actions'
+import { changeMemberHierarchy, changeMemberRole, changeMemberStatus, inviteMember, resendInvitation, revokeInvitation } from './actions'
+import { SCOPE_LABEL, SCOPES } from '@/lib/access'
 
 const btn='rounded border border-slate-700 px-2 py-1 text-xs hover:border-slate-500'
 const ROLE_ORDER=['admin','manager','supervisor','agent']
@@ -16,8 +17,9 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
     <p role="alert" className="mt-3 rounded-xl border border-slate-800 p-5 text-sm text-slate-300">A gestão da equipe é restrita aos perfis administrador e gerente.</p>
   </section>
 
-  const [members, roles, invitations, events] = await Promise.all([
-    supabase.from('organization_memberships').select('id,user_id,role,role_id,status,created_at').order('created_at'),
+  const [members, branches, roles, invitations, events] = await Promise.all([
+    supabase.from('organization_memberships').select('id,user_id,role,role_id,status,created_at,branch_id,team_leader_user_id,scope_override').order('created_at'),
+    supabase.from('organization_branches').select('id,name').eq('is_active', true).order('name'),
     supabase.from('organization_roles').select('id,name,tier,is_active').eq('is_active', true).order('is_system', { ascending: false }).order('name'),
     supabase.from('organization_invitations').select('id,email,role,status,expires_at,created_at').order('created_at', { ascending: false }).limit(50),
     supabase.from('organization_admin_events').select('id,event_type,target_email,details,occurred_at').order('occurred_at', { ascending: false }).limit(15),
@@ -58,6 +60,14 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
           <form action={changeMemberRole} className="flex gap-1"><input type="hidden" name="membership_id" value={m.id} />
             <select name="role_id" defaultValue={m.role_id ?? ''} aria-label="Papel" className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs">{(roles.data ?? []).filter(r => canManageMemberRole(membership.role, m.role, r.tier)).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select>
             <button className={btn}>Alterar papel</button></form>
+          <details className="w-full basis-full text-xs text-slate-400"><summary className="cursor-pointer">Filial, equipe e alcance</summary>
+            <form action={changeMemberHierarchy} className="mt-2 flex flex-wrap items-end gap-2"><input type="hidden" name="membership_id" value={m.id} />
+              <label>Filial<select name="branch_id" defaultValue={m.branch_id ?? ''} className="mt-1 block rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs"><option value="">Sem filial</option>{(branches.data ?? []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
+              <label>Líder da equipe<select name="team_leader_user_id" defaultValue={m.team_leader_user_id ?? ''} className="mt-1 block rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs"><option value="">Sem líder</option>{rows.filter(o => o.user_id !== m.user_id && o.status === 'active').map(o => <option key={o.user_id} value={o.user_id}>{emails.get(o.user_id) ?? 'Usuário'}</option>)}</select></label>
+              <label>Enxerga<select name="scope_override" defaultValue={m.scope_override ?? ''} className="mt-1 block rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs"><option value="">Conforme o papel</option>{SCOPES.filter(sc => sc !== 'all' || membership.role === 'admin').map(sc => <option key={sc} value={sc}>{SCOPE_LABEL[sc]}</option>)}</select></label>
+              <button className={btn}>Salvar</button>
+            </form>
+          </details>
           <form action={changeMemberStatus}><input type="hidden" name="membership_id" value={m.id} />
             {m.status === 'active'
               ? <><input type="hidden" name="status" value="inactive" /><button className={btn} title="Bloqueia o acesso imediatamente; pode ser reativado">Desativar acesso</button></>

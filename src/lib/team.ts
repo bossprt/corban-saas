@@ -27,6 +27,8 @@ export const TEAM_ERROR_MESSAGES={
  invalid_role_tier:'Nível de acesso inválido para este papel.',
  unknown_permission:'Uma das permissões não existe.',
  admin_role_is_fixed:'O papel Administrador não pode ser alterado.',
+ branch_not_found:'Filial não encontrada ou inativa.',
+ team_leader_not_found:'O líder escolhido não é um membro ativo (e ninguém lidera a si mesmo).',
  system_role_tier_immutable:'O nível de acesso de um papel padrão não pode mudar.',
  unexpected:'Não foi possível concluir. Nada foi alterado; tente novamente.'
 } as const
@@ -41,7 +43,8 @@ export const TEAM_OK_MESSAGES={
  revoked:'Convite cancelado.',
  role_changed:'Perfil atualizado.',
  status_changed:'Situação do acesso atualizada.',
- role_saved:'Papel salvo.'
+ role_saved:'Papel salvo.',
+ hierarchy_changed:'Filial, equipe e alcance atualizados.'
 } as const
 export type TeamOkCode=keyof typeof TEAM_OK_MESSAGES
 export const isTeamOkCode=(v:unknown):v is TeamOkCode=>typeof v==='string'&&Object.prototype.hasOwnProperty.call(TEAM_OK_MESSAGES,v)
@@ -66,7 +69,7 @@ export function normalizeEmail(raw:unknown):string|null{
 export const AUDIT_LABEL:Record<string,string>={
  invite_created:'Convite criado',invite_revoked:'Convite cancelado',invite_accepted:'Convite aceito',
  member_role_changed:'Perfil alterado',member_deactivated:'Acesso desativado',member_reactivated:'Acesso reativado',
- role_created:'Papel criado',role_updated:'Papel alterado',member_access_role_changed:'Papel do membro alterado'
+ role_created:'Papel criado',role_updated:'Papel alterado',member_access_role_changed:'Papel do membro alterado',member_hierarchy_changed:'Filial, equipe ou alcance alterados'
 }
 
 const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
