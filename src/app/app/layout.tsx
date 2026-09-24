@@ -19,6 +19,8 @@ const NAV: (NavItem & { show?: (role: string) => boolean; module?: string; perm?
   { key: 'esteira', href: '/app/propostas', label: 'Esteira', module: 'esteira' },
   { key: 'metas', href: '/app/metas', label: 'Metas' },
   { key: 'financeiro', href: '/app/financeiro', label: 'Financeiro', module: 'financeiro', perm: 'financeiro.view' },
+  // Everyone may have a payout account (their own statement); finance sees all accounts on the same screen.
+  { key: 'repasse', href: '/app/repasse', label: 'Repasse', module: 'repasse' },
   { key: 'comercial', href: '/app/comercial', label: 'Comercial', show: r => atLeast(r, 'supervisor'), module: 'comercial' },
   { key: 'relatorios', href: '/app/relatorios', label: 'Relatórios', module: 'relatorios' },
   { key: 'configuracoes', href: '/app/configuracao', label: 'Configurações', show: canManageTeam },

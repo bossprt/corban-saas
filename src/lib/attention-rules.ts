@@ -18,6 +18,9 @@ export type AttentionData = {
   divergenceOpen?: Signal | null      // received amount different from the frozen commission, not accepted
   deferredMissing?: Signal | null     // deferred installments due and not received
   chargebacks?: Signal | null         // chargebacks registered in the last 30 days
+  // Payout (payout_alerts; null without repasse access)
+  payoutApprovals?: Signal | null     // manual entries, statements and withdrawals waiting for a second person
+  payoutsUnpaid?: Signal | null       // approved statements and withdrawals not yet marked paid
 }
 export type Candidate = { rule_key: string; dedupe_key: string; severity: Severity; title: string; reason: string; evidence: { count: number; oldest_at: string | null; sample_ids: string[] }; impact: string; recommendation: string; href: string }
 
@@ -54,6 +57,14 @@ const RULES: Rule[] = [
     severity: 'medium',
     title: `${s.count} estorno(s) registrado(s) nos últimos 30 dias`, reason: 'O banco devolveu comissão de contrato cancelado, quitado ou portado.',
     impact: 'O estorno será descontado de quem recebeu por esses contratos.', recommendation: 'Veja os contratos estornados no financeiro.', href: '/app/financeiro' }) },
+  { key: 'payoutApprovals', rule_key: 'payout_approvals_pending', allowed: r => atLeast(r, 'supervisor'), build: s => ({
+    severity: s.count >= 10 ? 'high' : 'medium',
+    title: `${s.count} lançamento(s) ou repasse(s) aguardando aprovação`, reason: 'Vales, bônus, descontos, ajustes, extratos e saques só valem depois que outra pessoa aprova.',
+    impact: 'Sem aprovação, o repasse da equipe atrasa.', recommendation: 'Abra o repasse e aprove ou recuse com o motivo.', href: '/app/repasse' }) },
+  { key: 'payoutsUnpaid', rule_key: 'payouts_approved_unpaid', allowed: r => atLeast(r, 'supervisor'), build: (s, now) => ({
+    severity: ageHours(s.oldest, now) > 72 ? 'high' : 'medium',
+    title: `${s.count} repasse(s) aprovado(s) ainda não pago(s)`, reason: 'O extrato ou saque foi aprovado, mas o pagamento não foi registrado.',
+    impact: 'A equipe espera o dinheiro que já foi aprovado.', recommendation: 'Pague e registre o comprovante no repasse.', href: '/app/repasse' }) },
   { key: 'draftProposals', rule_key: 'draft_proposals', allowed: r => atLeast(r, 'supervisor'), build: s => ({
     severity: s.count >= 10 ? 'medium' : 'low',
     title: `${s.count} proposta(s) em rascunho há mais de 3 dias`, reason: 'A proposta foi criada mas não foi enviada para a operação.',

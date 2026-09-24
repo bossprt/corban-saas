@@ -356,3 +356,15 @@
 - **Decisão 2:** lines match proposals by ADE (letters and digits only) within the routes of the paying source and are compared to the cent (owner: zero tolerance) with the commission frozen by the F4 engine. Upfront = received amount of the non-deferred parts; deferred = the installment's received amount, the last one with the residual; chargeback = up to the net received.
 - **Decisão 3:** a report is a draft until confirmed with `financeiro.approve`; every line must be ok, divergent or ignored with a reason, and a declared total must equal the lines. Confirmation writes `commission_receipts`, append-only, one receipt per proposal component and installment. Divergences stay open until accepted with a note; corrections are new entries.
 - **Decisão 4:** alerts (paid without receipt after 30 days, open divergence, missing deferred installment after one month of grace, chargeback in the last 30 days) come from `finance_alerts` and feed the Action Center for supervisors and above with finance access.
+
+## ADR-0029 - Seller payout: current account per person, proportional chargeback, two-eyes approvals
+- **Data:** 24/09/2026 - **Status:** aceita (F6).
+- **Decisão 1:** one account per person: the registered seller or broker, with or without login, or a team member who is not a seller. Entries are immutable. The kinds are commission, chargeback, advance, bonus, discount, adjustment and payout.
+- **Decisão 2:** commission is credited when a receipt is reconciled: matched receipts on confirmation, divergent ones only after acceptance. The split uses the percentages frozen on the proposal over the amount actually received. Deferred installments credit the team only when the frozen rule pays the deferred.
+- **Decisão 3:** a chargeback debits each person the same fraction of what they received from the contract, rounded to the cent and capped at what they received.
+- **Decisão 4:** the payment model is a company default with a per-person override.
+  - Closing: a period statement; a negative carry is deducted at most `debt_limit_pct` of the net per statement (owner: 30%).
+  - Internal account: a withdrawal up to the available balance.
+  - Changing the company default pins accounts that have history. Moving an account to closings opens with its current balance, so nothing is paid twice.
+- **Decisão 5:** manual entries, statements and withdrawals are approved by someone other than whoever created them and other than the account holder. Payment is marked by hand with a date and a receipt (CNAB/PIX in F8).
+- **Correção F4:** the originator of a proposal with a seller is that seller, never whoever typed the proposal. A seller without login has no inherited hierarchy, so the supervisor and manager shares stay with the company.

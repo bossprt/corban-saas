@@ -15,6 +15,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### F6 — Repasse e conta corrente (24/09/2026)
+- Conta corrente por pessoa com lançamentos imutáveis: comissão conciliada, estorno proporcional, vale/desconto parcelados, bônus, ajuste e pagamento.
+- Fechamento periódico com limite de 30% de desconto do saldo negativo, ou conta interna com saque; aprovação sempre por outra pessoa; pagamento marcado com comprovante.
+- Correção: vendedor sem login é o originador da própria venda e não herda a hierarquia de quem digitou.
+
 ### F5 — Recebimento e conciliação (24/09/2026)
 - Importação de relatórios de comissão (à vista, diferido, estorno) por banco ou promotora, com modelo de colunas salvo.
 - Conferência linha a linha contra a comissão congelada (tolerância zero), vínculo manual por ADE, ignorar com motivo, confirmação com lançamento imutável.

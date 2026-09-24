@@ -2,10 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BarChart3, Building2, CalendarCheck, KanbanSquare, LayoutDashboard, Settings, Target, Users, WalletCards, type LucideIcon } from 'lucide-react'
+import { BarChart3, Building2, CalendarCheck, HandCoins, KanbanSquare, LayoutDashboard, Settings, Target, Users, WalletCards, type LucideIcon } from 'lucide-react'
 import { cn } from '@/components/ui'
 
-export type NavKey = 'hoje' | 'dashboard' | 'clientes' | 'esteira' | 'metas' | 'financeiro' | 'comercial' | 'relatorios' | 'configuracoes'
+export type NavKey = 'hoje' | 'dashboard' | 'clientes' | 'esteira' | 'metas' | 'financeiro' | 'repasse' | 'comercial' | 'relatorios' | 'configuracoes'
 export type NavItem = { key: NavKey; href: string; label: string }
 
 const ICONS: Record<NavKey, LucideIcon> = {
@@ -15,6 +15,7 @@ const ICONS: Record<NavKey, LucideIcon> = {
   esteira: KanbanSquare,
   metas: Target,
   financeiro: WalletCards,
+  repasse: HandCoins,
   comercial: Building2,
   relatorios: BarChart3,
   configuracoes: Settings,

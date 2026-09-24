@@ -35,6 +35,8 @@ const pages = [
   { path: '/app/relatorios', name: 'relatorios' },
   { path: '/app/financeiro', name: 'financeiro' },
   { path: '/app/financeiro/conciliacao', name: 'conciliacao' },
+  { path: '/app/repasse', name: 'repasse' },
+  { path: '/app/configuracao/repasse', name: 'config-repasse' },
 ]
 
 for (const { path, name } of pages) {
@@ -279,4 +281,59 @@ test('finance imports a bank report, resolves the lines and confirms the receipt
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-recebimento-proposta.png`, fullPage: true })
   await page.goto('/app/financeiro')
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-financeiro.png`, fullPage: true })
+})
+
+// Payout with two pairs of eyes: the administrator enters and closes, a finance user approves. Runs when E2E_FINANCE_EMAIL is set.
+test.describe('payout', () => {
+  const financeEmail = process.env.E2E_FINANCE_EMAIL
+  test.skip(!financeEmail, 'E2E_FINANCE_EMAIL is not set')
+  test('bonus and statement need a second person; the statement is paid with a receipt', async ({ page, browser }, info) => {
+    test.skip(info.project.name === 'mobile', 'one run is enough')
+    const finance = await (await browser.newContext()).newPage()
+    await finance.goto(new URL('/login', info.project.use.baseURL).toString())
+    await finance.locator('input[type="email"]').fill(financeEmail!)
+    await finance.locator('input[type="password"]').fill(password!)
+    await finance.locator('button[type="submit"]').click()
+    await finance.waitForURL(/\/app(\/|$)/)
+
+    // The administrator opens (or finds) the seller account and enters a bonus.
+    await page.goto('/app/repasse')
+    await page.getByLabel('Abrir conta de').selectOption({ label: 'Vendedor Teste' })
+    await page.getByRole('button', { name: 'Abrir', exact: true }).click()
+    await expect(page.getByText('Conta aberta.')).toBeVisible()
+    const accountUrl = page.url().split('?')[0]
+    const note = `Bônus E2E ${Date.now()}`
+    await page.getByLabel('Tipo').selectOption('bonus')
+    await page.getByLabel('Valor (R$)').last().fill('150,00')
+    await page.getByLabel('Descrição').fill(note)
+    await page.getByRole('button', { name: 'Lançar' }).click()
+    await expect(page.getByText('Lançamento registrado.')).toBeVisible()
+    const row = page.getByRole('row').filter({ hasText: note })
+    await expect(row).toContainText('Aguarda aprovação')
+    await row.getByRole('button', { name: 'Aprovar' }).click()
+    await expect(page.getByText('Quem lançou (ou o dono da conta) não pode aprovar.')).toBeVisible()
+
+    // Finance approves it.
+    await finance.goto(accountUrl)
+    await finance.getByRole('row').filter({ hasText: note }).getByRole('button', { name: 'Aprovar' }).click()
+    await expect(finance.getByText('Decisão registrada.')).toBeVisible()
+    await expect(finance.getByRole('row').filter({ hasText: note })).toContainText('Aprovado')
+
+    // The administrator closes the period; finance approves the seller statement; the administrator pays it.
+    await page.goto('/app/repasse')
+    await page.getByRole('button', { name: 'Fechar período' }).click()
+    await expect(page.getByText('Período fechado.')).toBeVisible()
+    await finance.goto(accountUrl)
+    await finance.getByRole('row').filter({ hasText: 'Aguarda aprovação' }).filter({ hasText: 'Fechamento' }).getByRole('button', { name: 'Aprovar' }).click()
+    await expect(finance.getByText('Decisão registrada.')).toBeVisible()
+    await page.goto(accountUrl)
+    const statement = page.getByRole('row').filter({ hasText: 'Aprovado, a pagar' })
+    await statement.getByPlaceholder('Comprovante (PIX, TED)').fill('PIX E2E')
+    await statement.getByRole('button', { name: 'Marcar pago' }).click()
+    await expect(page.getByText('Pagamento registrado na conta.')).toBeVisible()
+    await expect(page.getByRole('row').filter({ hasText: 'PIX E2E' }).first()).toContainText('Pago')
+    if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-repasse-conta.png`, fullPage: true })
+    await page.goto('/app/repasse')
+    if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-repasse.png`, fullPage: true })
+  })
 })

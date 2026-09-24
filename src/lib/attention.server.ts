@@ -6,7 +6,7 @@ type Ctx = Awaited<ReturnType<typeof requireAppContext>>
 export type AttentionRow = { id: string; rule_key: string; severity: string; title: string; reason: string; evidence: { count?: number; oldest_at?: string | null } | null; impact: string; recommendation: string; href: string; status: string; snoozed_until: string | null; first_detected_at: string; assigned_to: string | null }
 export type AttentionEvent = { item_id: string; event: string; note: string | null; created_at: string }
 
-export const ATTENTION_RULE_KEYS = ['overdue_cases', 'stale_leads', 'draft_proposals', 'pendencies_due', 'paid_without_receipt', 'receipt_divergence_open', 'deferred_missing', 'chargebacks'] as const
+export const ATTENTION_RULE_KEYS = ['overdue_cases', 'stale_leads', 'draft_proposals', 'pendencies_due', 'paid_without_receipt', 'receipt_divergence_open', 'deferred_missing', 'chargebacks', 'payout_approvals_pending', 'payouts_approved_unpaid'] as const
 
 const isoAgo = (ms: number) => new Date(Date.now() - ms).toISOString()
 
@@ -26,12 +26,13 @@ function liveRow(c: Candidate): AttentionRow {
 // and returns the items to show. Used by the Hoje screen and the Central de atenção.
 export async function loadAttention({ supabase, membership }: Ctx, opts: { withEvents?: boolean } = {}) {
   const exact = { count: 'exact' } as const
-  const [overdue, stale, drafts, pendencies, finance] = await Promise.all([
+  const [overdue, stale, drafts, pendencies, finance, payout] = await Promise.all([
     supabase.from('operational_cases').select('id,due_at', exact).not('canonical_state', 'in', '("paid","cancelled","rejected")').lt('due_at', isoAgo(0)).order('due_at').limit(200),
     supabase.from('leads').select('id,created_at', exact).eq('status', 'new').lt('created_at', isoAgo(2 * 24 * 3600 * 1000)).order('created_at').limit(200),
     supabase.from('proposals_v2').select('id,created_at', exact).eq('status', 'draft').lt('created_at', isoAgo(3 * 24 * 3600 * 1000)).order('created_at').limit(200),
     supabase.from('operational_cases').select('id,pendency_due_at', exact).eq('canonical_state', 'pending_external').lt('pendency_due_at', isoAgo(-24 * 3600 * 1000)).order('pendency_due_at').limit(200),
     supabase.rpc('finance_alerts', { p_org: membership.organization_id }),
+    supabase.rpc('payout_alerts', { p_org: membership.organization_id }),
   ])
   // Finance alerts: without finance access the RPC refuses and the four rules are simply not evaluated.
   const alerts = finance.error ? null : ((finance.data ?? []) as { kind: string; proposal_id: string; since: string }[])
@@ -40,8 +41,15 @@ export async function loadAttention({ supabase, membership }: Ctx, opts: { withE
     const rows = alerts.filter(a => a.kind === kind).sort((a, b) => a.since.localeCompare(b.since))
     return { count: rows.length, ids: rows.slice(0, 5).map(r => r.proposal_id), oldest: rows[0]?.since ?? null }
   }
+  const payoutRows = payout.error ? null : ((payout.data ?? []) as { kind: string; total: number; oldest: string | null }[])
+  const pay = (kind: string): Signal | null => {
+    if (!payoutRows) return null
+    const r = payoutRows.find(x => x.kind === kind)
+    return { count: r?.total ?? 0, ids: [], oldest: r?.oldest ?? null }
+  }
   const data: AttentionData = {
     overdueCases: signal(overdue, 'due_at'), staleLeads: signal(stale, 'created_at'), draftProposals: signal(drafts, 'created_at'), pendenciesDue: signal(pendencies, 'pendency_due_at'),
+    payoutApprovals: pay('approvals_pending'), payoutsUnpaid: pay('approved_unpaid'),
     paidWithoutReceipt: fin('paid_without_receipt'), divergenceOpen: fin('divergence_open'), deferredMissing: fin('deferred_missing'), chargebacks: fin('chargeback'),
   }
   const { candidates, evaluated } = evaluateRules(membership.role, data)

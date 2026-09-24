@@ -10,7 +10,7 @@ const NOW = Date.parse('2026-09-20T12:00:00Z')
 const H = 3_600_000
 const sig = (count: number, hoursOld = 1, ids: string[] = ['a', 'b']): Signal => ({ count, ids, oldest: new Date(NOW - hoursOld * H).toISOString() })
 const none: AttentionData = { overdueCases: null, staleLeads: null, draftProposals: null }
-const zero: AttentionData = { overdueCases: sig(0), staleLeads: sig(0), draftProposals: sig(0), pendenciesDue: sig(0), paidWithoutReceipt: sig(0), divergenceOpen: sig(0), deferredMissing: sig(0), chargebacks: sig(0) }
+const zero: AttentionData = { overdueCases: sig(0), staleLeads: sig(0), draftProposals: sig(0), pendenciesDue: sig(0), paidWithoutReceipt: sig(0), divergenceOpen: sig(0), deferredMissing: sig(0), chargebacks: sig(0), payoutApprovals: sig(0), payoutsUnpaid: sig(0) }
 
 test('rules: nothing detected = evaluated but empty (so cleared conditions can be auto-resolved)', () => {
   const r = evaluateRules('supervisor', zero, NOW)

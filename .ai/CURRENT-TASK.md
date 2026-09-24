@@ -21,6 +21,13 @@
 - Seed da empresa fictícia: `supabase/seed/f0-test-tenant.sql`, com trava `corban.env = 'test'` (validada: aborta sem a trava) e CPFs com dígito verificador válido.
 - graphify gerado em `graphify-out/` (local, fora do Git): 998 nós, 2666 arestas, 45 comunidades. Usar `graphify query` antes de ler arquivos.
 
+## F6 — andamento (branch `feature/f6-repasse`)
+- Decisões do dono: modelo por pessoa (padrão da empresa + exceção), negativo carrega e desconta no máximo 30% por repasse, dois olhos (quem lança não aprova), conta por vendedor cadastrado com ou sem login. Desenho e exemplo numérico aprovados (ADR-0029).
+- Migration `20260930090000_seller_payout_v1`: contas, lançamentos imutáveis, crédito automático na conciliação (divergente só após aceite), estorno proporcional com teto, vale/desconto parcelados, fechamento com limite de desconto, saque até o disponível, troca de modelo sem pagar duas vezes, aprovação por outra pessoa, `payout_alerts`. Inclui correção da F4 (originador = vendedor da proposta; vendedor sem login não herda hierarquia de quem digitou). Contrato `tests/security/seller-payout-contract.sql` 24/24.
+- Telas: Repasse (contas, fechar período, abrir conta, aprovações, repasses em aberto), extrato da conta (lançamento avulso, saque, modelo da pessoa, aprovar/pagar), Configurações > Repasse, 2 regras na Central de atenção/Hoje.
+- Banco local recriado do zero: 18 contratos de segurança passando; unit 184/184; e2e 31/31 (bônus e extrato com segunda pessoa, pago com comprovante). **Não aplicada em produção.**
+- Local: usuário de teste `financeiro@corban-teste.local` (papel Financeiro) para os testes com duas pessoas (`E2E_FINANCE_EMAIL`).
+
 ## F5 — andamento (branch `feature/f5-recebimento`)
 - Decisões do dono: remover blocos 1 (rede + `profiles`), 2 (importação/financeiro antigos) e 3 (hub de integrações); tolerância de conciliação zero; alerta "paga sem recebimento" em 30 dias; confirmação de relatório por quem tem `financeiro.edit` (admin/gerente).
 - Passo 0 feito: migration `20260924171033_remove_legacy_models_v1` (34 tabelas, 48 funções, 8 funções reescritas). Testada no banco local recriado do zero (baseline + migrations + seed): testes de segurança das fases F1–F4 iguais antes/depois; 19 testes SQL de modelos removidos apagados; unit 177/177; tsc e lint limpos; e2e 25/25 (4 fluxos só passam em série no dev server, por tempo). Telas antigas removidas: rede, financeiro, importações, integrações, regras-comissão antigas; cartões antigos da proposta. Aplicada em produção em 24/09/2026 (md5 conferido; condições, percentuais por grupo e componentes intactos; backup das 8 linhas removidas guardado fora do repositório).
