@@ -25,7 +25,7 @@
 - Banco: `20260924142925_pipeline_direct_proposals_v1` (proposta direta com junção banco+ADE, etapa Paga, pendência com motivo/prazo e volta à análise, Paga manual com nota por quem tem esteira.edit, distribuição de leads rodízio/fila/manual, metas por valor pago). Contrato `tests/security/pipeline-contract.sql` 19/19. **Aplicada em produção** (md5 igual).
 - Telas: Esteira nova (abas por etapa da empresa, alertas de pendência/prazo), Nova proposta, cartão Esteira na proposta, Metas (+ distribuição de leads), meta do mês no Hoje, Assumir lead.
 - Decisões do dono: etapas padrão + configuráveis; distribuição decidida pelo dono; meta = valor pago; Paga manual por qualquer operador com nota.
-- Pendentes da F3: kanban (hoje só tabela), edição das etapas pela tela (nome/ordem/prazo), alerta de pendência na Central de atenção (hoje só na Esteira), alertas de comissão ficam para a F5.
+- Itens finais da F3 feitos: kanban, Configurações > Etapas (migration `20260924143537_stage_settings_v1`, em produção, md5 igual), regra de pendência vencendo na Central de atenção e no Hoje. Alertas de comissão ficam para a F5.
 
 ## F2 — andamento (branch `feature/f2-cliente-unico`)
 - Cliente único por CPF + histórico de contatos: migration `20260924124257_client_identity_v1`, contrato `tests/security/client-identity-contract.sql` 17/17. Telas novas de lista, cadastro e ficha 360 (CPF sem máscara).

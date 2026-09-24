@@ -168,3 +168,17 @@ test('direct proposal runs through the pipeline to paid and counts in the goal',
   await expect(page.getByText(ade)).toBeVisible()
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-esteira.png`, fullPage: true })
 })
+
+test('pipeline kanban and stage settings', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  await page.goto('/app/propostas?visao=kanban')
+  await expect(page.getByLabel('Kanban da esteira')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Aguardando digitação' })).toBeVisible()
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-kanban.png`, fullPage: true })
+  await page.goto('/app/configuracao/etapas')
+  const name = page.getByLabel('Nome da etapa Em análise no banco')
+  await name.fill('Em análise no banco')
+  await page.getByRole('row').filter({ has: name }).getByRole('button', { name: 'Salvar' }).click()
+  await expect(page.getByText('Etapa salva.')).toBeVisible()
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-etapas.png`, fullPage: true })
+})

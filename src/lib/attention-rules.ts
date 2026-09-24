@@ -11,6 +11,7 @@ export type Signal = { count: number; ids: readonly string[]; oldest: string | n
 export type AttentionData = {
   overdueCases: Signal | null      // operational cases past due_at
   staleLeads: Signal | null        // new leads waiting more than 2 days
+  pendenciesDue?: Signal | null    // pendencies due within 24 hours or already late
   draftProposals: Signal | null    // proposals in draft for more than 3 days
   failedRuns: Signal | null        // integration runs failed for good
   importReviews: Signal | null     // import matches waiting for a human
@@ -43,6 +44,10 @@ const RULES: Rule[] = [
     severity: s.count >= 20 || ageHours(s.oldest, now) > 24 * 7 ? 'high' : 'medium',
     title: `${s.count} lead(s) novo(s) sem primeiro contato há mais de 2 dias`, reason: 'O lead entrou e ninguém registrou contato.',
     impact: 'Lead esfria: a chance de conversão cai a cada dia sem retorno.', recommendation: 'Distribua os leads mais antigos e cobre o primeiro contato.', href: '/app/leads' }) },
+  { key: 'pendenciesDue', rule_key: 'pendencies_due', allowed: r => atLeast(r, 'supervisor'), build: (s, now) => ({
+    severity: s.oldest && new Date(s.oldest).getTime() < now ? 'high' : 'medium',
+    title: `${s.count} pendência(s) vencendo ou vencida(s)`, reason: 'O prazo para resolver a pendência pedida pelo banco termina em menos de 24 horas ou já passou.',
+    impact: 'Pendência vencida pode fazer o banco cancelar a proposta.', recommendation: 'Abra a esteira na etapa Pendência e resolva as mais antigas.', href: '/app/propostas' }) },
   { key: 'draftProposals', rule_key: 'draft_proposals', allowed: r => atLeast(r, 'supervisor'), build: s => ({
     severity: s.count >= 10 ? 'medium' : 'low',
     title: `${s.count} proposta(s) em rascunho há mais de 3 dias`, reason: 'A proposta foi criada mas não foi enviada para a operação.',
@@ -55,7 +60,7 @@ export const ALL_RULE_KEYS = RULES.map(r => r.rule_key)
 export function evaluateRules(role: string | null | undefined, data: AttentionData, now: number = Date.now()): { candidates: Candidate[]; evaluated: string[] } {
   const candidates: Candidate[] = [], evaluated: string[] = []
   for (const r of RULES) {
-    const s = data[r.key]
+    const s = data[r.key] ?? null
     if (!r.allowed(role) || s === null || !Number.isInteger(s.count) || s.count < 0) continue
     evaluated.push(r.rule_key)
     if (s.count === 0) continue

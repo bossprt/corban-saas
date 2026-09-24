@@ -20,7 +20,7 @@ const days = (iso: string) => Math.max(0, Math.floor((Date.now() - new Date(iso)
 
 // Esteira: every proposal in the pipeline with its stage, how long it is there and the alerts that need action.
 // Stages are the company's own (names and order); visibility follows the caller's scope (RLS).
-export default async function PipelinePage({ searchParams }: { searchParams: Promise<{ etapa?: string }> }) {
+export default async function PipelinePage({ searchParams }: { searchParams: Promise<{ etapa?: string; visao?: string }> }) {
   const { supabase, access } = await requireAppContext()
   const sp = await searchParams
 
@@ -29,7 +29,8 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
     supabase.from('operational_cases').select('id,proposal_id,current_stage_id,canonical_state,entered_stage_at,due_at,pendency_due_at,pendency_reason').order('entered_stage_at', { ascending: true }).limit(500),
   ])
   const cases = (allCases ?? []) as CaseRow[]
-  const stage = (stages ?? []).find(s => s.code === sp.etapa)
+  const kanban = sp.visao === 'kanban'
+  const stage = kanban ? undefined : (stages ?? []).find(s => s.code === sp.etapa)
   const shown = stage ? cases.filter(c => c.current_stage_id === stage.id) : cases.filter(c => !CLOSED.includes(c.canonical_state))
 
   const ids = shown.map(c => c.proposal_id)
@@ -73,6 +74,44 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
         ))}
       </nav>
 
+      <div className="mb-3 flex justify-end gap-1 text-sm">
+        <Link href="/app/propostas" aria-current={!kanban ? 'page' : undefined} className={`rounded-lg px-3 py-1.5 ${!kanban ? 'bg-brand-soft font-semibold text-brand' : 'text-ink-soft hover:bg-surface-muted'}`}>Tabela</Link>
+        <Link href="/app/propostas?visao=kanban" aria-current={kanban ? 'page' : undefined} className={`rounded-lg px-3 py-1.5 ${kanban ? 'bg-brand-soft font-semibold text-brand' : 'text-ink-soft hover:bg-surface-muted'}`}>Kanban</Link>
+      </div>
+
+      {kanban ? (
+        <div className="flex gap-3 overflow-x-auto pb-2" aria-label="Kanban da esteira">
+          {(stages ?? []).filter(st => !CLOSED.includes(st.canonical_state)).map(st => {
+            const column = shown.filter(c => c.current_stage_id === st.id)
+            return (
+              <section key={st.id} aria-label={st.name} className="flex w-72 shrink-0 flex-col rounded-[14px] border border-line bg-surface-muted">
+                <header className="flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-ink">{st.name}<span className="num text-xs font-normal text-muted">{column.length}</span></header>
+                <div className="flex flex-col gap-2 px-2 pb-2">
+                  {column.map(c => {
+                    const p = proposals.get(c.proposal_id)
+                    const cust = (p?.customer_snapshot ?? {}) as Record<string, unknown>
+                    const com = (p?.commercial_snapshot ?? {}) as Record<string, unknown>
+                    const d = days(c.entered_stage_at)
+                    const alert = alertOf(c)
+                    return (
+                      <Link key={c.id} href={`/app/propostas/${c.proposal_id}`} className="rounded-[10px] border border-line bg-surface p-3 text-[13px] hover:border-brand/50">
+                        <span className="block font-medium text-ink">{String(cust.full_name ?? cust.name ?? 'Cliente')}</span>
+                        <span className="mt-0.5 block text-xs text-muted">{[com.bank, p?.external_proposal_id].filter(Boolean).join(' · ') || '—'}</span>
+                        <span className="mt-2 flex items-center justify-between">
+                          <span className="num font-semibold text-ink">{brl(p?.released_amount ?? p?.requested_amount ?? null)}</span>
+                          <span className={`num text-xs ${d >= 4 ? 'font-semibold text-diverged' : 'text-muted'}`}>{d === 0 ? 'hoje' : `${d} d`}</span>
+                        </span>
+                        {alert && <span className="mt-1.5 block text-xs font-medium text-diverged">{alert}</span>}
+                      </Link>
+                    )
+                  })}
+                  {column.length === 0 && <p className="px-1 py-3 text-center text-xs text-muted">Vazio</p>}
+                </div>
+              </section>
+            )
+          })}
+        </div>
+      ) : (
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-[13px]">
@@ -108,6 +147,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
           </table>
         </div>
       </Card>
+      )}
     </section>
   )
 }

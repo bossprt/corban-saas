@@ -35,6 +35,7 @@ export default async function ConfigurationPage() {
     <p className="mt-2 text-sm text-slate-400">{organization.name}: o que já está configurado e o que falta antes de o operador trabalhar. Conta apenas dados reais desta organização.</p>
     <div className="mt-4 grid gap-3 sm:grid-cols-2">
       <Link href="/app/equipe" className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm hover:border-slate-600"><strong>Equipe</strong><span className="mt-1 block text-xs text-slate-400">Quem acessa a empresa, convites e papel de cada pessoa.</span></Link>
+      <Link href="/app/configuracao/etapas" className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm hover:border-slate-600"><strong>Etapas da esteira</strong><span className="mt-1 block text-xs text-slate-400">Nome, ordem e prazo de cada etapa.</span></Link>
       <Link href="/app/configuracao/api" className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm hover:border-slate-600"><strong>API</strong><span className="mt-1 block text-xs text-slate-400">Chaves para outros sistemas (ex.: DeskcommCRM) enviarem leads.</span></Link>
       <Link href="/app/configuracao/papeis" className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm hover:border-slate-600"><strong>Papéis e permissões</strong><span className="mt-1 block text-xs text-slate-400">O que cada papel pode fazer em cada módulo e quais dados enxerga.</span></Link>
     </div>
