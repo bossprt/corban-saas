@@ -199,7 +199,7 @@ test('CPF and phone formatting', async () => {
 })
 test('public API route authenticates only through the database and logs nothing from the request', () => {
   const r = read('src/app/api/v1/leads/route.ts')
-  assert.match(r, /rpc\('api_ingest_lead'/)
+  assert.match(r, /rpc\('api_ingest_lead_distributed'/)
   assert.doesNotMatch(r, /console\.(log|info|warn|error)/)
   assert.doesNotMatch(r, /organization_id|p_org/)
   const a = read('src/app/app/configuracao/api/actions.ts')

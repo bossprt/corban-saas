@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabaseAdmin'
 
 // Public API v1: create a lead. Authentication, company, scope, modules and rate limit are decided by the database
-// (public.api_ingest_lead) from the API key alone; this route only moves bytes. Nothing from the request is logged.
+// (public.api_ingest_lead, wrapped by api_ingest_lead_distributed to apply lead distribution) from the API key alone;
+// this route only moves bytes. Nothing from the request is logged.
 export const dynamic = 'force-dynamic'
 
 const MAX_BYTES = 16_000
