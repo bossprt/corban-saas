@@ -153,7 +153,7 @@ test('submit buttons disable themselves while pending on the main forms', () => 
 
 test('permission catalog in the app matches the database catalog', async () => {
   const { MODULES, ACTIONS } = await import('../../src/lib/access')
-  const m = read('supabase/migrations/20260924200000_organization_roles_permissions_v1.sql')
+  const m = read('supabase/migrations/20260924071259_organization_roles_permissions_v1.sql')
   const mods = /unnest\(array\[([^\]]+)\]\) m/.exec(m)?.[1].replace(/'/g, '').split(',').map(s => s.trim())
   const acts = /unnest\(array\[([^\]]+)\]\) a/.exec(m)?.[1].replace(/'/g, '').split(',').map(s => s.trim())
   assert.deepEqual(mods, [...MODULES])

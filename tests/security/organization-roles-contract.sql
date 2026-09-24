@@ -1,4 +1,4 @@
--- Contract test for 20260924200000_organization_roles_permissions_v1. Runs on a local or test database seeded with
+-- Contract test for 20260924071259_organization_roles_permissions_v1. Runs on a local or test database seeded with
 -- supabase/seed/f0-test-tenant.sql plus two users: admin@corban-teste.local (admin) and vendedor@corban-teste.local (agent).
 -- Everything happens inside one transaction that is rolled back. Any failed expectation raises and stops the script.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/organization-roles-contract.sql

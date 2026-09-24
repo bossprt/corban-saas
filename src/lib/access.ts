@@ -1,4 +1,4 @@
-// Organization roles and permissions (migration 20260924200000_organization_roles_permissions_v1).
+// Organization roles and permissions (migration 20260924071259_organization_roles_permissions_v1).
 // The database is the authority (public.has_permission, RLS); this mirrors it so screens and actions fail early.
 // MODULES × ACTIONS must stay identical to private.permission_catalog(); a unit test pins it.
 
