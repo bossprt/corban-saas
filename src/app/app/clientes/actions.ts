@@ -8,6 +8,7 @@ import { normalizeCep } from '@/lib/cep'
 
 const go = (code: FeedbackCode): never => redirect(feedbackUrl('/app/clientes', code))
 
+// One client per CPF: an existing CPF is recognized and updated (upsert_client), never duplicated.
 export async function createCustomer(formData: FormData) {
   const { supabase, organization } = await requireAppContext()
   const fullName = String(formData.get('full_name') ?? '').trim()
@@ -18,24 +19,23 @@ export async function createCustomer(formData: FormData) {
   if (fullName.length < 3) return go('erro:nome_invalido')
   if (!isValidCpf(cpf)) return go('erro:cpf_invalido')
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return go('erro:email_invalido')
-
-  // The organization is explicit and validated by the database against an active membership.
   const zip = String(formData.get('zip') ?? '').trim()
   if (zip && !normalizeCep(zip)) return go('erro:cep_invalido')
-  const { error } = await supabase.rpc('create_customer_with_timeline', {
-    p_organization_id: organization.id, p_full_name: fullName, p_cpf: cpf, p_phone: phone, p_email: email, p_original_source: 'corban_os',
+
+  const { data, error } = await supabase.rpc('upsert_client', {
+    p_org: organization.id, p_cpf: cpf, p_full_name: fullName, p_phone: phone, p_email: email, p_source: 'manual',
   })
   if (error) return go(classifyDbFeedback(error))
+  const row = (Array.isArray(data) ? data[0] : data) as { client_id: string; created: boolean; visible: boolean } | null
+  if (!row) return go('erro:inesperado')
   revalidatePath('/app/clientes')
   revalidatePath('/app')
-  // The address is optional and secondary: the customer already exists, so a failure here never undoes it (the person is told and can save it from the customer page).
-  if (zip) {
-    const { data: created } = await supabase.from('clients').select('id').eq('cpf', cpf).is('deleted_at', null).maybeSingle()
-    if (!created) return go('ok:cliente_endereco_pendente')
-    const saved = await persistAddress(supabase, organization.id, created.id as string, formData)
-    if (saved) return go('ok:cliente_endereco_pendente')
-  }
-  return go('ok:cliente_cadastrado')
+  if (!row.visible) return go('ok:cliente_de_outro')
+
+  const detail = (code: FeedbackCode): never => redirect(feedbackUrl(`/app/clientes/${row.client_id}`, code))
+  // The address is optional and secondary: a failure never undoes the client (the person saves it from the client page).
+  if (zip && (await persistAddress(supabase, organization.id, row.client_id, formData))) return detail('ok:cliente_endereco_pendente')
+  return detail(row.created ? 'ok:cliente_cadastrado' : 'ok:cliente_reconhecido')
 }
 
 type Supa = Awaited<ReturnType<typeof requireAppContext>>['supabase']

@@ -184,3 +184,16 @@ test('platform module switch is gated, validated and audited', () => {
   assert.match(fn, /isPlanModule\(moduleKey\)/)
   assert.match(fn, /platform_admin_audit_events/)
 })
+test('client registration goes through the identity rule and never puts the CPF in a URL', () => {
+  const a = read('src/app/app/clientes/actions.ts')
+  assert.match(a, /rpc\('upsert_client'/)
+  assert.doesNotMatch(a, /from\('clients'\)\s*\.insert/)
+  assert.doesNotMatch(a, /feedbackUrl\([^)]*cpf/i)
+  assert.doesNotMatch(read('src/app/app/clientes/page.tsx'), /q=.*cpf|cpf.*searchParams/i)
+})
+test('CPF and phone formatting', async () => {
+  const { formatCpf, formatPhone } = await import('../../src/lib/cpf')
+  assert.equal(formatCpf('52998224725'), '529.982.247-25')
+  assert.equal(formatPhone('5568999000101'), '(68) 99900-0101')
+  assert.equal(formatPhone('6832240000'), '(68) 3224-0000')
+})

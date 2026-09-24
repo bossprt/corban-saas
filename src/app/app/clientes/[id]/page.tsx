@@ -1,29 +1,146 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { requireAppContext } from '@/lib/appContext'
+import { ArrowLeft, FilePlus2 } from 'lucide-react'
 import { AddressFields } from '@/components/AddressFields'
 import { SubmitButton } from '@/components/SubmitButton'
+import { Badge, ButtonLink, Card, CardHeader } from '@/components/ui'
+import { requireAppContext } from '@/lib/appContext'
+import { formatCpf, formatPhone } from '@/lib/cpf'
+import { proposalStatusLabel } from '@/lib/operational'
 import { saveCustomerAddress } from '../actions'
 
-function maskCpf(value:string|null){if(!value)return '—';const d=value.replace(/\D/g,'');return d.length===11?`***.${d.slice(3,6)}.${d.slice(6,9)}-**`:'***.***.***-**'}
-export default async function CustomerDetail({params}:{params:Promise<{id:string}>}){
- const {id}=await params
- const {supabase}=await requireAppContext()
- const [{data:customer},{data:proposals},{data:documents},{data:address}]=await Promise.all([
-  supabase.from('clients').select('id,full_name,cpf,phone,email,created_at').eq('id',id).is('deleted_at',null).maybeSingle(),
-  supabase.from('proposals_v2').select('id,status,requested_amount,created_at').eq('customer_id',id).order('created_at',{ascending:false}).limit(20),
-  supabase.from('customer_documents').select('id,status,created_at,document_type_id').eq('customer_id',id).order('created_at',{ascending:false}).limit(20),
-  supabase.from('customer_addresses').select('postal_code,street,number,complement,neighborhood,city,state').eq('customer_id',id).eq('is_primary',true).limit(1).maybeSingle(),
- ])
- if(!customer)notFound()
- return <section>
-  <div className="mb-6"><Link href="/app/clientes" className="text-sm text-slate-400 hover:text-white">← Clientes</Link><h1 className="mt-3 text-3xl font-semibold">{customer.full_name}</h1><p className="mt-2 text-sm text-slate-400">Customer 360 · CPF {maskCpf(customer.cpf)}</p></div>
-  <div className="grid gap-4 md:grid-cols-3"><div className="rounded-xl border border-slate-800 bg-slate-900 p-4"><div className="text-xs text-slate-500">Telefone</div><div className="mt-1">{customer.phone??'—'}</div></div><div className="rounded-xl border border-slate-800 bg-slate-900 p-4"><div className="text-xs text-slate-500">E-mail</div><div className="mt-1">{customer.email??'—'}</div></div><div className="rounded-xl border border-slate-800 bg-slate-900 p-4"><div className="text-xs text-slate-500">Desde</div><div className="mt-1">{new Date(customer.created_at).toLocaleDateString('pt-BR')}</div></div></div>
-  <form action={saveCustomerAddress} className="mt-6 grid gap-3 rounded-xl border border-slate-800 bg-slate-900 p-5 md:grid-cols-5"><input type="hidden" name="client_id" value={customer.id} />
-   <h2 className="font-semibold md:col-span-5">Endereço</h2>
-   <AddressFields initial={address?{zip:address.postal_code??'',street:address.street??'',number:address.number??'',complement:address.complement??'',district:address.neighborhood??'',city:address.city??'',state:address.state??''}:undefined} />
-   <SubmitButton className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 md:col-span-5 md:justify-self-end" pendingText="Salvando...">Salvar endereço</SubmitButton></form>
-  <div className="mt-6 grid gap-6 xl:grid-cols-2"><div className="rounded-xl border border-slate-800 bg-slate-900 p-5"><h2 className="font-semibold">Propostas</h2><div className="mt-3 space-y-2">{!proposals?.length?<p className="text-sm text-slate-500">Nenhuma proposta.</p>:proposals.map(p=><Link key={p.id} href={`/app/propostas/${p.id}`} className="flex justify-between rounded-lg border border-slate-800 p-3 text-sm hover:border-slate-700"><span>{p.id.slice(0,8)} · {p.status}</span><span>{p.requested_amount?Number(p.requested_amount).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}):'—'}</span></Link>)}</div></div>
-  <div className="rounded-xl border border-slate-800 bg-slate-900 p-5"><h2 className="font-semibold">Documentos</h2><p className="mt-2 text-xs text-slate-500">Arquivos físicos permanecem no cofre privado; aqui mostramos somente metadados autorizados.</p><div className="mt-3 space-y-2">{!documents?.length?<p className="text-sm text-slate-500">Nenhum documento.</p>:documents.map(d=><div key={d.id} className="rounded-lg border border-slate-800 p-3 text-sm"><span>{d.status}</span><span className="float-right text-slate-500">{new Date(d.created_at).toLocaleDateString('pt-BR')}</span></div>)}</div></div></div>
- </section>
+const brl = (v: unknown) => (v === null || v === undefined || v === '' ? '—' : Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }))
+const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('pt-BR') : '—')
+const SOURCE: Record<string, string> = { manual: 'cadastro manual', corban_os: 'cadastro manual', api: 'API', legado: 'legado' }
+const source = (s: string | null) => (s ? SOURCE[s] ?? (s.startsWith('lead:') ? `lead (${s.slice(5)})` : s) : '—')
+const EVENT: Record<string, string> = { 'customer.created': 'Cliente cadastrado', 'customer.recognized': 'CPF cadastrado de novo: contatos atualizados' }
+const LEAD_STATUS: Record<string, string> = { new: 'Novo', contacted: 'Em contato', qualified: 'Qualificado', converted: 'Convertido', lost: 'Perdido' }
+const DONE = ['paid', 'rejected', 'cancelled']
+
+// Client 360: identity, contact history, every contract the client ever had in the company, leads and timeline.
+export default async function CustomerDetail({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const { supabase } = await requireAppContext()
+  const [{ data: customer }, { data: contacts }, { data: proposals }, { data: leads }, { data: timeline }, { data: address }, { data: documents }] = await Promise.all([
+    supabase.from('clients').select('id,full_name,cpf,phone,email,birth_date,original_source,created_at').eq('id', id).is('deleted_at', null).maybeSingle(),
+    supabase.from('client_contacts').select('id,kind,value,is_primary,source,first_seen_at,last_seen_at').eq('customer_id', id).order('is_primary', { ascending: false }).order('last_seen_at', { ascending: false }),
+    supabase.from('proposals_v2').select('id,status,external_proposal_id,requested_amount,released_amount,installment_amount,term,created_at').eq('customer_id', id).order('created_at', { ascending: false }).limit(100),
+    supabase.from('leads').select('id,status,channel,created_at').eq('customer_id', id).order('created_at', { ascending: false }).limit(20),
+    supabase.from('customer_timeline_events').select('id,event_type,source,occurred_at').eq('customer_id', id).order('occurred_at', { ascending: false }).limit(20),
+    supabase.from('customer_addresses').select('postal_code,street,number,complement,neighborhood,city,state').eq('customer_id', id).eq('is_primary', true).limit(1).maybeSingle(),
+    supabase.from('customer_documents').select('id,status,created_at').eq('customer_id', id).order('created_at', { ascending: false }).limit(20),
+  ])
+  if (!customer) notFound()
+  const open = (proposals ?? []).filter(p => !DONE.includes(p.status))
+
+  return (
+    <section>
+      <Link href="/app/clientes" className="mb-3 inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink"><ArrowLeft size={15} aria-hidden />Clientes</Link>
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-[26px] font-semibold tracking-tight text-ink">{customer.full_name}</h1>
+          <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
+            <span className="font-mono text-ink-soft">CPF {formatCpf(customer.cpf)}</span>
+            <span>Cliente desde {day(customer.created_at)}</span>
+            <span>Origem: {source(customer.original_source)}</span>
+          </p>
+        </div>
+        <ButtonLink href="/app/simulacoes"><FilePlus2 size={16} aria-hidden />Nova proposta</ButtonLink>
+      </header>
+
+      <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
+        <div className="grid content-start gap-4">
+          <Card>
+            <CardHeader title="Contatos" />
+            <ul className="px-2 pb-2 pt-2">
+              {(contacts ?? []).length === 0 && <li className="px-3 pb-3 text-sm text-muted">Nenhum contato registrado.</li>}
+              {(contacts ?? []).map(c => (
+                <li key={c.id} className="flex items-center gap-3 border-t border-line px-3 py-2.5 first:border-t-0">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm text-ink">{c.kind === 'phone' ? formatPhone(c.value) : c.value}</span>
+                    <span className="block text-xs text-muted">{source(c.source)} · visto {day(c.last_seen_at)}{c.first_seen_at !== c.last_seen_at ? ` (desde ${day(c.first_seen_at)})` : ''}</span>
+                  </span>
+                  {c.is_primary && <Badge tone="brand">Principal</Badge>}
+                </li>
+              ))}
+            </ul>
+          </Card>
+
+          <Card>
+            <CardHeader title="Linha do tempo" />
+            <ul className="px-5 pb-5 pt-3 text-sm">
+              {(timeline ?? []).length === 0 && <li className="text-muted">Sem eventos.</li>}
+              {(timeline ?? []).map(e => (
+                <li key={e.id} className="flex gap-3 border-l-2 border-line py-1.5 pl-3">
+                  <span className="num w-20 shrink-0 text-xs text-muted">{day(e.occurred_at)}</span>
+                  <span className="text-ink-soft">{EVENT[e.event_type] ?? e.event_type}<span className="text-muted"> · {source(e.source)}</span></span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </div>
+
+        <div className="grid content-start gap-4">
+          <Card>
+            <CardHeader title={<span className="flex items-center gap-2">Contratos e propostas <Badge tone="neutral">{proposals?.length ?? 0}</Badge>{open.length > 0 && <Badge tone="paid-out">{open.length} em andamento</Badge>}</span>} />
+            <div className="overflow-x-auto px-2 pb-2 pt-2">
+              {(proposals ?? []).length === 0 ? (
+                <p className="px-3 pb-3 text-sm text-muted">Nenhum contrato com este cliente ainda.</p>
+              ) : (
+                <table className="w-full text-left text-sm">
+                  <thead className="text-xs text-muted"><tr><th className="px-3 py-2 font-medium">Data</th><th className="px-3 py-2 font-medium">ADE</th><th className="px-3 py-2 font-medium">Situação</th><th className="px-3 py-2 text-right font-medium">Valor</th><th className="px-3 py-2 text-right font-medium">Parcela</th></tr></thead>
+                  <tbody>
+                    {(proposals ?? []).map(p => (
+                      <tr key={p.id} className="border-t border-line hover:bg-surface-muted">
+                        <td className="num px-3 py-2 text-muted"><Link href={`/app/propostas/${p.id}`} className="hover:text-brand">{day(p.created_at)}</Link></td>
+                        <td className="px-3 py-2 font-mono text-[13px] text-ink-soft">{p.external_proposal_id ?? '—'}</td>
+                        <td className="px-3 py-2"><Badge tone={p.status === 'paid' ? 'received' : DONE.includes(p.status) ? 'neutral' : 'paid-out'}>{proposalStatusLabel(p.status).label}</Badge></td>
+                        <td className="num px-3 py-2 text-right text-ink">{brl(p.released_amount ?? p.requested_amount)}</td>
+                        <td className="num px-3 py-2 text-right text-ink-soft">{p.installment_amount ? `${brl(p.installment_amount)}${p.term ? ` × ${p.term}` : ''}` : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </Card>
+
+          {(leads ?? []).length > 0 && (
+            <Card>
+              <CardHeader title="Leads" />
+              <ul className="px-2 pb-2 pt-2">
+                {(leads ?? []).map(l => (
+                  <li key={l.id} className="flex items-center justify-between border-t border-line px-3 py-2.5 text-sm first:border-t-0">
+                    <span className="text-ink-soft">{l.channel} · {day(l.created_at)}</span>
+                    <Badge tone={l.status === 'converted' ? 'received' : l.status === 'lost' ? 'neutral' : 'paid-out'}>{LEAD_STATUS[l.status] ?? l.status}</Badge>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
+          <Card className="p-5">
+            <form action={saveCustomerAddress} className="grid gap-3 md:grid-cols-5">
+              <input type="hidden" name="client_id" value={customer.id} />
+              <h2 className="text-base font-semibold text-ink md:col-span-5">Endereço principal</h2>
+              <AddressFields initial={address ? { zip: address.postal_code ?? '', street: address.street ?? '', number: address.number ?? '', complement: address.complement ?? '', district: address.neighborhood ?? '', city: address.city ?? '', state: address.state ?? '' } : undefined} />
+              <div className="flex justify-end md:col-span-5">
+                <SubmitButton className="h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Salvando...">Salvar endereço</SubmitButton>
+              </div>
+            </form>
+          </Card>
+
+          <Card>
+            <CardHeader title="Documentos" />
+            <ul className="px-2 pb-2 pt-2 text-sm">
+              {(documents ?? []).length === 0 && <li className="px-3 pb-3 text-muted">Nenhum documento.</li>}
+              {(documents ?? []).map(d => (
+                <li key={d.id} className="flex justify-between border-t border-line px-3 py-2.5 first:border-t-0"><span className="text-ink-soft">{d.status}</span><span className="num text-muted">{day(d.created_at)}</span></li>
+              ))}
+            </ul>
+          </Card>
+        </div>
+      </div>
+    </section>
+  )
 }

@@ -15,3 +15,17 @@ export function maskCpf(value: string | null | undefined): string {
   const d = value.replace(/\D/g, '')
   return d.length === 11 ? `***.${d.slice(3, 6)}.${d.slice(6, 9)}-**` : '***.***.***-**'
 }
+
+// Full CPF for screens (owner decision: no masking). Never put it in a URL or a log line.
+export function formatCpf(value: string | null | undefined): string {
+  const d = String(value ?? '').replace(/\D/g, '')
+  return d.length === 11 ? `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}` : '—'
+}
+
+// Phones are stored as 55 + area code + number; shown as (68) 99900-0101.
+export function formatPhone(value: string | null | undefined): string {
+  const d = String(value ?? '').replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, '')
+  if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
+  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`
+  return value ? String(value) : '—'
+}

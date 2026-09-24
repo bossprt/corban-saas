@@ -85,3 +85,27 @@ test.describe('seller scope', () => {
     if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-vendedor-clientes.png`, fullPage: true })
   })
 })
+
+test('registering an existing CPF recognizes the client instead of duplicating', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  // A valid CPF unique to this run (check digits computed here).
+  const base = String(Date.now()).slice(-9)
+  const dv = (s: string, w: number) => { const r = s.split('').reduce((a, c, i) => a + Number(c) * (w - i), 0) % 11; return r < 2 ? 0 : 11 - r }
+  const d1 = dv(base, 10), cpf = base + d1 + dv(base + d1, 11)
+  await page.goto('/app/clientes?novo=1')
+  await page.getByLabel('Nome completo').fill('Cliente E2E Identidade')
+  await page.getByLabel('CPF').fill(cpf)
+  await page.getByLabel('Telefone').fill('(68) 99911-0001')
+  await page.getByRole('button', { name: 'Cadastrar cliente' }).click()
+  await expect(page.getByRole('heading', { name: 'Cliente E2E Identidade' })).toBeVisible()
+  await page.goto('/app/clientes?novo=1')
+  await page.getByLabel('Nome completo').fill('Nome Diferente')
+  await page.getByLabel('CPF').fill(cpf)
+  await page.getByLabel('Telefone').fill('(68) 98822-0002')
+  await page.getByRole('button', { name: 'Cadastrar cliente' }).click()
+  await expect(page.getByRole('heading', { name: 'Cliente E2E Identidade' })).toBeVisible()
+  await expect(page.getByText('Este CPF já era cliente da empresa')).toBeVisible()
+  await expect(page.getByText('(68) 98822-0002')).toBeVisible()
+  await expect(page.getByText('(68) 99911-0001')).toBeVisible()
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-cliente-ficha.png`, fullPage: true })
+})

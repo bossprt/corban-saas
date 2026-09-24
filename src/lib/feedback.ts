@@ -4,6 +4,8 @@
 export const FEEDBACK = {
   // success
   'ok:lead_registrado': 'Lead registrado.',
+  'ok:cliente_reconhecido': 'Este CPF já era cliente da empresa. Nada foi duplicado: os contatos novos entraram no histórico.',
+  'ok:cliente_de_outro': 'Este CPF já é cliente da empresa e está com outra pessoa da equipe. Os contatos novos foram registrados; fale com seu supervisor para assumir o atendimento.',
   'ok:lead_atualizado': 'Lead atualizado.',
   'ok:lead_convertido': 'Lead convertido em cliente. Você já pode fazer uma simulação.',
   'ok:cliente_cadastrado': 'Cliente cadastrado.',
@@ -126,6 +128,9 @@ export const feedbackUrl = (path: string, code: FeedbackCode) => `${path}?f=${en
 export function classifyDbFeedback(err: { message?: string; code?: string } | null | undefined): FeedbackCode {
   const m = String(err?.message ?? '')
   if (err?.code === '23505') return 'erro:cpf_duplicado'
+  if (/invalid_cpf/.test(m)) return 'erro:cpf_invalido'
+  if (/invalid_email/.test(m)) return 'erro:email_invalido'
+  if (/full_name_required/.test(m)) return 'erro:nome_invalido'
   if (err?.code === 'PGRST202' || err?.code === '42P01' || err?.code === 'PGRST205') return 'erro:indisponivel'
   if (err?.code === '42501' || /forbidden|not_authorized|permission denied/i.test(m)) return 'erro:sem_permissao'
   return 'erro:inesperado'
