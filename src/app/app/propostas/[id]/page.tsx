@@ -21,7 +21,7 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
 
   if (!proposal) notFound()
 
-  const [{ data: requirements }, { data: job }, { data: operationalCase }, { data: customerDocuments }, { data: externalIds }] = await Promise.all([
+  const [{ data: requirements }, { data: job }, { data: operationalCase }, { data: customerDocuments }, { data: externalIds }, { data: submission }] = await Promise.all([
     supabase.from('proposal_document_requirements')
       .select('id,document_type_id,label_snapshot,required_snapshot,status,exception_reason')
       .eq('proposal_id', id).order('created_at'),
@@ -35,6 +35,7 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
       .select('id,document_type_id,original_file_name,version,status')
       .eq('customer_id', proposal.customer_id).eq('status', 'active').order('created_at', { ascending: false }),
     supabase.from('proposal_external_identities').select('institution_key,external_proposal_number,source,first_seen_at').eq('proposal_id', id).order('first_seen_at'),
+    supabase.from('proposal_submissions').select('status,decision_reason').eq('proposal_id', id).maybeSingle(),
   ])
 
   const customer = (proposal.customer_snapshot ?? {}) as Record<string, unknown>
@@ -52,6 +53,13 @@ export default async function ProposalDetailPage({ params }: { params: Promise<{
       <div className="text-right"><span className="rounded-full bg-slate-800 px-3 py-1.5 text-sm">{proposalStatusLabel(proposal.status).label}</span><p className="mt-2 max-w-xs text-xs text-slate-400">{proposalStatusLabel(proposal.status).next}</p></div>
     </div>
 
+    {submission && submission.status !== 'validated' && (
+      <div className="mt-4 rounded-[14px] border border-line bg-surface px-5 py-3 text-sm text-ink">
+        {submission.status === 'pending'
+          ? <>Enviada pelo portal do corretor e <strong>aguardando validação</strong>: ainda não está na esteira e não tem comissão. <Link href="/app/propostas/validacao" className="text-brand underline">Validar ou recusar</Link></>
+          : <>Recusada na validação do portal: {submission.decision_reason}</>}
+      </div>
+    )}
     <PipelineCard supabase={supabase} access={access} proposalId={proposal.id} />
     <CommissionCard supabase={supabase} access={access} proposalId={proposal.id} closed={['paid', 'rejected', 'cancelled'].includes(proposal.status)} />
 

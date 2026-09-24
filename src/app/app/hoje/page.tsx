@@ -1,10 +1,12 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { ArrowRight, FilePlus2, UserPlus, UserRoundPlus } from 'lucide-react'
 import { requireAppContext } from '@/lib/appContext'
 import { loadAttention } from '@/lib/attention.server'
 import { isSeverity, SEVERITY_LABEL, SEVERITY_ORDER, type Severity } from '@/lib/attention-rules'
 import { proposalStatusLabel } from '@/lib/operational'
 import { atLeast } from '@/lib/rbac'
+import { isPortalUser } from '@/lib/portal'
 import { Badge, ButtonLink, Card, CardHeader, PageHeader, type Tone } from '@/components/ui'
 
 const SEVERITY_TONE: Record<Severity, Tone> = { critical: 'reversed', high: 'diverged', medium: 'paid-out', low: 'neutral' }
@@ -23,6 +25,7 @@ const ago = (iso: string) => {
 // the caller's own open leads and proposals, and the shortcuts to start work.
 export default async function TodayPage() {
   const ctx = await requireAppContext()
+  if (isPortalUser(ctx.access?.roleKey, ctx.modules)) redirect('/app/portal')
   const { supabase, user, membership } = ctx
 
   const [attention, leads, proposals, goals] = await Promise.all([

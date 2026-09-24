@@ -1,6 +1,8 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { requireAppContext } from '@/lib/appContext'
 import { actionItems } from '@/lib/action-center'
+import { isPortalUser } from '@/lib/portal'
 
 type Counted = { count: number | null; error: unknown }
 // A failed or unavailable query is shown as "indisponível", never as a misleading zero.
@@ -9,7 +11,8 @@ const num = (r: Counted) => (r.error ? 'indisponível' : String(r.count ?? 0))
 const isoAgo = (ms: number) => new Date(Date.now() - ms).toISOString()
 
 export default async function DashboardPage() {
-  const { supabase, organization, membership, user } = await requireAppContext()
+  const { supabase, organization, membership, user, access, modules } = await requireAppContext()
+  if (isPortalUser(access?.roleKey, modules)) redirect('/app/portal')
   // An operator sees THEIR own leads and proposals first; supervision roles see the whole organization.
   const mine = membership.role === 'agent'
   const own = <T,>(q: T): T => (mine ? (q as unknown as { eq: (c: string, v: string) => T }).eq('created_by', user.id) : q)

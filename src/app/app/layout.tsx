@@ -8,6 +8,7 @@ import { ROLE_LABEL } from '@/lib/team'
 import { FlashBanner } from '@/components/FlashBanner'
 import { BottomNav, SideNav, type NavItem } from '@/components/shell/NavLinks'
 import { CommandPalette } from '@/components/shell/CommandPalette'
+import { isPortalUser } from '@/lib/portal'
 import { signOut } from './actions'
 
 // `show` only decides what the menu offers; every page, action and RPC enforces the role again (a hidden link is not authorization).
@@ -26,9 +27,16 @@ const NAV: (NavItem & { show?: (role: string) => boolean; module?: string; perm?
   { key: 'configuracoes', href: '/app/configuracao', label: 'Configurações', show: canManageTeam },
 ]
 
+// Broker portal (F7): a member with the 'corretor' role gets only their own pages, mobile-first.
+const PORTAL_NAV: NavItem[] = [
+  { key: 'portal', href: '/app/portal', label: 'Início' },
+  { key: 'portal_nova', href: '/app/portal/nova', label: 'Nova proposta' },
+  { key: 'repasse', href: '/app/repasse', label: 'Extrato' },
+]
+
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { organization, membership, membershipCount, modules, access } = await requireAppContext()
-  const items: NavItem[] = NAV.filter(n => (!n.show || n.show(membership.role)) && (!n.module || modules.has(n.module)) && (!n.perm || can(access, n.perm))).map(({ key, href, label }) => ({ key, href, label }))
+  const items: NavItem[] = isPortalUser(access?.roleKey, modules) ? PORTAL_NAV : NAV.filter(n => (!n.show || n.show(membership.role)) && (!n.module || modules.has(n.module)) && (!n.perm || can(access, n.perm))).map(({ key, href, label }) => ({ key, href, label }))
   const initial = (organization.name ?? 'C').trim().charAt(0).toUpperCase()
 
   return (
@@ -43,7 +51,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
         <SideNav items={items} />
         <div className="mt-auto border-t border-line px-2 pt-3 text-xs text-muted">
-          <div>{ROLE_LABEL[membership.role] ?? membership.role}</div>
+          <div>{access?.roleName ?? ROLE_LABEL[membership.role] ?? membership.role}</div>
           {membershipCount > 1 && <Link href="/organizacao" className="underline hover:text-ink">Trocar empresa</Link>}
           <form action={signOut} className="mt-2">
             <button type="submit" className="flex items-center gap-2 rounded-lg py-1.5 text-sm text-ink-soft hover:text-ink">

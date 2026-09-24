@@ -170,6 +170,20 @@ export const FEEDBACK = {
   'erro:fator_arquivo': 'Envie um CSV ou XLSX válido de até 2 MB.',
   'erro:fator_colunas': 'Não foi possível identificar Prazo Inicial/Prazo Final/Fator ou há valores inválidos.',
   'erro:regra_comissao_invalida': 'Confira nome, vigência, imposto/desconto, escopo e regras dos grupos.',
+  'ok:portal_enviada': 'Proposta enviada. Ela aguarda a validação da empresa.',
+  'ok:portal_documento': 'Documento anexado à proposta.',
+  'ok:portal_validada': 'Proposta validada e colocada na esteira.',
+  'ok:portal_recusada': 'Proposta recusada. O corretor verá o motivo.',
+  'ok:portal_convite': 'Convite do portal enviado.',
+  'erro:portal_convite_email': 'Convite criado, mas o e-mail não saiu. Reenvie em Equipe, na lista de convites.',
+  'erro:portal_vendedor': 'Seu acesso não está ligado a um cadastro de vendedor ou corretor. Fale com a empresa.',
+  'erro:portal_ja_existe': 'Já existe uma proposta com este banco e ADE.',
+  'erro:portal_motivo': 'Para recusar, escreva o motivo (mínimo 3 letras).',
+  'erro:portal_decidida': 'Esta proposta já foi validada ou recusada.',
+  'erro:portal_quatro_olhos': 'Quem enviou a proposta não pode validá-la.',
+  'erro:portal_papel': 'O papel Corretor não existe ou está inativo. Confira em Configurações > Papéis.',
+  'erro:portal_acesso_existente': 'Este cadastro já tem acesso ao sistema.',
+  'erro:portal_documento': 'Não foi possível anexar o documento. Confira o arquivo e tente de novo.',
 } as const
 export type FeedbackCode = keyof typeof FEEDBACK
 export const isFeedbackCode = (v: unknown): v is FeedbackCode => typeof v === 'string' && Object.prototype.hasOwnProperty.call(FEEDBACK, v)

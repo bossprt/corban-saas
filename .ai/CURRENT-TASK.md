@@ -29,6 +29,13 @@
   - Resolvido (ADR-0031): cabeçalho do cálculo só com `financeiro.view`; coluna `expected_commission_amount` removida. Migration `20260924204503_commission_visibility_v1` (branch `fix/commission-visibility`), contrato 10/10, e2e 32/32 com login de vendedor. Aplicada em produção em 24/09/2026 (md5 conferido; 0 propostas e 0 simulações, nada a salvar).
   - Código legado: `INTEGRATION_WORKER_SECRET` e `CORBAN_ALLOW_LOCAL_PROVIDERS` ainda são checados em `src/lib/preflight.ts`, testes e `ENVIRONMENT-VARIABLES.md`, mas a rota do worker foi removida na F5.
 
+## F7 — portal do corretor (branch `feature/f7-portal-corretor`)
+- Decisões do dono (24/09/2026): F7 antes da F5.5/F6.5; CPF que já é cliente entra e a empresa decide de quem é a venda, o corretor nunca vê o cadastro; corretor anexa documentos; valida quem pode editar a esteira, recusa sempre com motivo; mesmo endereço com menu reduzido (ADR-0032).
+- Migration `20260925090000_broker_portal_v1`: `proposal_submissions`, `proposal_submission_documents`, `submit_broker_proposal`, `record_submission_document`, `decide_broker_proposal`, `broker_submission_queue`, `invite_seller_to_portal`, trava de comissão antes da validação, `can_see_client_row` sem propostas não validadas, políticas de Storage para `<org>/portal/<proposta>/`, convite com papel (`access_role_id`). **Não aplicada em produção.**
+- Telas: portal (Início com previsto e saldo, Nova proposta, detalhe com documentos e comissão própria); Esteira > Aguardando validação; aviso na proposta interna; Cadastros > Vendedores > Dar acesso ao portal; alerta na Hoje (`portal_submissions_pending`).
+- Local: usuário `corretor@corban-teste.local` (papel Corretor, vendedor "Corretor Teste"); Supabase local agora sobe com o Storage (antes estava excluído e nenhum upload funcionava no ambiente local).
+- Banco recriado do zero: 27/27 contratos (novo `broker-portal-contract.sql`, 23 checagens); unit 184/184; e2e 33/33 (novo teste do portal: enviar, anexar, validar, recusar com motivo); build OK.
+
 ## Testes antigos e paridade local ↔ produção (24/09/2026, branch `chore/legacy-tests-cleanup`)
 - Preflight sem as checagens do worker removido na F5; middleware não libera mais `/api/integrations/dispatch` sem sessão.
 - 17 contratos SQL da era ChatGPT apagados (testavam modelos removidos, fotos únicas de migrations antigas ou regra substituída).

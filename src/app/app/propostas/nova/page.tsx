@@ -5,6 +5,7 @@ import { Card, PageHeader } from '@/components/ui'
 import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
 import { formatCpf } from '@/lib/cpf'
+import { loadTableOptions } from '@/lib/proposals/table-options'
 import { createDirectProposal } from './actions'
 
 const label = 'text-[13px] font-medium text-ink-soft'
@@ -18,20 +19,11 @@ export default async function NewProposalPage({ searchParams }: { searchParams: 
     return <section><PageHeader title="Nova proposta" /><Card className="p-5 text-sm text-ink-soft">Seu papel não pode criar propostas.</Card></section>
   }
 
-  const [{ data: clients }, { data: versions }, { data: sellers }] = await Promise.all([
+  const [{ data: clients }, { data: sellers }, options] = await Promise.all([
     supabase.from('clients').select('id,full_name,cpf').is('deleted_at', null).order('full_name').limit(300),
-    supabase.from('product_table_versions').select('id,version,product_table_id').eq('status', 'published').limit(300),
     supabase.from('commercial_sellers').select('id,name').eq('is_active', true).order('name'),
+    loadTableOptions(supabase),
   ])
-  const tableIds = [...new Set((versions ?? []).map(v => v.product_table_id))]
-  const { data: tables } = tableIds.length ? await supabase.from('product_tables').select('id,name,code,route_id').in('id', tableIds) : { data: [] as { id: string; name: string; code: string; route_id: string }[] }
-  const routeIds = [...new Set((tables ?? []).map(t => t.route_id))]
-  const { data: routes } = routeIds.length ? await supabase.from('organization_product_routes').select('id,org_bank_id').in('id', routeIds) : { data: [] as { id: string; org_bank_id: string | null }[] }
-  const bankIds = [...new Set((routes ?? []).map(r => r.org_bank_id).filter(Boolean))] as string[]
-  const { data: banks } = bankIds.length ? await supabase.from('organization_banks').select('id,name').in('id', bankIds) : { data: [] as { id: string; name: string }[] }
-  const bankOfRoute = new Map((routes ?? []).map(r => [r.id, (banks ?? []).find(b => b.id === r.org_bank_id)?.name ?? '']))
-  const tableLabel = new Map((tables ?? []).map(t => [t.id, `${bankOfRoute.get(t.route_id) || 'Banco'} · ${t.name}`]))
-  const options = (versions ?? []).map(v => ({ id: v.id, label: `${tableLabel.get(v.product_table_id) ?? 'Tabela'} (v${v.version})` })).sort((a, b) => a.label.localeCompare(b.label))
 
   return (
     <section>

@@ -2,10 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BarChart3, Building2, CalendarCheck, HandCoins, KanbanSquare, LayoutDashboard, Settings, Target, Users, WalletCards, type LucideIcon } from 'lucide-react'
+import { BarChart3, Building2, CalendarCheck, FilePlus2, HandCoins, Home, KanbanSquare, LayoutDashboard, Settings, Target, Users, WalletCards, type LucideIcon } from 'lucide-react'
 import { cn } from '@/components/ui'
 
-export type NavKey = 'hoje' | 'dashboard' | 'clientes' | 'esteira' | 'metas' | 'financeiro' | 'repasse' | 'comercial' | 'relatorios' | 'configuracoes'
+export type NavKey = 'hoje' | 'dashboard' | 'clientes' | 'esteira' | 'metas' | 'financeiro' | 'repasse' | 'comercial' | 'relatorios' | 'configuracoes' | 'portal' | 'portal_nova'
 export type NavItem = { key: NavKey; href: string; label: string }
 
 const ICONS: Record<NavKey, LucideIcon> = {
@@ -19,6 +19,8 @@ const ICONS: Record<NavKey, LucideIcon> = {
   comercial: Building2,
   relatorios: BarChart3,
   configuracoes: Settings,
+  portal: Home,
+  portal_nova: FilePlus2,
 }
 
 // '/app' is the dashboard; every other item is active on its own prefix.
@@ -55,7 +57,7 @@ export function SideNav({ items }: { items: NavItem[] }) {
 // Phone navigation: the four most used destinations plus the rest behind the side menu.
 export function BottomNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname()
-  const main = items.filter(i => ['hoje', 'clientes', 'esteira', 'financeiro', 'dashboard'].includes(i.key)).slice(0, 4)
+  const main = items.filter(i => ['hoje', 'clientes', 'esteira', 'financeiro', 'dashboard', 'portal', 'portal_nova', 'repasse'].includes(i.key)).slice(0, 4)
   return (
     <nav aria-label="Navegação inferior" className="fixed inset-x-0 bottom-0 z-30 grid border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] md:hidden" style={{ gridTemplateColumns: `repeat(${main.length}, minmax(0, 1fr))` }}>
       {main.map(({ key, href, label }) => {

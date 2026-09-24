@@ -15,6 +15,17 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### F7 — Portal do corretor (24/09/2026)
+- Corretor com papel próprio envia propostas pelo portal (menu reduzido, pensado para celular); elas aguardam validação de outra pessoa antes de entrar na esteira e de ter comissão calculada.
+- Recusa sempre com motivo, visível ao corretor; documentos anexados ficam no bucket privado, só para o corretor e a empresa.
+- CPF que já é cliente: a proposta entra sem mostrar nem alterar o cadastro existente; a fila interna avisa "cliente já existe, carteira de X".
+- Convite de portal a partir do cadastro do vendedor, já com o papel Corretor; alerta de validação pendente na tela Hoje.
+
+### Visibilidade de comissão, limpeza de documentos e testes (24/09/2026)
+- Vendedor vê só a própria parte da comissão, só nas próprias propostas (ADR-0031); coluna antiga `expected_commission_amount` removida.
+- 65 documentos da era ChatGPT removidos (ADR-0030); deploy consolidado em `docs/DEPLOY.md`.
+- 17 contratos SQL antigos removidos; banco local com as mesmas permissões e dados de referência de produção; correção de permissão da tela Equipe (supervisor, filial, escopo, papel personalizado).
+
 ### F6 — Repasse e conta corrente (24/09/2026)
 - Conta corrente por pessoa com lançamentos imutáveis: comissão conciliada, estorno proporcional, vale/desconto parcelados, bônus, ajuste e pagamento.
 - Fechamento periódico com limite de 30% de desconto do saldo negativo, ou conta interna com saque; aprovação sempre por outra pessoa; pagamento marcado com comprovante.

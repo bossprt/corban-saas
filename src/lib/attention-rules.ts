@@ -21,6 +21,8 @@ export type AttentionData = {
   // Payout (payout_alerts; null without repasse access)
   payoutApprovals?: Signal | null     // manual entries, statements and withdrawals waiting for a second person
   payoutsUnpaid?: Signal | null       // approved statements and withdrawals not yet marked paid
+  // Broker portal (F7)
+  portalSubmissions?: Signal | null   // proposals sent through the portal waiting for validation
 }
 export type Candidate = { rule_key: string; dedupe_key: string; severity: Severity; title: string; reason: string; evidence: { count: number; oldest_at: string | null; sample_ids: string[] }; impact: string; recommendation: string; href: string }
 
@@ -65,6 +67,10 @@ const RULES: Rule[] = [
     severity: ageHours(s.oldest, now) > 72 ? 'high' : 'medium',
     title: `${s.count} repasse(s) aprovado(s) ainda não pago(s)`, reason: 'O extrato ou saque foi aprovado, mas o pagamento não foi registrado.',
     impact: 'A equipe espera o dinheiro que já foi aprovado.', recommendation: 'Pague e registre o comprovante no repasse.', href: '/app/repasse' }) },
+  { key: 'portalSubmissions', rule_key: 'portal_submissions_pending', allowed: r => atLeast(r, 'supervisor'), build: (s, now) => ({
+    severity: ageHours(s.oldest, now) > 24 ? 'high' : 'medium',
+    title: `${s.count} proposta(s) do portal do corretor aguardando validação`, reason: 'O corretor enviou a proposta e ela só entra na esteira depois que alguém da empresa valida.',
+    impact: 'Proposta parada na validação atrasa a digitação e desanima o parceiro.', recommendation: 'Abra a fila, confira os dados e os documentos, e valide ou recuse com o motivo.', href: '/app/propostas/validacao' }) },
   { key: 'draftProposals', rule_key: 'draft_proposals', allowed: r => atLeast(r, 'supervisor'), build: s => ({
     severity: s.count >= 10 ? 'medium' : 'low',
     title: `${s.count} proposta(s) em rascunho há mais de 3 dias`, reason: 'A proposta foi criada mas não foi enviada para a operação.',

@@ -10,7 +10,7 @@ const NOW = Date.parse('2026-09-20T12:00:00Z')
 const H = 3_600_000
 const sig = (count: number, hoursOld = 1, ids: string[] = ['a', 'b']): Signal => ({ count, ids, oldest: new Date(NOW - hoursOld * H).toISOString() })
 const none: AttentionData = { overdueCases: null, staleLeads: null, draftProposals: null }
-const zero: AttentionData = { overdueCases: sig(0), staleLeads: sig(0), draftProposals: sig(0), pendenciesDue: sig(0), paidWithoutReceipt: sig(0), divergenceOpen: sig(0), deferredMissing: sig(0), chargebacks: sig(0), payoutApprovals: sig(0), payoutsUnpaid: sig(0) }
+const zero: AttentionData = { overdueCases: sig(0), staleLeads: sig(0), draftProposals: sig(0), pendenciesDue: sig(0), paidWithoutReceipt: sig(0), divergenceOpen: sig(0), deferredMissing: sig(0), chargebacks: sig(0), payoutApprovals: sig(0), payoutsUnpaid: sig(0), portalSubmissions: sig(0) }
 
 test('rules: nothing detected = evaluated but empty (so cleared conditions can be auto-resolved)', () => {
   const r = evaluateRules('supervisor', zero, NOW)
@@ -87,4 +87,11 @@ test('rules: finance alerts are skipped without finance access and raised with i
   const item = r.candidates.find(c => c.rule_key === 'paid_without_receipt')
   assert.equal(item?.severity, 'high')
   assert.equal(item?.href, '/app/financeiro')
+})
+test('rules: portal proposals waiting for validation point to the queue; the older, the higher', () => {
+  const r = evaluateRules('supervisor', { ...zero, portalSubmissions: sig(3) }, NOW)
+  const item = r.candidates.find(c => c.rule_key === 'portal_submissions_pending')
+  assert.equal(item?.href, '/app/propostas/validacao')
+  assert.ok(!evaluateRules('agent', { ...zero, portalSubmissions: sig(3) }, NOW).evaluated.includes('portal_submissions_pending'))
+  assert.ok(!evaluateRules('supervisor', { ...zero, portalSubmissions: null }, NOW).evaluated.includes('portal_submissions_pending'))
 })

@@ -24,9 +24,11 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
   const { supabase, access } = await requireAppContext()
   const sp = await searchParams
 
-  const [{ data: stages }, { data: allCases }] = await Promise.all([
+  const [{ data: stages }, { data: allCases }, { count: portalPending }] = await Promise.all([
     supabase.from('operational_stages').select('id,code,name,canonical_state,sort_order').eq('is_active', true).order('sort_order'),
     supabase.from('operational_cases').select('id,proposal_id,current_stage_id,canonical_state,entered_stage_at,due_at,pendency_due_at,pendency_reason').order('entered_stage_at', { ascending: true }).limit(500),
+    // Portal proposals (F7) wait outside the pipeline until validated.
+    supabase.from('proposal_submissions').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
   ])
   const cases = (allCases ?? []) as CaseRow[]
   const kanban = sp.visao === 'kanban'
@@ -59,7 +61,10 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
       <PageHeader
         title="Esteira"
         description={`${openCount} propostas em andamento${alerts ? ` · ${alerts} com alerta` : ''}`}
-        actions={can(access, 'propostas.create') ? <ButtonLink href="/app/propostas/nova"><FilePlus2 size={16} aria-hidden />Nova proposta</ButtonLink> : null}
+        actions={<>
+          {can(access, 'esteira.edit') && (portalPending ?? 0) > 0 && <ButtonLink href="/app/propostas/validacao" variant="secondary">Aguardando validação <span className="num">{portalPending}</span></ButtonLink>}
+          {can(access, 'propostas.create') && <ButtonLink href="/app/propostas/nova"><FilePlus2 size={16} aria-hidden />Nova proposta</ButtonLink>}
+        </>}
       />
 
       <nav aria-label="Etapas" className="mb-4 flex gap-1 overflow-x-auto border-b border-line">

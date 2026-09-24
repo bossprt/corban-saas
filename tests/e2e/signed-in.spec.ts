@@ -356,3 +356,64 @@ test.describe('payout', () => {
     if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-repasse.png`, fullPage: true })
   })
 })
+
+// F7 broker portal: the broker sends proposals (one validated, one refused), attaches a document, and sees the outcome.
+test.describe('broker portal', () => {
+  const brokerEmail = process.env.E2E_BROKER_EMAIL
+  test.skip(!brokerEmail, 'E2E_BROKER_EMAIL is not set')
+  test('broker sends, the team validates or refuses with a reason, the broker sees it', async ({ page, browser }, info) => {
+    test.skip(info.project.name === 'mobile', 'one run is enough')
+    const base = String(Date.now()).slice(-9)
+    const dv = (s: string, w: number) => { const r = s.split('').reduce((a, c, i) => a + Number(c) * (w - i), 0) % 11; return r < 2 ? 0 : 11 - r }
+    const cpfOf = (b: string) => { const d1 = dv(b, 10); return b + d1 + dv(b + d1, 11) }
+    const okName = `Portal Validar ${base}`
+    const noName = `Portal Recusar ${base}`
+
+    const broker = await (await browser.newContext({ storageState: { cookies: [], origins: [] } })).newPage()
+    await broker.goto(new URL('/login', info.project.use.baseURL).toString())
+    await broker.locator('input[type="email"]').fill(brokerEmail!)
+    await broker.locator('input[type="password"]').fill(password!)
+    await broker.locator('button[type="submit"]').click()
+    await broker.waitForURL(/\/app\/portal/)
+    await expect(broker.getByRole('navigation', { name: 'Principal' }).getByText('Nova proposta')).toBeVisible()
+    await expect(broker.getByRole('navigation', { name: 'Principal' }).getByText('Esteira')).toHaveCount(0)
+
+    for (const [name, cpf] of [[okName, cpfOf(base)], [noName, cpfOf(String(Number(base) + 1).padStart(9, '0'))]]) {
+      await broker.getByRole('link', { name: 'Enviar nova proposta' }).click()
+      await broker.getByLabel('Nome completo').fill(name)
+      await broker.getByLabel('CPF').fill(cpf)
+      await broker.getByLabel('Telefone').fill('(68) 99955-0001')
+      await broker.getByLabel('Banco e tabela').selectOption({ label: 'Banco Teste · Tabela Teste INSS (v2)' })
+      await broker.getByLabel('Valor solicitado (R$)').fill('10.000,00')
+      await broker.getByLabel('Prazo (meses)').fill('120')
+      await broker.getByRole('button', { name: 'Enviar para validação' }).click()
+      await expect(broker.getByText('Proposta enviada. Ela aguarda a validação da empresa.')).toBeVisible()
+      await expect(broker.getByText('Aguardando validação').first()).toBeVisible()
+      if (name === okName) {
+        await broker.getByLabel('Documento').fill('RG')
+        await broker.getByLabel(/Arquivo/).setInputFiles({ name: 'rg.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n% e2e broker document\n%%EOF\n') })
+        await broker.getByRole('button', { name: 'Anexar' }).click()
+        await expect(broker.getByText('Documento anexado à proposta.')).toBeVisible({ timeout: 30_000 })
+        if (shots) await broker.screenshot({ path: `${shots}/${info.project.name}-portal-proposta.png`, fullPage: true })
+      }
+      await broker.getByRole('link', { name: 'Minhas propostas' }).click()
+    }
+
+    // The team (admin) validates one and refuses the other with a reason.
+    await page.goto('/app/propostas/validacao')
+    const okCard = page.locator('section').filter({ hasText: okName }).last()
+    await expect(okCard.getByRole('link', { name: 'RG' })).toBeVisible()
+    if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-portal-validacao.png`, fullPage: true })
+    await okCard.getByRole('button', { name: 'Validar' }).click()
+    await expect(page.getByText('Proposta validada e colocada na esteira.')).toBeVisible()
+    const noCard = page.locator('section').filter({ hasText: noName }).last()
+    await noCard.getByLabel('Motivo da recusa').fill('Documento ilegível, envie de novo')
+    await noCard.getByRole('button', { name: 'Recusar' }).click()
+    await expect(page.getByText('Proposta recusada. O corretor verá o motivo.')).toBeVisible()
+
+    await broker.goto(new URL('/app/portal', info.project.use.baseURL).toString())
+    await expect(broker.getByRole('link', { name: new RegExp(noName) })).toContainText('Motivo: Documento ilegível, envie de novo')
+    await expect(broker.getByRole('link', { name: new RegExp(okName) })).not.toContainText('Aguardando validação')
+    if (shots) await broker.screenshot({ path: `${shots}/${info.project.name}-portal-inicio.png`, fullPage: true })
+  })
+})

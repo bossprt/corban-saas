@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
 import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedback'
+import { sendInvitationEmail } from '@/lib/team.server'
 
 const PATH='/app/cadastros/vendedores'
 const text=(f:FormData,k:string)=>String(f.get(k)??'').trim()
@@ -50,4 +51,21 @@ export async function setSellerActive(f:FormData){
   if(!uuid(id))return go('erro:vendedor_invalido')
   const {error}=await ctx.supabase.from('commercial_sellers').update({is_active:active}).eq('id',id)
   return error?go(classifyDbFeedback(error)):go('ok:vendedor_atualizado')
+}
+
+// Portal access (F7): the database creates an invitation that carries the 'corretor' role and binds the seller on
+// acceptance; the e-mail goes out through Supabase Auth.
+export async function inviteSellerToPortal(f:FormData){
+  const ctx=await manager(); if(!ctx)return go('erro:sem_permissao')
+  const id=text(f,'id'),email=text(f,'email').toLowerCase()
+  if(!uuid(id)||!/^[^@\s]+@[^@\s]+$/.test(email))return go('erro:requisicao_invalida')
+  const {error}=await ctx.supabase.rpc('invite_seller_to_portal',{p_seller:id,p_email:email})
+  if(error){
+    const m=error.message??''
+    if(/portal_role_missing/.test(m))return go('erro:portal_papel')
+    if(/seller_already_has_access/.test(m))return go('erro:portal_acesso_existente')
+    return go(classifyDbFeedback(error))
+  }
+  const outcome=await sendInvitationEmail(email)
+  return go(outcome==='failed'?'erro:portal_convite_email':'ok:portal_convite')
 }
