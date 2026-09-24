@@ -1,4 +1,4 @@
--- Contract test for 20260924210000_commission_visibility_v1 (ADR-0031): a seller sees only their own share, and only on
+-- Contract test for 20260924204503_commission_visibility_v1 (ADR-0031): a seller sees only their own share, and only on
 -- their own proposals; the calculation header is finance-only; expected_commission_amount is gone.
 -- One transaction, rolled back.  psql -v ON_ERROR_STOP=1 -f tests/security/commission-visibility-contract.sql
 

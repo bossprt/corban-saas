@@ -26,7 +26,7 @@
 - Deploy consolidado em `docs/DEPLOY.md`.
 - Pendências herdadas dos documentos removidos:
   - Resolvido (ADR-0031): vendedor vê só a parte dele, só nas propostas dele.
-  - Resolvido (ADR-0031): cabeçalho do cálculo só com `financeiro.view`; coluna `expected_commission_amount` removida. Migration `20260924210000_commission_visibility_v1` (branch `fix/commission-visibility`), contrato 10/10, e2e 32/32 com login de vendedor. **Não aplicada em produção.**
+  - Resolvido (ADR-0031): cabeçalho do cálculo só com `financeiro.view`; coluna `expected_commission_amount` removida. Migration `20260924204503_commission_visibility_v1` (branch `fix/commission-visibility`), contrato 10/10, e2e 32/32 com login de vendedor. Aplicada em produção em 24/09/2026 (md5 conferido; 0 propostas e 0 simulações, nada a salvar).
   - Código legado: `INTEGRATION_WORKER_SECRET` e `CORBAN_ALLOW_LOCAL_PROVIDERS` ainda são checados em `src/lib/preflight.ts`, testes e `ENVIRONMENT-VARIABLES.md`, mas a rota do worker foi removida na F5.
 
 ## F6 — andamento (branch `feature/f6-repasse`)
