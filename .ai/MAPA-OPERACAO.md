@@ -22,6 +22,7 @@
 - Três portas com igual importância: cadastro manual, lead via API (DeskcommCRM ou qualquer outra fonte), proposta enviada pelo portal do corretor.
 - Cliente é único por CPF e telefone. Se chega de novo com dado diferente, o sistema guarda os dois: o novo vira principal, o antigo fica no histórico (vários telefones, endereços, contas).
 - Todo registro guarda sua origem.
+- Um cliente tem quantos contratos precisar (bancos, produtos e épocas diferentes, inclusive legados). Refinanciamento e portabilidade não são ligados ao contrato anterior: basta aparecerem no histórico do cliente. Buscar por CPF mostra todos os contratos que o cliente já teve na empresa.
 
 ## 3. Produtos e simulação
 
