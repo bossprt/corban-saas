@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react'
 import { applyLookup, EMPTY_ADDRESS, normalizeCep, type AddressFields as Fields, type AddressKey, type CepLookup } from '@/lib/cep'
 
-const field = 'rounded-lg border border-slate-700 bg-slate-950 p-2 text-sm'
+const field = 'field'
 const MSG: Record<string, string> = {
   found: 'Endereço encontrado. Confira e informe o número.',
   not_found: 'CEP não encontrado. Preencha o endereço à mão.',
@@ -12,7 +12,8 @@ const MSG: Record<string, string> = {
 }
 
 // Address block with CEP autofill. The lookup is a suggestion: it never blocks the form, never replaces what the person already typed, and number/complement stay manual.
-export function AddressFields({ initial }: { initial?: Partial<Fields> }) {
+// `prefix` names the inputs ("business_zip"...) so one form can carry two addresses; `legend` titles the block.
+export function AddressFields({ initial, prefix = '', legend = 'Endereço (opcional)' }: { initial?: Partial<Fields>; prefix?: string; legend?: string }) {
   const [v, setV] = useState<Fields>({ ...EMPTY_ADDRESS, ...initial })
   const [msg, setMsg] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -42,15 +43,15 @@ export function AddressFields({ initial }: { initial?: Partial<Fields> }) {
   }
 
   return <fieldset className="grid gap-2 md:col-span-5 md:grid-cols-6">
-    <legend className="mb-1 text-xs text-slate-400">Endereço (opcional)</legend>
-    <input name="zip" inputMode="numeric" autoComplete="postal-code" placeholder="CEP" value={v.zip} maxLength={9} className={field}
+    <legend className="mb-1 text-xs text-muted">{legend}</legend>
+    <input name={`${prefix}zip`} inputMode="numeric" autoComplete="postal-code" placeholder="CEP" value={v.zip} maxLength={9} className={field}
       onChange={e => { setV(p => ({ ...p, zip: e.target.value })); if (normalizeCep(e.target.value)) void lookup(e.target.value) }} onBlur={e => void lookup(e.target.value)} />
-    <input name="street" placeholder="Rua / logradouro" value={v.street} maxLength={160} className={`${field} md:col-span-3`} onChange={e => set('street', e.target.value)} />
-    <input name="number" placeholder="Número" value={v.number} maxLength={20} className={field} onChange={e => set('number', e.target.value)} />
-    <input name="complement" placeholder="Complemento" value={v.complement} maxLength={80} className={field} onChange={e => set('complement', e.target.value)} />
-    <input name="district" placeholder="Bairro" value={v.district} maxLength={120} className={`${field} md:col-span-2`} onChange={e => set('district', e.target.value)} />
-    <input name="city" placeholder="Cidade" value={v.city} maxLength={120} className={`${field} md:col-span-2`} onChange={e => set('city', e.target.value)} />
-    <input name="state" placeholder="UF" value={v.state} maxLength={2} className={field} onChange={e => set('state', e.target.value.toUpperCase())} />
-    <p aria-live="polite" className="text-xs text-slate-400 md:col-span-6">{busy ? 'Buscando CEP...' : msg ?? 'Digite o CEP para preencher rua, bairro, cidade e UF automaticamente.'}</p>
+    <input name={`${prefix}street`} placeholder="Rua / logradouro" value={v.street} maxLength={160} className={`${field} md:col-span-3`} onChange={e => set('street', e.target.value)} />
+    <input name={`${prefix}number`} placeholder="Número" value={v.number} maxLength={20} className={field} onChange={e => set('number', e.target.value)} />
+    <input name={`${prefix}complement`} placeholder="Complemento" value={v.complement} maxLength={80} className={field} onChange={e => set('complement', e.target.value)} />
+    <input name={`${prefix}district`} placeholder="Bairro" value={v.district} maxLength={120} className={`${field} md:col-span-2`} onChange={e => set('district', e.target.value)} />
+    <input name={`${prefix}city`} placeholder="Cidade" value={v.city} maxLength={120} className={`${field} md:col-span-2`} onChange={e => set('city', e.target.value)} />
+    <input name={`${prefix}state`} placeholder="UF" value={v.state} maxLength={2} className={field} onChange={e => set('state', e.target.value.toUpperCase())} />
+    <p aria-live="polite" className="text-xs text-muted md:col-span-6">{busy ? 'Buscando CEP...' : msg ?? 'Digite o CEP para preencher rua, bairro, cidade e UF automaticamente.'}</p>
   </fieldset>
 }

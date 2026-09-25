@@ -58,7 +58,7 @@ test('CEP route and forms: authenticated, key-less, fixed upstream host, timeout
   assert.ok(/ok:cliente_endereco_pendente/.test(act))
   assert.ok(!/formData\.get\('organization/.test(act)) // tenant never comes from the form
   const comp = read('src/components/AddressFields.tsx')
-  assert.ok(/name="number"/.test(comp) && !/required/.test(comp))
+  assert.ok(/name=\{`\$\{prefix\}number`\}/.test(comp) && !/required/.test(comp))
 })
 test('address is stored in the EXISTING customer_addresses table (composite tenant FK + member RLS already LIVE): no new table, no duplicate model', () => {
   const act = read('src/app/app/clientes/actions.ts')
