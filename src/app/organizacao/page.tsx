@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { acceptInvitationsFor } from '@/lib/team.server'
+import { AuthShell, authError } from '@/components/shell/AuthShell'
 import { selectOrganization } from './actions'
 
 const ROLE: Record<string, string> = { admin: 'Administrador', manager: 'Gerente', supervisor: 'Supervisor', agent: 'Operador' }
@@ -16,17 +17,20 @@ export default async function OrganizationPickerPage({ searchParams }: { searchP
   const { data: orgs } = await supabase.from('organizations').select('id, name').in('id', ids)
   const name = new Map((orgs ?? []).map(o => [o.id, o.name]))
   const sp = await searchParams
-  return <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-white">
-    <section className="w-full max-w-lg rounded-xl border border-slate-800 bg-slate-900 p-8">
-      <h1 className="text-xl font-semibold">Escolha a organização</h1>
-      <p className="mt-2 text-sm text-slate-400">Sua conta pertence a mais de uma organização. Os dados de cada uma ficam isolados; escolha em qual você vai trabalhar agora.</p>
-      {sp.erro && <p role="alert" className="mt-3 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">Organização inválida ou sem vínculo ativo.</p>}
+  return (
+    <AuthShell subtitle="Escolha a empresa">
+      <p className="text-sm text-ink-soft">Sua conta pertence a mais de uma empresa. Os dados de cada uma ficam separados; escolha em qual você vai trabalhar agora.</p>
+      {sp.erro && <p role="alert" className={`mt-3 ${authError}`}>Empresa inválida ou sem vínculo ativo.</p>}
       <div className="mt-5 space-y-2">
-        {memberships.map(m => <form key={m.organization_id} action={selectOrganization}>
-          <input type="hidden" name="organization_id" value={m.organization_id} />
-          <button className="flex w-full items-center justify-between rounded-lg border border-slate-700 px-4 py-3 text-left hover:border-emerald-400"><span>{name.get(m.organization_id) ?? 'Organização'}</span><span className="text-xs text-slate-400">{ROLE[m.role] ?? m.role}</span></button>
-        </form>)}
+        {memberships.map(m => (
+          <form key={m.organization_id} action={selectOrganization}>
+            <input type="hidden" name="organization_id" value={m.organization_id} />
+            <button className="flex w-full items-center justify-between rounded-[10px] border border-line bg-surface px-4 py-3 text-left text-sm text-ink hover:border-brand hover:bg-surface-muted">
+              <span className="font-medium">{name.get(m.organization_id) ?? 'Empresa'}</span><span className="text-xs text-muted">{ROLE[m.role] ?? m.role}</span>
+            </button>
+          </form>
+        ))}
       </div>
-    </section>
-  </main>
+    </AuthShell>
+  )
 }
