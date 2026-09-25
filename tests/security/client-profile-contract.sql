@@ -1,4 +1,4 @@
--- Contract test for 20260925120000_client_profile_v1 (ADR-0033): personal data and registrations only through RPCs that
+-- Contract test for 20260925025609_client_profile_v1 (ADR-0033): personal data and registrations only through RPCs that
 -- require clientes.edit and sight of the client; the registration password lives only in Vault, is never readable from
 -- the table, is shown only to who may edit the client, and every reveal is recorded.
 -- One transaction, rolled back.  psql -v ON_ERROR_STOP=1 -f tests/security/client-profile-contract.sql

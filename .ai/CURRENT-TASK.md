@@ -31,7 +31,7 @@
 
 ## Ficha completa do cliente (25/09/2026, branch `feature/f2b-ficha-cliente`)
 - Pedido do dono: dados pessoais completos, WhatsApp, dados bancários e várias matrículas por cliente (convênio, órgão em texto livre, margem atual, ID e senha). ADR-0033.
-- Migration `20260925120000_client_profile_v1`: colunas pessoais em `clients`, `client_registrations`, `sensitive_access_log`, RPCs `update_client_profile`, `add_client_bank_account`, `set_client_bank_account`, `save_client_registration`, `reveal_registration_password`; senha no Vault. **Não aplicada em produção.**
+- Migration `20260925025609_client_profile_v1`: colunas pessoais em `clients`, `client_registrations`, `sensitive_access_log`, RPCs `update_client_profile`, `add_client_bank_account`, `set_client_bank_account`, `save_client_registration`, `reveal_registration_password`; senha no Vault. Aplicada em produção em 25/09/2026 (versão 20260925025609, md5 conferido; permissões local = produção, 302).
 - Telas: ficha com Dados pessoais (idade), Matrículas (Mostrar senha por 30 s), Dados bancários, selo "Cadastro incompleto"; data de nascimento no novo cliente.
 - Banco recriado do zero: 28/28 contratos (novo `client-profile-contract.sql`, 23 checagens); unit 187/187; e2e 34/34; build OK.
 - Observação: datas padrão usam o dia UTC do servidor (à noite no Acre aparece o dia seguinte); fuso por empresa fica para depois.
