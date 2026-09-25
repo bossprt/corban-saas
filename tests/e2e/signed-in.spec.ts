@@ -573,3 +573,50 @@ test('single client form: complete registration at once; existing CPF fills only
   await expect(saved.getByLabel('Nome da mãe')).toHaveValue('Ana Mãe Única')
   await expect(saved.getByLabel('Nome do pai')).toHaveValue('Pai Preenchido Depois')
 })
+
+// Seller groups (owner decision 25/09/2026): the group is the payout rule, per commission type; edits are new versions;
+// own production has no payout column; a seller picks one group.
+test('seller group: payout rule per commission type, versioned, own production', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  const name = `Grupo E2E ${String(Date.now()).slice(-7)}`
+  await page.goto('/app/comercial/grupos/novo')
+  const form = page.locator('form').filter({ hasText: 'Repasse por tipo de comissão' })
+  await form.getByLabel('Nome do grupo').fill(name)
+  const row = (type: string) => form.locator('[data-row="component"]').filter({ has: page.getByText(type, { exact: true }) })
+  await row('Diferido').getByLabel('Quantos % serão distribuídos').fill('0')
+  await row('Bônus').getByLabel('Coluna de referência').selectOption('company')
+  await row('Bônus').getByLabel('Quantos % serão distribuídos').fill('65,5')
+  await form.locator('fieldset').filter({ hasText: 'Supervisor' }).last().getByLabel('Percentual (%)').fill('5')
+  const manager = form.locator('fieldset').filter({ hasText: 'Gerente comercial' }).last()
+  await manager.getByLabel('Sobre a produção total').check()
+  await manager.getByLabel('Percentual (%)').fill('1,5')
+  await form.getByRole('button', { name: 'Cadastrar grupo' }).click()
+  await expect(page.getByText('Grupo de vendedores salvo.')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByRole('heading', { name })).toBeVisible()
+  await expect(page.getByText('Regra configurada')).toBeVisible()
+  await expect(page.getByLabel('Nome do grupo')).toBeDisabled()
+  await expect(row('Bônus').getByLabel('Quantos % serão distribuídos')).toHaveValue('65,50')
+  await expect(row('Diferido').getByLabel('Quantos % serão distribuídos')).toHaveValue('0,00')
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-grupo-vendedores.png`, fullPage: true })
+
+  await page.getByRole('button', { name: 'Editar grupo' }).click()
+  await page.locator('fieldset').filter({ hasText: 'Gerente comercial' }).last().getByLabel('Percentual (%)').fill('2')
+  await page.getByRole('button', { name: 'Salvar grupo' }).click()
+  await expect(page.getByText('Versão 2 de 2')).toBeVisible({ timeout: 30_000 })
+
+  await page.getByRole('button', { name: 'Editar grupo' }).click()
+  await page.getByLabel('Quantos % serão distribuídos').first().fill('100,5')
+  await page.getByRole('button', { name: 'Salvar grupo' }).click()
+  await expect(page.getByText('Confira os percentuais')).toBeVisible({ timeout: 30_000 })
+
+  await page.goto('/app/comercial/grupos/novo')
+  await page.getByLabel('Nome do grupo').fill(`${name} Própria`)
+  await page.getByLabel(/Produção própria/).check()
+  await expect(page.locator('[data-row="component"]')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Cadastrar grupo' }).click()
+  await expect(page.getByText('Produção própria').first()).toBeVisible({ timeout: 30_000 })
+
+  await page.goto('/app/cadastros/vendedores')
+  await expect(page.getByLabel('Grupo').first().locator('option', { hasText: name }).first()).toHaveCount(1)
+  await expect(page.getByText('Grupo de Vendedor', { exact: true })).toHaveCount(0)
+})

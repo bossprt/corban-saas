@@ -117,12 +117,9 @@ where not exists (select 1 from public.commercial_condition_shares x where x.con
 update public.product_table_versions set status = 'published', published_at = now()
 where id = '00000000-0000-4000-8000-0000000c0302' and status = 'draft';
 
-insert into public.seller_groups (id, organization_id, tech_key, name, is_active)
-values ('00000000-0000-4000-8000-0000000c0701', '00000000-0000-4000-8000-00000000c0b1', 'equipe_teste', 'Equipe Teste', true)
-on conflict (id) do nothing;
-insert into public.commercial_sellers (id, organization_id, tech_key, name, seller_category, seller_group_id, commission_group_id, branch_id, user_id, is_active)
+insert into public.commercial_sellers (id, organization_id, tech_key, name, seller_category, commission_group_id, branch_id, user_id, is_active)
 select '00000000-0000-4000-8000-0000000c0801', '00000000-0000-4000-8000-00000000c0b1', 'vendedor_teste', 'Vendedor Teste', 'pf',
-       '00000000-0000-4000-8000-0000000c0701', '00000000-0000-4000-8000-0000000c0601',
+       '00000000-0000-4000-8000-0000000c0601',
        (select id from public.organization_branches where organization_id = '00000000-0000-4000-8000-00000000c0b1' and code = 'MTZ'),
        (select id from auth.users where email = 'vendedor@corban-teste.local'), true
 where not exists (select 1 from public.commercial_sellers where id = '00000000-0000-4000-8000-0000000c0801');

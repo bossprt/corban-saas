@@ -54,7 +54,7 @@ export function setupItems(i: SetupInput): SetupItem[] {
   return [
     { key: 'team', label: 'Equipe convidada', done: i.activeMembers >= 2, hint: 'Convide o supervisor e os operadores.', href: '/app/equipe' },
     { key: 'reference', label: 'Bancos e convênios cadastrados', done: i.referenceReady, hint: 'Cadastre seus bancos e habilite os convênios (governos, prefeituras ou próprios).', href: '/app/comercial' },
-    ...(i.commissionGroups === undefined ? [] : [{ key: 'groups', label: 'Grupos de comissão cadastrados', done: i.commissionGroups > 0, hint: 'Crie os grupos (corretor, parceiro, equipe...) que dividem a comissão.', href: '/app/comercial' }]),
+    ...(i.commissionGroups === undefined ? [] : [{ key: 'groups', label: 'Grupos de vendedores cadastrados', done: i.commissionGroups > 0, hint: 'Crie os grupos (corretor, parceiro, equipe...) que dividem a comissão.', href: '/app/comercial' }]),
     { key: 'routes', label: 'Tabela comercial criada', done: i.routes > 0, hint: 'Escolha banco e convênio e dê um nome à tabela.', href: '/app/comercial' },
     { key: 'table', label: 'Tabela com versão publicada', done: i.publishedVersions > 0, hint: 'Sem tabela publicada ninguém consegue simular.', href: '/app/comercial' },
     { key: 'checklist', label: 'Checklist de documentos publicado', done: i.publishedChecklists > 0, hint: 'Sem checklist publicado o operador não prepara documentos.', href: '/app/catalogo' },

@@ -65,15 +65,6 @@ export async function createAgreement(f: FormData) {
   return error ? go(comError(error), returnPath(f)) : go('ok:convenio_cadastrado', returnPath(f))
 }
 
-export async function createCommissionGroup(f: FormData) {
-  const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')
-  // "kind" is a technical classification, not a required business decision. The UI now only asks the user for the group name and calculation basis.
-  const name = text(f, 'name'), kind = text(f, 'kind') || 'other', basis = text(f, 'calculation_basis')
-  if (!isLabel(name, 80) || !['broker', 'partner', 'referrer', 'employee', 'sales_team', 'counter', 'supervisor', 'manager', 'other'].includes(kind) || !['percent_of_production', 'percent_of_received_commission'].includes(basis)) return go('erro:catalogo_invalido', returnPath(f))
-  const { error } = await ctx.supabase.from('commission_groups').insert({ organization_id: ctx.membership.organization_id, name, kind, calculation_basis: basis })
-  return error ? go(comError(error), returnPath(f)) : go('ok:grupo_cadastrado', returnPath(f))
-}
-
 // Deactivate / reactivate. Nothing is ever deleted: history keeps pointing at the row.
 export async function setActive(f: FormData) {
   const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')

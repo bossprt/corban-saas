@@ -14,13 +14,13 @@ export default async function RegistrationsHubPage() {
       ['Convênios', 'Convênios nacionais habilitados e convênios próprios.', '/app/comercial/convenios'],
       ['Produtos / Tabelas', 'Tabelas comerciais, versões, condições e importação.', '/app/comercial/tabelas'],
       ['Tipos de Contrato', 'Novo, Refinanciamento, Portabilidade, Refin/Portabilidade e tipos próprios.', '/app/comercial/tipos-contrato'],
-      ['Empresas de origem de terceiros', 'Masters, promotoras, correspondentes e parceiros externos.', '/app/comercial/origens'],
-      ['Grupos de comissão', 'Regras de remuneração por canal/grupo.', '/app/comercial/grupos'],
+      ['Promotoras parceiras', 'Masters, promotoras e correspondentes parceiros por onde a empresa também digita.', '/app/comercial/origens'],
+      ['Grupos de vendedores', 'Corretor, Parceiro, Balcão...: a regra de repasse de cada tipo de vendedor.', '/app/comercial/grupos'],
       ['Fatores', 'Fatores diários e fixos usados no CRM e nas simulações.', '/app/comercial/fatores'],
       ['Modelo comercial', 'Resumo da configuração comercial da organização.', '/app/comercial'],
     ]],
     ['Rede e acesso', [
-      ['Vendedores', 'Grupo de Vendedor, Grupo de Comissão e categoria PF/PJ/SUB.', '/app/cadastros/vendedores'],
+      ['Vendedores', 'Cada vendedor, o grupo dele e a categoria PF/PJ/SUB.', '/app/cadastros/vendedores'],
       ...(manageTeam ? [['Equipe e acessos', 'Usuários, papéis e ciclo de acesso.', '/app/equipe']] : []),
     ]],
   ] as const
