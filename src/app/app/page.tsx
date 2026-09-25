@@ -40,11 +40,11 @@ export default async function DashboardPage() {
   })
   const card = 'rounded-2xl border border-slate-800 bg-slate-900 p-5 hover:border-slate-700'
   return <section>
-    <div className="mb-8"><p className="text-sm text-emerald-400">Piloto</p><h1 className="mt-1 text-3xl font-semibold">Visão geral</h1><p className="mt-2 text-slate-400">{organization?.name}</p></div>
+    <div className="mb-8"><h1 className="text-3xl font-semibold">Visão geral</h1><p className="mt-2 text-slate-400">{organization?.name}</p></div>
     <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900 p-5"><h2 className="font-semibold">Precisa da sua atenção</h2>
       {attention.length === 0 ? <p className="mt-2 text-sm text-slate-400">Nada pendente agora.</p> : <ul className="mt-3 space-y-2">{attention.map(a => <li key={a.key}><Link href={a.href} className="flex items-baseline justify-between gap-3 rounded-lg border border-slate-800 px-3 py-2 text-sm hover:border-slate-600"><span><span className="text-slate-100">{a.label}</span><span className="block text-xs text-slate-500">{a.hint}</span></span><strong className="text-lg text-amber-300">{a.count}</strong></Link></li>)}</ul>}
     </div>
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">{cards.map(([label, value, href, hint]) => <Link href={href} key={label} className={card}><div className="text-sm text-slate-400">{label}</div><div className={`mt-3 font-semibold ${value === 'indisponível' ? 'text-base text-amber-300' : 'text-3xl'}`}>{value}</div>{hint && <div className="mt-1 text-xs text-slate-500">{hint}</div>}</Link>)}</div>
-    <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-6"><h2 className="font-semibold">Fluxo operacional</h2><p className="mt-2 text-sm leading-6 text-slate-400">Lead → Cliente → Simulação → Proposta → Documentos → Operação. Os números desta tela vêm direto da sua organização e respeitam o seu perfil de acesso.</p></div>
+    <p className="mt-6 text-xs text-slate-500">Os números desta tela vêm direto da sua empresa e respeitam o seu perfil de acesso.</p>
   </section>
 }
