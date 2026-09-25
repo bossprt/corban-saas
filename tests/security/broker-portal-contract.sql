@@ -116,8 +116,8 @@ reset role;
 
 -- Portal invitation: a seller without login is invited; on acceptance the membership has the 'corretor' role.
 insert into auth.users (id, email) values ('00000000-0000-4000-8000-0000000c0f01', 'novo-corretor@corban-teste.local');
-insert into public.commercial_sellers (id, organization_id, name, seller_category, seller_group_id, commission_group_id, is_active)
-select '00000000-0000-4000-8000-0000000c0803', organization_id, 'Corretor Convidado', 'pj', seller_group_id, commission_group_id, true
+insert into public.commercial_sellers (id, organization_id, name, seller_category, commission_group_id, is_active)
+select '00000000-0000-4000-8000-0000000c0803', organization_id, 'Corretor Convidado', 'pj', commission_group_id, true
 from public.commercial_sellers where id = '00000000-0000-4000-8000-0000000c0801';
 select pg_temp.act_as((select admin_user from ids));
 set local role authenticated;

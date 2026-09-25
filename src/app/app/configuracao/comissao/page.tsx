@@ -6,7 +6,7 @@ import { saveRule, setTaxExempt } from './actions'
 
 type Rule = { id: string; scope_kind: string; scope_id: string | null; effective_from: string; mode: string | null; tax_rate_pct: string | null; profit_pct: string | null; manager_pct: string | null; supervisor_pct: string | null; originator_pct: string | null; pay_deferred: boolean | null; note: string | null }
 
-const SCOPE_LABEL: Record<string, string> = { global: 'Empresa (padrão)', bank: 'Banco', table: 'Tabela', group: 'Grupo de comissão', seller: 'Vendedor' }
+const SCOPE_LABEL: Record<string, string> = { global: 'Empresa (padrão)', bank: 'Banco', table: 'Tabela', group: 'Grupo de vendedores', seller: 'Vendedor' }
 const MODE_LABEL: Record<string, string> = { cascade: 'Cascata', group_table: 'Tabela por grupo' }
 // '6.0000' -> '6', '6.5000' -> '6,5' (decimal strings from the database, never floats).
 const trim = (v: string | null | undefined) => (v === null || v === undefined ? '' : (String(v).includes('.') ? String(v).replace(/0+$/, '').replace(/\.$/, '') : String(v)).replace('.', ','))
@@ -97,7 +97,7 @@ export default async function CommissionSettingsPage() {
                 <option value="" disabled>Escolha banco, tabela, grupo ou vendedor</option>
                 <optgroup label="Banco">{(banks ?? []).map(b => <option key={b.id} value={`bank:${b.id}`}>{b.name}</option>)}</optgroup>
                 <optgroup label="Tabela">{(tables ?? []).map(t => <option key={t.id} value={`table:${t.id}`}>{t.name}</option>)}</optgroup>
-                <optgroup label="Grupo de comissão">{(groups ?? []).map(g => <option key={g.id} value={`group:${g.id}`}>{g.name}</option>)}</optgroup>
+                <optgroup label="Grupo de vendedores">{(groups ?? []).map(g => <option key={g.id} value={`group:${g.id}`}>{g.name}</option>)}</optgroup>
                 <optgroup label="Vendedor">{(sellers ?? []).map(x => <option key={x.id} value={`seller:${x.id}`}>{x.name}</option>)}</optgroup>
               </select>
             </label>

@@ -62,7 +62,7 @@ export default async function CommercialPage() {
         <div className="mt-4 flex gap-2"><Link href="/app/comercial/instituicoes" className={btn}>Gerenciar</Link></div>
       </div>
       <div className={card}>
-        <div className="flex items-start justify-between gap-3"><div><strong>Empresas de origem de terceiros</strong><p className="mt-1 text-xs text-slate-500">Usadas somente quando a tabela/produção vem de uma empresa externa.</p></div><span className="rounded-full border border-slate-700 px-2 py-1 text-xs text-slate-300">{(providers.data ?? []).filter(p => p.is_active).length} ativas</span></div>
+        <div className="flex items-start justify-between gap-3"><div><strong>Promotoras parceiras</strong><p className="mt-1 text-xs text-slate-500">Usadas somente quando a tabela/produção vem de uma empresa externa.</p></div><span className="rounded-full border border-slate-700 px-2 py-1 text-xs text-slate-300">{(providers.data ?? []).filter(p => p.is_active).length} ativas</span></div>
         <div className="mt-4 flex gap-2"><Link href="/app/comercial/origens" className={ghost}>Gerenciar</Link></div>
       </div>
     </div>
