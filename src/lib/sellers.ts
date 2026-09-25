@@ -18,6 +18,13 @@ export function payToText(a: PayTarget): string {
   return a.holder_name ? `${main} · favorecido: ${a.holder_name} (${formatTaxId(a.holder_document)})` : main
 }
 
+// Where the seller came from: registered in Corban or imported from another system (only the origin is kept).
+export function originText(origin: string | null | undefined, importedAt: string | null | undefined): string | null {
+  if (!origin || origin === 'manual') return null
+  const system = origin === 'import:2tech' ? '2tech' : origin.replace(/^import:/, '')
+  return `Importado da ${system}${importedAt ? ` em ${new Date(importedAt).toLocaleDateString('pt-BR')}` : ''}`
+}
+
 export const sellerCode = (n: number | null | undefined) => (n ? String(n).padStart(3, '0') : '—')
 
 export function isValidCnpj(value: string): boolean {

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { formatTaxId, isValidCnpj, isValidTaxId, payToText, sellerCode } from '../../src/lib/sellers'
+import { formatTaxId, isValidCnpj, isValidTaxId, originText, payToText, sellerCode } from '../../src/lib/sellers'
 
 test('sellers: CNPJ check digits, same rule as the database', () => {
   assert.equal(isValidCnpj('11.222.333/0001-81'), true)
@@ -31,4 +31,10 @@ test('sellers: the primary account as one line for whoever pays', () => {
   assert.equal(payToText({ ...none, transfer_method: 'pix', pix_key_type: 'email', pix_key: 'x@y.co' }), 'PIX (E-mail): x@y.co')
   assert.equal(payToText({ ...none, transfer_method: 'ted', bank_code: '104', bank_name: 'Caixa', branch: '0001', account_number: '445566', account_digit: 'X',
     holder_name: 'Empresa Ltda', holder_document: '11222333000181' }), 'TED 104 Caixa · ag. 0001 · 445566-X · favorecido: Empresa Ltda (11.222.333/0001-81)')
+})
+
+test('sellers: the origin says only where an imported seller came from', () => {
+  assert.equal(originText('manual', null), null)
+  assert.equal(originText('import:2tech', null), 'Importado da 2tech')
+  assert.match(originText('import:2tech', '2026-09-25T22:59:17Z') ?? '', /^Importado da 2tech em \d{2}\/\d{2}\/2026$/)
 })

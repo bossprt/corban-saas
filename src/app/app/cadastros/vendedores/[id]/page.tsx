@@ -6,7 +6,7 @@ import { SubmitButton } from '@/components/SubmitButton'
 import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
-import { CATEGORY_LABEL, sellerCode } from '@/lib/sellers'
+import { CATEGORY_LABEL, originText, sellerCode } from '@/lib/sellers'
 import { isUuid } from '@/lib/team'
 import { inviteSellerToPortal, saveSeller, setSellerActive } from '../actions'
 import { SellerForm, type SellerValues } from '../SellerForm'
@@ -27,7 +27,7 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
   const [{ data: groups }, { data: branches }, seller, profile, accounts, contacts] = await Promise.all([
     supabase.from('commission_groups').select('id,name,is_active').order('sort_order').order('name'),
     supabase.from('organization_branches').select('id,name,is_active').eq('is_active', true).order('name'),
-    isNew ? Promise.resolve({ data: null }) : supabase.from('commercial_sellers').select('id,code,name,tax_id,seller_category,commission_group_id,branch_id,is_active,user_id').eq('id', id).maybeSingle(),
+    isNew ? Promise.resolve({ data: null }) : supabase.from('commercial_sellers').select('id,code,name,tax_id,seller_category,commission_group_id,branch_id,is_active,user_id,origin,imported_at').eq('id', id).maybeSingle(),
     isNew ? Promise.resolve({ data: null }) : supabase.from('seller_profiles').select('*').eq('seller_id', id).maybeSingle(),
     isNew || !canSeeBank ? Promise.resolve({ data: [] }) : supabase.from('seller_bank_accounts')
       .select('id,transfer_method,account_type,bank_code,bank_name,branch,account_number,account_digit,pix_key_type,pix_key,holder_name,holder_document,note,is_primary')
@@ -60,6 +60,7 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
             <span>{CATEGORY_LABEL[s.seller_category] ?? s.seller_category}</span>
             <Badge tone={s.is_active ? 'received' : 'neutral'}>{s.is_active ? 'Ativo' : 'Inativo'}</Badge>
             {s.user_id && <Badge tone="brand">Com acesso ao portal</Badge>}
+            {originText(s.origin, s.imported_at) && <span className="text-xs">{originText(s.origin, s.imported_at)}</span>}
             {missing.length > 0 && <><Badge tone="pending">Cadastro incompleto</Badge><span className="text-xs">Falta: {missing.join(', ')}.</span></>}
           </span>
         ) : 'O código do vendedor é gerado automaticamente ao cadastrar.'}

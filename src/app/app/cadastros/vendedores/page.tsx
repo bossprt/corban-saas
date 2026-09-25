@@ -4,7 +4,7 @@ import { Badge, ButtonLink, Card, CardHeader, PageHeader } from '@/components/ui
 import { requireAppContext } from '@/lib/appContext'
 import { formatPhone } from '@/lib/cpf'
 import { atLeast } from '@/lib/rbac'
-import { CATEGORY_LABEL, sellerCode } from '@/lib/sellers'
+import { CATEGORY_LABEL, originText, sellerCode } from '@/lib/sellers'
 
 // Sellers: each one belongs to one seller group and is paid by that group's rule. The row opens the seller file.
 export default async function SellersPage() {
@@ -13,7 +13,7 @@ export default async function SellersPage() {
   const canEdit = atLeast(membership.role, 'manager')
   const [groups, sellers, profiles] = await Promise.all([
     supabase.from('commission_groups').select('id,name'),
-    supabase.from('commercial_sellers').select('id,code,name,seller_category,commission_group_id,is_active,user_id').order('code'),
+    supabase.from('commercial_sellers').select('id,code,name,seller_category,commission_group_id,is_active,user_id,origin').order('code'),
     supabase.from('seller_profiles').select('seller_id,phone,email'),
   ])
   const groupName = new Map((groups.data ?? []).map(x => [x.id, x.name]))
@@ -42,6 +42,7 @@ export default async function SellersPage() {
                     <span className="block text-[13px] text-ink-soft">{CATEGORY_LABEL[s.seller_category] ?? s.seller_category} · Grupo: {groupName.get(s.commission_group_id) ?? '—'}{p?.phone ? ` · ${formatPhone(p.phone)}` : ''}</span>
                   </span>
                   <span className="flex items-center gap-2">
+                    {originText(s.origin, null) && <Badge tone="neutral">{originText(s.origin, null)}</Badge>}
                     {incomplete && <Badge tone="pending">Cadastro incompleto</Badge>}
                     {s.user_id && <Badge tone="brand">Com acesso</Badge>}
                     <Badge tone={s.is_active ? 'received' : 'neutral'}>{s.is_active ? 'Ativo' : 'Inativo'}</Badge>
