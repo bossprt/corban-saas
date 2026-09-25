@@ -1,19 +1,13 @@
 import Link from 'next/link'
 import { Search, UserRoundPlus } from 'lucide-react'
-import { AddressFields } from '@/components/AddressFields'
-import { SubmitButton } from '@/components/SubmitButton'
 import { Card, PageHeader } from '@/components/ui'
 import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
 import { formatCpf, formatPhone } from '@/lib/cpf'
 import { digitsOnly, searchTerm } from '@/lib/search'
-import { GENDER_LABEL, MARITAL_LABEL, UFS } from '@/lib/clients/profile'
 import { createCustomer } from './actions'
-import { BankAccountRows, RegistrationRows } from './RepeatableBlocks'
+import { ClientForm } from './ClientForm'
 
-const lbl = 'text-[13px] font-medium text-ink-soft'
-const legend = 'mb-2 text-sm font-semibold text-ink'
-const optional = 'ml-1 text-xs font-normal text-muted'
 const SOURCE_LABEL: Record<string, string> = { manual: 'Cadastro manual', corban_os: 'Cadastro manual', api: 'API', legado: 'Legado' }
 const sourceLabel = (s: string | null) => (s ? SOURCE_LABEL[s] ?? (s.startsWith('lead:') ? `Lead (${s.slice(5)})` : s) : '—')
 
@@ -46,45 +40,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
       {canCreate && sp.novo && (
         <Card className="mb-6 p-5">
           <h2 className="mb-4 text-base font-semibold text-ink">Novo cliente</h2>
-          <form action={createCustomer} className="grid gap-5">
-            <fieldset className="grid gap-3 md:grid-cols-4">
-              <legend className={legend}>1. Identificação</legend>
-              <label className={`${lbl} md:col-span-2`}>Nome completo<input required minLength={3} name="full_name" className="field mt-1.5" autoComplete="off" /></label>
-              <label className={lbl}>CPF<input required name="cpf" inputMode="numeric" placeholder="000.000.000-00" className="field mt-1.5 font-mono" autoComplete="off" /></label>
-              <label className={lbl}>Telefone<input name="phone" inputMode="tel" placeholder="(68) 99900-0000" className="field mt-1.5" autoComplete="off" /></label>
-              <label className={lbl}>WhatsApp<input name="whatsapp" inputMode="tel" placeholder="(68) 99900-0000" className="field mt-1.5" autoComplete="off" /></label>
-              <label className="flex items-end gap-2 pb-2.5 text-sm text-ink"><input type="checkbox" name="whatsapp_same" className="accent-[var(--brand)]" />Usar o mesmo número no WhatsApp</label>
-              <label className={lbl}>E-mail<input name="email" type="email" className="field mt-1.5" autoComplete="off" /></label>
-              <label className={lbl}>Data de nascimento<input name="birth_date" type="date" className="field mt-1.5" /></label>
-            </fieldset>
-            <fieldset>
-              <legend className={legend}>2. Endereço <span className={optional}>opcional</span></legend>
-              <div className="grid gap-3 md:grid-cols-5"><AddressFields /></div>
-            </fieldset>
-            {canEdit && (
-              <>
-                <fieldset className="grid gap-3 md:grid-cols-4">
-                  <legend className={legend}>3. Dados pessoais <span className={optional}>opcional</span></legend>
-                  <label className={`${lbl} md:col-span-2`}>Nome da mãe<input name="mother_name" maxLength={160} className="field mt-1.5" /></label>
-                  <label className={`${lbl} md:col-span-2`}>Nome do pai<input name="father_name" maxLength={160} className="field mt-1.5" /></label>
-                  <label className={lbl}>RG<input name="rg_number" maxLength={20} className="field mt-1.5 font-mono" /></label>
-                  <label className={lbl}>Órgão expedidor<input name="rg_issuer" maxLength={20} placeholder="SSP" className="field mt-1.5" /></label>
-                  <label className={lbl}>UF do RG<select name="rg_state" defaultValue="" className="field mt-1.5"><option value="">—</option>{UFS.map(u => <option key={u}>{u}</option>)}</select></label>
-                  <label className={lbl}>Data de emissão<input name="rg_issued_on" type="date" className="field mt-1.5" /></label>
-                  <label className={lbl}>Sexo<select name="gender" defaultValue="" className="field mt-1.5"><option value="">—</option>{Object.entries(GENDER_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
-                  <label className={lbl}>Estado civil<select name="marital_status" defaultValue="" className="field mt-1.5"><option value="">—</option>{Object.entries(MARITAL_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
-                  <label className={lbl}>Naturalidade (cidade)<input name="birthplace_city" maxLength={120} className="field mt-1.5" /></label>
-                  <label className={lbl}>UF de nascimento<select name="birthplace_state" defaultValue="" className="field mt-1.5"><option value="">—</option>{UFS.map(u => <option key={u}>{u}</option>)}</select></label>
-                </fieldset>
-                <BankAccountRows />
-                <RegistrationRows agreements={agreements ?? []} />
-              </>
-            )}
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs text-muted">Só nome, CPF e telefone são obrigatórios. CPF que já é cliente: os dados vazios são completados, nada é apagado.</p>
-              <SubmitButton className="h-10 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Salvando...">Cadastrar cliente</SubmitButton>
-            </div>
-          </form>
+          <ClientForm mode="create" action={createCustomer} agreements={agreements ?? []} canEdit={canEdit} />
         </Card>
       )}
 

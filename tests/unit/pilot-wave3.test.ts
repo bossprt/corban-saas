@@ -147,7 +147,7 @@ test('the simulation page guides an empty organization and never shows a table U
   assert.doesNotMatch(s, /product_table_id\.slice/)
 })
 test('submit buttons disable themselves while pending on the main forms', () => {
-  for (const f of ['src/app/app/leads/page.tsx', 'src/app/app/clientes/page.tsx', 'src/app/app/simulacoes/page.tsx', 'src/app/app/documentos/page.tsx']) assert.match(read(f), /<SubmitButton/, f)
+  for (const f of ['src/app/app/leads/page.tsx', 'src/app/app/clientes/ClientForm.tsx', 'src/app/app/simulacoes/page.tsx', 'src/app/app/documentos/page.tsx']) assert.match(read(f), /<SubmitButton/, f)
   assert.match(read('src/components/SubmitButton.tsx'), /useFormStatus/)
 })
 

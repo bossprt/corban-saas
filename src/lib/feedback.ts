@@ -171,6 +171,8 @@ export const FEEDBACK = {
   'erro:fator_colunas': 'Não foi possível identificar Prazo Inicial/Prazo Final/Fator ou há valores inválidos.',
   'erro:regra_comissao_invalida': 'Confira nome, vigência, imposto/desconto, escopo e regras dos grupos.',
   'ok:ficha_salva': 'Dados pessoais salvos.',
+  'ok:cadastro_atualizado': 'Cadastro atualizado.',
+  'erro:ficha_telefone': 'Telefone inválido: use DDD + número.',
   'ok:ficha_conta_salva': 'Dados bancários atualizados.',
   'ok:ficha_matricula_salva': 'Matrícula salva.',
   'erro:ficha_nascimento': 'Data de nascimento inválida.',
