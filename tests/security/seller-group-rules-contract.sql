@@ -1,4 +1,4 @@
--- Contract test for 20260925235900_seller_group_rules_v1 (local test company and users, see data-scope-contract.sql).
+-- Contract test for 20260925180643_seller_group_rules_v1 (local test company and users, see data-scope-contract.sql).
 -- One transaction, rolled back.  psql -v ON_ERROR_STOP=1 -f tests/security/seller-group-rules-contract.sql
 
 begin;
