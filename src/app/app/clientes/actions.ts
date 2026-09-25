@@ -74,32 +74,42 @@ async function completeNewClient(supabase: Supa, organizationId: string, clientI
     if (!primary && (await persistAddress(supabase, organizationId, clientId, f))) return 'ok:cliente_endereco_pendente'
   }
 
-  const clean = (k: string) => val(f, k).replace(/[^0-9Xx-]/g, '')
-  if (val(f, 'bank_code') || val(f, 'account_number')) {
-    const account = val(f, 'account_number').replace(/\D/g, '')
-    const { data: same } = await supabase.from('customer_bank_accounts').select('id').eq('customer_id', clientId).eq('bank_code', clean('bank_code')).eq('branch', clean('branch')).eq('account_number', account).limit(1).maybeSingle()
-    if (!same) {
-      const { error } = await supabase.rpc('add_client_bank_account', {
-        p_client: clientId, p_bank_code: clean('bank_code'), p_bank_name: val(f, 'bank_name'), p_branch: clean('branch'), p_account_number: account,
-        p_account_digit: clean('account_digit') || null, p_account_type: val(f, 'account_type') || 'checking', p_primary: false,
-      })
-      if (error) return profileError(error.message ?? '') ?? classifyDbFeedback(error)
-    }
+  // Several accounts and registrations in the same form: every row posts the same names, read in row order.
+  const all = (k: string) => f.getAll(k).map(v => String(v ?? '').trim())
+  const cleanOf = (v: string) => v.replace(/[^0-9Xx-]/g, '')
+  const codes = all('bank_code'), names = all('bank_name'), branches = all('branch'), numbers = all('account_number'), digits = all('account_digit'), types = all('account_type')
+  const primaryRow = Number(val(f, 'primary_account') || '0')
+  // An existing client keeps its current primary account (nothing already registered is changed).
+  const { data: hasPrimary } = created ? { data: null } : await supabase.from('customer_bank_accounts').select('id').eq('customer_id', clientId).eq('is_primary', true).limit(1).maybeSingle()
+  let refused = 0
+  for (let i = 0; i < Math.max(codes.length, numbers.length); i++) {
+    if (!codes[i] && !numbers[i]) continue
+    const account = (numbers[i] ?? '').replace(/\D/g, '')
+    const { data: same } = await supabase.from('customer_bank_accounts').select('id').eq('customer_id', clientId).eq('bank_code', cleanOf(codes[i] ?? ''))
+      .eq('branch', cleanOf(branches[i] ?? '')).eq('account_number', account).limit(1).maybeSingle()
+    if (same) continue
+    const { error } = await supabase.rpc('add_client_bank_account', {
+      p_client: clientId, p_bank_code: cleanOf(codes[i] ?? ''), p_bank_name: names[i] ?? '', p_branch: cleanOf(branches[i] ?? ''), p_account_number: account,
+      p_account_digit: cleanOf(digits[i] ?? '') || null, p_account_type: types[i] || 'checking', p_primary: i === primaryRow && !hasPrimary,
+    })
+    if (error) refused++
   }
 
-  if (val(f, 'agreement_id') || val(f, 'registration_number')) {
-    const agreement = val(f, 'agreement_id')
-    if (!isId(agreement)) return 'erro:ficha_convenio'
-    const margin = parseMoneyInput(f.get('margin_amount'))
-    if (margin === 'invalid') return 'erro:valor_invalido'
-    const password = String(f.get('portal_password') ?? '')
+  const agreements = all('agreement_id'), agencies = all('agency_name'), regNumbers = all('registration_number'), margins = f.getAll('margin_amount'),
+    logins = all('portal_login'), passwords = f.getAll('portal_password').map(v => String(v ?? ''))
+  for (let i = 0; i < Math.max(agreements.length, regNumbers.length); i++) {
+    if (!agreements[i] && !regNumbers[i]) continue
+    const margin = parseMoneyInput(margins[i] ?? null)
+    if (!isId(agreements[i] ?? '') || margin === 'invalid') { refused++; continue }
     const { error } = await supabase.rpc('save_client_registration', {
-      p_client: clientId, p_registration: null, p_agreement: agreement, p_agency_name: orNull(f, 'agency_name'), p_registration_number: val(f, 'registration_number'),
-      p_status: 'active', p_margin_amount: margin, p_margin_as_of: null, p_portal_login: orNull(f, 'portal_login'),
-      p_password: password === '' ? null : password, p_clear_password: false, p_notes: null,
+      p_client: clientId, p_registration: null, p_agreement: agreements[i], p_agency_name: agencies[i] || null, p_registration_number: regNumbers[i] ?? '',
+      p_status: 'active', p_margin_amount: margin, p_margin_as_of: null, p_portal_login: logins[i] || null,
+      p_password: passwords[i] ? passwords[i] : null, p_clear_password: false, p_notes: null,
     })
-    if (error) return profileError(error.message ?? '') ?? classifyDbFeedback(error)
+    if (error) refused++
   }
+  // The client and the valid rows are saved; the page says that some rows were refused, to be fixed there.
+  if (refused) return 'erro:ficha_linhas_recusadas'
   return null
 }
 

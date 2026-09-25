@@ -7,8 +7,9 @@ import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
 import { formatCpf, formatPhone } from '@/lib/cpf'
 import { digitsOnly, searchTerm } from '@/lib/search'
-import { ACCOUNT_TYPE_LABEL, GENDER_LABEL, MARITAL_LABEL, UFS } from '@/lib/clients/profile'
+import { GENDER_LABEL, MARITAL_LABEL, UFS } from '@/lib/clients/profile'
 import { createCustomer } from './actions'
+import { BankAccountRows, RegistrationRows } from './RepeatableBlocks'
 
 const lbl = 'text-[13px] font-medium text-ink-soft'
 const legend = 'mb-2 text-sm font-semibold text-ink'
@@ -75,25 +76,8 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
                   <label className={lbl}>Naturalidade (cidade)<input name="birthplace_city" maxLength={120} className="field mt-1.5" /></label>
                   <label className={lbl}>UF de nascimento<select name="birthplace_state" defaultValue="" className="field mt-1.5"><option value="">—</option>{UFS.map(u => <option key={u}>{u}</option>)}</select></label>
                 </fieldset>
-                <fieldset className="grid gap-3 md:grid-cols-4">
-                  <legend className={legend}>4. Dados bancários <span className={optional}>opcional · a primeira conta; outras na ficha</span></legend>
-                  <label className={lbl}>Código do banco<input name="bank_code" inputMode="numeric" maxLength={3} placeholder="001" className="field mt-1.5 font-mono" /></label>
-                  <label className={`${lbl} md:col-span-3`}>Banco<input name="bank_name" maxLength={120} placeholder="Banco do Brasil" className="field mt-1.5" /></label>
-                  <label className={lbl}>Agência<input name="branch" inputMode="numeric" maxLength={8} className="field mt-1.5 font-mono" /></label>
-                  <label className={lbl}>Conta<input name="account_number" inputMode="numeric" maxLength={20} className="field mt-1.5 font-mono" /></label>
-                  <label className={lbl}>Dígito<input name="account_digit" maxLength={2} className="field mt-1.5 font-mono" /></label>
-                  <label className={lbl}>Tipo<select name="account_type" className="field mt-1.5">{Object.entries(ACCOUNT_TYPE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
-                </fieldset>
-                <fieldset className="grid gap-3 md:grid-cols-4">
-                  <legend className={legend}>5. Matrícula <span className={optional}>opcional · a primeira; outras na ficha</span></legend>
-                  <label className={lbl}>Convênio<select name="agreement_id" defaultValue="" className="field mt-1.5"><option value="">—</option>{(agreements ?? []).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
-                  <label className={lbl}>Órgão<input name="agency_name" maxLength={160} placeholder="Secretaria de Educação" className="field mt-1.5" /></label>
-                  <label className={lbl}>Matrícula<input name="registration_number" maxLength={40} className="field mt-1.5 font-mono" /></label>
-                  <label className={lbl}>Margem (R$)<input name="margin_amount" inputMode="decimal" placeholder="0,00" className="field mt-1.5" /></label>
-                  <label className={lbl}>ID / login<input name="portal_login" maxLength={120} autoComplete="off" className="field mt-1.5 font-mono" /></label>
-                  <label className={lbl}>Senha<input name="portal_password" type="password" maxLength={200} autoComplete="new-password" className="field mt-1.5 font-mono" /></label>
-                  <p className="text-xs text-muted md:col-span-2 md:self-end">A senha fica criptografada no cofre; só aparece no botão Mostrar senha, e cada visualização é registrada.</p>
-                </fieldset>
+                <BankAccountRows />
+                <RegistrationRows agreements={agreements ?? []} />
               </>
             )}
             <div className="flex flex-wrap items-center justify-between gap-3">

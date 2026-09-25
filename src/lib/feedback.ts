@@ -181,6 +181,7 @@ export const FEEDBACK = {
   'erro:ficha_matricula': 'Número de matrícula inválido: use letras, números, ponto, barra ou hífen.',
   'erro:ficha_matricula_existe': 'Esta matrícula já está cadastrada neste convênio.',
   'erro:ficha_convenio': 'Escolha um convênio ativo.',
+  'erro:ficha_linhas_recusadas': 'Cliente salvo, mas alguma conta ou matrícula foi recusada (repetida, sem convênio ou com dado inválido). Confira abaixo e adicione de novo.',
   'ok:portal_enviada': 'Proposta enviada. Ela aguarda a validação da empresa.',
   'ok:portal_documento': 'Documento anexado à proposta.',
   'ok:portal_validada': 'Proposta validada e colocada na esteira.',
