@@ -29,6 +29,13 @@
   - Resolvido (ADR-0031): cabeçalho do cálculo só com `financeiro.view`; coluna `expected_commission_amount` removida. Migration `20260924204503_commission_visibility_v1` (branch `fix/commission-visibility`), contrato 10/10, e2e 32/32 com login de vendedor. Aplicada em produção em 24/09/2026 (md5 conferido; 0 propostas e 0 simulações, nada a salvar).
   - Código legado: `INTEGRATION_WORKER_SECRET` e `CORBAN_ALLOW_LOCAL_PROVIDERS` ainda são checados em `src/lib/preflight.ts`, testes e `ENVIRONMENT-VARIABLES.md`, mas a rota do worker foi removida na F5.
 
+## Editar cliente na mesma tela do cadastro (25/09/2026, branch `feature/editar-cadastro-unico`)
+- Pedido do dono: a ficha continua como consulta; "Editar cadastro" abre o mesmo formulário do Novo cliente com os 5 blocos preenchidos (CPF travado). Várias contas e matrículas também no cadastro novo.
+- Migration `20260925053116_client_identity_edit_v1`: `update_client_identity` (nome, telefone e e-mail; o anterior fica no histórico) e `update_client_bank_account`. Aplicada em produção em 25/09/2026 (md5 conferido).
+- As 5 ações antigas de edição por bloco foram removidas (sem uso).
+- Engano corrigido: o contrato novo tinha sobrescrito `client-identity-contract.sql` (da F2); o original foi restaurado e o novo está em `client-identity-edit-contract.sql`.
+- Banco recriado do zero: 29/29 contratos; unit 187/187; e2e 35/35 (dois testes passaram ao rodar de novo, por demora de compilação); build OK.
+
 ## Cadastro único do cliente (25/09/2026, branch `feature/cadastro-unico`)
 - Pedido do dono: tudo no Novo cliente, em blocos (identificação, endereço, dados pessoais, primeira conta, primeira matrícula); só nome, CPF e telefone obrigatórios; o restante continua editável na ficha.
 - CPF que já é cliente: só completa os dados pessoais vazios, mantém o endereço principal existente, não duplica conta igual; matrícula repetida é recusada. Sem mudança de banco.

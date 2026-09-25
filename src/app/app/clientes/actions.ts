@@ -74,42 +74,7 @@ async function completeNewClient(supabase: Supa, organizationId: string, clientI
     if (!primary && (await persistAddress(supabase, organizationId, clientId, f))) return 'ok:cliente_endereco_pendente'
   }
 
-  // Several accounts and registrations in the same form: every row posts the same names, read in row order.
-  const all = (k: string) => f.getAll(k).map(v => String(v ?? '').trim())
-  const cleanOf = (v: string) => v.replace(/[^0-9Xx-]/g, '')
-  const codes = all('bank_code'), names = all('bank_name'), branches = all('branch'), numbers = all('account_number'), digits = all('account_digit'), types = all('account_type')
-  const primaryRow = Number(val(f, 'primary_account') || '0')
-  // An existing client keeps its current primary account (nothing already registered is changed).
-  const { data: hasPrimary } = created ? { data: null } : await supabase.from('customer_bank_accounts').select('id').eq('customer_id', clientId).eq('is_primary', true).limit(1).maybeSingle()
-  let refused = 0
-  for (let i = 0; i < Math.max(codes.length, numbers.length); i++) {
-    if (!codes[i] && !numbers[i]) continue
-    const account = (numbers[i] ?? '').replace(/\D/g, '')
-    const { data: same } = await supabase.from('customer_bank_accounts').select('id').eq('customer_id', clientId).eq('bank_code', cleanOf(codes[i] ?? ''))
-      .eq('branch', cleanOf(branches[i] ?? '')).eq('account_number', account).limit(1).maybeSingle()
-    if (same) continue
-    const { error } = await supabase.rpc('add_client_bank_account', {
-      p_client: clientId, p_bank_code: cleanOf(codes[i] ?? ''), p_bank_name: names[i] ?? '', p_branch: cleanOf(branches[i] ?? ''), p_account_number: account,
-      p_account_digit: cleanOf(digits[i] ?? '') || null, p_account_type: types[i] || 'checking', p_primary: i === primaryRow && !hasPrimary,
-    })
-    if (error) refused++
-  }
-
-  const agreements = all('agreement_id'), agencies = all('agency_name'), regNumbers = all('registration_number'), margins = f.getAll('margin_amount'),
-    logins = all('portal_login'), passwords = f.getAll('portal_password').map(v => String(v ?? ''))
-  for (let i = 0; i < Math.max(agreements.length, regNumbers.length); i++) {
-    if (!agreements[i] && !regNumbers[i]) continue
-    const margin = parseMoneyInput(margins[i] ?? null)
-    if (!isId(agreements[i] ?? '') || margin === 'invalid') { refused++; continue }
-    const { error } = await supabase.rpc('save_client_registration', {
-      p_client: clientId, p_registration: null, p_agreement: agreements[i], p_agency_name: agencies[i] || null, p_registration_number: regNumbers[i] ?? '',
-      p_status: 'active', p_margin_amount: margin, p_margin_as_of: null, p_portal_login: logins[i] || null,
-      p_password: passwords[i] ? passwords[i] : null, p_clear_password: false, p_notes: null,
-    })
-    if (error) refused++
-  }
-  // The client and the valid rows are saved; the page says that some rows were refused, to be fixed there.
-  if (refused) return 'erro:ficha_linhas_recusadas'
+  if (await saveRows(supabase, clientId, created, f)) return 'erro:ficha_linhas_recusadas'
   return null
 }
 
@@ -132,17 +97,6 @@ async function persistAddress(supabase: Supa, organizationId: string, clientId: 
   return error ? classifyDbFeedback(error) : null
 }
 
-export async function saveCustomerAddress(formData: FormData) {
-  const { supabase, organization } = await requireAppContext()
-  const id = val(formData, 'client_id')
-  const back = (code: FeedbackCode): never => redirect(feedbackUrl(`/app/clientes/${encodeURIComponent(id)}`, code))
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return go('erro:requisicao_invalida')
-  const failure = await persistAddress(supabase, organization.id, id, formData)
-  if (failure) return back(failure)
-  revalidatePath(`/app/clientes/${id}`)
-  return back('ok:endereco_salvo')
-}
-
 // ---- Client profile (ADR-0033): personal data, bank accounts and registrations, all through governed RPCs ----------------
 const isId = (v: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)
 const orNull = (f: FormData, k: string) => val(f, k) || null
@@ -161,69 +115,6 @@ function profileError(m: string): FeedbackCode | null {
   return null
 }
 
-export async function updateClientProfile(formData: FormData) {
-  const { supabase } = await requireAppContext()
-  const id = val(formData, 'client_id')
-  if (!isId(id)) return go('erro:requisicao_invalida')
-  const back = (code: FeedbackCode): never => redirect(feedbackUrl(`/app/clientes/${id}`, code))
-  const { error } = await supabase.rpc('update_client_profile', {
-    p_client: id, p_birth_date: dateOrNull(formData, 'birth_date'), p_father_name: orNull(formData, 'father_name'), p_mother_name: orNull(formData, 'mother_name'),
-    p_rg_number: orNull(formData, 'rg_number'), p_rg_issuer: orNull(formData, 'rg_issuer'), p_rg_state: orNull(formData, 'rg_state'),
-    p_rg_issued_on: dateOrNull(formData, 'rg_issued_on'), p_gender: orNull(formData, 'gender'), p_marital_status: orNull(formData, 'marital_status'),
-    p_birthplace_city: orNull(formData, 'birthplace_city'), p_birthplace_state: orNull(formData, 'birthplace_state'),
-    p_whatsapp: formData.get('whatsapp_same') === 'on' ? orNull(formData, 'phone') : orNull(formData, 'whatsapp'),
-  })
-  if (error) return back(profileError(error.message ?? '') ?? classifyDbFeedback(error))
-  revalidatePath(`/app/clientes/${id}`)
-  return back('ok:ficha_salva')
-}
-
-export async function addClientBankAccount(formData: FormData) {
-  const { supabase } = await requireAppContext()
-  const id = val(formData, 'client_id')
-  if (!isId(id)) return go('erro:requisicao_invalida')
-  const back = (code: FeedbackCode): never => redirect(feedbackUrl(`/app/clientes/${id}`, code))
-  const clean = (k: string) => val(formData, k).replace(/[^0-9Xx-]/g, '')
-  const { error } = await supabase.rpc('add_client_bank_account', {
-    p_client: id, p_bank_code: clean('bank_code'), p_bank_name: val(formData, 'bank_name'), p_branch: clean('branch'),
-    p_account_number: val(formData, 'account_number').replace(/\D/g, ''), p_account_digit: clean('account_digit') || null,
-    p_account_type: val(formData, 'account_type'), p_primary: formData.get('is_primary') === 'on',
-  })
-  if (error) return back(profileError(error.message ?? '') ?? classifyDbFeedback(error))
-  revalidatePath(`/app/clientes/${id}`)
-  return back('ok:ficha_conta_salva')
-}
-
-export async function setClientBankAccount(formData: FormData) {
-  const { supabase } = await requireAppContext()
-  const id = val(formData, 'client_id'), account = val(formData, 'account_id'), action = val(formData, 'action')
-  if (!isId(id) || !isId(account) || !['primary', 'remove'].includes(action)) return go('erro:requisicao_invalida')
-  const back = (code: FeedbackCode): never => redirect(feedbackUrl(`/app/clientes/${id}`, code))
-  const { error } = await supabase.rpc('set_client_bank_account', { p_account: account, p_action: action })
-  if (error) return back(profileError(error.message ?? '') ?? classifyDbFeedback(error))
-  revalidatePath(`/app/clientes/${id}`)
-  return back('ok:ficha_conta_salva')
-}
-
-export async function saveClientRegistration(formData: FormData) {
-  const { supabase } = await requireAppContext()
-  const id = val(formData, 'client_id'), registration = val(formData, 'registration_id'), agreement = val(formData, 'agreement_id')
-  if (!isId(id) || (registration && !isId(registration)) || !isId(agreement)) return go('erro:requisicao_invalida')
-  const back = (code: FeedbackCode): never => redirect(feedbackUrl(`/app/clientes/${id}`, code))
-  const margin = parseMoneyInput(formData.get('margin_amount'))
-  if (margin === 'invalid') return back('erro:valor_invalido')
-  const password = String(formData.get('portal_password') ?? '')
-  const { error } = await supabase.rpc('save_client_registration', {
-    p_client: id, p_registration: registration || null, p_agreement: agreement, p_agency_name: orNull(formData, 'agency_name'),
-    p_registration_number: val(formData, 'registration_number'), p_status: val(formData, 'status') || 'active', p_margin_amount: margin,
-    p_margin_as_of: margin ? dateOrNull(formData, 'margin_as_of') : null, p_portal_login: orNull(formData, 'portal_login'),
-    p_password: password === '' ? null : password, p_clear_password: formData.get('clear_password') === 'on', p_notes: orNull(formData, 'notes'),
-  })
-  if (error) return back(profileError(error.message ?? '') ?? classifyDbFeedback(error))
-  revalidatePath(`/app/clientes/${id}`)
-  return back('ok:ficha_matricula_salva')
-}
-
 // Returns the password to the screen (never through a URL). The database checks the permission and records the access.
 export async function revealRegistrationPassword(registrationId: string): Promise<{ password?: string | null; error?: string }> {
   const { supabase } = await requireAppContext()
@@ -231,4 +122,103 @@ export async function revealRegistrationPassword(registrationId: string): Promis
   const { data, error } = await supabase.rpc('reveal_registration_password', { p_registration: registrationId })
   if (error) return { error: /not_authorized/.test(error.message ?? '') ? 'Seu papel não pode ver esta senha.' : 'Não foi possível mostrar a senha.' }
   return { password: (data as string | null) ?? null }
+}
+
+// Accounts and registrations of the single form (create and edit). Rows with an id are updated or removed; rows without an
+// id are created when filled. Returns how many rows were refused (the valid ones are saved).
+async function saveRows(supabase: Supa, clientId: string, created: boolean, f: FormData): Promise<number> {
+  const all = (k: string) => f.getAll(k).map(v => String(v ?? '').trim())
+  const cleanOf = (v: string) => v.replace(/[^0-9Xx-]/g, '')
+  let refused = 0
+
+  const accIds = all('account_id'), removes = all('remove_account'), codes = all('bank_code'), names = all('bank_name'), branches = all('branch'),
+    numbers = all('account_number'), digits = all('account_digit'), types = all('account_type')
+  const primaryRow = Number(val(f, 'primary_account') || '0')
+  const editing = accIds.some(Boolean)
+  // A known client keeps its current primary account when registering again; when editing, the chosen row is the primary one.
+  const { data: hasPrimary } = created || editing ? { data: null } : await supabase.from('customer_bank_accounts').select('id').eq('customer_id', clientId).eq('is_primary', true).limit(1).maybeSingle()
+  let primaryId: string | null = null
+  for (let i = 0; i < Math.max(codes.length, numbers.length, accIds.length); i++) {
+    const id = accIds[i] ?? ''
+    const account = (numbers[i] ?? '').replace(/\D/g, '')
+    if (id && isId(id)) {
+      if (removes[i] === '1') {
+        const { error } = await supabase.rpc('set_client_bank_account', { p_account: id, p_action: 'remove' })
+        if (error) refused++
+        continue
+      }
+      const { error } = await supabase.rpc('update_client_bank_account', { p_account: id, p_bank_code: cleanOf(codes[i] ?? ''), p_bank_name: names[i] ?? '',
+        p_branch: cleanOf(branches[i] ?? ''), p_account_number: account, p_account_digit: cleanOf(digits[i] ?? '') || null, p_account_type: types[i] || 'checking' })
+      if (error) refused++
+      else if (i === primaryRow) primaryId = id
+      continue
+    }
+    if (!codes[i] && !account) continue
+    const { data: same } = await supabase.from('customer_bank_accounts').select('id').eq('customer_id', clientId).eq('bank_code', cleanOf(codes[i] ?? ''))
+      .eq('branch', cleanOf(branches[i] ?? '')).eq('account_number', account).limit(1).maybeSingle()
+    if (same) continue
+    const { data: newId, error } = await supabase.rpc('add_client_bank_account', {
+      p_client: clientId, p_bank_code: cleanOf(codes[i] ?? ''), p_bank_name: names[i] ?? '', p_branch: cleanOf(branches[i] ?? ''), p_account_number: account,
+      p_account_digit: cleanOf(digits[i] ?? '') || null, p_account_type: types[i] || 'checking', p_primary: i === primaryRow && !hasPrimary,
+    })
+    if (error) refused++
+    else if (i === primaryRow && !hasPrimary) primaryId = newId as string
+  }
+  if (primaryId && editing) {
+    const { error } = await supabase.rpc('set_client_bank_account', { p_account: primaryId, p_action: 'primary' })
+    if (error) refused++
+  }
+
+  const regIds = all('registration_id'), agreements = all('agreement_id'), agencies = all('agency_name'), regNumbers = all('registration_number'),
+    statuses = all('registration_status'), margins = f.getAll('margin_amount'), marginDates = all('margin_as_of'), logins = all('portal_login'),
+    passwords = f.getAll('portal_password').map(v => String(v ?? '')), clears = all('clear_password')
+  for (let i = 0; i < Math.max(agreements.length, regNumbers.length, regIds.length); i++) {
+    const id = regIds[i] ?? ''
+    if (!id && !agreements[i] && !regNumbers[i]) continue
+    const margin = parseMoneyInput(margins[i] ?? null)
+    if (!isId(agreements[i] ?? '') || margin === 'invalid' || (id && !isId(id))) { refused++; continue }
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(marginDates[i] ?? '') ? marginDates[i] : null
+    const { error } = await supabase.rpc('save_client_registration', {
+      p_client: clientId, p_registration: id || null, p_agreement: agreements[i], p_agency_name: agencies[i] || null, p_registration_number: regNumbers[i] ?? '',
+      p_status: statuses[i] === 'inactive' ? 'inactive' : 'active', p_margin_amount: margin, p_margin_as_of: margin ? date : null, p_portal_login: logins[i] || null,
+      p_password: passwords[i] ? passwords[i] : null, p_clear_password: clears[i] === '1', p_notes: null,
+    })
+    if (error) refused++
+  }
+  return refused
+}
+
+// Edit an existing client in the same form as the registration (owner decision). The CPF never changes.
+export async function updateCustomer(formData: FormData) {
+  const { supabase, organization } = await requireAppContext()
+  const id = val(formData, 'client_id')
+  if (!isId(id)) return go('erro:requisicao_invalida')
+  const back = (code: FeedbackCode): never => redirect(feedbackUrl(`/app/clientes/${id}/editar`, code))
+  const done = (code: FeedbackCode): never => redirect(feedbackUrl(`/app/clientes/${id}`, code))
+  const zip = val(formData, 'zip')
+  if (zip && !normalizeCep(zip)) return back('erro:cep_invalido')
+
+  const { error: identityError } = await supabase.rpc('update_client_identity', {
+    p_client: id, p_full_name: val(formData, 'full_name'), p_phone: orNull(formData, 'phone'), p_email: orNull(formData, 'email'),
+  })
+  if (identityError) {
+    const m = identityError.message ?? ''
+    return back(/full_name_required/.test(m) ? 'erro:nome_invalido' : /invalid_phone/.test(m) ? 'erro:ficha_telefone' : /invalid_email/.test(m) ? 'erro:email_invalido' : classifyDbFeedback(identityError))
+  }
+  const { error: profileErr } = await supabase.rpc('update_client_profile', {
+    p_client: id, p_birth_date: dateOrNull(formData, 'birth_date'), p_father_name: orNull(formData, 'father_name'), p_mother_name: orNull(formData, 'mother_name'),
+    p_rg_number: orNull(formData, 'rg_number'), p_rg_issuer: orNull(formData, 'rg_issuer'), p_rg_state: orNull(formData, 'rg_state'),
+    p_rg_issued_on: dateOrNull(formData, 'rg_issued_on'), p_gender: orNull(formData, 'gender'), p_marital_status: orNull(formData, 'marital_status'),
+    p_birthplace_city: orNull(formData, 'birthplace_city'), p_birthplace_state: orNull(formData, 'birthplace_state'),
+    p_whatsapp: formData.get('whatsapp_same') === 'on' ? orNull(formData, 'phone') : orNull(formData, 'whatsapp'),
+  })
+  if (profileErr) return back(profileError(profileErr.message ?? '') ?? classifyDbFeedback(profileErr))
+  if (zip) {
+    const failure = await persistAddress(supabase, organization.id, id, formData)
+    if (failure) return back(failure)
+  }
+  const refused = await saveRows(supabase, id, false, formData)
+  revalidatePath(`/app/clientes/${id}`)
+  revalidatePath('/app/clientes')
+  return refused ? back('erro:ficha_linhas_recusadas') : done('ok:cadastro_atualizado')
 }

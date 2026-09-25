@@ -1,15 +1,12 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, FilePlus2 } from 'lucide-react'
-import { AddressFields } from '@/components/AddressFields'
-import { SubmitButton } from '@/components/SubmitButton'
+import { ArrowLeft, FilePlus2, Pencil } from 'lucide-react'
 import { Badge, ButtonLink, Card, CardHeader } from '@/components/ui'
 import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
 import { missingProfileFields, type ProfileFields } from '@/lib/clients/profile'
 import { formatCpf, formatPhone } from '@/lib/cpf'
 import { proposalStatusLabel } from '@/lib/operational'
-import { saveCustomerAddress } from '../actions'
 import { BankAccounts, PersonalData, Registrations, type BankAccount, type Registration } from './ProfileSections'
 
 const brl = (v: unknown) => (v === null || v === undefined || v === '' ? '—' : Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }))
@@ -57,7 +54,10 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
           </p>
           {missing.length > 0 && <p className="mt-2 text-xs text-ink-soft"><Badge tone="pending">Cadastro incompleto</Badge> <span className="ml-1">Falta: {missing.join(', ')}.</span></p>}
         </div>
-        <ButtonLink href={`/app/propostas/nova?cliente=${customer.id}`}><FilePlus2 size={16} aria-hidden />Nova proposta</ButtonLink>
+        <span className="flex flex-wrap gap-2">
+          {canEdit && <ButtonLink href={`/app/clientes/${customer.id}/editar`} variant="secondary"><Pencil size={16} aria-hidden />Editar cadastro</ButtonLink>}
+          <ButtonLink href={`/app/propostas/nova?cliente=${customer.id}`}><FilePlus2 size={16} aria-hidden />Nova proposta</ButtonLink>
+        </span>
       </header>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
@@ -93,9 +93,9 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
         </div>
 
         <div className="grid content-start gap-4">
-          <PersonalData clientId={customer.id} phone={customer.phone} p={profile} canEdit={canEdit} />
-          <Registrations clientId={customer.id} registrations={registrations} agreements={agreementRows ?? []} canEdit={canEdit} />
-          <BankAccounts clientId={customer.id} accounts={accounts} canEdit={canEdit} />
+          <PersonalData p={profile} />
+          <Registrations registrations={registrations} agreements={agreementRows ?? []} canReveal={canEdit} />
+          <BankAccounts accounts={accounts} />
           <Card>
             <CardHeader title={<span className="flex items-center gap-2">Contratos e propostas <Badge tone="neutral">{proposals?.length ?? 0}</Badge>{open.length > 0 && <Badge tone="paid-out">{open.length} em andamento</Badge>}</span>} />
             <div className="overflow-x-auto px-2 pb-2 pt-2">
@@ -134,15 +134,9 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
             </Card>
           )}
 
-          <Card className="p-5">
-            <form action={saveCustomerAddress} className="grid gap-3 md:grid-cols-5">
-              <input type="hidden" name="client_id" value={customer.id} />
-              <h2 className="text-base font-semibold text-ink md:col-span-5">Endereço principal</h2>
-              <AddressFields initial={address ? { zip: address.postal_code ?? '', street: address.street ?? '', number: address.number ?? '', complement: address.complement ?? '', district: address.neighborhood ?? '', city: address.city ?? '', state: address.state ?? '' } : undefined} />
-              <div className="flex justify-end md:col-span-5">
-                <SubmitButton className="h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Salvando...">Salvar endereço</SubmitButton>
-              </div>
-            </form>
+          <Card>
+            <CardHeader title="Endereço principal" />
+            <p className="px-5 pb-4 pt-3 text-sm text-ink">{address ? [address.street, address.number, address.complement, address.neighborhood, address.city && `${address.city}${address.state ? `/${address.state}` : ''}`, address.postal_code].filter(Boolean).join(' · ') : <span className="text-muted">Nenhum endereço cadastrado.</span>}</p>
           </Card>
 
           <Card>
