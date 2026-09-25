@@ -128,7 +128,7 @@ test('unknown money is "Não calculado", never R$ 0,00', () => {
 test('menu: modules are role-aware (F1 journey navigation: 8 entries)', () => {
   const NL = String.fromCharCode(10)
   const l = read('src/app/app/layout.tsx')
-  for (const [href, guard] of [['/app/comercial', "atLeast(r, 'supervisor')"], ['/app/configuracao', 'canManageTeam']]) {
+  for (const [href, guard] of [['/app/cadastros', "atLeast(r, 'supervisor')"], ['/app/configuracao', 'canManageTeam']]) {
     const line = l.split(NL).find(x => x.includes(`'${href}'`)) ?? ''
     assert.ok(line.includes(guard), href)
   }

@@ -9,6 +9,7 @@ import { FlashBanner } from '@/components/FlashBanner'
 import { BottomNav, SideNav, type NavItem } from '@/components/shell/NavLinks'
 import { CommandPalette } from '@/components/shell/CommandPalette'
 import { isPortalUser } from '@/lib/portal'
+import { REGISTRATIONS, REGISTRATION_SECTIONS } from '@/lib/registrations'
 import { signOut } from './actions'
 
 // `show` only decides what the menu offers; every page, action and RPC enforces the role again (a hidden link is not authorization).
@@ -22,7 +23,8 @@ const NAV: (NavItem & { show?: (role: string) => boolean; module?: string; perm?
   { key: 'financeiro', href: '/app/financeiro', label: 'Financeiro', module: 'financeiro', perm: 'financeiro.view' },
   // Everyone may have a payout account (their own statement); finance sees all accounts on the same screen.
   { key: 'repasse', href: '/app/repasse', label: 'Repasse', module: 'repasse' },
-  { key: 'comercial', href: '/app/comercial', label: 'Comercial', show: r => atLeast(r, 'supervisor'), module: 'comercial' },
+  // Everything the company registers (banks, tables, seller groups, sellers, team...) under one item; clients stay separate.
+  { key: 'comercial', href: '/app/cadastros', label: 'Cadastros', show: r => atLeast(r, 'supervisor'), module: 'comercial', sections: REGISTRATION_SECTIONS },
   { key: 'relatorios', href: '/app/relatorios', label: 'Relatórios', module: 'relatorios' },
   { key: 'configuracoes', href: '/app/configuracao', label: 'Configurações', show: canManageTeam },
 ]
@@ -36,7 +38,10 @@ const PORTAL_NAV: NavItem[] = [
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { organization, membership, membershipCount, modules, access } = await requireAppContext()
-  const items: NavItem[] = isPortalUser(access?.roleKey, modules) ? PORTAL_NAV : NAV.filter(n => (!n.show || n.show(membership.role)) && (!n.module || modules.has(n.module)) && (!n.perm || can(access, n.perm))).map(({ key, href, label }) => ({ key, href, label }))
+  const items: NavItem[] = isPortalUser(access?.roleKey, modules) ? PORTAL_NAV : NAV.filter(n => (!n.show || n.show(membership.role)) && (!n.module || modules.has(n.module)) && (!n.perm || can(access, n.perm))).map(({ key, href, label, sections }) => ({
+    key, href, label, sections,
+    ...(key === 'comercial' ? { children: REGISTRATIONS.filter(r => !r.teamOnly || canManageTeam(membership.role)).map(r => ({ href: r.href, label: r.label })) } : {}),
+  }))
   const initial = (organization.name ?? 'C').trim().charAt(0).toUpperCase()
 
   return (
