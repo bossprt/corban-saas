@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Ficha completa do cliente (25/09/2026)
+- Dados pessoais (pais, RG, sexo, estado civil, naturalidade, WhatsApp, nascimento), dados bancários e várias matrículas por cliente com margem e acesso; senha da matrícula criptografada no cofre, mostrada só a quem pode editar e com registro de cada visualização.
+
 ### F7 — Portal do corretor (24/09/2026)
 - Corretor com papel próprio envia propostas pelo portal (menu reduzido, pensado para celular); elas aguardam validação de outra pessoa antes de entrar na esteira e de ter comissão calculada.
 - Recusa sempre com motivo, visível ao corretor; documentos anexados ficam no bucket privado, só para o corretor e a empresa.

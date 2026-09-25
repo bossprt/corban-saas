@@ -20,7 +20,7 @@ begin
   end if;
   if has_function_privilege('anon',f.oid,'EXECUTE') then raise exception 'definer_executable_by_anon_%.%',f.sch,f.proname; end if;
   if f.sch in ('public','graphql_public') and has_function_privilege('authenticated',f.oid,'EXECUTE')
-     and f.prosrc !~* '(auth\.uid\(\)|has_permission|is_active_organization_member|caller_role_in|has_active_organization_role|is_payout_holder|can_see_)' then
+     and f.prosrc !~* '(auth\.uid\(\)|has_permission|is_active_organization_member|caller_role_in|has_active_organization_role|is_payout_holder|can_see_|editable_client)' then
    raise exception 'exposed_definer_without_caller_check_%.%',f.sch,f.proname;
   end if;
  end loop;

@@ -40,7 +40,8 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
             <label className="text-[13px] font-medium text-ink-soft md:col-span-2">Nome completo<input required minLength={3} name="full_name" className="field mt-1.5" autoComplete="off" /></label>
             <label className="text-[13px] font-medium text-ink-soft">CPF<input required name="cpf" inputMode="numeric" placeholder="000.000.000-00" className="field mt-1.5 font-mono" autoComplete="off" /></label>
             <label className="text-[13px] font-medium text-ink-soft">Telefone<input name="phone" inputMode="tel" placeholder="(68) 99900-0000" className="field mt-1.5" autoComplete="off" /></label>
-            <label className="text-[13px] font-medium text-ink-soft md:col-span-2">E-mail<input name="email" type="email" className="field mt-1.5" autoComplete="off" /></label>
+            <label className="text-[13px] font-medium text-ink-soft">E-mail<input name="email" type="email" className="field mt-1.5" autoComplete="off" /></label>
+            <label className="text-[13px] font-medium text-ink-soft">Data de nascimento<input name="birth_date" type="date" className="field mt-1.5" /></label>
             <div className="md:col-span-4">
               <p className="mb-2 text-[13px] font-medium text-ink-soft">Endereço (opcional)</p>
               <div className="grid gap-3 md:grid-cols-5"><AddressFields /></div>
