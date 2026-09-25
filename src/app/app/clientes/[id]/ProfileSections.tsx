@@ -4,7 +4,7 @@ import { ACCOUNT_TYPE_LABEL, ageOn, dateBr, GENDER_LABEL, MARITAL_LABEL, type Pr
 import { brlText } from '@/lib/receipts/format'
 import { RevealPassword } from './RevealPassword'
 
-// Read-only blocks of the client page. Editing happens in the same form as the registration (/app/clientes/[id]/editar).
+// Read-only blocks of the client page, for roles without clientes.edit. Editors see the locked registration form instead.
 const todayIso = () => new Date().toISOString().slice(0, 10)
 
 export type BankAccount = { id: string; bank_code: string; bank_name: string; branch: string; account_number: string; account_digit: string | null; account_type: string; is_primary: boolean }
