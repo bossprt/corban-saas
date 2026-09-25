@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import { Badge, Card, CardHeader, PageHeader } from '@/components/ui'
 import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
+import { atLeast } from '@/lib/rbac'
+import { payToText } from '@/lib/sellers'
 import { memberEmails } from '@/lib/team.server'
 import { brlText } from '@/lib/receipts/format'
 import { add, fromDecimalString, toDecimalString, type Rational } from '@/lib/commission/money'
@@ -16,7 +18,7 @@ const todayIso = () => new Date().toISOString().slice(0, 10)
 
 // Payout home. Finance sees every account, the approvals and the period closing; a person goes to their own account.
 export default async function PayoutPage() {
-  const { supabase, organization, access } = await requireAppContext()
+  const { supabase, organization, access, membership } = await requireAppContext()
   const { data: summaryRows } = await supabase.rpc('payout_account_summaries', { p_org: organization.id })
   const summaries = (summaryRows ?? []) as Summary[]
   const finance = can(access, 'repasse.view')
@@ -33,6 +35,17 @@ export default async function PayoutPage() {
     supabase.from('organization_memberships').select('user_id').eq('status', 'active'),
   ])
   const names = new Map(summaries.map(s => [s.account_id, s.holder_name]))
+  // Where to send each seller's money: the primary account of the seller file (bank data: admin, manager, finance).
+  const payTo = new Map<string, string>()
+  if (can(access, 'financeiro.view') || atLeast(membership.role, 'manager')) {
+    const [{ data: accounts }, { data: banks }] = await Promise.all([
+      supabase.from('payout_accounts').select('id,seller_id').not('seller_id', 'is', null),
+      supabase.from('seller_bank_accounts').select('seller_id,transfer_method,pix_key_type,pix_key,bank_code,bank_name,branch,account_number,account_digit,holder_name,holder_document')
+        .eq('is_primary', true).is('removed_at', null),
+    ])
+    const bySeller = new Map((banks ?? []).map(b => [b.seller_id, payToText(b)]))
+    for (const a of accounts ?? []) payTo.set(a.id, bySeller.get(a.seller_id) ?? '')
+  }
   const emails = await memberEmails((members ?? []).map(m => m.user_id))
   // One row per manual entry group (installments of the same advance are approved together).
   const groups = new Map<string, Pending & { count: number; total: Rational }>()
@@ -110,7 +123,7 @@ export default async function PayoutPage() {
 
       <Card className="overflow-hidden">
         <CardHeader title="Repasses em aberto" />
-        <PayoutRows rows={(payoutRows ?? []) as PayoutRow[]} names={names} back="/app/repasse" canApprove={canApprove} canPay={canCreate || canApprove} />
+        <PayoutRows rows={(payoutRows ?? []) as PayoutRow[]} names={names} back="/app/repasse" canApprove={canApprove} canPay={canCreate || canApprove} payTo={payTo} />
       </Card>
     </section>
   )

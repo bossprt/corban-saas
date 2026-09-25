@@ -9,7 +9,8 @@ const todayIso = () => new Date().toISOString().slice(0, 10)
 export type PayoutRow = { id: string; account_id: string; kind: string; period_start: string | null; period_end: string | null; carry_in: string | null; period_net: string | null; debt_deduction: string | null; amount: string; carry_out: string | null; status: string; requested_at: string; paid_on: string | null; payment_reference: string | null; note: string | null }
 
 // Statements and withdrawals with their approval and payment actions (the database enforces who may do what).
-export function PayoutRows({ rows, names, back, canApprove, canPay }: { rows: PayoutRow[]; names?: Map<string, string>; back: string; canApprove: boolean; canPay: boolean }) {
+// payTo: the seller's primary payment account per payout account, shown next to "Marcar pago" (only when the viewer may see bank data).
+export function PayoutRows({ rows, names, back, canApprove, canPay, payTo }: { rows: PayoutRow[]; names?: Map<string, string>; back: string; canApprove: boolean; canPay: boolean; payTo?: Map<string, string> }) {
   const today = todayIso()
   return (
     <div className="overflow-x-auto">
@@ -37,6 +38,9 @@ export function PayoutRows({ rows, names, back, canApprove, canPay }: { rows: Pa
                     <form action={decidePayout} className="flex gap-1"><input type="hidden" name="payout_id" value={p.id} /><input type="hidden" name="back" value={back} /><input type="hidden" name="decision" value="cancel" />
                       <input name="note" required minLength={3} placeholder="Motivo" className="field h-8 w-28 text-xs" /><button className="h-8 rounded-md px-2 text-xs text-ink-soft hover:bg-surface-muted">Cancelar</button></form>
                   </div>
+                )}
+                {p.status === 'approved' && canPay && payTo?.has(p.account_id) && (
+                  <div className="mb-1 max-w-xs text-xs text-ink-soft">{payTo.get(p.account_id) ? <>Pagar para: <span className="font-mono text-ink">{payTo.get(p.account_id)}</span></> : <span className="text-[#92400E]">Sem conta para pagamento no cadastro do vendedor.</span>}</div>
                 )}
                 {p.status === 'approved' && canPay && (
                   <form action={markPaid} className="flex flex-wrap gap-1"><input type="hidden" name="payout_id" value={p.id} /><input type="hidden" name="back" value={back} />

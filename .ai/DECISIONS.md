@@ -405,3 +405,10 @@
 - **Decisão 3:** a group can be "own production": the company keeps 100%, there is no payout column and no payout; supervisor and manager still apply. A group other rules read from cannot become own production, and an own-production group cannot be read as a column.
 - **Decisão 4:** percentages travel as decimal text from the form to the database (0-100, up to 6 decimals); never floating point.
 - **Próximo:** part B gives every group its own block of columns in the commission tables and imports the 2tech layout (company + one block per group, % or R$ per value) and converts today's shares; part C makes the engine and the payout use the rule.
+
+## ADR-0035 - Full seller registration (stage 1)
+- **Data:** 25/09/2026 - **Status:** aceita (decisões do dono).
+- **Decisão 1:** the seller file is the registration form (same pattern as the client): automatic code per company (sequential, never changes), identity (name, CPF/CNPJ checked, category, group, branch, trade name, birth/opening date, RG with issuer and date, parents), contact (mobile, WhatsApp, other phones, e-mail), home and business address, bank accounts for the commission and contacts of the seller's company. Required: name, CPF/CNPJ, mobile and e-mail; the rest shows "Cadastro incompleto". One CPF/CNPJ is one seller per company.
+- **Decisão 2:** payment accounts are PIX (key typed and validated: CPF/CNPJ, mobile, e-mail, random) or TED (full account), one primary, with an optional payee (name + CPF/CNPJ) when the money goes to someone else. Bank data is read only by admin, manager and finance; removed accounts are kept with `removed_at`; every change is logged in `seller_bank_account_events`. The payout screen shows the primary account next to "Marcar pago".
+- **Decisão 3:** one governed write, `save_seller` (admin/manager). The ChatGPT-era `seller_profiles` is reused (its one production row stays); the unused `upsert_seller_profile` and `can_view_seller_payment` are removed.
+- **Próximo:** stage 2 (seller payment rules: deferred, bonus, closing block, IR %, minimum, TED cost) goes with part C of the payout bridge; stage 3 (certifications, attachments) later.
