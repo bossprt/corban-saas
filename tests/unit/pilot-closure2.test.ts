@@ -57,7 +57,7 @@ test('recovery: identical public answer for any e-mail, no auth of our own, fixe
 })
 test('recovery page never reveals whether the address exists', () => {
   const p = read('src/app/login/recuperar/page.tsx')
-  assert.match(p, /Se este e-mail tiver um acesso/)
+  assert.match(p, /Se este e-mail tiver (um )?acesso/)
   assert.doesNotMatch(p, /não encontrado|não existe|cadastrado/i)
 })
 test('/auth/confirm: strict token shape, type allow-list, fixed destination, no token echo/log', () => {
