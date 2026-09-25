@@ -34,16 +34,73 @@ export async function createCustomer(formData: FormData) {
   if (!row.visible) return go('ok:cliente_de_outro')
 
   const detail = (code: FeedbackCode): never => redirect(feedbackUrl(`/app/clientes/${row.client_id}`, code))
-  // Birth date on the first registration only (an existing client keeps its profile; it is edited on the client page).
-  const birth = String(formData.get('birth_date') ?? '')
-  if (row.created && /^\d{4}-\d{2}-\d{2}$/.test(birth)) {
-    const { error: birthError } = await supabase.rpc('update_client_profile', { p_client: row.client_id, p_birth_date: birth, p_father_name: null, p_mother_name: null,
-      p_rg_number: null, p_rg_issuer: null, p_rg_state: null, p_rg_issued_on: null, p_gender: null, p_marital_status: null, p_birthplace_city: null, p_birthplace_state: null, p_whatsapp: null })
-    if (birthError) return detail('erro:ficha_nascimento')
-  }
-  // The address is optional and secondary: a failure never undoes the client (the person saves it from the client page).
-  if (zip && (await persistAddress(supabase, organization.id, row.client_id, formData))) return detail('ok:cliente_endereco_pendente')
+  const clientId = row.client_id
+  // Single registration form (owner decision): the optional blocks are saved after the client exists. A failure in one of
+  // them never undoes the client; the page opens with the message and the person completes it there.
+  const failure = await completeNewClient(supabase, organization.id, clientId, row.created, formData)
+  if (failure) return detail(failure)
   return detail(row.created ? 'ok:cliente_cadastrado' : 'ok:cliente_reconhecido')
+}
+
+const PROFILE_KEYS = ['birth_date', 'father_name', 'mother_name', 'rg_number', 'rg_issuer', 'rg_state', 'rg_issued_on', 'gender', 'marital_status', 'birthplace_city', 'birthplace_state', 'whatsapp'] as const
+type ProfileRow = Record<(typeof PROFILE_KEYS)[number], string | null>
+
+// Personal data, address, first bank account and first registration of the single form. For a client that already
+// existed, only empty personal data is filled and an existing primary address is kept: nothing is erased.
+async function completeNewClient(supabase: Supa, organizationId: string, clientId: string, created: boolean, f: FormData): Promise<FeedbackCode | null> {
+  const typed: ProfileRow = {
+    birth_date: dateOrNull(f, 'birth_date'), father_name: orNull(f, 'father_name'), mother_name: orNull(f, 'mother_name'), rg_number: orNull(f, 'rg_number'),
+    rg_issuer: orNull(f, 'rg_issuer'), rg_state: orNull(f, 'rg_state'), rg_issued_on: dateOrNull(f, 'rg_issued_on'), gender: orNull(f, 'gender'),
+    marital_status: orNull(f, 'marital_status'), birthplace_city: orNull(f, 'birthplace_city'), birthplace_state: orNull(f, 'birthplace_state'),
+    whatsapp: f.get('whatsapp_same') === 'on' ? orNull(f, 'phone') : orNull(f, 'whatsapp'),
+  }
+  if (PROFILE_KEYS.some(k => typed[k])) {
+    let merged = typed
+    if (!created) {
+      const { data: current } = await supabase.from('clients').select(PROFILE_KEYS.join(',')).eq('id', clientId).maybeSingle()
+      const cur = (current ?? {}) as unknown as Partial<ProfileRow>
+      merged = Object.fromEntries(PROFILE_KEYS.map(k => [k, cur[k] ?? typed[k]])) as ProfileRow
+    }
+    const { error } = await supabase.rpc('update_client_profile', {
+      p_client: clientId, p_birth_date: merged.birth_date, p_father_name: merged.father_name, p_mother_name: merged.mother_name, p_rg_number: merged.rg_number,
+      p_rg_issuer: merged.rg_issuer, p_rg_state: merged.rg_state, p_rg_issued_on: merged.rg_issued_on, p_gender: merged.gender, p_marital_status: merged.marital_status,
+      p_birthplace_city: merged.birthplace_city, p_birthplace_state: merged.birthplace_state, p_whatsapp: merged.whatsapp,
+    })
+    if (error) return profileError(error.message ?? '') ?? classifyDbFeedback(error)
+  }
+
+  if (val(f, 'zip')) {
+    const { data: primary } = created ? { data: null } : await supabase.from('customer_addresses').select('id').eq('customer_id', clientId).eq('is_primary', true).limit(1).maybeSingle()
+    if (!primary && (await persistAddress(supabase, organizationId, clientId, f))) return 'ok:cliente_endereco_pendente'
+  }
+
+  const clean = (k: string) => val(f, k).replace(/[^0-9Xx-]/g, '')
+  if (val(f, 'bank_code') || val(f, 'account_number')) {
+    const account = val(f, 'account_number').replace(/\D/g, '')
+    const { data: same } = await supabase.from('customer_bank_accounts').select('id').eq('customer_id', clientId).eq('bank_code', clean('bank_code')).eq('branch', clean('branch')).eq('account_number', account).limit(1).maybeSingle()
+    if (!same) {
+      const { error } = await supabase.rpc('add_client_bank_account', {
+        p_client: clientId, p_bank_code: clean('bank_code'), p_bank_name: val(f, 'bank_name'), p_branch: clean('branch'), p_account_number: account,
+        p_account_digit: clean('account_digit') || null, p_account_type: val(f, 'account_type') || 'checking', p_primary: false,
+      })
+      if (error) return profileError(error.message ?? '') ?? classifyDbFeedback(error)
+    }
+  }
+
+  if (val(f, 'agreement_id') || val(f, 'registration_number')) {
+    const agreement = val(f, 'agreement_id')
+    if (!isId(agreement)) return 'erro:ficha_convenio'
+    const margin = parseMoneyInput(f.get('margin_amount'))
+    if (margin === 'invalid') return 'erro:valor_invalido'
+    const password = String(f.get('portal_password') ?? '')
+    const { error } = await supabase.rpc('save_client_registration', {
+      p_client: clientId, p_registration: null, p_agreement: agreement, p_agency_name: orNull(f, 'agency_name'), p_registration_number: val(f, 'registration_number'),
+      p_status: 'active', p_margin_amount: margin, p_margin_as_of: null, p_portal_login: orNull(f, 'portal_login'),
+      p_password: password === '' ? null : password, p_clear_password: false, p_notes: null,
+    })
+    if (error) return profileError(error.message ?? '') ?? classifyDbFeedback(error)
+  }
+  return null
 }
 
 type Supa = Awaited<ReturnType<typeof requireAppContext>>['supabase']

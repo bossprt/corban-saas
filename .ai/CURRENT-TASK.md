@@ -29,6 +29,11 @@
   - Resolvido (ADR-0031): cabeçalho do cálculo só com `financeiro.view`; coluna `expected_commission_amount` removida. Migration `20260924204503_commission_visibility_v1` (branch `fix/commission-visibility`), contrato 10/10, e2e 32/32 com login de vendedor. Aplicada em produção em 24/09/2026 (md5 conferido; 0 propostas e 0 simulações, nada a salvar).
   - Código legado: `INTEGRATION_WORKER_SECRET` e `CORBAN_ALLOW_LOCAL_PROVIDERS` ainda são checados em `src/lib/preflight.ts`, testes e `ENVIRONMENT-VARIABLES.md`, mas a rota do worker foi removida na F5.
 
+## Cadastro único do cliente (25/09/2026, branch `feature/cadastro-unico`)
+- Pedido do dono: tudo no Novo cliente, em blocos (identificação, endereço, dados pessoais, primeira conta, primeira matrícula); só nome, CPF e telefone obrigatórios; o restante continua editável na ficha.
+- CPF que já é cliente: só completa os dados pessoais vazios, mantém o endereço principal existente, não duplica conta igual; matrícula repetida é recusada. Sem mudança de banco.
+- Testes: unit 187/187; e2e 35/35 (novo teste do cadastro único e do CPF repetido); build OK.
+
 ## Ficha completa do cliente (25/09/2026, branch `feature/f2b-ficha-cliente`)
 - Pedido do dono: dados pessoais completos, WhatsApp, dados bancários e várias matrículas por cliente (convênio, órgão em texto livre, margem atual, ID e senha). ADR-0033.
 - Migration `20260925025609_client_profile_v1`: colunas pessoais em `clients`, `client_registrations`, `sensitive_access_log`, RPCs `update_client_profile`, `add_client_bank_account`, `set_client_bank_account`, `save_client_registration`, `reveal_registration_password`; senha no Vault. Aplicada em produção em 25/09/2026 (versão 20260925025609, md5 conferido; permissões local = produção, 302).
