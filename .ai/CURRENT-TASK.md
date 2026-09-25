@@ -31,7 +31,7 @@
 
 ## Editar cliente na mesma tela do cadastro (25/09/2026, branch `feature/editar-cadastro-unico`)
 - Pedido do dono: a ficha continua como consulta; "Editar cadastro" abre o mesmo formulário do Novo cliente com os 5 blocos preenchidos (CPF travado). Várias contas e matrículas também no cadastro novo.
-- Migration `20260925150000_client_identity_edit_v1`: `update_client_identity` (nome, telefone e e-mail; o anterior fica no histórico) e `update_client_bank_account`. **Não aplicada em produção.**
+- Migration `20260925053116_client_identity_edit_v1`: `update_client_identity` (nome, telefone e e-mail; o anterior fica no histórico) e `update_client_bank_account`. Aplicada em produção em 25/09/2026 (md5 conferido).
 - As 5 ações antigas de edição por bloco foram removidas (sem uso).
 - Engano corrigido: o contrato novo tinha sobrescrito `client-identity-contract.sql` (da F2); o original foi restaurado e o novo está em `client-identity-edit-contract.sql`.
 - Banco recriado do zero: 29/29 contratos; unit 187/187; e2e 35/35 (dois testes passaram ao rodar de novo, por demora de compilação); build OK.

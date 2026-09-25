@@ -1,4 +1,4 @@
--- Contract test for 20260925150000_client_identity_edit_v1: name, phone and e-mail of an existing client change only through
+-- Contract test for 20260925053116_client_identity_edit_v1: name, phone and e-mail of an existing client change only through
 -- update_client_identity (clientes.edit and sight of the client); the previous phone stays in the history; the CPF never
 -- changes; an existing bank account is edited only by who may edit the client.
 -- One transaction, rolled back.  psql -v ON_ERROR_STOP=1 -f tests/security/client-identity-edit-contract.sql
