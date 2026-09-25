@@ -389,3 +389,10 @@
 - **Decisão 3:** when the CPF already belongs to the company, the proposal links to that client without changing it or showing it: what the broker typed stays in the proposal snapshot, `can_see_client_row` ignores non-validated portal proposals, and only the internal queue shows "cliente já existe, carteira de X" (client owned by someone other than the sender). The typed contacts reach the client record only on validation.
 - **Decisão 4:** documents sent with the proposal live under `<org>/portal/<proposal>/` in the private bucket, readable only by whoever sees the proposal, uploadable only by the sender while it waits for validation.
 - **Decisão 5:** portal access is an invitation for a registered seller that carries the 'corretor' role (`invite_seller_to_portal`, `organization_invitations.access_role_id`); on acceptance the membership gets that role and the seller is bound to the login.
+
+## ADR-0033 - Full client profile, registrations and vaulted registration passwords
+- **Data:** 25/09/2026 - **Status:** aceita (decisões do dono).
+- **Decisão 1:** the client gains optional personal data (parents, RG with issuer, UF and issue date, gender, marital status, birthplace, WhatsApp) and birth date on screen. Only name, CPF and phone stay mandatory; the client page lists what is missing as "cadastro incompleto" without blocking.
+- **Decisão 2:** a client has any number of registrations (matrículas): agreement, agency (órgão, free text: there are too many across Brazil to standardize), number (unique per agreement in the company), status, current margin (overwritten, with date and author) and portal login/password. Bank accounts (several, one primary) use the existing table.
+- **Decisão 3:** writes go through RPCs that require `clientes.edit` and sight of the client (`private.editable_client`).
+- **Decisão 4:** the registration password lives only in Supabase Vault (the table keeps a reference the API cannot read). It is shown only by `reveal_registration_password`, to who may edit that client, and every reveal is written to `sensitive_access_log`, readable by administrators only (MAPA §14: access to sensitive data is recorded).

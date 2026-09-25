@@ -29,6 +29,13 @@
   - Resolvido (ADR-0031): cabeçalho do cálculo só com `financeiro.view`; coluna `expected_commission_amount` removida. Migration `20260924204503_commission_visibility_v1` (branch `fix/commission-visibility`), contrato 10/10, e2e 32/32 com login de vendedor. Aplicada em produção em 24/09/2026 (md5 conferido; 0 propostas e 0 simulações, nada a salvar).
   - Código legado: `INTEGRATION_WORKER_SECRET` e `CORBAN_ALLOW_LOCAL_PROVIDERS` ainda são checados em `src/lib/preflight.ts`, testes e `ENVIRONMENT-VARIABLES.md`, mas a rota do worker foi removida na F5.
 
+## Ficha completa do cliente (25/09/2026, branch `feature/f2b-ficha-cliente`)
+- Pedido do dono: dados pessoais completos, WhatsApp, dados bancários e várias matrículas por cliente (convênio, órgão em texto livre, margem atual, ID e senha). ADR-0033.
+- Migration `20260925025609_client_profile_v1`: colunas pessoais em `clients`, `client_registrations`, `sensitive_access_log`, RPCs `update_client_profile`, `add_client_bank_account`, `set_client_bank_account`, `save_client_registration`, `reveal_registration_password`; senha no Vault. Aplicada em produção em 25/09/2026 (versão 20260925025609, md5 conferido; permissões local = produção, 302).
+- Telas: ficha com Dados pessoais (idade), Matrículas (Mostrar senha por 30 s), Dados bancários, selo "Cadastro incompleto"; data de nascimento no novo cliente.
+- Banco recriado do zero: 28/28 contratos (novo `client-profile-contract.sql`, 23 checagens); unit 187/187; e2e 34/34; build OK.
+- Observação: datas padrão usam o dia UTC do servidor (à noite no Acre aparece o dia seguinte); fuso por empresa fica para depois.
+
 ## F7 — portal do corretor (branch `feature/f7-portal-corretor`)
 - Decisões do dono (24/09/2026): F7 antes da F5.5/F6.5; CPF que já é cliente entra e a empresa decide de quem é a venda, o corretor nunca vê o cadastro; corretor anexa documentos; valida quem pode editar a esteira, recusa sempre com motivo; mesmo endereço com menu reduzido (ADR-0032).
 - Migration `20260925000807_broker_portal_v1`: `proposal_submissions`, `proposal_submission_documents`, `submit_broker_proposal`, `record_submission_document`, `decide_broker_proposal`, `broker_submission_queue`, `invite_seller_to_portal`, trava de comissão antes da validação, `can_see_client_row` sem propostas não validadas, políticas de Storage para `<org>/portal/<proposta>/`, convite com papel (`access_role_id`). Aplicada em produção em 24/09/2026 (versão 20260925000807, md5 conferido; permissões local = produção, 295).

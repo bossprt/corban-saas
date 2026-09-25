@@ -4,10 +4,13 @@ import { ArrowLeft, FilePlus2 } from 'lucide-react'
 import { AddressFields } from '@/components/AddressFields'
 import { SubmitButton } from '@/components/SubmitButton'
 import { Badge, ButtonLink, Card, CardHeader } from '@/components/ui'
+import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
+import { missingProfileFields, type ProfileFields } from '@/lib/clients/profile'
 import { formatCpf, formatPhone } from '@/lib/cpf'
 import { proposalStatusLabel } from '@/lib/operational'
 import { saveCustomerAddress } from '../actions'
+import { BankAccounts, PersonalData, Registrations, type BankAccount, type Registration } from './ProfileSections'
 
 const brl = (v: unknown) => (v === null || v === undefined || v === '' ? '—' : Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }))
 const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('pt-BR') : '—')
@@ -20,18 +23,26 @@ const DONE = ['paid', 'rejected', 'cancelled']
 // Client 360: identity, contact history, every contract the client ever had in the company, leads and timeline.
 export default async function CustomerDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const { supabase } = await requireAppContext()
-  const [{ data: customer }, { data: contacts }, { data: proposals }, { data: leads }, { data: timeline }, { data: address }, { data: documents }] = await Promise.all([
-    supabase.from('clients').select('id,full_name,cpf,phone,email,birth_date,original_source,created_at').eq('id', id).is('deleted_at', null).maybeSingle(),
+  const { supabase, access } = await requireAppContext()
+  const [{ data: customer }, { data: contacts }, { data: proposals }, { data: leads }, { data: timeline }, { data: address }, { data: documents }, { data: accountRows }, { data: registrationRows }, { data: agreementRows }] = await Promise.all([
+    supabase.from('clients').select('id,full_name,cpf,phone,email,birth_date,original_source,created_at,father_name,mother_name,rg_number,rg_issuer,rg_state,rg_issued_on,gender,marital_status,birthplace_city,birthplace_state,whatsapp').eq('id', id).is('deleted_at', null).maybeSingle(),
     supabase.from('client_contacts').select('id,kind,value,is_primary,source,first_seen_at,last_seen_at').eq('customer_id', id).order('is_primary', { ascending: false }).order('last_seen_at', { ascending: false }),
     supabase.from('proposals_v2').select('id,status,external_proposal_id,requested_amount,released_amount,installment_amount,term,created_at').eq('customer_id', id).order('created_at', { ascending: false }).limit(100),
     supabase.from('leads').select('id,status,channel,created_at').eq('customer_id', id).order('created_at', { ascending: false }).limit(20),
     supabase.from('customer_timeline_events').select('id,event_type,source,occurred_at').eq('customer_id', id).order('occurred_at', { ascending: false }).limit(20),
     supabase.from('customer_addresses').select('postal_code,street,number,complement,neighborhood,city,state').eq('customer_id', id).eq('is_primary', true).limit(1).maybeSingle(),
     supabase.from('customer_documents').select('id,status,created_at').eq('customer_id', id).order('created_at', { ascending: false }).limit(20),
+    supabase.from('customer_bank_accounts').select('id,bank_code,bank_name,branch,account_number,account_digit,account_type,is_primary').eq('customer_id', id).order('is_primary', { ascending: false }).order('created_at'),
+    supabase.from('client_registrations').select('id,agreement_id,agency_name,registration_number,status,margin_amount,margin_as_of,portal_login,has_portal_password,notes').eq('customer_id', id).order('status').order('created_at'),
+    supabase.from('organization_agreements').select('id,name').eq('is_active', true).order('name'),
   ])
   if (!customer) notFound()
   const open = (proposals ?? []).filter(p => !DONE.includes(p.status))
+  const accounts = (accountRows ?? []) as BankAccount[]
+  const registrations = (registrationRows ?? []) as Registration[]
+  const profile = customer as unknown as ProfileFields
+  const missing = missingProfileFields(profile, { hasBankAccount: accounts.length > 0, hasRegistration: registrations.length > 0 })
+  const canEdit = can(access, 'clientes.edit')
 
   return (
     <section>
@@ -44,6 +55,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
             <span>Cliente desde {day(customer.created_at)}</span>
             <span>Origem: {source(customer.original_source)}</span>
           </p>
+          {missing.length > 0 && <p className="mt-2 text-xs text-ink-soft"><Badge tone="pending">Cadastro incompleto</Badge> <span className="ml-1">Falta: {missing.join(', ')}.</span></p>}
         </div>
         <ButtonLink href={`/app/propostas/nova?cliente=${customer.id}`}><FilePlus2 size={16} aria-hidden />Nova proposta</ButtonLink>
       </header>
@@ -57,7 +69,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
               {(contacts ?? []).map(c => (
                 <li key={c.id} className="flex items-center gap-3 border-t border-line px-3 py-2.5 first:border-t-0">
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm text-ink">{c.kind === 'phone' ? formatPhone(c.value) : c.value}</span>
+                    <span className="block truncate text-sm text-ink">{c.kind === 'email' ? c.value : formatPhone(c.value)}{c.kind === 'whatsapp' && <span className="ml-1 text-xs text-muted">WhatsApp</span>}</span>
                     <span className="block text-xs text-muted">{source(c.source)} · visto {day(c.last_seen_at)}{c.first_seen_at !== c.last_seen_at ? ` (desde ${day(c.first_seen_at)})` : ''}</span>
                   </span>
                   {c.is_primary && <Badge tone="brand">Principal</Badge>}
@@ -81,6 +93,9 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
         </div>
 
         <div className="grid content-start gap-4">
+          <PersonalData clientId={customer.id} phone={customer.phone} p={profile} canEdit={canEdit} />
+          <Registrations clientId={customer.id} registrations={registrations} agreements={agreementRows ?? []} canEdit={canEdit} />
+          <BankAccounts clientId={customer.id} accounts={accounts} canEdit={canEdit} />
           <Card>
             <CardHeader title={<span className="flex items-center gap-2">Contratos e propostas <Badge tone="neutral">{proposals?.length ?? 0}</Badge>{open.length > 0 && <Badge tone="paid-out">{open.length} em andamento</Badge>}</span>} />
             <div className="overflow-x-auto px-2 pb-2 pt-2">
