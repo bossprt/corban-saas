@@ -1,4 +1,4 @@
--- Contract test for 20260925090000_broker_portal_v1 (F7): portal proposals wait for validation by someone else, an
+-- Contract test for 20260925000807_broker_portal_v1 (F7): portal proposals wait for validation by someone else, an
 -- existing client is never shown to the broker, no commission before validation, refusal needs a reason, portal
 -- documents are private to the sender and the team, and a portal invitation lands with the 'corretor' role.
 -- One transaction, rolled back.  psql -v ON_ERROR_STOP=1 -f tests/security/broker-portal-contract.sql
