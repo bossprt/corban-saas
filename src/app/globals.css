@@ -120,4 +120,8 @@ body {
   .field {
     @apply w-full rounded-lg border border-line-strong bg-surface px-3 py-2.5 text-sm text-ink outline-none placeholder:text-muted focus:border-brand focus:ring-2 focus:ring-brand/20;
   }
+  /* Locked client file: fields stay fully readable; only the frame shows they cannot be typed in. */
+  .field:disabled {
+    @apply cursor-default border-line bg-surface-muted/40 text-ink opacity-100;
+  }
 }

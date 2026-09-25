@@ -193,7 +193,7 @@ export async function updateCustomer(formData: FormData) {
   const { supabase, organization } = await requireAppContext()
   const id = val(formData, 'client_id')
   if (!isId(id)) return go('erro:requisicao_invalida')
-  const back = (code: FeedbackCode): never => redirect(feedbackUrl(`/app/clientes/${id}/editar`, code))
+  const back = (code: FeedbackCode): never => redirect(feedbackUrl(`/app/clientes/${id}`, code))
   const done = (code: FeedbackCode): never => redirect(feedbackUrl(`/app/clientes/${id}`, code))
   const zip = val(formData, 'zip')
   if (zip && !normalizeCep(zip)) return back('erro:cep_invalido')

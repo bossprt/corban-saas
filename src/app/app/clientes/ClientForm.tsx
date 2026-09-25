@@ -1,3 +1,7 @@
+'use client'
+
+import { useState } from 'react'
+import { Pencil, X } from 'lucide-react'
 import { AddressFields } from '@/components/AddressFields'
 import { SubmitButton } from '@/components/SubmitButton'
 import { formatCpf, formatPhone } from '@/lib/cpf'
@@ -12,14 +16,27 @@ export type ClientFormValues = Partial<ProfileFields> & { id: string; full_name:
 export type AddressValues = { zip: string; street: string; number: string; complement: string; district: string; city: string; state: string }
 
 // One form for registering and for editing a client (owner decision): the same five blocks, prefilled when editing.
-export function ClientForm({ mode, action, client, address, accounts = [], registrations = [], agreements, canEdit }: {
+// On the client page the form opens locked (the page itself is the client file); "Editar cadastro" unlocks it in place.
+export function ClientForm({ mode, action, client, address, accounts = [], registrations = [], agreements, canEdit, canReveal = false }: {
   mode: 'create' | 'edit'; action: (f: FormData) => Promise<void>; client?: ClientFormValues; address?: AddressValues
-  accounts?: AccountRow[]; registrations?: RegistrationRow[]; agreements: { id: string; name: string }[]; canEdit: boolean
+  accounts?: AccountRow[]; registrations?: RegistrationRow[]; agreements: { id: string; name: string }[]; canEdit: boolean; canReveal?: boolean
 }) {
   const c = client
+  const [editing, setEditing] = useState(mode === 'create')
+  const [round, setRound] = useState(0)
+  const locked = !editing
   return (
     <form action={action} className="grid gap-5">
       {c && <input type="hidden" name="client_id" value={c.id} />}
+      {mode === 'edit' && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-muted">{locked ? 'Para alterar, clique em Editar cadastro.' : 'Editando: altere o que precisar e clique em Salvar alterações.'}</p>
+          {locked
+            ? <button type="button" onClick={() => setEditing(true)} className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line-strong bg-surface px-3 text-sm font-medium text-ink hover:bg-surface-muted"><Pencil size={15} aria-hidden />Editar cadastro</button>
+            : <button type="button" onClick={() => { setEditing(false); setRound(r => r + 1) }} className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line bg-surface px-3 text-sm text-ink-soft hover:bg-surface-muted"><X size={15} aria-hidden />Cancelar</button>}
+        </div>
+      )}
+      <fieldset key={round} disabled={locked} className="grid gap-5">
       <fieldset className="grid gap-3 md:grid-cols-4">
         <legend className={legend}>1. Identificação</legend>
         <label className={`${lbl} md:col-span-2`}>Nome completo<input required minLength={3} maxLength={160} name="full_name" defaultValue={c?.full_name ?? ''} className="field mt-1.5" autoComplete="off" /></label>
@@ -51,16 +68,17 @@ export function ClientForm({ mode, action, client, address, accounts = [], regis
             <label className={lbl}>Naturalidade (cidade)<input name="birthplace_city" defaultValue={c?.birthplace_city ?? ''} maxLength={120} className="field mt-1.5" /></label>
             <label className={lbl}>UF de nascimento<select name="birthplace_state" defaultValue={c?.birthplace_state ?? ''} className="field mt-1.5"><option value="">—</option>{UFS.map(u => <option key={u}>{u}</option>)}</select></label>
           </fieldset>
-          <BankAccountRows initial={accounts} />
-          <RegistrationRows agreements={agreements} initial={registrations} />
+          <BankAccountRows initial={accounts} locked={locked} />
+          <RegistrationRows agreements={agreements} initial={registrations} locked={locked} canReveal={canReveal} />
         </>
       )}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      </fieldset>
+      {editing && <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-muted">{mode === 'create'
           ? 'Só nome, CPF e telefone são obrigatórios. CPF que já é cliente: os dados vazios são completados, nada é apagado.'
           : 'Telefone ou e-mail novo vira o principal; o anterior fica no histórico de contatos.'}</p>
         <SubmitButton className="h-10 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Salvando...">{mode === 'create' ? 'Cadastrar cliente' : 'Salvar alterações'}</SubmitButton>
-      </div>
+      </div>}
     </form>
   )
 }

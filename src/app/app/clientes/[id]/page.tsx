@@ -1,12 +1,14 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, FilePlus2, Pencil } from 'lucide-react'
+import { ArrowLeft, FilePlus2 } from 'lucide-react'
 import { Badge, ButtonLink, Card, CardHeader } from '@/components/ui'
 import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
 import { missingProfileFields, type ProfileFields } from '@/lib/clients/profile'
 import { formatCpf, formatPhone } from '@/lib/cpf'
 import { proposalStatusLabel } from '@/lib/operational'
+import { updateCustomer } from '../actions'
+import { ClientForm, type ClientFormValues } from '../ClientForm'
 import { BankAccounts, PersonalData, Registrations, type BankAccount, type Registration } from './ProfileSections'
 
 const brl = (v: unknown) => (v === null || v === undefined || v === '' ? '—' : Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }))
@@ -17,12 +19,13 @@ const EVENT: Record<string, string> = { 'customer.created': 'Cliente cadastrado'
 const LEAD_STATUS: Record<string, string> = { new: 'Novo', contacted: 'Em contato', qualified: 'Qualificado', converted: 'Convertido', lost: 'Perdido' }
 const DONE = ['paid', 'rejected', 'cancelled']
 
-// Client 360: identity, contact history, every contract the client ever had in the company, leads and timeline.
+// Client 360. The page is the client file: whoever can edit sees the full registration form, locked until "Editar cadastro"
+// (owner decision); below it, contacts, contracts, leads and timeline. Roles without clientes.edit see read-only blocks.
 export default async function CustomerDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const { supabase, access } = await requireAppContext()
   const [{ data: customer }, { data: contacts }, { data: proposals }, { data: leads }, { data: timeline }, { data: address }, { data: documents }, { data: accountRows }, { data: registrationRows }, { data: agreementRows }] = await Promise.all([
-    supabase.from('clients').select('id,full_name,cpf,phone,email,birth_date,original_source,created_at,father_name,mother_name,rg_number,rg_issuer,rg_state,rg_issued_on,gender,marital_status,birthplace_city,birthplace_state,whatsapp').eq('id', id).is('deleted_at', null).maybeSingle(),
+    supabase.from('clients').select('id,full_name,cpf,phone,email,birth_date,original_source,created_at,updated_at,father_name,mother_name,rg_number,rg_issuer,rg_state,rg_issued_on,gender,marital_status,birthplace_city,birthplace_state,whatsapp').eq('id', id).is('deleted_at', null).maybeSingle(),
     supabase.from('client_contacts').select('id,kind,value,is_primary,source,first_seen_at,last_seen_at').eq('customer_id', id).order('is_primary', { ascending: false }).order('last_seen_at', { ascending: false }),
     supabase.from('proposals_v2').select('id,status,external_proposal_id,requested_amount,released_amount,installment_amount,term,created_at').eq('customer_id', id).order('created_at', { ascending: false }).limit(100),
     supabase.from('leads').select('id,status,channel,created_at').eq('customer_id', id).order('created_at', { ascending: false }).limit(20),
@@ -55,10 +58,17 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
           {missing.length > 0 && <p className="mt-2 text-xs text-ink-soft"><Badge tone="pending">Cadastro incompleto</Badge> <span className="ml-1">Falta: {missing.join(', ')}.</span></p>}
         </div>
         <span className="flex flex-wrap gap-2">
-          {canEdit && <ButtonLink href={`/app/clientes/${customer.id}/editar`} variant="secondary"><Pencil size={16} aria-hidden />Editar cadastro</ButtonLink>}
           <ButtonLink href={`/app/propostas/nova?cliente=${customer.id}`}><FilePlus2 size={16} aria-hidden />Nova proposta</ButtonLink>
         </span>
       </header>
+
+      {canEdit && (
+        <Card className="mb-4 p-5">
+          <ClientForm key={customer.updated_at} mode="edit" action={updateCustomer} client={customer as unknown as ClientFormValues} canEdit canReveal
+            agreements={agreementRows ?? []} accounts={accounts} registrations={registrations}
+            address={address ? { zip: address.postal_code ?? '', street: address.street ?? '', number: address.number ?? '', complement: address.complement ?? '', district: address.neighborhood ?? '', city: address.city ?? '', state: address.state ?? '' } : undefined} />
+        </Card>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
         <div className="grid content-start gap-4">
@@ -93,9 +103,13 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
         </div>
 
         <div className="grid content-start gap-4">
-          <PersonalData p={profile} />
-          <Registrations registrations={registrations} agreements={agreementRows ?? []} canReveal={canEdit} />
-          <BankAccounts accounts={accounts} />
+          {!canEdit && (
+            <>
+              <PersonalData p={profile} />
+              <Registrations registrations={registrations} agreements={agreementRows ?? []} canReveal={false} />
+              <BankAccounts accounts={accounts} />
+            </>
+          )}
           <Card>
             <CardHeader title={<span className="flex items-center gap-2">Contratos e propostas <Badge tone="neutral">{proposals?.length ?? 0}</Badge>{open.length > 0 && <Badge tone="paid-out">{open.length} em andamento</Badge>}</span>} />
             <div className="overflow-x-auto px-2 pb-2 pt-2">
@@ -134,10 +148,12 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
             </Card>
           )}
 
-          <Card>
-            <CardHeader title="Endereço principal" />
-            <p className="px-5 pb-4 pt-3 text-sm text-ink">{address ? [address.street, address.number, address.complement, address.neighborhood, address.city && `${address.city}${address.state ? `/${address.state}` : ''}`, address.postal_code].filter(Boolean).join(' · ') : <span className="text-muted">Nenhum endereço cadastrado.</span>}</p>
-          </Card>
+          {!canEdit && (
+            <Card>
+              <CardHeader title="Endereço principal" />
+              <p className="px-5 pb-4 pt-3 text-sm text-ink">{address ? [address.street, address.number, address.complement, address.neighborhood, address.city && `${address.city}${address.state ? `/${address.state}` : ''}`, address.postal_code].filter(Boolean).join(' · ') : <span className="text-muted">Nenhum endereço cadastrado.</span>}</p>
+            </Card>
+          )}
 
           <Card>
             <CardHeader title="Documentos" />

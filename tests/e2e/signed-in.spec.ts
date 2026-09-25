@@ -418,9 +418,9 @@ test.describe('broker portal', () => {
   })
 })
 
-// ADR-0033: a client is edited in the same form as the registration: identity, personal data, a registration with a vaulted
+// ADR-0033: the client page is the registration form, locked until "Editar cadastro": identity, personal data, a registration with a vaulted
 // password, bank accounts; the old phone stays in the history; an account can be removed.
-test('client profile: edit in the same form, vaulted password, accounts', async ({ page }, info) => {
+test('client profile: the page is the form, locked until Editar cadastro', async ({ page }, info) => {
   test.skip(info.project.name === 'mobile', 'one run is enough')
   const base = String(Date.now() + 7).slice(-9)
   const dv = (s: string, w: number) => { const r = s.split('').reduce((a, c, i) => a + Number(c) * (w - i), 0) % 11; return r < 2 ? 0 : 11 - r }
@@ -435,9 +435,11 @@ test('client profile: edit in the same form, vaulted password, accounts', async 
   await create.getByRole('button', { name: 'Cadastrar cliente' }).click()
   await expect(page.getByRole('heading', { name: `${name} Errado` })).toBeVisible({ timeout: 30_000 })
   await expect(page.getByText('Cadastro incompleto')).toBeVisible()
-  await expect(page.getByText('17/05/1980')).toBeVisible()
+  await expect(page.locator('input[name="birth_date"]')).toHaveValue('1980-05-17')
+  await expect(page.getByLabel('Nome completo')).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Salvar alterações' })).toHaveCount(0)
 
-  await page.getByRole('link', { name: 'Editar cadastro' }).click()
+  await page.getByRole('button', { name: 'Editar cadastro' }).click()
   const edit = page.locator('form').filter({ hasText: '1. Identificação' })
   await expect(edit.getByLabel('Nome completo')).toHaveValue(`${name} Errado`, { timeout: 30_000 })
   await edit.getByLabel('Nome completo').fill(name)
@@ -475,18 +477,19 @@ test('client profile: edit in the same form, vaulted password, accounts', async 
   await edit.getByRole('button', { name: 'Salvar alterações' }).click()
   await expect(page.getByText('Cadastro atualizado.')).toBeVisible({ timeout: 30_000 })
   await expect(page.getByRole('heading', { name })).toBeVisible()
-  await expect(page.getByText('Maria da Silva')).toBeVisible()
-  await expect(page.getByText('R$ 812,45')).toBeVisible()
+  await expect(page.getByLabel('Nome completo')).toBeDisabled()
+  await expect(page.getByLabel('Nome da mãe')).toHaveValue('Maria da Silva')
+  await expect(page.getByLabel('Margem (R$)')).toHaveValue('812,45')
   await expect(page.getByText('Senha#E2E123')).toHaveCount(0)
   await page.getByRole('button', { name: 'Mostrar senha' }).click()
   await expect(page.getByText('Senha#E2E123')).toBeVisible()
   await expect(page.getByText('(68) 99911-2233')).toBeVisible()
-  await expect(page.getByText('104 · Caixa')).toBeVisible()
+  await expect(page.locator('input[name="bank_name"][value="Caixa"]')).toHaveCount(1)
   await expect(page.getByText('Cadastro incompleto')).toHaveCount(0)
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-cliente-ficha-completa.png`, fullPage: true })
 
   // Edit again: the form comes prefilled; change the margin and remove the second account.
-  await page.getByRole('link', { name: 'Editar cadastro' }).click()
+  await page.getByRole('button', { name: 'Editar cadastro' }).click()
   const again = page.locator('form').filter({ hasText: '1. Identificação' })
   await expect(again.locator('[data-row="registration"]').nth(0).getByLabel('Matrícula')).toHaveValue(`MAT-${base}`, { timeout: 30_000 })
   await again.locator('[data-row="registration"]').nth(0).getByLabel('Margem (R$)').fill('900,00')
@@ -494,8 +497,8 @@ test('client profile: edit in the same form, vaulted password, accounts', async 
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-cliente-editar.png`, fullPage: true })
   await again.getByRole('button', { name: 'Salvar alterações' }).click()
   await expect(page.getByText('Cadastro atualizado.')).toBeVisible({ timeout: 30_000 })
-  await expect(page.getByText('R$ 900,00')).toBeVisible()
-  await expect(page.getByText('104 · Caixa')).toHaveCount(0)
+  await expect(page.getByLabel('Margem (R$)')).toHaveValue('900,00')
+  await expect(page.locator('input[name="bank_name"][value="Caixa"]')).toHaveCount(0)
 })
 
 // Single registration form (owner decision): everything at once; the same CPF again only fills what was empty.
@@ -542,15 +545,21 @@ test('single client form: complete registration at once; existing CPF fills only
   await acc2.getByLabel('Principal').check()
   await form.getByRole('button', { name: 'Cadastrar cliente' }).click()
   await expect(page.getByRole('heading', { name })).toBeVisible({ timeout: 30_000 })
-  await expect(page.getByText('Ana Mãe Única')).toBeVisible()
-  await expect(page.getByText('998877 SESP/AC')).toBeVisible()
-  await expect(page.getByText('104 · Caixa')).toBeVisible()
-  await expect(page.getByText(`UNI-${base}`)).toBeVisible()
-  await expect(page.getByText('R$ 350,00')).toBeVisible()
-  await expect(page.getByText(`DOIS-${base}`)).toBeVisible()
-  await expect(page.getByText('R$ 120,50')).toBeVisible()
-  await expect(page.locator('li').filter({ hasText: '001 · Banco do Brasil' })).toContainText('Principal')
-  await expect(page.locator('li').filter({ hasText: '104 · Caixa' })).not.toContainText('Principal')
+  // The client page is the locked registration form: check the saved values in its fields.
+  const saved = page.locator('form').filter({ hasText: '1. Identificação' })
+  await expect(saved.getByLabel('Nome da mãe')).toHaveValue('Ana Mãe Única')
+  await expect(saved.getByLabel('RG', { exact: true })).toHaveValue('998877')
+  await expect(saved.getByLabel('Órgão expedidor')).toHaveValue('SESP')
+  await expect(saved.getByLabel('UF do RG')).toHaveValue('AC')
+  const regs = saved.locator('[data-row="registration"]')
+  await expect(regs).toHaveCount(2)
+  await expect(saved.locator(`input[name="registration_number"][value="UNI-${base}"]`)).toHaveCount(1)
+  await expect(saved.locator(`input[name="registration_number"][value="DOIS-${base}"]`)).toHaveCount(1)
+  await expect(saved.locator('input[name="margin_amount"][value="350,00"]')).toHaveCount(1)
+  await expect(saved.locator('input[name="margin_amount"][value="120,50"]')).toHaveCount(1)
+  const account = (bank: string) => saved.locator('[data-row="account"]').filter({ has: page.locator(`input[name="bank_name"][value="${bank}"]`) })
+  await expect(account('Banco do Brasil').getByLabel('Principal')).toBeChecked()
+  await expect(account('Caixa').getByLabel('Principal')).not.toBeChecked()
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-cadastro-unico.png`, fullPage: true })
 
   // Same CPF again with a different mother's name and a new father: the old value stays, the blank is filled.
@@ -561,7 +570,6 @@ test('single client form: complete registration at once; existing CPF fills only
   await form.getByLabel('Nome do pai').fill('Pai Preenchido Depois')
   await form.getByRole('button', { name: 'Cadastrar cliente' }).click()
   await expect(page.getByRole('heading', { name })).toBeVisible({ timeout: 30_000 })
-  await expect(page.getByText('Ana Mãe Única')).toBeVisible()
-  await expect(page.getByText('Nome Diferente')).toHaveCount(0)
-  await expect(page.getByText('Pai Preenchido Depois')).toBeVisible()
+  await expect(saved.getByLabel('Nome da mãe')).toHaveValue('Ana Mãe Única')
+  await expect(saved.getByLabel('Nome do pai')).toHaveValue('Pai Preenchido Depois')
 })
