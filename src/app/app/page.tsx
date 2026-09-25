@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { ChevronRight } from 'lucide-react'
+import { Badge, Card, CardHeader, PageHeader } from '@/components/ui'
 import { redirect } from 'next/navigation'
 import { requireAppContext } from '@/lib/appContext'
 import { actionItems } from '@/lib/action-center'
@@ -31,20 +33,37 @@ export default async function DashboardPage() {
   const cards: [string, string, string, string][] = [
     [mine ? 'Meus leads em aberto' : 'Leads em aberto', num(leads), '/app/leads', 'novos, em contato ou qualificados'],
     ['Clientes ativos', num(customers), '/app/clientes', ''],
-    [mine ? 'Minhas propostas' : 'Propostas', num(proposals), '/app/propostas', mine ? 'propostas criadas por você' : 'todas as propostas da organização'],
+    [mine ? 'Minhas propostas' : 'Propostas', num(proposals), '/app/propostas', mine ? 'propostas criadas por você' : 'todas as propostas da empresa'],
     ['Casos na operação', num(cases), '/app/operacao', 'em andamento na esteira'],
     ['Fila de digitação', num(jobs), '/app/operacao', ''],
   ]
   const attention = actionItems(membership.role, {
     staleLeads: staleLeads.error ? null : staleLeads.count, draftProposals: draftProposals.error ? null : draftProposals.count, overdueCases: overdueCases.error ? null : overdueCases.count,
   })
-  const card = 'rounded-2xl border border-slate-800 bg-slate-900 p-5 hover:border-slate-700'
   return <section>
-    <div className="mb-8"><h1 className="text-3xl font-semibold">Visão geral</h1><p className="mt-2 text-slate-400">{organization?.name}</p></div>
-    <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900 p-5"><h2 className="font-semibold">Precisa da sua atenção</h2>
-      {attention.length === 0 ? <p className="mt-2 text-sm text-slate-400">Nada pendente agora.</p> : <ul className="mt-3 space-y-2">{attention.map(a => <li key={a.key}><Link href={a.href} className="flex items-baseline justify-between gap-3 rounded-lg border border-slate-800 px-3 py-2 text-sm hover:border-slate-600"><span><span className="text-slate-100">{a.label}</span><span className="block text-xs text-slate-500">{a.hint}</span></span><strong className="text-lg text-amber-300">{a.count}</strong></Link></li>)}</ul>}
+    <PageHeader title="Visão geral" description={organization?.name} />
+    <Card className="mb-4">
+      <CardHeader title={<span className="flex items-center gap-2">Precisa da sua atenção {attention.length > 0 && <Badge tone="diverged">{attention.length}</Badge>}</span>} />
+      {attention.length === 0
+        ? <p className="px-5 pb-5 pt-2 text-sm text-muted">Nada pendente agora.</p>
+        : <ul className="mt-3">{attention.map(a => (
+          <li key={a.key}>
+            <Link href={a.href} className="flex items-center justify-between gap-3 border-t border-line px-5 py-3 hover:bg-surface-muted">
+              <span><span className="block text-sm font-medium text-ink">{a.label}</span><span className="block text-[13px] text-ink-soft">{a.hint}</span></span>
+              <span className="flex items-center gap-2"><strong className="num text-lg text-[#92400E]">{a.count}</strong><ChevronRight size={16} aria-hidden className="text-muted" /></span>
+            </Link>
+          </li>
+        ))}</ul>}
+    </Card>
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      {cards.map(([label, value, href, hint]) => (
+        <Link href={href} key={label} className="flex flex-col gap-1.5 rounded-[14px] border border-line bg-surface px-5 py-4 hover:border-line-strong hover:bg-surface-muted">
+          <span className="text-[13px] font-medium text-muted">{label}</span>
+          <span className={value === 'indisponível' ? 'text-base font-semibold text-[#92400E]' : 'num text-[28px] font-semibold tracking-tight text-ink'}>{value}</span>
+          {hint && <span className="text-[13px] text-ink-soft">{hint}</span>}
+        </Link>
+      ))}
     </div>
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">{cards.map(([label, value, href, hint]) => <Link href={href} key={label} className={card}><div className="text-sm text-slate-400">{label}</div><div className={`mt-3 font-semibold ${value === 'indisponível' ? 'text-base text-amber-300' : 'text-3xl'}`}>{value}</div>{hint && <div className="mt-1 text-xs text-slate-500">{hint}</div>}</Link>)}</div>
-    <p className="mt-6 text-xs text-slate-500">Os números desta tela vêm direto da sua empresa e respeitam o seu perfil de acesso.</p>
+    <p className="mt-6 text-xs text-muted">Os números desta tela vêm direto da sua empresa e respeitam o seu perfil de acesso.</p>
   </section>
 }
