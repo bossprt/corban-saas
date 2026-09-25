@@ -22,7 +22,7 @@ export default async function AgreementsPage() {
   const govs = (templates.data ?? []).filter(t => t.kind === 'state_government' && !enabled.has(t.id))
   const halls = (templates.data ?? []).filter(t => t.kind === 'capital_city_hall' && !enabled.has(t.id))
   return <section>
-    <Link href="/app/comercial" className="text-sm text-slate-400 underline">← Voltar ao Comercial</Link>
+    <Link href="/app/cadastros" className="text-sm text-slate-400 underline">← Cadastros</Link>
     <h1 className="mt-3 text-3xl font-semibold">Convênios</h1>
     <p className="mt-2 text-sm text-slate-400">Habilite um convênio nacional ou cadastre um convênio próprio. A lista fica aqui, sem crescer na tela principal do Comercial.</p>
 

@@ -19,7 +19,7 @@ export default async function ContractTypesPage(){
  ])
  const setting=new Map((settings.data??[]).map(x=>[x.contract_type_id,x]))
  return <section>
-  <Link href="/app/cadastros" className="text-sm text-slate-400 underline">← Voltar aos Cadastros</Link>
+  <Link href="/app/cadastros" className="text-sm text-slate-400 underline">← Cadastros</Link>
   <h1 className="mt-3 text-3xl font-semibold">Tipos de Contrato</h1>
   <p className="mt-2 max-w-3xl text-sm text-slate-400">Tipos globais como Novo, Refinanciamento, Portabilidade e Refin/Portabilidade podem ser habilitados conforme a operação. Sua empresa também pode criar tipos próprios.</p>
 

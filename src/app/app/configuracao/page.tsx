@@ -33,7 +33,6 @@ export default async function ConfigurationPage() {
   })
   const done = items.filter(i => i.done).length
   const shortcuts: [string, string, string][] = [
-    ['Equipe', '/app/equipe', 'Quem acessa a empresa, convites e papel de cada pessoa.'],
     ['Comissão', '/app/configuracao/comissao', 'Imposto, lucro da empresa, repasse e fontes isentas.'],
     ['Repasse', '/app/configuracao/repasse', 'Fechamento ou conta interna, frequência e limite de desconto do saldo negativo.'],
     ['Etapas da esteira', '/app/configuracao/etapas', 'Nome, ordem e prazo de cada etapa.'],

@@ -30,7 +30,7 @@ export default async function FactorsPage(){
  const entriesBy=new Map<string,(typeof entries.data extends (infer T)[]|null?T:never)[]>()
  for(const e of entries.data??[])entriesBy.set(e.batch_id,[...(entriesBy.get(e.batch_id)??[]),e])
  return <section>
-  <Link href="/app/cadastros" className="text-sm text-slate-400 underline">← Voltar aos Cadastros</Link>
+  <Link href="/app/cadastros" className="text-sm text-slate-400 underline">← Cadastros</Link>
   <h1 className="mt-3 text-3xl font-semibold">Fatores</h1>
   <p className="mt-2 max-w-3xl text-sm text-slate-400">Fatores diários recebem uma vigência por data. Fatores fixos continuam valendo até uma publicação futura. O CRM consulta o fator publicado aplicável.</p>
 

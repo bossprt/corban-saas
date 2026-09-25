@@ -16,7 +16,7 @@ export default async function InstitutionsPage() {
   const { data: rows } = await supabase.from('organization_banks').select('id,name,is_active').order('name')
   const active = (rows ?? []).filter(r => r.is_active).length
   return <section>
-    <Link href="/app/comercial" className="text-sm text-slate-400 underline">← Voltar ao Comercial</Link>
+    <Link href="/app/cadastros" className="text-sm text-slate-400 underline">← Cadastros</Link>
     <div className="mt-3 flex flex-wrap items-end justify-between gap-3"><div><h1 className="text-3xl font-semibold">Instituições / Origens</h1><p className="mt-2 text-sm text-slate-400">Banco ou instituição que fica no lado de origem da operação. Exemplos: Daycoval, NASP, Hope.</p></div><span className="text-sm text-slate-400">{active} ativas · {(rows ?? []).length} no total</span></div>
 
     {canEdit && <form action={createBank} className={`${card} mt-5 flex flex-wrap gap-2`}>

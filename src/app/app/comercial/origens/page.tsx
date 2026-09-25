@@ -17,7 +17,7 @@ export default async function OriginsPage() {
   const { data: rows } = await supabase.from('organization_providers').select('id,name,provider_type,is_active').order('name')
   const active = (rows ?? []).filter(r => r.is_active).length
   return <section>
-    <Link href="/app/comercial" className="text-sm text-slate-400 underline">← Voltar ao Comercial</Link>
+    <Link href="/app/cadastros" className="text-sm text-slate-400 underline">← Cadastros</Link>
     <div className="mt-3"><h1 className="text-3xl font-semibold">Promotoras parceiras</h1><p className="mt-2 text-sm text-slate-400">Cadastre aqui somente a empresa externa usada quando uma tabela/produção não é própria da sua operação.</p><p className="mt-1 text-xs text-slate-500">{active} ativas · {(rows ?? []).length} no total</p></div>
 
     {canEdit && <form action={createProvider} className={`${card} mt-5 grid gap-2 md:grid-cols-3`}>

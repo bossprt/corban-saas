@@ -2,11 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BarChart3, Building2, CalendarCheck, FilePlus2, HandCoins, Home, KanbanSquare, LayoutDashboard, Settings, Target, Users, WalletCards, type LucideIcon } from 'lucide-react'
+import { BarChart3, CalendarCheck, FilePlus2, FolderOpen, HandCoins, Home, KanbanSquare, LayoutDashboard, Settings, Target, Users, WalletCards, type LucideIcon } from 'lucide-react'
 import { cn } from '@/components/ui'
 
 export type NavKey = 'hoje' | 'dashboard' | 'clientes' | 'esteira' | 'metas' | 'financeiro' | 'repasse' | 'comercial' | 'relatorios' | 'configuracoes' | 'portal' | 'portal_nova'
-export type NavItem = { key: NavKey; href: string; label: string }
+export type NavLink = { href: string; label: string }
+// `children` open under the item while the user is in one of its `sections` (Cadastros lists every registration).
+export type NavItem = { key: NavKey; href: string; label: string; children?: NavLink[]; sections?: string[] }
 
 const ICONS: Record<NavKey, LucideIcon> = {
   hoje: CalendarCheck,
@@ -16,7 +18,7 @@ const ICONS: Record<NavKey, LucideIcon> = {
   metas: Target,
   financeiro: WalletCards,
   repasse: HandCoins,
-  comercial: Building2,
+  comercial: FolderOpen,
   relatorios: BarChart3,
   configuracoes: Settings,
   portal: Home,
@@ -32,22 +34,41 @@ export function SideNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname()
   return (
     <nav aria-label="Principal" className="flex flex-col gap-0.5">
-      {items.map(({ key, href, label }) => {
+      {items.map(({ key, href, label, children, sections }) => {
         const Icon = ICONS[key]
-        const active = isActive(pathname, href)
+        const inSection = isActive(pathname, href) || (sections ?? []).some(s => isActive(pathname, s))
+        const childActive = (children ?? []).some(c => isActive(pathname, c.href))
+        const active = inSection && !childActive
         return (
-          <Link
-            key={key}
-            href={href}
-            aria-current={active ? 'page' : undefined}
-            className={cn(
-              'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors',
-              active ? 'bg-brand-soft font-semibold text-brand' : 'text-ink-soft hover:bg-surface-muted hover:text-ink',
+          <div key={key}>
+            <Link
+              href={href}
+              aria-current={active ? 'page' : undefined}
+              aria-expanded={children ? inSection : undefined}
+              className={cn(
+                'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors',
+                active ? 'bg-brand-soft font-semibold text-brand' : inSection ? 'font-semibold text-brand' : 'text-ink-soft hover:bg-surface-muted hover:text-ink',
+              )}
+            >
+              <Icon size={17} aria-hidden />
+              {label}
+            </Link>
+            {children && inSection && (
+              <ul className="mb-1 ml-[21px] mt-0.5 flex flex-col gap-0.5 border-l border-line pl-2">
+                {children.map(c => {
+                  const on = isActive(pathname, c.href)
+                  return (
+                    <li key={c.href}>
+                      <Link href={c.href} aria-current={on ? 'page' : undefined}
+                        className={cn('block rounded-md px-2.5 py-1.5 text-[13px] transition-colors', on ? 'bg-brand-soft font-semibold text-brand' : 'text-ink-soft hover:bg-surface-muted hover:text-ink')}>
+                        {c.label}
+                      </Link>
+                    </li>
+                  )
+                })}
+              </ul>
             )}
-          >
-            <Icon size={17} aria-hidden />
-            {label}
-          </Link>
+          </div>
         )
       })}
     </nav>

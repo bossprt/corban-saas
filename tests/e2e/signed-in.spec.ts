@@ -24,7 +24,7 @@ const pages = [
   { path: '/app/atencao', name: 'atencao' },
   { path: '/app/clientes', name: 'clientes' },
   { path: '/app/propostas', name: 'esteira' },
-  { path: '/app/comercial', name: 'comercial' },
+  { path: '/app/cadastros', name: 'cadastros' },
   { path: '/app/equipe', name: 'equipe' },
   { path: '/app/configuracao/papeis', name: 'papeis' },
   { path: '/app/metas', name: 'metas' },
@@ -619,4 +619,25 @@ test('seller group: payout rule per commission type, versioned, own production',
   await page.goto('/app/cadastros/vendedores')
   await expect(page.getByLabel('Grupo').first().locator('option', { hasText: name }).first()).toHaveCount(1)
   await expect(page.getByText('Grupo de Vendedor', { exact: true })).toHaveCount(0)
+})
+
+// Cadastros (owner decision 25/09/2026): every registration under one menu item, reachable by clicking only.
+test('menu Cadastros: every registration reachable by clicking; old Comercial page lands there', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'side menu is desktop; the phone uses the search')
+  await page.goto('/app/hoje')
+  const menu = page.getByRole('navigation', { name: 'Principal' })
+  await expect(menu.getByRole('link', { name: 'Comercial' })).toHaveCount(0)
+  await menu.getByRole('link', { name: 'Cadastros' }).click()
+  await expect(page.getByRole('heading', { name: 'Cadastros' })).toBeVisible({ timeout: 30_000 })
+  for (const item of ['Bancos', 'Convênios', 'Promotoras parceiras', 'Tipos de contrato', 'Tabelas', 'Grupos de vendedores', 'Vendedores', 'Fatores', 'Equipe']) {
+    await expect(menu.getByRole('link', { name: item, exact: true })).toBeVisible()
+  }
+  await menu.getByRole('link', { name: 'Vendedores', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Cadastrar vendedor' })).toBeVisible({ timeout: 30_000 })
+  await expect(menu.getByRole('link', { name: 'Vendedores', exact: true })).toHaveAttribute('aria-current', 'page')
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-menu-cadastros.png`, fullPage: true })
+  await page.goto('/app/comercial')
+  await expect(page).toHaveURL(/\/app\/cadastros$/, { timeout: 30_000 })
+  await page.goto('/app/configuracao')
+  await expect(page.getByText('Quem acessa a empresa, convites e papel de cada pessoa.')).toHaveCount(0)
 })

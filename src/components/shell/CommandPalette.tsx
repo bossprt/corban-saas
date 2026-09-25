@@ -104,12 +104,19 @@ export function CommandPalette({ nav }: { nav: NavItem[] }) {
 
           {term.length < 2 ? (
             <Command.Group heading="Ir para" className={GROUP}>
-              {nav.map(n => (
+              {nav.flatMap(n => [
                 <Command.Item key={n.key} value={`nav-${n.key}`} onSelect={() => go(n.href)} className={ITEM}>
                   <ArrowRight size={15} className="text-muted" aria-hidden />
                   {n.label}
-                </Command.Item>
-              ))}
+                </Command.Item>,
+                // Sub-entries (Cadastros > Vendedores...): on the phone there is no side menu, so they are reachable here.
+                ...(n.children ?? []).map(c => (
+                  <Command.Item key={`${n.key}-${c.href}`} value={`nav-${n.key}-${c.href}`} onSelect={() => go(c.href)} className={ITEM}>
+                    <ArrowRight size={15} className="text-muted" aria-hidden />
+                    <span className="text-muted">{n.label} ›</span> {c.label}
+                  </Command.Item>
+                )),
+              ])}
             </Command.Group>
           ) : null}
         </Command.List>
