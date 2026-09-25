@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node10",
+    "target": "ES2020",
+    "noEmit": false,
+    "incremental": false,
+    "outDir": "../../.test-build",
+    "rootDir": "../..",
+    "plugins": [],
+    "types": ["node"]
+  },
+  "include": ["./**/*.ts", "../../src/lib/imports/**/*.ts", "../../src/lib/rbac.ts", "../../src/lib/tenant.ts", "../../src/lib/commission/**/*.ts", "../../src/lib/commercial.ts", "../../src/lib/receipts/**/*.ts"],
+  "exclude": ["../../node_modules"]
+}

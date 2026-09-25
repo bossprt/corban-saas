@@ -39,3 +39,16 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# unit test build output
+/.test-build/
+
+# Playwright
+/playwright-report/
+/test-results/
+
+# graphify (local knowledge graph)
+/graphify-out/
+
+# Supabase CLI local state
+/supabase/.temp/

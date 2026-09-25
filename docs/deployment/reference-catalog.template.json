@@ -1,0 +1,20 @@
+{
+  "banks": [
+    { "code": "<CODIGO_BANCO>", "name": "<Nome do banco>" }
+  ],
+  "providers": [
+    { "code": "<CODIGO_PROVEDOR>", "name": "<Nome do provedor / master>", "providerType": "<bank_direct | master | promotora | other>" }
+  ],
+  "agreements": [
+    { "bankCode": "<CODIGO_BANCO>", "code": "<CODIGO_CONVENIO>", "name": "<Nome do convênio>" }
+  ],
+  "products": [
+    { "code": "<CODIGO_PRODUTO>", "name": "<Nome do produto>" }
+  ],
+  "modalities": [
+    { "productCode": "<CODIGO_PRODUTO>", "code": "<CODIGO_MODALIDADE>", "name": "<Nome da modalidade>" }
+  ],
+  "documentTypes": [
+    { "code": "<CODIGO_DOCUMENTO>", "name": "<Nome do documento>" }
+  ]
+}

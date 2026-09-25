@@ -1,0 +1,4 @@
+*.sh text eol=lf
+scripts/f0/*.txt text eol=lf
+supabase/migrations/*.sql text eol=lf
+supabase/baseline/*.sql text eol=lf

@@ -1,0 +1,158 @@
+import Link from 'next/link'
+import { FilePlus2 } from 'lucide-react'
+import { Badge, ButtonLink, Card, PageHeader, type Tone } from '@/components/ui'
+import { can } from '@/lib/access'
+import { requireAppContext } from '@/lib/appContext'
+import { formatCpf } from '@/lib/cpf'
+
+type CaseRow = { id: string; proposal_id: string; current_stage_id: string; canonical_state: string; entered_stage_at: string; due_at: string | null; pendency_due_at: string | null; pendency_reason: string | null }
+type ProposalRow = { id: string; external_proposal_id: string | null; requested_amount: number | null; released_amount: number | null; customer_snapshot: Record<string, unknown> | null; commercial_snapshot: Record<string, unknown> | null; seller_id: string | null; created_by: string | null }
+
+const CLOSED = ['paid', 'rejected', 'cancelled']
+const STATE_TONE: Record<string, Tone> = {
+  digitization_queue: 'neutral', digitizing: 'expected', submitted: 'paid-out', pending_external: 'diverged',
+  approved: 'received', paid: 'received', rejected: 'reversed', cancelled: 'neutral',
+}
+const brl = (v: number | null) => (v === null || v === undefined ? '—' : Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }))
+// Server-rendered per request.
+const requestTime = () => Date.now()
+const days = (iso: string) => Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000))
+
+// Esteira: every proposal in the pipeline with its stage, how long it is there and the alerts that need action.
+// Stages are the company's own (names and order); visibility follows the caller's scope (RLS).
+export default async function PipelinePage({ searchParams }: { searchParams: Promise<{ etapa?: string; visao?: string }> }) {
+  const { supabase, access } = await requireAppContext()
+  const sp = await searchParams
+
+  const [{ data: stages }, { data: allCases }, { count: portalPending }] = await Promise.all([
+    supabase.from('operational_stages').select('id,code,name,canonical_state,sort_order').eq('is_active', true).order('sort_order'),
+    supabase.from('operational_cases').select('id,proposal_id,current_stage_id,canonical_state,entered_stage_at,due_at,pendency_due_at,pendency_reason').order('entered_stage_at', { ascending: true }).limit(500),
+    // Portal proposals (F7) wait outside the pipeline until validated.
+    supabase.from('proposal_submissions').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+  ])
+  const cases = (allCases ?? []) as CaseRow[]
+  const kanban = sp.visao === 'kanban'
+  const stage = kanban ? undefined : (stages ?? []).find(s => s.code === sp.etapa)
+  const shown = stage ? cases.filter(c => c.current_stage_id === stage.id) : cases.filter(c => !CLOSED.includes(c.canonical_state))
+
+  const ids = shown.map(c => c.proposal_id)
+  const { data: proposalRows } = ids.length
+    ? await supabase.from('proposals_v2').select('id,external_proposal_id,requested_amount,released_amount,customer_snapshot,commercial_snapshot,seller_id,created_by').in('id', ids)
+    : { data: [] as ProposalRow[] }
+  const proposals = new Map(((proposalRows ?? []) as ProposalRow[]).map(p => [p.id, p]))
+  const sellerIds = [...new Set([...proposals.values()].map(p => p.seller_id).filter(Boolean))] as string[]
+  const { data: sellers } = sellerIds.length ? await supabase.from('commercial_sellers').select('id,name').in('id', sellerIds) : { data: [] as { id: string; name: string }[] }
+  const sellerName = new Map((sellers ?? []).map(s => [s.id, s.name]))
+  const stageName = new Map((stages ?? []).map(s => [s.id, s.name]))
+  const count = (id: string) => cases.filter(c => c.current_stage_id === id).length
+  const openCount = cases.filter(c => !CLOSED.includes(c.canonical_state)).length
+
+  const now = requestTime()
+  const alertOf = (c: CaseRow) => {
+    if (c.pendency_due_at && new Date(c.pendency_due_at).getTime() < now) return 'Pendência vencida'
+    if (c.pendency_due_at && new Date(c.pendency_due_at).getTime() < now + 86_400_000) return 'Pendência vence em 24h'
+    if (c.due_at && !CLOSED.includes(c.canonical_state) && new Date(c.due_at).getTime() < now) return 'Parada além do prazo'
+    return ''
+  }
+  const alerts = shown.filter(c => alertOf(c)).length
+
+  return (
+    <section>
+      <PageHeader
+        title="Esteira"
+        description={`${openCount} propostas em andamento${alerts ? ` · ${alerts} com alerta` : ''}`}
+        actions={<>
+          {can(access, 'esteira.edit') && (portalPending ?? 0) > 0 && <ButtonLink href="/app/propostas/validacao" variant="secondary">Aguardando validação <span className="num">{portalPending}</span></ButtonLink>}
+          {can(access, 'propostas.create') && <ButtonLink href="/app/propostas/nova"><FilePlus2 size={16} aria-hidden />Nova proposta</ButtonLink>}
+        </>}
+      />
+
+      <nav aria-label="Etapas" className="mb-4 flex gap-1 overflow-x-auto border-b border-line">
+        <Link href="/app/propostas" aria-current={!stage ? 'page' : undefined} className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2.5 text-sm ${!stage ? 'border-brand font-semibold text-ink' : 'border-transparent text-ink-soft hover:text-ink'}`}>
+          Em andamento <span className="num ml-1 text-xs text-muted">{openCount}</span>
+        </Link>
+        {(stages ?? []).map(s => (
+          <Link key={s.id} href={`/app/propostas?etapa=${s.code}`} aria-current={stage?.id === s.id ? 'page' : undefined}
+            className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2.5 text-sm ${stage?.id === s.id ? 'border-brand font-semibold text-ink' : 'border-transparent text-ink-soft hover:text-ink'}`}>
+            {s.name} <span className="num ml-1 text-xs text-muted">{count(s.id)}</span>
+          </Link>
+        ))}
+      </nav>
+
+      <div className="mb-3 flex justify-end gap-1 text-sm">
+        <Link href="/app/propostas" aria-current={!kanban ? 'page' : undefined} className={`rounded-lg px-3 py-1.5 ${!kanban ? 'bg-brand-soft font-semibold text-brand' : 'text-ink-soft hover:bg-surface-muted'}`}>Tabela</Link>
+        <Link href="/app/propostas?visao=kanban" aria-current={kanban ? 'page' : undefined} className={`rounded-lg px-3 py-1.5 ${kanban ? 'bg-brand-soft font-semibold text-brand' : 'text-ink-soft hover:bg-surface-muted'}`}>Kanban</Link>
+      </div>
+
+      {kanban ? (
+        <div className="flex gap-3 overflow-x-auto pb-2" aria-label="Kanban da esteira">
+          {(stages ?? []).filter(st => !CLOSED.includes(st.canonical_state)).map(st => {
+            const column = shown.filter(c => c.current_stage_id === st.id)
+            return (
+              <section key={st.id} aria-label={st.name} className="flex w-72 shrink-0 flex-col rounded-[14px] border border-line bg-surface-muted">
+                <header className="flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-ink">{st.name}<span className="num text-xs font-normal text-muted">{column.length}</span></header>
+                <div className="flex flex-col gap-2 px-2 pb-2">
+                  {column.map(c => {
+                    const p = proposals.get(c.proposal_id)
+                    const cust = (p?.customer_snapshot ?? {}) as Record<string, unknown>
+                    const com = (p?.commercial_snapshot ?? {}) as Record<string, unknown>
+                    const d = days(c.entered_stage_at)
+                    const alert = alertOf(c)
+                    return (
+                      <Link key={c.id} href={`/app/propostas/${c.proposal_id}`} className="rounded-[10px] border border-line bg-surface p-3 text-[13px] hover:border-brand/50">
+                        <span className="block font-medium text-ink">{String(cust.full_name ?? cust.name ?? 'Cliente')}</span>
+                        <span className="mt-0.5 block text-xs text-muted">{[com.bank, p?.external_proposal_id].filter(Boolean).join(' · ') || '—'}</span>
+                        <span className="mt-2 flex items-center justify-between">
+                          <span className="num font-semibold text-ink">{brl(p?.released_amount ?? p?.requested_amount ?? null)}</span>
+                          <span className={`num text-xs ${d >= 4 ? 'font-semibold text-diverged' : 'text-muted'}`}>{d === 0 ? 'hoje' : `${d} d`}</span>
+                        </span>
+                        {alert && <span className="mt-1.5 block text-xs font-medium text-diverged">{alert}</span>}
+                      </Link>
+                    )
+                  })}
+                  {column.length === 0 && <p className="px-1 py-3 text-center text-xs text-muted">Vazio</p>}
+                </div>
+              </section>
+            )
+          })}
+        </div>
+      ) : (
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-[13px]">
+            <thead className="bg-surface-muted text-xs font-semibold text-muted">
+              <tr>
+                <th className="px-3 py-2.5">ADE</th><th className="px-3 py-2.5">Cliente</th><th className="px-3 py-2.5">CPF</th><th className="px-3 py-2.5">Banco / tabela</th>
+                <th className="px-3 py-2.5 text-right">Valor</th><th className="px-3 py-2.5">Vendedor</th><th className="px-3 py-2.5">Etapa</th><th className="px-3 py-2.5 text-right">Na etapa</th><th className="px-3 py-2.5">Alerta</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map(c => {
+                const p = proposals.get(c.proposal_id)
+                const cust = (p?.customer_snapshot ?? {}) as Record<string, unknown>
+                const com = (p?.commercial_snapshot ?? {}) as Record<string, unknown>
+                const d = days(c.entered_stage_at)
+                const alert = alertOf(c)
+                return (
+                  <tr key={c.id} className="border-t border-line-strong/60 hover:bg-surface-muted">
+                    <td className="px-3 py-2 font-mono"><Link href={`/app/propostas/${c.proposal_id}`} className="text-brand hover:text-brand-strong">{p?.external_proposal_id ?? '—'}</Link></td>
+                    <td className="px-3 py-2 font-medium text-ink"><Link href={`/app/propostas/${c.proposal_id}`} className="hover:text-brand">{String(cust.full_name ?? cust.name ?? 'Cliente')}</Link></td>
+                    <td className="px-3 py-2 font-mono text-ink-soft">{formatCpf(String(cust.cpf ?? ''))}</td>
+                    <td className="px-3 py-2 text-ink-soft">{[com.bank, com.table].filter(Boolean).join(' · ') || '—'}</td>
+                    <td className="num px-3 py-2 text-right text-ink">{brl(p?.released_amount ?? p?.requested_amount ?? null)}</td>
+                    <td className="px-3 py-2 text-ink-soft">{(p?.seller_id && sellerName.get(p.seller_id)) || '—'}</td>
+                    <td className="px-3 py-2"><Badge tone={STATE_TONE[c.canonical_state] ?? 'neutral'}>{stageName.get(c.current_stage_id) ?? c.canonical_state}</Badge></td>
+                    <td className={`num px-3 py-2 text-right ${d >= 4 && !CLOSED.includes(c.canonical_state) ? 'font-semibold text-diverged' : 'text-ink-soft'}`}>{d === 0 ? 'hoje' : `${d} d`}</td>
+                    <td className="px-3 py-2 text-xs font-medium text-diverged" title={c.pendency_reason ?? undefined}>{alert}</td>
+                  </tr>
+                )
+              })}
+              {shown.length === 0 && <tr><td colSpan={9} className="px-4 py-10 text-center text-sm text-muted">Nenhuma proposta nesta etapa.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+      )}
+    </section>
+  )
+}

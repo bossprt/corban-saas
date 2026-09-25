@@ -1,0 +1,3 @@
+create index if not exists proposal_component_snapshot_proposal_idx on public.proposal_commercial_component_snapshots(proposal_id);
+create index if not exists proposal_component_snapshot_component_idx on public.proposal_commercial_component_snapshots(commission_component_id);
+create index if not exists proposal_component_snapshot_split_idx on public.proposal_commercial_component_snapshots(split_rule_version_id) where split_rule_version_id is not null;

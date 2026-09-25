@@ -7,3 +7,18 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+# CORBAN OS — AGENT BOOTSTRAP
+
+Before changing architecture, schema, authorization, financial logic or domain behavior, read:
+
+1. `/.ai/MAPA-OPERACAO.md` — product source of truth (approved by the owner)
+2. `/.ai/RULES.md`
+3. `/.ai/DECISIONS.md`
+4. `/.ai/CURRENT-TASK.md`
+
+Live code, migrations and the database are the only evidence of what is implemented. Never describe planned capability as implemented. Explain every action and wait for the owner's approval before executing it.
+
+Tenant isolation is fail-closed. Never weaken RLS to make a feature work. Never use floating point for money. Financial history is immutable except explicit compensating/reversal records. AI suggestions do not publish financial truth without deterministic validation and required Human Gates.
+
+Do not modify `main` directly. No destructive migration, production publication, secrets, significant spend or irreversible external action without Human Gate. End each execution cycle by updating CURRENT-TASK/CHANGELOG and architectural decisions when applicable.

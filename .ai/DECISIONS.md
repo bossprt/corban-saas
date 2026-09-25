@@ -181,3 +181,211 @@
 ---
 
 # FIM
+
+---
+
+## ADR-0011 — Membership explícito e contexto tenant fail-closed
+
+- **Data:** 17/09/2026
+- **Status:** aceita; substitui a parte do ADR-0001 que dependia de `organization_id` no JWT como fonte única de tenant.
+- **Contexto:** O banco vivo usa `profiles.organization_id` e `get_user_organization_id()`. Isso suporta apenas um vínculo simples por usuário e não é suficiente para a evolução V2 de RBAC, múltiplas organizações e revogação contextual.
+- **Decisão:** Introduzir `organization_memberships` como vínculo explícito entre usuário e organização. O tenant efetivo deve ser resolvido de forma fail-closed a partir de sessão autenticada + membership ativo/autorizado. Claims/JWT podem otimizar contexto, mas não substituem a validação vigente no backend/banco.
+- **Migração:** aditiva primeiro; preservar `profiles.organization_id` durante transição e migrar memberships existentes de forma idempotente. Nenhuma remoção do legado até testes de isolamento e compatibilidade passarem.
+- **Segurança:** policies V2 serão explícitas por operação; inserts/updates exigirão `WITH CHECK` coerente. Relações tenant-scoped críticas devem impedir referência cruzada entre organizações.
+- **Consequências:** um usuário poderá futuramente participar de mais de uma organização; revogação de membership passa a ser fonte operacional; testes A/B entre tenants tornam-se gate obrigatório; código não pode confiar apenas em tenant enviado pelo cliente.
+
+
+---
+
+## ADR-0012 — Identidade canônica, canais comerciais e rede de distribuição
+
+- **Data:** 18/09/2026
+- **Status:** aceita conceitualmente; substitui a linearidade `Bank → Provider/Master → ...` da seção 6 do Master V2.
+- **Evidência operacional:** Smart pode operar o mesmo banco/tabela simultaneamente como Sub e via Correspondentes parceiros (ex.: Efetiva Mais/Bevicred), com comissões diferentes. A Smart também pode ser Master e possuir Subs abaixo dela.
+- **Decisão:** Banco/tabela são identidades canônicas independentes do canal. Master, Subestabelecido e Parceiro são papéis da relação comercial, não tipos permanentes da empresa. Uma organização pode ocupar papéis diferentes simultaneamente, inclusive para o mesmo banco.
+- **Identidade:** Proposal possui UUID interno imutável. Identidades externas são vinculadas separadamente; número de proposta bancária é match forte, preservando instituição+numero como chave externa defensiva. Tabelas também possuem identidade canônica e aliases/códigos por canal.
+- **Canal:** cada canal registra contraparte, papel, códigos/nomenclaturas externas, vigência e condições comerciais. A mesma tabela pode ter múltiplos canais concorrentes.
+- **Rede:** tenant pode vender para organizações acima e receber produção de organizações abaixo. CNPJ/identificadores da rede determinam o produtor econômico quando relatórios externos consolidam Subs.
+- **Financeiro:** separar produção, comissão gerada, direito econômico, pagador, recebido e divergência. Split de Sub pode ser 100/0, 95/5, 90/10 etc. por regra/versionamento, inclusive por componente.
+- **Componentes:** à vista, diferido, antecipação do diferido, bônus/campanha e outros componentes são separados. Antecipação converte o diferido conforme fator vigente; não soma o percentual nominal do diferido como receita imediata.
+- **Histórico:** proposta congela rota, identidades externas e regras financeiras vigentes. Alterações futuras não recalculam proposta histórica.
+- **Conciliação:** matching determinístico por identidade externa forte; ambiguidades exigem Human Gate. Pagamento direto do banco ao Sub não transforma comissão do Sub em receita da Master; somente a participação econômica da Master e bônus elegíveis entram como receita esperada da Master.
+
+## ADR-0013 — Adapter 2Tech, contrato canônico de observação e fail-closed de reversões
+- **Data:** 18/09/2026
+- **Status:** aceita.
+- **Decisão 1 (adapter):** `2tech/busca_contrato_file` (contrato 1.0.0) trata 2Tech como *provider* e a instituição financeira como dimensão separada, lida apenas de coluna explícita. `StatusBancoCliente`, `StatusEmpresaVendedor` e `StatusProposta` permanecem independentes; nenhum texto de status vira estado canônico. Comissão em branco (`not_reported`) é distinta de zero (`reported_zero`) e nenhuma das duas significa ausência de receita. Semântica financeira do adapter é `production_report`: não afirma comissão nem pagamento.
+- **Decisão 2 (schema):** impressão digital dos cabeçalhos; schema sem coluna de identidade de proposta ou sem coluna de semântica conhecida é colocado em quarentena (linhas `record_kind='other'`, sem número de proposta). Impressões conhecidas só são registradas após validação com arquivo real; até lá todo schema é `unverified`.
+- **Decisão 3 (canônico/conflitos):** códigos de provider são aliases (`canonical.ts`), nunca enums. Identidade de proposta = instituição + número, independente do provider. `conflicts.ts` detecta replay, duplicata no lote, múltiplas fontes, status contraditório, correção posterior, identidade ambígua e linhas de tenants distintos (bloqueio); `autoPublishAllowed` é sempre `false`.
+- **Decisão 4 (achados de revisão adversarial no banco live, corrigidos apenas em migrations preparadas):** (a) `refresh_financial_reconciliation` somava reversões (valores são >= 0) em vez de subtrair; (b) eventos `reversal`/`adjustment` podiam ser inseridos diretamente sem validar organização/proposta/componente/valor; (c) `authenticated` tinha TRUNCATE/REFERENCES/TRIGGER em quase todas as tabelas de tenant, o que ignora RLS e triggers de imutabilidade. Correções em `20260919_*`, aguardando Human Gate.
+- **Consequência:** nada de `20260919_*` está aplicado no Supabase remoto.
+
+## ADR-0014 — Ledger append-only com reversões parciais, tenant derivado do recurso e blockers live
+- **Data:** 19/09/2026
+- **Status:** aceita; migrations correspondentes PREPARADAS, não aplicadas (Human Gate).
+- **Decisão 1:** reversão é evento compensatório; várias reversões parciais do mesmo evento são válidas e o total acumulado não pode exceder o original. Não existe UNIQUE por `reverses_event_id`. Concorrência: advisory lock por evento original antes de ler a soma (RPC e trigger); isolamento diferente de READ COMMITTED é rejeitado.
+- **Decisão 2:** todo tipo de evento financeiro só entra por publisher governado; `adjustment` e tipos sem publisher permanecem bloqueados.
+- **Decisão 3:** o tenant de uma operação é derivado do recurso (evento, proposta, lote) e só depois se exige membership ativo naquele tenant; nunca `organization_memberships ... limit 1`. Classificação completa em `docs/audits/AUDIT-2026-09-19-TENANT-RESOLUTION-AND-LIVE-BLOCKERS.md`.
+- **Decisão 4:** `financial_reconciliation_cases` só recebe valores derivados via `refresh_financial_reconciliation`; humanos apenas resolvem casos com nota.
+- **Decisão 5:** `attach_import_batch_adapter` é SECURITY DEFINER estreito (única forma de gravar linhagem de adapter) porque `import_batches` não tem policy de UPDATE.
+- **Achados live (A):** `has_active_organization_role` sem EXECUTE para `authenticated` (todas as escritas com RBAC falham) e `digest()` não qualificado sob `search_path=public` (ingestão e publisher de evidência falham).
+
+## ADR-0015 — Helper de RBAC como SECURITY INVOKER, definer só em schema privado, leitura financeira supervisor+
+- **Data:** 19/09/2026
+- **Status:** aceita; migrations correspondentes PREPARADAS, não aplicadas.
+- **Decisão 1:** `has_active_organization_role` passa a SECURITY INVOKER (mesma assinatura). O definer era desnecessário: `organization_memberships` tem uma única policy (`select_self`) que não chama o helper e expõe exatamente as linhas que o helper lê. Remove o WARN do advisor sem tocar 36 policies e 10 funções.
+- **Decisão 2:** quando um SECURITY DEFINER for inevitável (escrita em tabela sem policy de UPDATE), ele vive no schema não exposto `private` (PostgREST expõe só `public` e `graphql_public`, verificado), com `search_path=''`, sem argumento de organização e tenant derivado do recurso; a entrada pública é INVOKER. Caso atual: `private.attach_import_batch_adapter`.
+- **Decisão 3:** dados de comissão/financeiro são legíveis apenas por supervisor+ no banco (RLS), não só na UI. Colunas de comissão em `proposal_commercial_snapshots` e `import_normalized_rows` exigem views por coluna (dívida B).
+- **Decisão 4:** conflitos de importação são registrados de forma persistente, ligados às linhas raw imutáveis, idempotentes por fingerprint, sem poder publicar verdade financeira (`auto_publish_allowed=false` por CHECK).
+- **Decisão 5:** o E2E rollback-only contra o schema live é o gate obrigatório antes de considerar uma cadeia de RPCs "funcional"; validação estrutural não basta (quatro RPCs live nunca funcionaram para usuário real).
+
+## ADR-0016 — Segurança por coluna via readers privados, tenant ativo explícito, resolução imutável, leads como CRM
+- **Data:** 20/09/2026 — **Status:** aceita; migrations `20260920_*` PREPARADAS, não aplicadas.
+- **Decisão 1:** como `authenticated` é um único role de banco, colunas econômicas de tabelas mistas (`import_normalized_rows`, `proposal_commercial_snapshots`) saem do SELECT direto e são servidas por readers SECURITY DEFINER no schema `private` (membership + supervisor+ dentro), com wrappers INVOKER em `public`. Readers devem tratar role NULL como proibido (`coalesce(role,'')`).
+- **Decisão 2:** o tenant ativo é explícito e determinístico: um membership → ele; vários → cookie `corban_org` re-validado contra memberships ativos a cada request; senão `/organizacao`. O client do app é escopado à organização ativa; RPCs derivam o tenant do recurso; RPCs sem recurso recebem `p_organization_id` validado.
+- **Decisão 3:** catálogo comercial (`product_table_external_identities`) = manager+ em política e RPC.
+- **Decisão 4:** a resolução de conciliação (nota/quem/quando) só muda junto da transição open→resolved, é carimbada pela sessão e é imutável; refresh não reabre caso resolvido.
+- **Decisão 5:** Lead é registro de CRM com timeline append-only, sem colunas financeiras; escrita só por RPC; conversão atômica/idempotente; intake idempotente por (organização, canal, ref externa).
+- **Decisão 6:** submissão externa passa por executor idempotente com ledger; providers externos ficam bloqueados por padrão; Bevicred permanece DEFERRED (recusa incondicional).
+
+## ADR-0017 — Estado de integration_runs no banco, lease com fencing, evidência determinística, esteira só por RPC
+- **Data:** 21/09/2026 — **Status:** aceita; migrations `20260921_*` PREPARADAS, não aplicadas.
+- **Decisão 1:** a posse de um run é do BANCO, não de memória do worker: `claim_integration_run` serializa por `SELECT … FOR UPDATE` na identidade única (tenant, binding, fingerprint), concede lease + `claim_token` (fencing). Worker que perdeu o token não escreve mais nada; lease vencido permite takeover contando tentativa.
+- **Decisão 2:** máquina de estados fail-closed em trigger (queued→running, running→running/succeeded/failed, failed→running só se não terminal e com tentativas, queued/failed→cancelled). `succeeded` exige artefato `response_metadata`; identidade do run é imutável; DELETE impossível; artefatos append-only e idempotentes por hash.
+- **Decisão 3:** fencing por token e não por expiração: um worker lento e sozinho ainda registra o resultado real (evita segunda submissão ao provider). Revogação de membership bloqueia novo claim/retry/cancel, mas não descarta resultado em voo.
+- **Decisão 4:** funções de worker são SECURITY INVOKER executáveis só por `service_role` (nenhum SECURITY DEFINER novo). Segredo em metadata/artefato/erro é rejeitado pelo banco e redigido antes pelo app (redactor determinístico e idempotente).
+- **Decisão 5:** providers declaram `CapabilityManifest`; o executor consulta o manifest, nunca o nome do provider. Registro de providers guarda o estado de homologação; 2Tech = `awaiting_real_file`, Bevicred = `deferred`.
+- **Decisão 6:** esteira (`operational_cases`, `operational_events`, `digitization_jobs`) só é escrita por RPC governada (token de guarda); eventos são append-only. Sucesso de provider é evidência de execução, nunca receita nem status pago.
+
+## ADR-0018 — Worker server-only, dispatch consultivo, retry ≠ reexecução, escrita de proposta/timeline só por RPC
+- **Data:** 22/09/2026 — **Status:** aceita; `20260922_worker_governance_v1` PREPARADA, não aplicada.
+- **Decisão 1:** o worker é um ciclo limitado (`runDispatchCycle`, no máximo 25 itens, sem loop nem timer) acionado por algo externo (rota `POST /api/integrations/dispatch` com segredo Bearer, CLI ou fila). A rota fica DESABILITADA (503) enquanto `INTEGRATION_WORKER_SECRET` não existir e não é agendada em lugar nenhum.
+- **Decisão 2:** `list_dispatchable_integration_runs` é consultivo; quem decide é `claim_integration_run` no banco (lease + fencing). O payload persistido em `metadata.request` é sempre redigido, então requests devem carregar REFERÊNCIAS (ids), nunca PII.
+- **Decisão 3:** provider local/fake só resolve fora de produção E com `CORBAN_ALLOW_LOCAL_PROVIDERS=1`, e só se o manifest do adapter for idêntico ao do registro. Providers vêm do registro; nunca de `if provider===`.
+- **Decisão 4:** RETRY continua a MESMA execução (governada pelo claim: espera, tentativas, lease). REEXECUÇÃO cria um run NOVO com `parent_run_id` + motivo obrigatório (10–500), fingerprint derivado do pai, idempotente por pai, manager+, só de pai terminal (falha terminal ou cancelado). Run concluído nunca é reexecutado; run retentável usa retry. O pai nunca é alterado.
+- **Decisão 5:** `proposals_v2` e `customer_timeline_events` só são escritos por RPC governada (token transacional); identidade da proposta é imutável mesmo com o token; timeline é append-only inclusive para o owner. O trigger de proposta é nomeado para disparar antes dos guards antigos.
+- **Decisão 6:** CORREÇÃO de regressão LIVE: `transition_operational_case` não setava o token da esteira exigido pelo hardening LIVE de 20260921 e falhava para todos os usuários; redefinida na nova migration.
+
+## ADR-0019 — Despacho escopado por adapter, histórico de tentativas imutável, orçamento de tempo, replay idempotente de PAID
+- **Data:** 23/09/2026 — **Status:** aceita; `20260923_worker_dispatch_hardening_v1` e `20260924_confirm_paid_replay_v1` PREPARADAS, não aplicadas.
+- **Decisão 1:** o worker só pede ao banco runs de adapters que ele consegue executar (`p_adapter_keys`). Runs sem provider utilizável (2Tech sem arquivo, Bevicred, fake em produção) NÃO ocupam slots do ciclo. Ordenação por "momento em que ficou elegível" (`coalesce(next_attempt_at, lease_expires_at, created_at)`), sem prioridade inventada.
+- **Decisão 2:** toda tentativa falha e todo lease expirado viram artefato `diagnostic` append-only (idempotente por tentativa). O retry limpa as colunas vivas de erro, mas o histórico nunca some. Mensagem de falha com cara de segredo vira marcador fixo e não trava mais o run.
+- **Decisão 3:** um ciclo tem orçamento de relógio (`budgetMs`); não inicia run novo se não couber um timeout de provider. Defaults serverless: timeout 20s, lease 60s, orçamento 45s, `maxDuration` 60s. O que sobra fica elegível no próximo ciclo.
+- **Decisão 4:** o fake local só resolve com `NODE_ENV` em {development,test} E `CORBAN_ALLOW_LOCAL_PROVIDERS=1` (allow-list; NODE_ENV ausente/desconhecido não basta).
+- **Decisão 5:** o endpoint de dispatch é uma função pura (`handleDispatchRequest`): 503 sem segredo forte, 403 para credencial errada/malformada, corpo só com contagens; esquema Bearer case-insensitive, credencial exata.
+- **Decisão 6:** replay de `confirm_proposal_paid_from_import` devolve a mesma evidência (idempotente) em vez de errar com `proposal_must_be_approved`.
+
+## ADR-0020 - Governed team access lifecycle (invitations, role/status changes, admin audit)
+- **Data:** 24/09/2026 - **Status:** aceita; `20260925_team_access_lifecycle_v1` PREPARADA, NAO aplicada.
+- **Decisao 1:** identidade continua sendo Supabase Auth + `organization_memberships`. Nao existe segundo sistema de identidade nem token de convite proprio: o e-mail/link e emitido e verificado pelo Auth.
+- **Decisao 2:** toda escrita de membership/convite/auditoria passa por RPC SECURITY INVOKER + guard trigger (`corban.membership_rpc`). O authenticated perde INSERT/DELETE em memberships e so atualiza `role,status,updated_at`. Nenhuma funcao SECURITY DEFINER nova (baseline 8 mantido).
+- **Decisao 3 (politica):** admin gerencia todos; gerente so supervisor/agente (no perfil atual E no novo); ninguem altera o proprio acesso; supervisor/agente nada. Perder o ultimo admin e estruturalmente impossivel (so admin toca admin, nunca a si mesmo).
+- **Decisao 4:** aceite de convite e service_role-only, usa a identidade validada pelo Auth (`getUser`, `email_confirmed_at`). Convite nunca altera silenciosamente o perfil de um membro ativo; membro desativado e reativado com o perfil do convite (resultado explicito).
+- **Decisao 5:** auditoria append-only (`organization_admin_events`), sem token/senha/segredo. Limite de 20 convites/hora/ator no banco.
+- **Decisao 6:** visibilidade de comissao continua fail-closed (supervisor+) e centralizada em `canViewCommission`; a decisao comercial sobre o agente segue PENDENTE do Owner (ver gap analysis).
+- **Decisao 7:** `/api/health` publico so devolve app+banco; prontidao de worker/provedor e visivel apenas a supervisores logados. Providers locais sempre rotulados `LOCAL / TESTE`.
+
+## ADR-0021 - Governed simulation writes and merged membership SELECT policy
+- **Data:** 24/09/2026 - **Status:** aceita; `20260926_simulation_governance_v1` e `20260927_membership_select_policy_merge_v1` PREPARADAS, nao aplicadas.
+- **Decisao 1:** simulacoes so nascem por `create_simulation` (INVOKER): tenant derivado do cliente, tabela publicada do MESMO tenant, taxa/coeficiente da versao, parcela calculada no banco, ator = auth.uid(). Escrita direta (INSERT/UPDATE/DELETE) fica recusada por guard trigger + grants por coluna.
+- **Decisao 2:** `expected_commission_amount` e `released_amount` de simulacoes ficam NULL: nao existe fonte governada, portanto nada pode forja-los. Metadata da tabela nao e copiada para snapshots.
+- **Decisao 3:** a acao do app mantem um fallback TEMPORARIO (insert calculado no servidor) apenas quando o PostgREST informa que a RPC nao existe; depois da migration o banco recusa esse insert. Remover apos aplicar.
+- **Decisao 4:** duas policies permissivas de SELECT em `organization_memberships` viram uma so (mesma logica OR), para limpar o warning do advisor de performance sem mudar visibilidade.
+- **Decisao 5:** recuperacao de senha usa Supabase Auth com resposta identica para qualquer e-mail; a politica de senha final e do Auth (runbook).
+
+## ADR-0022 - Operator feedback through whitelisted redirect codes; revoked-actor runs leave the dispatch list
+- **Data:** 25/09/2026 - **Status:** aceita; `20260928_revoked_actor_dispatch_v1` PREPARADA, nao aplicada.
+- **Decisao 1:** em producao o Next.js esconde a mensagem de `Error` lancado por server action; por isso as acoes do fluxo do operador redirecionam com um codigo (`?f=ok:...|erro:...`) e o shell mostra texto fixo de uma lista branca. Texto arbitrario na URL nunca e renderizado. Erros do banco viram codigo, nunca texto.
+- **Decisao 2:** uploads: o tipo aceito e o dos primeiros bytes (PDF/JPEG/PNG/WebP) e precisa coincidir com o declarado; tamanho, vazio e nome sao verificados antes de tocar banco/Storage.
+- **Decisao 3:** run cujo criador perdeu acesso sai da lista de dispatch (mesma regra do `claim`) e e encerrado por `sweep_orphaned_integration_runs` (service_role): queued/retry -> cancelled, running vencido -> failed terminal, codigo fixo sanitizado. O worker chama o sweep antes de listar, best effort.
+- **Decisao 4:** menu por perfil e dashboard do operador limitado aos proprios registros sao conveniencia de UX; a autorizacao continua no banco.
+
+## ADR-0023 - Catalog publication through governed RPCs; platform-owned reference catalog; Vercel-safe uploads
+- **Data:** 25/09/2026 - **Status:** aceita; `20260929_catalog_publish_v1` PREPARADA, nao aplicada.
+- **Decisao 1:** publicar versao de tabela e checklist so pelas RPCs `publish_product_table_version` (admin/gerente) e `publish_document_checklist_template` (supervisor+), INVOKER, com guard trigger (GUC `corban.catalog_rpc`). INSERT de authenticated e sempre rascunho; publicar substitui a versao anterior na mesma transacao; publicada continua imutavel.
+- **Decisao 2:** o catalogo de referencia global e da PLATAFORMA: escrito apenas pela rota `/api/admin/reference-catalog` (administrador de plataforma, upsert idempotente por codigo, auditado, sem dado inventado). Tenants montam rotas/tabelas/checklists sobre ele.
+- **Decisao 3:** etapas padrao da esteira (7 estados, sem `paid`, sem SLA) sao dominio, nao dado comercial; criadas sob demanda por gerente/admin.
+- **Decisao 4:** bootstrap de organizacao exige CNPJ valido (guardado so com digitos), recusa duplicata e pede confirmacao explicita para nome parecido; id do tenant vem do banco.
+- **Decisao 5:** upload de documento limitado a 4 MB (limite de corpo da Vercel); upload direto ao Storage fica como P1. Origem publica: `NEXT_PUBLIC_SITE_URL` obrigatoria em producao; fallback so para mesma origem.
+
+## ADR-0024 - Commercial Model V3: catalogo comercial do tenant, condicao unica e grupos de comissao dinamicos
+- **Data:** 26/09/2026 - **Status:** aceita; `20261002_commercial_model_v3_foundation_v1` PREPARADA, testada rollback-only (100 checks ALL PASS), NAO aplicada (Human Gate).
+- **Decisao 1:** aditivo e compativel: tabelas novas do tenant (`organization_banks/providers/agreements`, `commission_groups`) ao lado das globais legadas; `organization_product_routes` ganha o formato V3 (banco + convenio + provedor opcional) por CHECK exclusivo, sem renome nem drop. Historico intacto.
+- **Decisao 2:** Tipo de Contrato (`contract_types`) e estrutura GLOBAL somente leitura, sem produto/banco/tenant. Convenios nacionais (27 governos incl. DF + 26 prefeituras de capitais) sao templates globais sem banco; o tenant os habilita e o banco força o nome oficial. Produto operacional = tabela comercial do tenant.
+- **Decisao 3:** condicao comercial = uma linha por versao/Tipo de Contrato/prazo com coeficiente e/ou taxa (lidos por todo membro, a simulacao precisa) e, separados e supervisor+, comissao recebida e uma participacao por grupo, gravados numa unica RPC `save_commercial_condition` (INVOKER, guard-token). Versao publicada congela suas condicoes.
+- **Decisao 4:** grupos sao regras dinamicas do tenant com `calculation_basis` explicito (`percent_of_production` | `percent_of_received_commission`). Grupos sao vendedores ALTERNATIVOS da mesma operacao (a linha de exemplo do V3 paga 11% sobre 7% recebidos): o teto e POR GRUPO (um grupo nunca recebe mais que a comissao recebida), nunca a soma entre grupos. Comissao recebida e repasse continuam conceitos separados; gerente/supervisor sao grupos opcionais.
+- **Decisao 5:** dinheiro/percentual so NUMERIC no banco e string decimal canonica + BigInt escalado no app; nunca Float. Codigos tecnicos sao gerados pelo banco/servidor e nunca digitados nem exibidos.
+- **Decisao 6:** importacao CSV/XLSX admite uma coluna por grupo; coluna desconhecida, duplicada ou ambigua RECUSA o arquivo inteiro; celula vazia = grupo fora da condicao (nao zero). Salvamento linha a linha pela mesma RPC, idempotente.
+- **Decisao 7:** politica de repasse (V3 §20): tabelas `payout_policies/versions/items`, versoes IMUTAVEIS (salvar = nova versao), percentual da comissao RECEBIDA por grupo, base bruta ou liquida (desconto/imposto configuravel), reutilizavel em lote; a condicao guarda recebida bruta, base usada, versao da politica e origem de cada participacao (manual/politica/ajuste). Efetivo = `round(base x pct / 100, 6)` calculado no banco. Origem da Producao (V3 §19.3): `own` sem empresa externa, `third_party` exige a empresa de origem (CHECK).
+- **Decisao 8:** agente de importacao por IA, metering de creditos e agente operacional (V3 §20.6, §21-§23) NAO fazem parte desta migration: exigem chave de provedor de IA e gasto (Human Gate); o pipeline deterministico com previa entregue aqui e a camada sobre a qual o agente vai operar.
+- **Decisao 9:** comissao continua fail-closed (supervisor+); simulacao por condicao (`create_simulation_for_condition`) nunca copia comissao. Integracao dos grupos com snapshot/split/repasse fica para a proxima onda.
+
+## ADR-0025 - Next wave V3: atomic import, provider-agnostic AI import, metering, Action Center (prepared)
+- **Data:** 20/09/2026 - **Status:** aceita para preparacao; `20261004_commercial_bulk_import_v1`, `20261005_ai_import_metering_v1`, `20261006_action_center_v1` PREPARADAS, nao aplicadas.
+- **Decisao 1:** importacao comercial atomica no banco: `import_commercial_conditions` reaproveita `save_commercial_condition` (uma unica implementacao das regras), tudo-ou-nada, idempotente por versao + Tipo de Contrato + prazo, recusa devolve a lista de linhas.
+- **Decisao 2:** IA e acelerador, nunca dependencia: o mapper so PROPOE qual coluna significa o que; validador deterministico (coluna inventada descartada, campo financeiro exige confianca E evidencia numerica, colunas desconhecidas preservadas); reuso de mapping so com layout identico; mudanca de layout volta para revisao humana; nada importa sem a previa humana; manual sempre disponivel.
+- **Decisao 3:** Gemini e apenas um adapter (`ImportMapper`); a chave e INJETADA por modulo servidor, nunca lida nem guardada pela biblioteca; sem chave/limite/creditos/tarifa a IA fica fechada.
+- **Decisao 4:** metering: IA desligada por padrao por tenant; reserva ANTES da chamada, liquidacao unica, ledger append-only, teto mensal, idempotencia por chave; custo do provedor separado dos creditos cobrados; nenhum preco no produto; so `service_role` concede creditos/limites.
+- **Decisao 5:** Action Center deterministico primeiro: regras puras no app (com evidencia), ciclo de vida e historico no banco (um item ativo por chave; ignorar exige motivo; resolvido e final; historico append-only); regra cujo dado nao pôde ser lido NAO e avaliada (indisponivel != zero); nenhum alerta altera dado de negocio; sinais so por eventos/SLA objetivos, nunca desempenho subjetivo.
+- **Decisao 6:** CEP: consulta autenticada, sem chave, ao ViaCEP; so sugere; nunca sobrescreve o que a pessoa digitou/salvou; falha nao bloqueia; endereco no `customer_addresses` ja existente (auditar as tabelas LIVE antes de desenhar DDL).
+- **Decisao 7:** payout/snapshot (onda F) so DESENHADO em `docs/audits/AUDIT-2026-09-20-NEXT-WAVE-V3.md`: falta vincular usuarios a grupos; snapshot V3 vai em `proposal_commercial_snapshots` (nao em `proposals_v2.commercial_snapshot`, legivel por operador); ledger so a partir do snapshot congelado; base da comissao e decisao do Owner.
+
+
+## ADR-0026 - Product navigation by business domain + triple-review execution protocol
+- **Data:** 20/09/2026 - **Status:** aceita.
+- **Decisão 1:** navegação principal do Corban OS é por domínio de trabalho: Visão geral, CRM, Operacional, Financeiro, Cadastros, Relatórios, Configuração.
+- **Decisão 2:** cadastros e módulos detalhados ficam atrás de hubs; a página principal não vira lista infinita.
+- **Decisão 3:** páginas antigas continuam acessíveis; esta onda não migra nem apaga dados e não altera RLS.
+- **Decisão 4:** toda execução relevante passa por revisão de completude, adversarial e validação real antes de ser aceita.
+- **Decisão 5:** Claude não é executor padrão; só entra quando houver capacidade local necessária, sempre com fila longa e disciplina de contexto.
+
+## ADR-0027 - Product reset: owner-validated operation map replaces ChatGPT-era docs as product truth
+- **Data:** 24/09/2026 - **Status:** aceita.
+- **Contexto:** read-only audit (24/09/2026) found a solid technical base (RLS on all 109 tables, exact BigInt money math, commercial catalog) but no operational use: clients, leads, simulations, proposals_v2, contracts and financial_events hold 0 rows. Tax, received-commission settlement and seller payout do not close a cycle. Production has 4 applied migrations absent from every Git branch (commercial_condition_amount_ranges_v1, commercial_condition_term_ranges_v1, term_range_import_paths_v1, move_btree_gist_extension_v1).
+- **Decisão 1:** `.ai/MAPA-OPERACAO.md` (v2, approved by the owner) is the product source of truth. CORBAN-OS-* documents become hypotheses to verify against code and database.
+- **Decisão 2:** Corban works standalone. DeskcommCRM is an optional client of Corban's public API (`/api/v1`, per-tenant keys, signed outbound webhooks); nothing in Corban depends on it.
+- **Decisão 3:** no percentage or policy is hard-coded. Commission, tax, company margin, split, deferred payout, negative-balance and payout-period policies are owner-configurable, versioned and frozen on the proposal. Rule precedence: global < bank/table < commission group < seller < exception.
+- **Decisão 4:** seller payout runs on an immutable debit/credit ledger per seller; chargebacks debit everyone who received from the contract proportionally; payout only after bank receipt and reconciliation; money leaves only with human approval.
+- **Decisão 5:** visual layer is rebuilt with an own design system (Radix Primitives, TanStack Table, cmdk, Recharts, IBM Plex), light theme by default, pluggable brand tokens, mobile-first seller screens. A static mockup is approved before any UI code.
+- **Decisão 6:** execution follows phases F0–F11 in MAPA-OPERACAO.md, starting with F0 (bring production-only migrations into Git). Every phase needs owner approval before starting and ends proven on screen with real data.
+
+## ADR-0028 - Commission receipt: report import, contract-by-contract reconciliation and immutable receipt ledger
+- **Data:** 24/09/2026 - **Status:** aceita (F5).
+- **Contexto:** the ChatGPT-era import pipeline, financial evidence ledger and integration hub had zero rows and did not know the F4 commission engine. The owner approved removing them (migration `20260924171033_remove_legacy_models_v1`, backup of the 8 configuration rows kept outside the repository).
+- **Decisão 1:** a paying source is an organization bank or promoter. Each source and report kind (upfront, deferred, chargeback) has a saved column layout; the app parses XLSX/XLS/CSV and sends exact decimal strings. Ambiguous or over-precise amounts are refused, never rounded.
+- **Decisão 2:** lines match proposals by ADE (letters and digits only) within the routes of the paying source and are compared to the cent (owner: zero tolerance) with the commission frozen by the F4 engine. Upfront = received amount of the non-deferred parts; deferred = the installment's received amount, the last one with the residual; chargeback = up to the net received.
+- **Decisão 3:** a report is a draft until confirmed with `financeiro.approve`; every line must be ok, divergent or ignored with a reason, and a declared total must equal the lines. Confirmation writes `commission_receipts`, append-only, one receipt per proposal component and installment. Divergences stay open until accepted with a note; corrections are new entries.
+- **Decisão 4:** alerts (paid without receipt after 30 days, open divergence, missing deferred installment after one month of grace, chargeback in the last 30 days) come from `finance_alerts` and feed the Action Center for supervisors and above with finance access.
+
+## ADR-0029 - Seller payout: current account per person, proportional chargeback, two-eyes approvals
+- **Data:** 24/09/2026 - **Status:** aceita (F6).
+- **Decisão 1:** one account per person: the registered seller or broker, with or without login, or a team member who is not a seller. Entries are immutable. The kinds are commission, chargeback, advance, bonus, discount, adjustment and payout.
+- **Decisão 2:** commission is credited when a receipt is reconciled: matched receipts on confirmation, divergent ones only after acceptance. The split uses the percentages frozen on the proposal over the amount actually received. Deferred installments credit the team only when the frozen rule pays the deferred.
+- **Decisão 3:** a chargeback debits each person the same fraction of what they received from the contract, rounded to the cent and capped at what they received.
+- **Decisão 4:** the payment model is a company default with a per-person override.
+  - Closing: a period statement; a negative carry is deducted at most `debt_limit_pct` of the net per statement (owner: 30%).
+  - Internal account: a withdrawal up to the available balance.
+  - Changing the company default pins accounts that have history. Moving an account to closings opens with its current balance, so nothing is paid twice.
+- **Decisão 5:** manual entries, statements and withdrawals are approved by someone other than whoever created them and other than the account holder. Payment is marked by hand with a date and a receipt (CNAB/PIX in F8).
+- **Correção F4:** the originator of a proposal with a seller is that seller, never whoever typed the proposal. A seller without login has no inherited hierarchy, so the supervisor and manager shares stay with the company.
+
+## ADR-0030 - Documentation reset: only live documents stay in the repository
+- **Data:** 24/09/2026 - **Status:** aceita (limpeza aprovada pelo dono).
+- **Contexto:** 65 ChatGPT-era documents (master plans, wave specs, audits, pilot scripts, runbooks) described models removed in F5, plans never built and states that were no longer true. Agents were told to read them as the source of truth. All of them are recoverable from the tag `backup/docs-pre-cleanup`.
+- **Decisão 1:** the documents in force are `.ai/MAPA-OPERACAO.md` (product), `.ai/RULES.md`, `.ai/DECISIONS.md`, `.ai/CURRENT-TASK.md`, `.ai/CHANGELOG.md`, `README.md`, `docs/DEPLOY.md`, `docs/deployment/ENVIRONMENT-VARIABLES.md` (read by a unit test and by error messages) and `docs/imports/GOV-ACRE-V114.md` (external rate-table knowledge, source file in `data/source-evidence/`). What is implemented is decided by the code, the migrations and the live database.
+- **Decisão 2 (kept from the smart commercial import spec):** `src/lib/imports/smart-file.ts` is the single entry point that turns CSV, XLSX, XLS (BIFF, via `@e965/xlsx`) and PDF (via `unpdf`) into rows; the format is decided by the first bytes, not by extension or MIME. `@e965/xlsx` was chosen over `xlsx` (known CVEs, unmaintained since 0.18.5) and `unpdf` over `pdf-parse`/`pdfjs-dist` (size and maintenance). Limits: 2 MB spreadsheet (`SMART_FILE_LIMITS`), PDF limit in `smart-pdf.ts`, source rows in `SMART_LIMITS`. Not handled yet: XLSX number formats (`15%` versus `0.15`).
+
+## ADR-0031 - Commission visibility: a seller sees only their own share, on their own proposals
+- **Data:** 24/09/2026 - **Status:** aceita (decisão do dono).
+- **Decisão 1:** a seller sees only their own share of the commission (the originator lines of the frozen calculation), and only on the proposals where they are the seller. They never see what the company receives from the bank, the tax, the company profit, the supervisor or manager shares, or the rates of the tables.
+- **Decisão 2:** the calculation header (`proposal_commission_calcs`, with every percentage) is readable only with `financeiro.view`; before, the originator could read it through the API and derive the company's receipt. The originator reads their lines through `private.is_commission_originator` (the frozen login or the seller record) and the screen uses `proposal_commission_mine()`, which returns amounts as exact decimal text.
+- **Decisão 3:** the ChatGPT-era column `expected_commission_amount` (proposals and simulations; readable by any member, empty, unused) was removed with its references (migration `commission_visibility_v1`).
+- **Decisão 4:** table commission rates stay visible to supervisor and above only (`canViewCommission`).
+
+## ADR-0032 - Broker portal: proposals wait for validation, the existing client stays hidden
+- **Data:** 24/09/2026 - **Status:** aceita (F7, recomendações aprovadas pelo dono).
+- **Decisão 1:** a broker or partner is a registered seller with a login and the 'corretor' role (scope: own). In the same app and address, a portal user sees a reduced, mobile-first menu: Início, Nova proposta, Extrato.
+- **Decisão 2:** a proposal sent through the portal (`submit_broker_proposal`) waits in `proposal_submissions` until someone with `esteira.edit` who is not the sender validates or refuses it (`decide_broker_proposal`). Only a validated proposal gets its pipeline case and may have its commission calculated (trigger on `proposal_commission_calcs`). A refusal cancels the proposal and always carries a reason the broker sees.
+- **Decisão 3:** when the CPF already belongs to the company, the proposal links to that client without changing it or showing it: what the broker typed stays in the proposal snapshot, `can_see_client_row` ignores non-validated portal proposals, and only the internal queue shows "cliente já existe, carteira de X" (client owned by someone other than the sender). The typed contacts reach the client record only on validation.
+- **Decisão 4:** documents sent with the proposal live under `<org>/portal/<proposal>/` in the private bucket, readable only by whoever sees the proposal, uploadable only by the sender while it waits for validation.
+- **Decisão 5:** portal access is an invitation for a registered seller that carries the 'corretor' role (`invite_seller_to_portal`, `organization_invitations.access_role_id`); on acceptance the membership gets that role and the seller is bound to the login.

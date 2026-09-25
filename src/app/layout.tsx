@@ -1,21 +1,19 @@
-﻿import './globals.css'
+import './globals.css'
 import type { Metadata } from 'next'
+import { IBM_Plex_Mono, IBM_Plex_Sans } from 'next/font/google'
+
+const plexSans = IBM_Plex_Sans({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-plex-sans', display: 'swap' })
+const plexMono = IBM_Plex_Mono({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-plex-mono', display: 'swap' })
 
 export const metadata: Metadata = {
-  title: 'Corban SaaS - Sistema para Correspondentes Bancários',
-  description: 'Gestão multi-tenant para correspondentes bancários',
+  title: 'Corban',
+  description: 'Gestão para correspondentes bancários',
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR">
-      <body className="bg-slate-950 text-slate-100 antialiased min-h-screen flex flex-col">
-        {children}
-      </body>
+    <html lang="pt-BR" className={`${plexSans.variable} ${plexMono.variable}`}>
+      <body className="flex min-h-screen flex-col bg-canvas text-ink antialiased">{children}</body>
     </html>
   )
 }
