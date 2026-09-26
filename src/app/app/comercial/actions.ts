@@ -95,30 +95,31 @@ export async function updateProvider(f: FormData) {
 }
 
 // A commercial table = bank + agreement (+ optional provider). The route and the technical code are generated here; the person only names the table.
+const NEW_TABLE = `${PATH}/tabelas/nova`
 export async function createCommercialTable(f: FormData) {
-  const ctx = await manager(); if (!ctx) return go('erro:sem_permissao')
+  const ctx = await manager(); if (!ctx) return go('erro:sem_permissao', NEW_TABLE)
   const bank = text(f, 'bank_id'), agreement = text(f, 'agreement_id'), name = text(f, 'name'), origin = text(f, 'production_origin')
   // Origem da Produção: Própria (no external company) or Terceiro (the origin company is required)
   const provider = origin === 'third_party' ? text(f, 'provider_id') : ''
-  if (origin !== 'own' && origin !== 'third_party') return go('erro:origem_invalida')
-  if (origin === 'third_party' && !isUuid(provider)) return go('erro:origem_invalida')
-  if (!isUuid(bank) || !isUuid(agreement) || !isLabel(name)) return go('erro:catalogo_invalido')
+  if (origin !== 'own' && origin !== 'third_party') return go('erro:origem_invalida', NEW_TABLE)
+  if (origin === 'third_party' && !isUuid(provider)) return go('erro:origem_invalida', NEW_TABLE)
+  if (!isUuid(bank) || !isUuid(agreement) || !isLabel(name)) return go('erro:catalogo_invalido', NEW_TABLE)
   const org = ctx.membership.organization_id
   const ins = await ctx.supabase.from('organization_product_routes').insert({ organization_id: org, org_bank_id: bank, org_provider_id: provider || null, org_agreement_id: agreement, production_origin: origin, status: 'active' }).select('id').single()
   let routeId = ins.data?.id as string | undefined
   if (ins.error) {
-    if (ins.error.code !== '23505') return go(comError(ins.error))
+    if (ins.error.code !== '23505') return go(comError(ins.error), NEW_TABLE)
     // the route already exists (same bank/agreement/provider): reuse it, several tables may hang on one route
     let q = ctx.supabase.from('organization_product_routes').select('id').eq('org_bank_id', bank).eq('org_agreement_id', agreement)
     q = provider ? q.eq('org_provider_id', provider) : q.is('org_provider_id', null)
     routeId = (await q.limit(1).maybeSingle()).data?.id
   }
-  if (!routeId) return go('erro:inesperado')
+  if (!routeId) return go('erro:inesperado', NEW_TABLE)
   const code = `t-${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`
   const tbl = await ctx.supabase.from('product_tables').insert({ organization_id: org, route_id: routeId, code, name, status: 'active' }).select('id').single()
-  if (tbl.error || !tbl.data) return go(tbl.error ? comError(tbl.error) : 'erro:inesperado')
+  if (tbl.error || !tbl.data) return go(tbl.error ? comError(tbl.error) : 'erro:inesperado', NEW_TABLE)
   const ver = await ctx.supabase.from('product_table_versions').insert({ organization_id: org, product_table_id: tbl.data.id, version: 1, status: 'draft' })
-  return ver.error ? go(comError(ver.error)) : go('ok:tabela_criada')
+  return ver.error ? go(comError(ver.error), NEW_TABLE) : go('ok:tabela_criada', `${PATH}/tabelas/${tbl.data.id}`)
 }
 
 export async function newDraftVersion(f: FormData) {

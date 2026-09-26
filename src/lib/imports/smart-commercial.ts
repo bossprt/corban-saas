@@ -11,13 +11,16 @@ export type SmartImportComponentValue={
  source:'import'
  calculation_base?:string|null
 }
-export type SmartImportRepassObservation={
+// What a seller group gets for one commission type on one line (part B, ADR-0036): % of the operation or a fixed R$.
+export type SmartImportGroupValue={
  group_id:string
  component_type_id:string
- raw_value:string
- rule_hint:'share_of_received'|'direct'|'unknown'
- value_kind_hint:'percentage'|'fixed_brl'|null
+ value_kind:'percentage'|'fixed_brl'
+ value:string
+ source:'import'
 }
+// "Repasse N" columns (2tech layout) are mapped to a group by the person importing: slot number -> group id, or null to ignore.
+export type RepassMap=Record<string,string|null>
 export type SmartImportRow={
  bank_name:string
  agreement_name:string
@@ -34,7 +37,7 @@ export type SmartImportRow={
  factor_value:string|null
  factor_date:string|null
  components:SmartImportComponentValue[]
- source_repasses:SmartImportRepassObservation[]
+ group_values:SmartImportGroupValue[]
 }
 export type SmartImportResult={
  rows:SmartImportRow[]
@@ -49,6 +52,8 @@ export type SmartImportResult={
   hasBonus:boolean
   hasGenericRepasseColumns:boolean
   genericRepasseSlots:string[]
+  hasUnmappedRepassValues?:boolean
+  groups?:string[]
  }
 }
 
@@ -115,22 +120,41 @@ const resolveType=(raw:string,types:readonly SmartImportContractType[])=>{
  const k=n(raw)
  return types.find(t=>n(t.name)===k||n(t.tech_key)===k)??null
 }
-const componentFromHeader=(header:string,components:readonly SmartImportComponent[])=>{
+// Every commission column is "<type>" or "<type> (<who>)": who is Empresa, a registered seller group, or Repasse N.
+// Anything else in the parenthesis is an unknown group and the file is refused (money is never read by guess).
+type HeaderClass=
+ |{kind:'company';component:SmartImportComponent}
+ |{kind:'group';component:SmartImportComponent;group:SmartImportGroup}
+ |{kind:'slot';component:SmartImportComponent;slot:string}
+ |{kind:'unknown';component:SmartImportComponent}
+const classifyHeader=(header:string,components:readonly SmartImportComponent[],groups:readonly SmartImportGroup[]):HeaderClass|null=>{
  const h=n(header)
- const company=!/(repasse|corretor|parceiro|balcao|indicador|afiliado)/.test(h)||/empresa/.test(h)
- if(!company)return null
- for(const c of components){
-  const aliases=componentAliases[c.tech_key]??[n(c.name)]
-  if(aliases.some(a=>h===a||h.startsWith(a+'_')||h.includes('_'+a+'_')||h.includes(a+'_empresa')))return c
+ if(!h||/unidade/.test(h))return null
+ const aliases=components.flatMap(c=>[...(componentAliases[c.tech_key]??[]),n(c.name)].map(a=>({a,c}))).sort((x,y)=>y.a.length-x.a.length)
+ for(const {a,c} of aliases){
+  if(h===a)return {kind:'company',component:c}
+  if(!h.startsWith(a+'_'))continue
+  const rest=h.slice(a.length+1).replace(/_valor$/,'')
+  if(rest==='empresa')return {kind:'company',component:c}
+  const group=groups.find(g=>n(g.name)===rest)
+  if(group)return {kind:'group',component:c,group}
+  const slot=/^repasse_(\d+)$/.exec(rest)
+  if(slot)return {kind:'slot',component:c,slot:slot[1]}
+  return {kind:'unknown',component:c}
  }
  return null
 }
-const unitFor=(header:string,unitRaw:string,componentKey:string):'percentage'|'fixed_brl'|null=>{
+// Number = % of the operation; "R$ 25,00" = fixed amount (owner decision). A separate unit column still wins when present.
+const moneyValue=(raw:string):{value:string|null;fixed:boolean}=>{
+ const fixed=/r\$/i.test(raw)
+ let t=raw.replace(/r\$/i,'').replace(/\s+/g,'')
+ if(fixed&&t.includes(','))t=t.replace(/\./g,'')
+ return {value:decimal(t,9,8),fixed}
+}
+const unitFor=(header:string,unitRaw:string,fixedInValue:boolean):'percentage'|'fixed_brl'=>{
  const u=n(unitRaw),h=n(header)
- if(/(^|_)r(_|$)|reais|brl/.test(u)||/r\$/.test(unitRaw)||h.includes('valor_fixo')||h.includes('seguro_fixo'))return 'fixed_brl'
- if(u==='%'||u==='percentual'||u==='porcentagem'||u==='percent'||h.includes('percent'))return 'percentage'
- if(['upfront','deferred','bonus_1','bonus_2','bonus_3'].includes(componentKey))return 'percentage'
- return null
+ if(fixedInValue||/(^|_)r(_|$)|reais|brl/.test(u)||/r\$/.test(unitRaw)||h.includes('valor_fixo'))return 'fixed_brl'
+ return 'percentage'
 }
 const factorMode=(raw:string):'daily'|'fixed'|null=>{
  const k=n(raw)
@@ -141,7 +165,7 @@ const factorMode=(raw:string):'daily'|'fixed'|null=>{
 
 export function mapSmartCommercialRows(
  rawRows:readonly (readonly unknown[])[],
- ctx:{contractTypes:readonly SmartImportContractType[];groups:readonly SmartImportGroup[];components:readonly SmartImportComponent[]}
+ ctx:{contractTypes:readonly SmartImportContractType[];groups:readonly SmartImportGroup[];components:readonly SmartImportComponent[];repassMap?:RepassMap}
 ):SmartImportResult{
  const issues:SmartImportIssue[]=[]
  const rows:SmartImportRow[]=[]
@@ -166,37 +190,49 @@ export function mapSmartCommercialRows(
  if(col.coefficient===undefined&&col.rate===undefined&&col.factor===undefined)issues.push({line:1,code:'missing_rate_coefficient_or_factor'})
 
  const componentCols:{value:number;unit?:number;component:SmartImportComponent;header:string}[]=[]
+ const groupCols:{value:number;group:SmartImportGroup;component:SmartImportComponent;header:string}[]=[]
+ const slotCols:{value:number;slot:string;component:SmartImportComponent;header:string}[]=[]
  for(let i=0;i<rawHead.length;i++){
-  const c=componentFromHeader(rawHead[i],ctx.components)
+  const c=classifyHeader(rawHead[i],ctx.components,ctx.groups)
   if(!c)continue
-  if(/unidade/.test(head[i]))continue
-  const unit=head.findIndex((h,j)=>j!==i&&h.includes(n(c.name))&&h.includes('empresa')&&h.includes('unidade'))
-  componentCols.push({value:i,unit:unit>=0?unit:undefined,component:c,header:rawHead[i]})
+  if(c.kind==='company'){
+   const unit=head.findIndex((h,j)=>j!==i&&h.includes(n(c.component.name))&&h.includes('empresa')&&h.includes('unidade'))
+   componentCols.push({value:i,unit:unit>=0?unit:undefined,component:c.component,header:rawHead[i]})
+  }else if(c.kind==='group')groupCols.push({value:i,group:c.group,component:c.component,header:rawHead[i]})
+  else if(c.kind==='slot')slotCols.push({value:i,slot:c.slot,component:c.component,header:rawHead[i]})
+  else issues.push({line:1,code:'unknown_group_column',detail:rawHead[i].slice(0,60)})
  }
 
- const genericRepasseSlots=[...new Set(rawHead.map(h=>/repasse[_ ]?(\d+)/i.exec(n(h))?.[1]).filter((x):x is string=>!!x))].map(x=>`Repasse ${x}`)
+ // Repasse N: each slot must be mapped to a group (or explicitly ignored) by the person importing.
+ const repassMap=ctx.repassMap??{}
+ const genericRepasseSlots=[...new Set(slotCols.map(c=>c.slot))].sort((a,b)=>+a-+b).map(x=>`Repasse ${x}`)
  const genericRepasse=genericRepasseSlots.length>0
- if(genericRepasse)issues.push({line:1,code:'generic_repass_requires_mapping',detail:`${genericRepasseSlots.join(', ')} não identificam Corretor, Parceiro ou outro grupo: nenhum foi mapeado.`})
-
- const namedRepassCols:{value:number;group:SmartImportGroup;component:SmartImportComponent;header:string}[]=[]
- for(let i=0;i<rawHead.length;i++){
-  const h=head[i]
-  const group=ctx.groups.find(g=>h.includes(n(g.name)))
-  if(!group)continue
-  const component=ctx.components.find(c=>(componentAliases[c.tech_key]??[n(c.name)]).some(a=>h.includes(a)))
-  if(component)namedRepassCols.push({value:i,group,component,header:rawHead[i]})
+ const unmapped=[...new Set(slotCols.map(c=>c.slot))].filter(x=>!Object.prototype.hasOwnProperty.call(repassMap,x))
+ if(unmapped.length)issues.push({line:1,code:'generic_repass_requires_mapping',detail:unmapped.map(x=>`Repasse ${x}`).join(', ')})
+ for(const [slot,groupId] of Object.entries(repassMap)){
+  if(groupId===null)continue
+  const group=ctx.groups.find(g=>g.id===groupId)
+  if(!group){issues.push({line:1,code:'repass_map_invalid_group',detail:`Repasse ${slot}`});continue}
+  for(const sc of slotCols.filter(x=>x.slot===slot))groupCols.push({value:sc.value,group,component:sc.component,header:sc.header})
+ }
+ const seenPair=new Set<string>()
+ for(const g of groupCols){
+  const k=`${g.group.id}:${g.component.id}`
+  if(seenPair.has(k))issues.push({line:1,code:'duplicate_group_column',detail:g.header.slice(0,60)})
+  seenPair.add(k)
  }
 
- const consumed=new Set<number>([...Object.values(col).filter((v):v is number=>v!==undefined),...componentCols.flatMap(c=>[c.value,...(c.unit===undefined?[]:[c.unit])]),...namedRepassCols.map(c=>c.value)])
+ const consumed=new Set<number>([...Object.values(col).filter((v):v is number=>v!==undefined),...componentCols.flatMap(c=>[c.value,...(c.unit===undefined?[]:[c.unit])]),...groupCols.map(c=>c.value),...slotCols.map(c=>c.value)])
  for(let i=0;i<rawHead.length;i++){
   const h=head[i]
-  if(!h||consumed.has(i)||/repasse[_ ]?\d+/.test(h)||/unidade/.test(h)||IGNORABLE.test(h))continue
+  if(!h||consumed.has(i)||/unidade/.test(h)||IGNORABLE.test(h))continue
   if(MONEY_WORDS.test(h))issues.push({line:1,code:'unrecognized_commission_column',detail:rawHead[i].slice(0,60)})
  }
  if(issues.some(x=>x.line===1&&x.code!=='generic_repass_requires_mapping')){
   return {rows:[],issues,summary:{sourceRows,expandedRows:0,tables:[],components:[],hasDeferred:false,hasPlastic:false,hasBonus:false,hasGenericRepasseColumns:genericRepasse,genericRepasseSlots}}
  }
 
+ let hasUnmappedValue=false
  rawRows.slice(1).forEach((r,idx)=>{
   const line=idx+2
   const bank=cell(r,col.bank),agreement=cell(r,col.agreement),table=cell(r,col.table),contractRaw=cell(r,col.contract)
@@ -231,22 +267,30 @@ export function mapSmartCommercialRows(
   for(const cc of componentCols){
    const raw=cell(r,cc.value)
    if(raw==='')continue
-   const value=decimal(raw,9,8)
+   const {value,fixed}=moneyValue(raw)
    if(value===null){issues.push({line,code:'invalid_component_value',detail:cc.component.name});return}
    if(Number(value)===0)continue
-   const unit=unitFor(cc.header,cc.unit===undefined?'':cell(r,cc.unit),cc.component.tech_key)
-   if(!unit){issues.push({line,code:'component_unit_required',detail:cc.component.name});return}
+   const unit=unitFor(cc.header,cc.unit===undefined?'':cell(r,cc.unit),fixed)
    if(unit==='percentage'&&Number(value)>100){issues.push({line,code:'component_percentage_over_100',detail:cc.component.name});return}
    comps.push({component_type_id:cc.component.id,value_kind:unit,received_value:value,source:'import'})
   }
 
-  const repasses:SmartImportRepassObservation[]=[]
-  for(const rc of namedRepassCols){
-   const raw=cell(r,rc.value)
+  // Empty or zero = the type does not apply to the group on this line.
+  const groupValues:SmartImportGroupValue[]=[]
+  for(const gc of groupCols){
+   const raw=cell(r,gc.value)
    if(raw==='')continue
-   const value=decimal(raw,9,8)
-   if(value===null){issues.push({line,code:'invalid_repass_value',detail:`${rc.group.name} / ${rc.component.name}`});return}
-   repasses.push({group_id:rc.group.id,component_type_id:rc.component.id,raw_value:value,rule_hint:'unknown',value_kind_hint:null})
+   const {value,fixed}=moneyValue(raw)
+   if(value===null){issues.push({line,code:'invalid_repass_value',detail:`${gc.group.name} / ${gc.component.name}`});return}
+   if(Number(value)===0)continue
+   if(!fixed&&Number(value)>100){issues.push({line,code:'invalid_repass_value',detail:`${gc.group.name} / ${gc.component.name}`});return}
+   groupValues.push({group_id:gc.group.id,component_type_id:gc.component.id,value_kind:fixed?'fixed_brl':'percentage',value,source:'import'})
+  }
+  // A mapped slot with values but no answer yet blocks the line (never silently dropped).
+  for(const sc of slotCols){
+   if(Object.prototype.hasOwnProperty.call(repassMap,sc.slot))continue
+   const raw=cell(r,sc.value)
+   if(raw!==''&&moneyValue(raw).value!==null&&Number(moneyValue(raw).value)!==0){hasUnmappedValue=true;break}
   }
 
   if(rows.length+(max-min+1)>SMART_LIMITS.expandedRows){issues.push({line,code:'file_too_large_for_import'});return}
@@ -255,7 +299,7 @@ export function mapSmartCommercialRows(
    contract_type_id:type.id,contract_type_name:type.name,term,
    coefficient:coefficient??factor,rate,effective_from:from,effective_until:until,
    factor_mode:fMode,factor_value:factor,factor_date:fDate,
-   components:comps,source_repasses:repasses,
+   components:comps,group_values:groupValues,
   })
  })
 
@@ -269,7 +313,8 @@ export function mapSmartCommercialRows(
    sourceRows,expandedRows:rows.length,tables,components:[...componentNames],
    hasDeferred:componentNames.has('deferred'),hasPlastic:componentNames.has('plastic'),
    hasBonus:['bonus_1','bonus_2','bonus_3'].some(x=>componentNames.has(x)),
-   hasGenericRepasseColumns:genericRepasse,genericRepasseSlots,
+   hasGenericRepasseColumns:genericRepasse,genericRepasseSlots,hasUnmappedRepassValues:hasUnmappedValue,
+   groups:[...new Set(rows.flatMap(r=>r.group_values.map(v=>v.group_id)))].map(id=>ctx.groups.find(g=>g.id===id)?.name??id),
   }
  }
 }

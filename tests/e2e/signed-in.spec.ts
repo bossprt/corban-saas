@@ -703,3 +703,50 @@ test('seller file: full registration with payment accounts, edited in the same f
   await page.goto('/app/cadastros/vendedores')
   await expect(page.getByRole('link', { name: new RegExp(name) })).toBeVisible()
 })
+
+// Part B (owner decision 25/09/2026): a 2tech-layout file is imported with its "Repasse N" columns mapped to seller
+// groups; the table shows the company and each group; a line's commission is changed by hand and the vigência published.
+test('commission tables: 2tech file with Repasse mapping, view per group, edit a line, publish', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  const tag = String(Date.now()).slice(-7)
+  const csv = [
+    'Banco;Convênio;Tabela/Nome do Produto;Código no Banco;Início;Prazo Inicial;Prazo Final;Tipo de Contrato;Taxa a.m;À Vista (Empresa);Diferido (Empresa);À Vista (Repasse 1);Plástico (Repasse 1);À Vista (Repasse 2)',
+    `Banco E2E ${tag};Convênio E2E ${tag};Tabela E2E ${tag};C${tag};01/09/2026;84;84;Novo;1,66;6;12;2,5;R$ 10,00;1`,
+    `Banco E2E ${tag};Convênio E2E ${tag};Tabela E2E ${tag};C${tag};01/09/2026;96;96;Novo;1,70;7;0;3;;1`,
+  ].join('\n')
+  await page.goto('/app/comercial/importacao-inteligente')
+  await page.getByLabel('Planilha').setInputFiles({ name: `tabela-${tag}.csv`, mimeType: 'text/csv', buffer: Buffer.from(csv, 'utf-8') })
+  await page.getByRole('button', { name: 'Ler planilha' }).click()
+  await expect(page.getByText('A planilha usa colunas Repasse. De qual grupo é cada uma?')).toBeVisible({ timeout: 30_000 })
+  await page.getByLabel('Repasse 1').selectOption({ label: 'Ouro' })
+  await page.getByLabel('Repasse 2').selectOption({ label: 'Não usar esta coluna' })
+  await page.getByRole('button', { name: 'Aplicar e ver a prévia de novo' }).click()
+  await expect(page.getByText('Grupos: Ouro')).toBeVisible({ timeout: 30_000 })
+  await page.getByLabel(/Confirmo que o Diferido/).check()
+  await page.getByRole('button', { name: 'Importar como rascunho' }).click()
+  await expect(page.getByText(/Importação concluída/)).toBeVisible({ timeout: 30_000 })
+
+  await page.goto(`/app/comercial/tabelas?nome=Tabela+E2E+${tag}&vigencia=todas`)
+  await expect(page.getByText('1 tabela(s)', { exact: false })).toBeVisible({ timeout: 30_000 })
+  await page.getByRole('link', { name: `Tabela E2E ${tag}`, exact: true }).click()
+  await expect(page.getByRole('heading', { name: `Tabela E2E ${tag}` })).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByText('Rascunho').first()).toBeVisible()
+  const grid = page.locator('#comissao table')
+  await expect(grid.getByRole('cell', { name: '6%' })).toBeVisible()
+  await page.getByRole('tab', { name: 'Ouro' }).click()
+  await expect(grid.getByRole('cell', { name: '2,5%' })).toBeVisible({ timeout: 30_000 })
+  await expect(grid.getByRole('cell', { name: 'R$ 10,00' })).toBeVisible()
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-tabela-grupo.png`, fullPage: true })
+
+  await grid.getByRole('link', { name: 'Alterar comissão' }).first().click()
+  await page.getByLabel('À Vista — Ouro').fill('3,25')
+  await page.getByRole('button', { name: 'Salvar comissão da linha' }).click()
+  await expect(page.getByText('Comissão da linha salva.')).toBeVisible({ timeout: 30_000 })
+  await page.getByRole('tab', { name: 'Ouro' }).click()
+  await expect(page.locator('#comissao table').getByRole('cell', { name: '3,25%' })).toBeVisible({ timeout: 30_000 })
+  await page.getByRole('button', { name: 'Publicar' }).click()
+  await expect(page.getByText('Vigência publicada.')).toBeVisible({ timeout: 30_000 })
+  await page.getByRole('button', { name: /Nova vigência a partir da v1/ }).click()
+  await expect(page.getByText(/Rascunho da nova vigência pronto/)).toBeVisible({ timeout: 30_000 })
+  await expect(page.locator('#vigencias').getByText('v2', { exact: true })).toBeVisible()
+})
