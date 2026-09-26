@@ -25,16 +25,14 @@ export async function PipelineCard({ supabase, access, proposalId }: { supabase:
     .select('id,canonical_state,current_stage_id,entered_stage_at,due_at,pendency_reason,pendency_due_at')
     .eq('proposal_id', proposalId).maybeSingle()
   if (!c) return null
-  const [{ data: stage }, { data: events }] = await Promise.all([
-    supabase.from('operational_stages').select('name').eq('id', c.current_stage_id).maybeSingle(),
-    supabase.from('operational_events').select('id,from_state,to_state,metadata,occurred_at').eq('operational_case_id', c.id).order('occurred_at', { ascending: false }).limit(8),
-  ])
+  // The stage history is in the contract history card.
+  const { data: stage } = await supabase.from('operational_stages').select('name').eq('id', c.current_stage_id).maybeSingle()
   const moves = NEXT[c.canonical_state] ?? []
   const editable = can(access, 'esteira.edit') && moves.length > 0
   const tomorrow = tomorrowIso()
 
   return (
-    <Card className="mt-6">
+    <Card className="mt-4">
       <CardHeader title={<span className="flex items-center gap-2">Esteira <Badge tone="paid-out">{stage?.name ?? c.canonical_state}</Badge></span>} />
       <div className="space-y-4 p-5 pt-3 text-sm">
         <p className="text-muted">Nesta etapa desde {new Date(c.entered_stage_at).toLocaleString('pt-BR')}{c.due_at ? ` · prazo ${new Date(c.due_at).toLocaleString('pt-BR')}` : ''}</p>
@@ -60,14 +58,6 @@ export async function PipelineCard({ supabase, access, proposalId }: { supabase:
               <button className="h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Salvar etapa</button>
             </div>
           </form>
-        )}
-        {(events ?? []).length > 0 && (
-          <ul className="border-t border-line pt-3 text-xs text-muted">
-            {(events ?? []).map(e => {
-              const note = (e.metadata as Record<string, unknown> | null)?.note
-              return <li key={e.id} className="py-0.5">{new Date(e.occurred_at).toLocaleString('pt-BR')} · {ACTION_LABEL[e.to_state ?? ''] ?? e.to_state}{note ? ` — ${String(note)}` : ''}</li>
-            })}
-          </ul>
         )}
       </div>
     </Card>

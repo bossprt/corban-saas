@@ -4,7 +4,7 @@ import { Badge, Card, CardHeader, PageHeader, type Tone } from '@/components/ui'
 import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
 import { fetchAll } from '@/lib/fetchAll'
-import { add, fromDecimalString, mul, toDecimalString, type Rational } from '@/lib/commission/money'
+import { add, fromDecimalString, mul, sub, toDecimalString, type Rational } from '@/lib/commission/money'
 import { PAGE_SIZES, pageSize, termText } from '@/lib/commission/tableValues'
 import { brlText } from '@/lib/receipts/format'
 
@@ -30,13 +30,13 @@ type CalcLine = { line_kind: string; amount: string; multiplier: number; proposa
 // receives, what the seller gets and the margin; everyone else sees the contracts their scope allows (RLS), without
 // the company values. A row opens the contract file.
 export default async function ContractsPage({ searchParams }: { searchParams: Promise<SP> }) {
-  const { supabase, access } = await requireAppContext()
+  const { supabase, access, membership } = await requireAppContext()
   const finance = can(access, 'financeiro.view')
   const sp = await searchParams
   const text = one(sp.q).trim()
   const f = {
     de: one(sp.de), ate: one(sp.ate), banco: one(sp.banco), convenio: one(sp.convenio), vendedor: one(sp.vendedor), grupo: one(sp.grupo),
-    situacao: one(sp.situacao), comissao: one(sp.comissao),
+    situacao: one(sp.situacao), comissao: one(sp.comissao), alterado: one(sp.alterado),
     // A CPF typed in the search is never used (and the form refuses it): CPF must not travel in a URL.
     q: CPF_LIKE.test(text) ? '' : text.toLowerCase(),
   }
@@ -55,6 +55,9 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
   const lines = finance ? await fetchAll<CalcLine>((a, b) => supabase.from('proposal_commission_lines')
     .select('line_kind,amount,multiplier,proposal_commission_calcs!inner(proposal_id,status)').eq('proposal_commission_calcs.status', 'active')
     .order('id').range(a, b)) : []
+  // What is payable to the seller (the owner's or a manager's change, part C2) per contract.
+  const { data: payoutRows } = finance ? await supabase.rpc('contract_payout_totals', { p_org: membership.organization_id }) : { data: [] }
+  const payout = new Map(((payoutRows ?? []) as { proposal_id: string; rule_amount: string; payable: string; overridden: boolean }[]).map(r => [r.proposal_id, r]))
   const totals = new Map<string, Map<string, Rational>>()
   for (const l of lines) {
     const calc = Array.isArray(l.proposal_commission_calcs) ? l.proposal_commission_calcs[0] : l.proposal_commission_calcs
@@ -65,6 +68,15 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
     totals.set(pid, m)
   }
 
+  // Seller = payable; margin = company margin by the rule + what the change kept in the company.
+  for (const [pid, m] of totals) {
+    const po = payout.get(pid)
+    if (!po) continue
+    const gain = sub(fromDecimalString(String(po.rule_amount)), fromDecimalString(String(po.payable)))
+    m.set('payable', fromDecimalString(String(po.payable)))
+    m.set('gain', gain)
+    m.set('margin', add(m.get('company') ?? ZERO, gain))
+  }
   const versionOf = new Map((versions ?? []).map(v => [v.id, v]))
   const tableOf = new Map((tables ?? []).map(t => [t.id, t]))
   const routeOf = new Map((routes ?? []).map(r => [r.id, r]))
@@ -85,6 +97,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
     && (!f.vendedor || c.seller_id === f.vendedor) && (!f.grupo || s?.commission_group_id === f.grupo)
     && (!f.situacao || c.status === f.situacao)
     && (!f.comissao || (f.comissao === 'calculada') === totals.has(c.id))
+    && (!f.alterado || !!payout.get(c.id)?.overridden)
     && (!f.q || String(c.customer_snapshot?.full_name ?? '').toLowerCase().includes(f.q) || String(c.external_proposal_id ?? '').toLowerCase().includes(f.q)))
   const size = pageSize(one(sp.n), 25), pages = Math.max(1, Math.ceil(filtered.length / size))
   const page = Math.min(Math.max(1, Number(one(sp.p)) || 1), pages)
@@ -112,6 +125,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
           <label className={lbl}>Vendedor<select name="vendedor" defaultValue={f.vendedor} className="field mt-1.5"><option value="">Todos</option>{(sellers ?? []).map(s => <option key={s.id} value={s.id}>{s.code ? `${String(s.code).padStart(3, '0')} · ` : ''}{s.name}</option>)}</select></label>
           <label className={lbl}>Grupo do vendedor<select name="grupo" defaultValue={f.grupo} className="field mt-1.5"><option value="">Todos</option>{(groups ?? []).map(g => <option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
           {finance && <label className={lbl}>Comissão<select name="comissao" defaultValue={f.comissao} className="field mt-1.5"><option value="">Todas</option><option value="calculada">Calculada</option><option value="pendente">Não calculada</option></select></label>}
+          {finance && <label className={`${lbl} flex items-center gap-2 self-end pb-2`}><input type="checkbox" name="alterado" value="1" defaultChecked={!!f.alterado} className="accent-[var(--brand)]" />Só repasse alterado</label>}
           <input type="hidden" name="n" value={size} />
           <div className="flex items-end gap-2 lg:col-span-3">
             <button className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><Search size={15} aria-hidden />Buscar</button>
@@ -120,8 +134,8 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
         </form>
       </Card>
 
-      {finance && <div className="mb-4 grid gap-3 sm:grid-cols-3">
-        {[['Empresa recebe', sum('received')], ['Vendedores recebem', sum('originator')], ['Margem', sum('company')]].map(([k, v]) => (
+      {finance && <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[['Empresa recebe', sum('received')], ['Vendedores recebem', sum('payable')], ['Margem', sum('margin')], ['Ganho com alterações de repasse', sum('gain')]].map(([k, v]) => (
           <Card key={String(k)} className="px-5 py-4"><div className="text-xs text-muted">{String(k)} · contratos filtrados</div><div className="num mt-1 text-xl font-semibold text-ink">{money(v as Rational)}</div></Card>
         ))}
       </div>}
@@ -141,7 +155,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
             <tbody>
               {rows.map(({ c, w, s }) => {
                 const t = totals.get(c.id)
-                const margin = t ? toDecimalString(t.get('company') ?? ZERO, 2) : ''
+                const margin = t ? toDecimalString(t.get('margin') ?? t.get('company') ?? ZERO, 2) : ''
                 return (
                   <tr key={c.id} className="border-t border-line hover:bg-surface-muted/60">
                     <td className="px-5 py-2.5">
@@ -154,7 +168,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
                     <td className="whitespace-nowrap px-3 py-2.5"><Badge tone={STATUS_TONE[c.status] ?? 'neutral'}>{STATUS_LABEL[c.status] ?? c.status}</Badge></td>
                     {finance && (t ? <>
                       <td className="num whitespace-nowrap px-3 py-2.5 text-right">{money(t.get('received'))}</td>
-                      <td className="num whitespace-nowrap px-3 py-2.5 text-right">{money(t.get('originator'))}</td>
+                      <td className="num whitespace-nowrap px-3 py-2.5 text-right">{money(t.get('payable') ?? t.get('originator'))}{payout.get(c.id)?.overridden && <Badge tone="pending" className="ml-1.5">Alterado</Badge>}</td>
                       <td className={`num whitespace-nowrap px-3 py-2.5 text-right font-medium ${margin.startsWith('-') ? 'text-[#B91C1C]' : 'text-ink'}`}>{brlText(margin)}</td>
                     </> : <td colSpan={3} className="px-3 py-2.5 text-right"><Badge tone="pending">Comissão não calculada</Badge></td>)}
                     <td className="px-3 py-2.5 text-right"><Link href={`/app/propostas/${c.id}`} aria-label={`Abrir contrato de ${c.customer_snapshot?.full_name ?? 'cliente'}`} className="inline-flex size-8 items-center justify-center rounded-md text-muted hover:bg-surface-muted hover:text-ink"><ChevronRight size={16} aria-hidden /></Link></td>

@@ -123,7 +123,9 @@ test('proposal statuses have labels and a next step; paid is evidence-only', () 
   assert.match(proposalStatusLabel('paid').label, /evidência/)
 })
 test('unknown money is "Não calculado", never R$ 0,00', () => {
-  for (const f of ['src/app/app/simulacoes/page.tsx', 'src/app/app/propostas/[id]/page.tsx']) assert.match(read(f), /value === null \? 'Não calculado'/, f)
+  assert.match(read('src/app/app/simulacoes/page.tsx'), /value === null \? 'Não calculado'/)
+  // The contract file (part C2) shows amounts in its form: an unknown amount is an empty field, never "0,00".
+  assert.match(read('src/app/app/propostas/[id]/page.tsx'), /v === null \|\| v === undefined \? ''/)
 })
 test('menu: modules are role-aware (F1 journey navigation: 8 entries)', () => {
   const NL = String.fromCharCode(10)
