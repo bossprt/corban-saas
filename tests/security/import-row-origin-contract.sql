@@ -1,4 +1,4 @@
--- Contract test for 20260926040000_import_row_origin_v1 (ADR-0038): one imported file can carry the origin of each
+-- Contract test for 20260926061643_import_row_origin_v1 (ADR-0038): one imported file can carry the origin of each
 -- row (own production or an active partner of the company); rows without it keep the origin chosen on screen; an
 -- unknown, inactive or other-company partner is refused and nothing is written.
 -- One transaction, rolled back.  psql -v ON_ERROR_STOP=1 -f tests/security/import-row-origin-contract.sql
