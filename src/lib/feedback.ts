@@ -172,6 +172,14 @@ export const FEEDBACK = {
   'erro:import_arquivo': 'Envie um arquivo CSV ou XLSX de até 1 MB.',
   'erro:vendedor_invalido': 'Confira nome, categoria, CPF/CNPJ e grupo.',
   'erro:vendedor_nome': 'Informe o nome ou a razão social do vendedor.',
+  'ok:tabela_renomeada': 'Nome da tabela salvo.',
+  'ok:vigencia_rascunho': 'Rascunho da nova vigência pronto: altere o que precisar e publique.',
+  'ok:vigencia_publicada': 'Vigência publicada. A anterior foi encerrada.',
+  'ok:linha_salva': 'Comissão da linha salva.',
+  'erro:tabela_nome': 'Informe o nome da tabela (2 a 160 letras).',
+  'erro:vigencia_sem_taxa': 'Há linhas sem taxa nem coeficiente: complete antes de publicar.',
+  'erro:linha_valor_invalido': 'Confira os valores: número de 0 a 100 (%) ou "R$ 25,00" para valor fixo.',
+  'erro:vigencia_publicada_imutavel': 'Vigência publicada não muda. Crie uma nova vigência a partir dela.',
   'erro:vendedor_documento': 'CPF ou CNPJ inválido. Confira os números.',
   'erro:vendedor_documento_repetido': 'Já existe um vendedor com esse CPF/CNPJ.',
   'erro:vendedor_celular': 'Informe um celular válido, com DDD.',
@@ -218,7 +226,11 @@ export type FeedbackCode = keyof typeof FEEDBACK
 export const isFeedbackCode = (v: unknown): v is FeedbackCode => typeof v === 'string' && Object.prototype.hasOwnProperty.call(FEEDBACK, v)
 export const feedbackTone = (c: FeedbackCode) => (c.startsWith('ok:') ? 'ok' : 'erro')
 
-export const feedbackUrl = (path: string, code: FeedbackCode) => `${path}?f=${encodeURIComponent(code)}`
+// Keeps a query the page already has (?v=...) and puts the code before any #anchor.
+export const feedbackUrl = (path: string, code: FeedbackCode) => {
+  const [base, hash] = path.split('#')
+  return `${base}${base.includes('?') ? '&' : '?'}f=${encodeURIComponent(code)}${hash ? `#${hash}` : ''}`
+}
 
 // Maps a database/PostgREST error to a code WITHOUT ever exposing its text.
 export function classifyDbFeedback(err: { message?: string; code?: string } | null | undefined): FeedbackCode {

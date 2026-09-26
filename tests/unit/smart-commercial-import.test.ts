@@ -40,12 +40,13 @@ test('generic Repasse 1 is never silently mapped to a group',()=>{
  assert.ok(r.issues.some(x=>x.code==='generic_repass_requires_mapping'))
 })
 
-test('plastic without unit is refused',()=>{
+test('a plain number is % of the operation; R$ in the cell is a fixed amount (owner decision, part B)',()=>{
  const r=mapSmartCommercialRows([
-  ['Banco','Convênio','Produto','Tipo de Contrato','Prazo','Taxa','Plástico (Empresa)'],
-  ['HOPE','Gov. AC','Cartão','Novo','84','1.8','50'],
+  ['Banco','Convênio','Produto','Tipo de Contrato','Prazo','Taxa','À Vista (Empresa)','Plástico (Empresa)'],
+  ['HOPE','Gov. AC','Cartão','Novo','84','1.8','5','R$ 1.250,50'],
  ],ctx)
- assert.ok(r.issues.some(x=>x.code==='component_unit_required'))
+ assert.deepEqual(r.issues,[])
+ assert.deepEqual(r.rows[0].components.map(c=>[c.value_kind,c.received_value]),[['percentage','5'],['fixed_brl','1250.50']])
 })
 
 test('zero deferred is ignored and does not trigger question',()=>{

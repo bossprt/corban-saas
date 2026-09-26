@@ -1,39 +1,60 @@
 
 import { readSmartFile, type SmartFormat } from '@/lib/imports/smart-file'
 import { effectiveContractTypes } from '@/lib/contract-types'
-import { mapSmartCommercialRows, type SmartImportResult } from '@/lib/imports/smart-commercial'
+import { mapSmartCommercialRows, type RepassMap, type SmartImportResult } from '@/lib/imports/smart-commercial'
 
-export type SmartParsed=SmartImportResult&{format:SmartFormat|null}
+// groupOptions: the groups a "Repasse N" column can be mapped to (active, not own production).
+export type SmartParsed=SmartImportResult&{format:SmartFormat|null;groupOptions:{id:string;name:string}[]}
+
+// "repass_map" form field: {"1":"<group uuid>","2":null}. Anything malformed is treated as "no answer".
+export function parseRepassMap(raw:unknown):RepassMap{
+ try{
+  const v=JSON.parse(String(raw??'{}')) as Record<string,unknown>
+  const out:RepassMap={}
+  for(const [k,g] of Object.entries(v??{})){
+   if(!/^\d{1,2}$/.test(k))continue
+   if(g===null)out[k]=null
+   else if(typeof g==='string'&&/^[0-9a-f-]{36}$/i.test(g))out[k]=g
+  }
+  return out
+ }catch{return {}}
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the scoped Supabase client is untyped in this codebase
 type Ctx={supabase:{from:(table:string)=>any}}
 
-export async function parseSmartCommercialFile(ctx:Ctx,file:File):Promise<SmartParsed>{
+export async function parseSmartCommercialFile(ctx:Ctx,file:File,repassMap:RepassMap={}):Promise<SmartParsed>{
  // size is checked BEFORE reading the body into memory (arrayBuffer would allocate it all)
  if(file.size===0||file.size>5_000_000)throw new Error('invalid_file')
  const read=await readSmartFile(new Uint8Array(await file.arrayBuffer()),file.name)
  if(read.issues.length||read.rows.length===0){
   // a file the reader could not turn into a table never reaches the commercial parser and never reaches the database
   const issues=read.issues.length?read.issues:[{line:1,code:'file_without_rows'}]
-  return {format:read.format,rows:[],issues,summary:{sourceRows:0,expandedRows:0,tables:[],components:[],hasDeferred:false,hasPlastic:false,hasBonus:false,hasGenericRepasseColumns:false,genericRepasseSlots:[]}}
+  return {format:read.format,groupOptions:[],rows:[],issues,summary:{sourceRows:0,expandedRows:0,tables:[],components:[],hasDeferred:false,hasPlastic:false,hasBonus:false,hasGenericRepasseColumns:false,genericRepasseSlots:[]}}
  }
  const raw=read.rows
 
- const [types,settings,groups,components]=await Promise.all([
+ const [types,settings,groups,components,rules]=await Promise.all([
   ctx.supabase.from('contract_types').select('id,name,tech_key,is_active,organization_id').order('sort_order').order('name'),
   ctx.supabase.from('organization_contract_type_settings').select('contract_type_id,is_enabled,use_in_pipeline,use_in_commission'),
   ctx.supabase.from('commission_groups').select('id,name,is_active').eq('is_active',true).order('sort_order').order('name'),
   ctx.supabase.from('commission_component_types').select('id,tech_key,name,is_active').eq('is_active',true).order('sort_order'),
+  ctx.supabase.from('commission_group_rules').select('group_id,version,own_production').order('version',{ascending:false}),
  ])
+ // Own-production groups have no columns: a column named after one is an unknown group.
+ const current=new Map<string,boolean>()
+ for(const r of (rules.data??[]) as {group_id:string;own_production:boolean}[])if(!current.has(r.group_id))current.set(r.group_id,r.own_production)
+ const payable=((groups.data??[]) as {id:string;name:string}[]).filter(g=>!current.get(g.id))
  const enabled=effectiveContractTypes(
   (types.data??[]) as {id:string;name:string;tech_key:string;is_active:boolean;organization_id:string|null}[],
   (settings.data??[]) as {contract_type_id:string;is_enabled:boolean;use_in_pipeline:boolean;use_in_commission:boolean}[],
   'commission',
  )
- return {format:read.format,...mapSmartCommercialRows(raw,{
+ return {format:read.format,groupOptions:payable,...mapSmartCommercialRows(raw,{
   contractTypes:enabled,
-  groups:(groups.data??[]) as {id:string;name:string}[],
+  groups:payable,
   components:(components.data??[]) as {id:string;tech_key:string;name:string}[],
+  repassMap,
  })}
 }
 
@@ -45,7 +66,10 @@ export const SMART_IMPORT_ISSUES:Record<string,string>={
  missing_contract:'Não encontrei a coluna Tipo de Contrato.',
  missing_term:'Não encontrei Prazo ou Prazo Inicial.',
  missing_rate_coefficient_or_factor:'Não encontrei Taxa, Coeficiente ou Fator.',
- generic_repass_requires_mapping:'O arquivo usa Repasse 1/2/3. Esses repasses não serão usados como regra interna sem confirmação.',
+ generic_repass_requires_mapping:'O arquivo usa colunas "Repasse N". Escolha o grupo de vendedores de cada uma (ou "Não usar") para continuar.',
+ unknown_group_column:'Há uma coluna de grupo que não existe no Corban (ou é produção própria). Cadastre o grupo em Grupos de vendedores ou corrija o nome da coluna.',
+ repass_map_invalid_group:'Um Repasse foi ligado a um grupo que não existe ou não pode receber repasse.',
+ duplicate_group_column:'O mesmo grupo recebeu duas colunas para o mesmo tipo de comissão (confira o mapeamento dos Repasses).',
  missing_identity:'Banco, Convênio, Tabela ou Tipo de Contrato está vazio.',
  unknown_contract_type:'Tipo de Contrato não existe ou não está habilitado.',
  invalid_term_range:'Faixa de prazo inválida.',

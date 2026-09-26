@@ -54,7 +54,7 @@ test('canViewCommission is fail-closed until the Owner decides (supervisor and a
   assert.equal(atLeast('supervisor', 'supervisor'), canViewCommission('supervisor'))
 })
 test('screens ask canViewCommission instead of hard-coding the role', () => {
-  for (const f of ['src/app/app/comercial/tabelas/page.tsx']) assert.match(read(f), /canViewCommission\(/, f)
+  for (const f of ['src/app/app/comercial/tabelas/[id]/page.tsx']) assert.match(read(f), /canViewCommission\(/, f)
 })
 
 // ---- error classification and input hygiene

@@ -144,21 +144,35 @@ test('Diferido = 0 raises no question; Diferido > 0 is detected; Plástico witho
   assert.deepEqual(zero.issues, []); assert.equal(zero.summary.hasDeferred, false); assert.equal(zero.rows[0].components.length, 0)
   const some = map([[...CH, 'Diferido (Empresa)'], ['H', 'G', 'T', 'Novo', '84', '1', '3,5']])
   assert.equal(some.summary.hasDeferred, true); assert.deepEqual(some.rows[0].components.map(c => [c.value_kind, c.received_value]), [['percentage', '3.5']])
-  assert.equal(map([[...CH, 'Plástico (Empresa)'], ['H', 'G', 'T', 'Novo', '84', '1', '50']]).issues[0].code, 'component_unit_required')
+  assert.deepEqual(map([[...CH, 'Plástico (Empresa)'], ['H', 'G', 'T', 'Novo', '84', '1', '50']]).rows[0].components.map(c => c.value_kind), ['percentage'])
   const brl = map([[...CH, 'Plástico (Empresa) - Valor', 'Plástico (Empresa) - Unidade [% ou R$]'], ['H', 'G', 'T', 'Novo', '84', '1', '50', 'R$']])
   assert.deepEqual(brl.issues, []); assert.deepEqual(brl.rows[0].components.map(c => [c.value_kind, c.received_value]), [['fixed_brl', '50']]); assert.equal(brl.summary.hasPlastic, true)
   assert.equal(map([[...CH, 'À Vista (Empresa)'], ['H', 'G', 'T', 'Novo', '84', '1', '101']]).issues[0].code, 'component_percentage_over_100')
 })
-test('Repasse 1/2/3 is NEVER mapped to a group: slots are listed, nothing enters source_repasses, the file must be confirmed and ignored', () => {
-  const r = map([[...CH, 'À Vista (Empresa)', 'À Vista (Repasse 1)', 'À Vista (Repasse 2)', 'Diferido (Repasse 3)'], ['H', 'G', 'T', 'Novo', '84', '1', '7', '4', '3', '1']])
+const SLOTS = [[...CH, 'À Vista (Empresa)', 'À Vista (Repasse 1)', 'À Vista (Repasse 2)', 'Diferido (Repasse 3)'], ['H', 'G', 'T', 'Novo', '84', '1', '7', '4', '3', '1']]
+test('Repasse 1/2/3 is never guessed: without an answer the slots are listed and no group value is produced', () => {
+  const r = map(SLOTS)
   assert.ok(r.issues.some(i => i.code === 'generic_repass_requires_mapping')); assert.deepEqual(r.summary.genericRepasseSlots, ['Repasse 1', 'Repasse 2', 'Repasse 3'])
-  assert.ok(r.rows.length > 0 && r.rows.every(x => x.source_repasses.length === 0))
+  assert.ok(r.rows.length > 0 && r.rows.every(x => x.group_values.length === 0)); assert.equal(r.summary.hasUnmappedRepassValues, true)
   assert.equal(JSON.stringify(r.rows).includes('g-cor'), false)
 })
-test('real group names in the file (Corretor/Parceiro) are recognised as observations of those groups', () => {
-  const r = map([[...CH, 'À Vista (Empresa)', 'À Vista (Corretor)', 'À Vista (Parceiro)'], ['H', 'G', 'T', 'Novo', '84', '1', '7', '4', '3']])
-  assert.deepEqual(r.issues, []); assert.deepEqual(r.rows[0].source_repasses.map(x => [x.group_id, x.raw_value]).sort(), [['g-cor', '4'], ['g-par', '3']])
+test('Repasse N mapped by the person importing: each slot becomes that group; a slot answered "ignore" is dropped', () => {
+  const r = mapSmartCommercialRows(SLOTS, { ...ctx, repassMap: { '1': 'g-cor', '2': 'g-par', '3': null } })
+  assert.deepEqual(r.issues, [])
+  assert.deepEqual(r.rows[0].group_values.map(v => [v.group_id, v.value_kind, v.value]).sort(), [['g-cor', 'percentage', '4'], ['g-par', 'percentage', '3']])
+  assert.equal(mapSmartCommercialRows(SLOTS, { ...ctx, repassMap: { '1': 'g-x', '2': null, '3': null } }).issues[0].code, 'repass_map_invalid_group')
+  assert.equal(mapSmartCommercialRows(SLOTS, { ...ctx, repassMap: { '1': 'g-cor', '2': 'g-cor', '3': null } }).issues[0].code, 'duplicate_group_column')
+})
+test('real group names in the file become that group\'s values; empty or zero means the type does not apply', () => {
+  const r = map([[...CH, 'À Vista (Empresa)', 'À Vista (Corretor)', 'À Vista (Parceiro)', 'Plástico (Corretor)', 'Diferido (Parceiro)'], ['H', 'G', 'T', 'Novo', '84', '1', '7', '4', '3', 'R$ 10,00', '0']])
+  assert.deepEqual(r.issues, [])
+  assert.deepEqual(r.rows[0].group_values.map(x => [x.group_id, x.value_kind, x.value]).sort(), [['g-cor', 'fixed_brl', '10.00'], ['g-cor', 'percentage', '4'], ['g-par', 'percentage', '3']])
   assert.deepEqual(r.summary.genericRepasseSlots, [])
+})
+test('a group that is not registered (or is own production) refuses the whole file', () => {
+  const r = map([[...CH, 'À Vista (Empresa)', 'À Vista (Fulano)'], ['H', 'G', 'T', 'Novo', '84', '1', '7', '4']])
+  assert.equal(r.rows.length, 0); assert.equal(r.issues[0].code, 'unknown_group_column'); assert.equal(r.issues[0].detail, 'À Vista (Fulano)')
+  assert.equal(map([[...CH, 'À Vista (Corretor)'], ['H', 'G', 'T', 'Novo', '84', '1', '101']]).issues[0].code, 'invalid_repass_value')
 })
 
 // ---------------------------------------------------------------- hostile files
@@ -232,9 +246,10 @@ test('server wiring: content-driven reader, size checked before reading, PDFs go
   const s = read('src/lib/imports/smart-commercial-server.ts'), a = read('src/app/api/comercial/importacao-inteligente/apply/route.ts'), p = read('src/app/api/comercial/importacao-inteligente/preview/route.ts')
   assert.ok(/readSmartFile\(/.test(s) && /file\.size>5_000_000/.test(s))
   assert.ok(/safeFileName\(file\.name\)/.test(p) && /needsReview/.test(p))
-  assert.ok(!/source_repasses/.test(a.slice(a.indexOf('const payload'), a.indexOf("rpc('import_smart_commercial_rows'"))))
+  assert.ok(/group_values:r\.group_values/.test(a.slice(a.indexOf('const payload'), a.indexOf("rpc('import_smart_commercial_rows'"))))
+  assert.ok(/parseRepassMap\(fd\.get\('repass_map'\)\)/.test(a) && /parseRepassMap\(fd\.get\('repass_map'\)\)/.test(p))
   for (const f of ['smart-file', 'smart-pdf', 'legacy-xls', 'file-guards']) assert.ok(!/gemini|openai|anthropic|process\.env|fetch\(/i.test(read(`src/lib/imports/${f}.ts`)), f)
-  assert.ok(/hard\.length/.test(a) && /generic&&!ignoreLegacy/.test(a))
+  assert.ok(/hard\.length/.test(a) && /const hard=parsed\.issues$/m.test(a))
 })
 test('an XLSX with more rows than the ceiling is REFUSED, never silently cut to a partial import', async () => {
   const big = [HEAD, ...Array.from({ length: SMART_LIMITS.sourceRows + 50 }, (_, i) => ['H', 'G', `T${i}`, 'Novo', '84', '1', '7'])]
