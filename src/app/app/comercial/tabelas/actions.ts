@@ -6,6 +6,7 @@ import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
 import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedback'
 import { parseValueInput } from '@/lib/commission/tableValues'
+import { normalizePct } from '@/lib/commission/groupRule'
 import { isUuid } from '@/lib/team'
 
 const LIST = '/app/comercial/tabelas'
@@ -50,6 +51,9 @@ export async function saveLineValues(f: FormData) {
   const back = `${LIST}/${id}/linha/${condition}`
   const ctx = await manager(); if (!ctx) return go(back, 'erro:sem_permissao')
   const base = text(f, 'calculation_base') || null
+  const taxRaw = text(f, 'tax_pct').replace(/%$/, '').trim()
+  const tax = taxRaw === '' ? '' : normalizePct(taxRaw)
+  if (tax === null) return go(back, 'erro:linha_imposto_invalido')
   const components: { component_type_id: string; value_kind: string; received_value: string; calculation_base: string | null; source: string }[] = []
   const groupValues: { group_id: string; component_type_id: string; value_kind: string; value: string; source: string }[] = []
   for (const [key, raw] of f.entries()) {
@@ -61,10 +65,12 @@ export async function saveLineValues(f: FormData) {
     if (m[1] === 'c') components.push({ component_type_id: m[2], value_kind: parsed.kind, received_value: parsed.value, calculation_base: base, source: 'manual' })
     else if (m[3]) groupValues.push({ group_id: m[2], component_type_id: m[3], value_kind: parsed.kind, value: parsed.value, source: 'manual' })
   }
-  const { error } = await ctx.supabase.rpc('save_condition_values', { p_condition: condition, p_components: components, p_group_values: groupValues })
+  // A % without its base would be refused by the calculation: ask for it here.
+  if (!base && components.some(c => c.value_kind === 'percentage')) return go(back, 'erro:linha_sem_base')
+  const { error } = await ctx.supabase.rpc('save_condition_values', { p_condition: condition, p_components: components, p_group_values: groupValues, p_tax_pct: tax })
   if (error) {
     const m = error.message ?? ''
-    return go(back, /version_not_draft/.test(m) ? 'erro:vigencia_publicada_imutavel' : /invalid_group_value|invalid_components/.test(m) ? 'erro:linha_valor_invalido' : classifyDbFeedback(error))
+    return go(back, /version_not_draft/.test(m) ? 'erro:vigencia_publicada_imutavel' : /invalid_group_value|invalid_components|invalid_tax_pct/.test(m) ? 'erro:linha_valor_invalido' : classifyDbFeedback(error))
   }
   return go(tablePage(id, version), 'ok:linha_salva')
 }

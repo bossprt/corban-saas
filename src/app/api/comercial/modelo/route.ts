@@ -2,6 +2,7 @@ import ExcelJS from 'exceljs'
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
 import { effectiveContractTypes } from '@/lib/contract-types'
+import { SHEET_LINE_COLUMNS, SHEET_TAIL_COLUMNS, valueColumns } from '@/lib/commission/tableSheet'
 
 export const dynamic='force-dynamic'
 
@@ -29,14 +30,8 @@ export async function GET(){
 
   const wb=new ExcelJS.Workbook()
   const ws=wb.addWorksheet('Tabelas')
-  const columns:string[]=[
-    'Banco','Convênio','Tabela','Código no Banco',
-    'Vigência Inicial','Vigência Final','Tipo de Contrato','Prazo Inicial','Prazo Final',
-    'Fator','Taxa a.m. (%)',
-  ]
   // Same layout as the 2tech report: company block, then one block per group. Number = % of the operation; "R$ 25,00" = fixed.
-  for(const c of components.data??[])columns.push(`${c.name} (Empresa)`)
-  for(const g of payGroups)for(const c of components.data??[])columns.push(`${c.name} (${g.name})`)
+  const columns:string[]=[...SHEET_LINE_COLUMNS,'Fator','Taxa a.m. (%)',...SHEET_TAIL_COLUMNS,...valueColumns(components.data??[],payGroups)]
   ws.addRow(columns)
   ws.views=[{state:'frozen',ySplit:1}]
   ws.autoFilter={from:'A1',to:ws.getRow(1).getCell(columns.length).address}
@@ -49,6 +44,8 @@ export async function GET(){
     ['Empresa',organization.name],
     ['Colunas','Dados da linha, depois o bloco (Empresa) com o que o banco paga e um bloco para cada grupo de vendedores com o que ele recebe.'],
     ['Valores','Número = % da operação (ex.: 2,5). "R$ 25,00" = valor fixo por contrato. Vazio = não vale para aquele grupo na linha.'],
+    ['Base de Cálculo','Bruto (valor do contrato) ou Líquido (valor liberado): sobre qual valor os % da linha são calculados.'],
+    ['Imposto (%)','Imposto que a empresa paga sobre o que recebe nesta linha (média do Simples, ex.: 6). Vazio ou 0 = não paga imposto. O vendedor nunca paga imposto.'],
     ['Tipo de Contrato','Use exatamente um dos nomes habilitados abaixo.'],
     ['Grupos','Só grupos cadastrados. Coluna de grupo desconhecido faz a planilha ser recusada inteira. Produção própria não tem bloco.'],
     ['Planilha da 2tech','Pode ser importada como está: o Corban pergunta de qual grupo é cada "Repasse N".'],

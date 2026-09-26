@@ -38,6 +38,8 @@ export type SmartImportRow={
  factor_date:string|null
  components:SmartImportComponentValue[]
  group_values:SmartImportGroupValue[]
+ // Imposto (%) of the line; only present when the file has the column (empty cell = 0 = no tax).
+ tax_pct?:string
 }
 export type SmartImportResult={
  rows:SmartImportRow[]
@@ -74,6 +76,8 @@ const baseAliases={
  factor:['fator'],
  factorMode:['tipo_fator','tipo_de_fator'],
  factorDate:['data_fator','vigencia_fator','data_do_fator','data_referencia','data'],
+ tax:['imposto','imposto_percentual','percentual_imposto','aliquota_imposto','aliquota'],
+ base:['base_de_calculo','base_calculo','base_calculo_comissao','base'],
 } as const
 export const SMART_HEADER_ALIASES=baseAliases
 
@@ -156,6 +160,14 @@ const unitFor=(header:string,unitRaw:string,fixedInValue:boolean):'percentage'|'
  if(fixedInValue||/(^|_)r(_|$)|reais|brl/.test(u)||/r\$/.test(unitRaw)||h.includes('valor_fixo'))return 'fixed_brl'
  return 'percentage'
 }
+export type CalculationBase='BRUTO'|'LÍQUIDO'
+// "Bruto", "B", "Líquido", "L" (2tech shows the base as B/L); anything else is refused.
+export const parseCalculationBase=(raw:string):CalculationBase|null=>{
+ const k=n(raw)
+ if(k==='b'||k.startsWith('bruto'))return 'BRUTO'
+ if(k==='l'||k.startsWith('liquido'))return 'LÍQUIDO'
+ return null
+}
 const factorMode=(raw:string):'daily'|'fixed'|null=>{
  const k=n(raw)
  if(k.includes('diario'))return 'daily'
@@ -165,7 +177,7 @@ const factorMode=(raw:string):'daily'|'fixed'|null=>{
 
 export function mapSmartCommercialRows(
  rawRows:readonly (readonly unknown[])[],
- ctx:{contractTypes:readonly SmartImportContractType[];groups:readonly SmartImportGroup[];components:readonly SmartImportComponent[];repassMap?:RepassMap}
+ ctx:{contractTypes:readonly SmartImportContractType[];groups:readonly SmartImportGroup[];components:readonly SmartImportComponent[];repassMap?:RepassMap;defaultBase?:CalculationBase}
 ):SmartImportResult{
  const issues:SmartImportIssue[]=[]
  const rows:SmartImportRow[]=[]
@@ -184,6 +196,7 @@ export function mapSmartCommercialRows(
   contract:firstIndex(head,baseAliases.contract),term:firstIndex(head,baseAliases.term),termMin:firstIndex(head,baseAliases.termMin),termMax:firstIndex(head,baseAliases.termMax),
   coefficient:firstIndex(head,baseAliases.coefficient),rate:firstIndex(head,baseAliases.rate),factor:firstIndex(head,baseAliases.factor),
   factorMode:firstIndex(head,baseAliases.factorMode),factorDate:firstIndex(head,baseAliases.factorDate),
+  tax:firstIndex(head,baseAliases.tax),base:firstIndex(head,baseAliases.base),
  }
  for(const [k,v] of Object.entries({bank:col.bank,agreement:col.agreement,table:col.table,contract:col.contract}))if(v===undefined)issues.push({line:1,code:`missing_${k}`})
  if(col.term===undefined&&col.termMin===undefined)issues.push({line:1,code:'missing_term'})
@@ -228,7 +241,9 @@ export function mapSmartCommercialRows(
   if(!h||consumed.has(i)||/unidade/.test(h)||IGNORABLE.test(h))continue
   if(MONEY_WORDS.test(h))issues.push({line:1,code:'unrecognized_commission_column',detail:rawHead[i].slice(0,60)})
  }
- if(issues.some(x=>x.line===1&&x.code!=='generic_repass_requires_mapping')){
+ // The base (gross or net amount) decides the money: a file without it needs the person importing to choose one.
+ if(col.base===undefined&&!ctx.defaultBase)issues.push({line:1,code:'calculation_base_required'})
+ if(issues.some(x=>x.line===1&&x.code!=='generic_repass_requires_mapping'&&x.code!=='calculation_base_required')){
   return {rows:[],issues,summary:{sourceRows,expandedRows:0,tables:[],components:[],hasDeferred:false,hasPlastic:false,hasBonus:false,hasGenericRepasseColumns:genericRepasse,genericRepasseSlots}}
  }
 
@@ -262,6 +277,13 @@ export function mapSmartCommercialRows(
   if(fDateRaw&&!parseDate(fDateRaw)){issues.push({line,code:'invalid_date'});return}
   if(factor!==null&&fMode==='daily'&&!fDate){issues.push({line,code:'factor_date_required'});return}
   if([bank,agreement,table].some(x=>x.length>SMART_LIMITS.text)){issues.push({line,code:'text_too_long'});return}
+  const taxRaw=col.tax===undefined?'':cell(r,col.tax).replace(/%$/,'').trim()
+  const tax=col.tax===undefined?undefined:taxRaw===''?'0':decimal(taxRaw,3,6)
+  if(tax===null||(tax!==undefined&&Number(tax)>100)){issues.push({line,code:'invalid_tax'});return}
+  const baseRaw=col.base===undefined?'':cell(r,col.base)
+  const rowBase=baseRaw?parseCalculationBase(baseRaw):ctx.defaultBase??null
+  if(baseRaw&&!rowBase){issues.push({line,code:'invalid_calculation_base',detail:baseRaw.slice(0,20)});return}
+  if(!rowBase&&col.base!==undefined){issues.push({line,code:'missing_calculation_base'});return}
 
   const comps:SmartImportComponentValue[]=[]
   for(const cc of componentCols){
@@ -272,7 +294,7 @@ export function mapSmartCommercialRows(
    if(Number(value)===0)continue
    const unit=unitFor(cc.header,cc.unit===undefined?'':cell(r,cc.unit),fixed)
    if(unit==='percentage'&&Number(value)>100){issues.push({line,code:'component_percentage_over_100',detail:cc.component.name});return}
-   comps.push({component_type_id:cc.component.id,value_kind:unit,received_value:value,source:'import'})
+   comps.push({component_type_id:cc.component.id,value_kind:unit,received_value:value,source:'import',calculation_base:rowBase})
   }
 
   // Empty or zero = the type does not apply to the group on this line.
@@ -300,6 +322,7 @@ export function mapSmartCommercialRows(
    coefficient:coefficient??factor,rate,effective_from:from,effective_until:until,
    factor_mode:fMode,factor_value:factor,factor_date:fDate,
    components:comps,group_values:groupValues,
+   ...(tax===undefined?{}:{tax_pct:tax}),
   })
  })
 

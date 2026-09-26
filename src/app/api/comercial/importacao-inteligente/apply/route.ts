@@ -1,7 +1,7 @@
 
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
-import { parseRepassMap, parseSmartCommercialFile, SMART_IMPORT_ISSUES } from '@/lib/imports/smart-commercial-server'
+import { parseBaseChoice, parseRepassMap, parseSmartCommercialFile, SMART_IMPORT_ISSUES } from '@/lib/imports/smart-commercial-server'
 
 export const dynamic='force-dynamic'
 const uuid=(v:string)=>/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v)
@@ -20,7 +20,7 @@ export async function POST(req:Request){
   if(origin==='own'&&provider)return Response.json({error:'Produção própria não usa empresa de origem.'},{status:400})
 
   // Every "Repasse N" must have an answer (a group or "Não usar"): nothing is imported by guess.
-  const parsed=await parseSmartCommercialFile(ctx,file,parseRepassMap(fd.get('repass_map')))
+  const parsed=await parseSmartCommercialFile(ctx,file,parseRepassMap(fd.get('repass_map')),parseBaseChoice(fd.get('calculation_base')))
   const hard=parsed.issues
   if(hard.length)return Response.json({error:'O arquivo ainda possui erros.',issues:hard.map(x=>({...x,message:SMART_IMPORT_ISSUES[x.code]??x.code}))},{status:400})
   if(!parsed.rows.length)return Response.json({error:'Nenhuma linha válida para importar.'},{status:400})
@@ -29,7 +29,7 @@ export async function POST(req:Request){
     bank_name:r.bank_name,agreement_name:r.agreement_name,table_name:r.table_name,external_table_code:r.external_table_code,
     contract_type_id:r.contract_type_id,contract_type_name:r.contract_type_name,term:r.term,
     coefficient:r.coefficient,rate:r.rate,effective_from:r.effective_from,effective_until:r.effective_until,
-    factor_mode:r.factor_mode,factor_value:r.factor_value,factor_date:r.factor_date,components:r.components,group_values:r.group_values,
+    factor_mode:r.factor_mode,factor_value:r.factor_value,factor_date:r.factor_date,components:r.components,group_values:r.group_values,...(r.tax_pct===undefined?{}:{tax_pct:r.tax_pct}),
   }))
   const {data,error}=await ctx.supabase.rpc('import_smart_commercial_rows',{
    p_organization:ctx.membership.organization_id,

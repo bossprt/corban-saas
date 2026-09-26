@@ -1,7 +1,7 @@
 
 import { readSmartFile, type SmartFormat } from '@/lib/imports/smart-file'
 import { effectiveContractTypes } from '@/lib/contract-types'
-import { mapSmartCommercialRows, type RepassMap, type SmartImportResult } from '@/lib/imports/smart-commercial'
+import { mapSmartCommercialRows, parseCalculationBase, type CalculationBase, type RepassMap, type SmartImportResult } from '@/lib/imports/smart-commercial'
 
 // groupOptions: the groups a "Repasse N" column can be mapped to (active, not own production).
 export type SmartParsed=SmartImportResult&{format:SmartFormat|null;groupOptions:{id:string;name:string}[]}
@@ -23,7 +23,10 @@ export function parseRepassMap(raw:unknown):RepassMap{
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the scoped Supabase client is untyped in this codebase
 type Ctx={supabase:{from:(table:string)=>any}}
 
-export async function parseSmartCommercialFile(ctx:Ctx,file:File,repassMap:RepassMap={}):Promise<SmartParsed>{
+// "calculation_base" form field: the base chosen for a file that does not carry one (Bruto or Líquido).
+export const parseBaseChoice=(raw:unknown):CalculationBase|undefined=>typeof raw==='string'&&raw?parseCalculationBase(raw)??undefined:undefined
+
+export async function parseSmartCommercialFile(ctx:Ctx,file:File,repassMap:RepassMap={},defaultBase?:CalculationBase):Promise<SmartParsed>{
  // size is checked BEFORE reading the body into memory (arrayBuffer would allocate it all)
  if(file.size===0||file.size>5_000_000)throw new Error('invalid_file')
  const read=await readSmartFile(new Uint8Array(await file.arrayBuffer()),file.name)
@@ -55,6 +58,7 @@ export async function parseSmartCommercialFile(ctx:Ctx,file:File,repassMap:Repas
   groups:payable,
   components:(components.data??[]) as {id:string;tech_key:string;name:string}[],
   repassMap,
+  defaultBase,
  })}
 }
 
@@ -81,6 +85,10 @@ export const SMART_IMPORT_ISSUES:Record<string,string>={
  component_unit_required:'Componente em que não foi possível determinar se é % ou R$.',
  component_percentage_over_100:'Percentual de componente acima de 100%.',
  invalid_repass_value:'Valor de repasse inválido.',
+ calculation_base_required:'A planilha não diz a base de cálculo das comissões (bruto ou líquido). Escolha abaixo para continuar.',
+ invalid_calculation_base:'Base de cálculo inválida: use Bruto ou Líquido.',
+ missing_calculation_base:'Linha sem base de cálculo (Bruto ou Líquido).',
+ invalid_tax:'Imposto inválido: use um percentual de 0 a 100 (vazio = não paga imposto).',
  empty_file:'Arquivo vazio.',
  unsupported_file:'Formato não suportado. Use CSV, XLSX, XLS ou PDF com texto.',
  file_too_large:'Arquivo maior que o limite (2 MB para planilhas, 5 MB para PDF).',

@@ -96,10 +96,10 @@ set local role authenticated;
 insert into results select 'a new vigência is a copy of the published one', (select status from public.product_table_versions where id = (select id from cloned)) = 'draft'
   and (select count(*) from public.commercial_condition_group_values v join public.commercial_conditions c on c.id = v.condition_id where c.product_table_version_id = (select id from cloned)) = 2
   and (select count(*) from public.commercial_condition_components k join public.commercial_conditions c on c.id = k.condition_id where c.product_table_version_id = (select id from cloned)) = 2;
-insert into results select 'a line is saved all or nothing', pg_temp.refused(format('select public.save_condition_values(%L, %L, %L)',
+insert into results select 'a line is saved all or nothing', pg_temp.refused(format('select public.save_condition_values(%L, %L, %L, %L)',
   (select c.id from public.commercial_conditions c where c.product_table_version_id = (select id from cloned) limit 1),
   jsonb_build_array(jsonb_build_object('component_type_id', (select upfront from ids), 'value_kind', 'percentage', 'received_value', '9', 'source', 'manual')),
-  jsonb_build_array(jsonb_build_object('group_id', (select grp from ids), 'component_type_id', (select upfront from ids), 'value_kind', 'percentage', 'value', '150'))), 'invalid_group_value')
+  jsonb_build_array(jsonb_build_object('group_id', (select grp from ids), 'component_type_id', (select upfront from ids), 'value_kind', 'percentage', 'value', '150')), ''), 'invalid_group_value')
   and exists (select 1 from public.commercial_condition_components k join public.commercial_conditions c on c.id = k.condition_id
     where c.product_table_version_id = (select id from cloned) and k.component_type_id = (select upfront from ids) and k.received_value = 6);
 reset role;

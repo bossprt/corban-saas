@@ -7,13 +7,15 @@ import { calculateCommission } from './commission-actions'
 type Supa = Awaited<ReturnType<typeof import('@/lib/appContext').requireAppContext>>['supabase']
 type Line = { component_key: string; part: string; multiplier: number; line_kind: string; amount: string }
 
-const KINDS = ['received', 'tax', 'manager', 'supervisor', 'originator', 'company'] as const
-const KIND_LABEL: Record<string, string> = { received: 'Recebido do banco', tax: 'Imposto', manager: 'Gerente', supervisor: 'Supervisor', originator: 'Vendedor', company: 'Empresa' }
+const KINDS = ['received', 'tax', 'ir_withheld', 'manager', 'supervisor', 'originator', 'company'] as const
+const KIND_LABEL: Record<string, string> = { received: 'Empresa recebe', tax: 'Imposto', ir_withheld: 'IR retido', manager: 'Gerente', supervisor: 'Supervisor', originator: 'Vendedor', company: 'Margem' }
+const MODE_LABEL: Record<string, string> = { group_values: 'Tabela e grupo do vendedor', cascade: 'Cascata (antigo)', group_table: 'Tabela por grupo (antigo)' }
+const pctBr = (v?: string | null) => String(v ?? '0').replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '').replace('.', ',')
 const COMPONENT_LABEL: Record<string, string> = { upfront: 'À vista', deferred: 'Diferido', bonus_1: 'Bônus 1', bonus_2: 'Bônus 2', bonus_3: 'Bônus 3', plastic: 'Plástico', insurance_fixed: 'Seguro' }
 const brl = (v: string) => brlText(v)
 const ZERO = fromDecimalString('0')
 
-type Calc = { mode?: string; tax_rate_pct?: string; tax_exempt?: boolean; pay_deferred?: boolean; installments?: number | null; calculated_at: string }
+type Calc = { mode?: string; tax_rate_pct?: string; tax_exempt?: boolean; ir_withheld_pct?: string | null; pay_deferred?: boolean; installments?: number | null; calculated_at: string }
 type Mine = { calculated: boolean; calculated_at?: string; mine?: boolean; lines?: Omit<Line, 'line_kind'>[] }
 
 // Frozen commission of the proposal. Totals are exact sums (amount × installments) of the stored lines.
@@ -26,7 +28,7 @@ export async function CommissionCard({ supabase, access, proposalId, closed }: {
   let notMine = false
   if (finance) {
     const { data } = await supabase.from('proposal_commission_calcs')
-      .select('id,mode,tax_rate_pct,tax_exempt,pay_deferred,installments,calculated_at')
+      .select('id,mode,tax_rate_pct,tax_exempt,ir_withheld_pct,pay_deferred,installments,calculated_at')
       .eq('proposal_id', proposalId).eq('status', 'active').maybeSingle()
     if (data) {
       calc = data
@@ -55,13 +57,14 @@ export async function CommissionCard({ supabase, access, proposalId, closed }: {
   const totals = new Map<string, Rational>()
   for (const l of lines) totals.set(l.line_kind, add(totals.get(l.line_kind) ?? ZERO, mul(fromDecimalString(String(l.amount)), fromDecimalString(String(l.multiplier)))))
   const components = [...new Set(lines.map(l => l.component_key))]
-  const visibleKinds = KINDS.filter(k => finance || k === 'originator')
+  // Finance sees every party with a value; the company receipt, the seller and the margin always show.
+  const visibleKinds = KINDS.filter(k => finance ? ['received', 'originator', 'company'].includes(k) || lines.some(l => l.line_kind === k && Number(l.amount) !== 0) : k === 'originator')
   const cell = (component: string, part: string, kind: string) => lines.find(l => l.component_key === component && l.part === part && l.line_kind === kind)?.amount
 
   return (
     <Card className="mt-6">
       <CardHeader
-        title={<span className="flex items-center gap-2">Comissão {calc?.mode && <Badge tone="brand">{calc.mode === 'cascade' ? 'Cascata' : 'Tabela por grupo'}</Badge>}{calc?.tax_exempt && <Badge tone="received">Fonte isenta</Badge>}</span>}
+        title={<span className="flex items-center gap-2">Comissão {calc?.mode && <Badge tone="brand">{MODE_LABEL[calc.mode] ?? calc.mode}</Badge>}{finance && calc?.tax_exempt && <Badge tone="received">Sem imposto</Badge>}</span>}
         action={canCalc ? (
           <form action={calculateCommission}>
             <input type="hidden" name="proposal_id" value={proposalId} />
@@ -71,10 +74,10 @@ export async function CommissionCard({ supabase, access, proposalId, closed }: {
       />
       <div className="p-5 pt-3 text-sm">
         {!calc ? (
-          <p className="text-muted">Comissão ainda não calculada. O cálculo usa a condição da tabela, as regras de comissão da empresa e a hierarquia do vendedor, e fica congelado na proposta.</p>
+          <p className="text-muted">Comissão ainda não calculada. O cálculo usa a linha da tabela (o que a empresa recebe, o imposto e o valor de cada grupo), a regra do grupo do vendedor, o IR retido pelo banco e a hierarquia do vendedor. Fica guardado no contrato.</p>
         ) : (
           <>
-            <p className="mb-3 text-xs text-muted">Calculada em {new Date(calc.calculated_at).toLocaleString('pt-BR')}{finance && <> · imposto {calc.tax_exempt ? 'isento' : `${String(calc.tax_rate_pct).replace(/0+$/, '').replace(/\.$/, '').replace('.', ',')}%`} · diferido {calc.pay_deferred ? 'repassado à equipe' : 'fica com a empresa'}</>}</p>
+            <p className="mb-3 text-xs text-muted">Calculada em {new Date(calc.calculated_at).toLocaleString('pt-BR')}{finance && <> · imposto {calc.tax_exempt ? 'não paga' : `${pctBr(calc.tax_rate_pct)}%`}{calc.ir_withheld_pct && Number(calc.ir_withheld_pct) ? ` · IR retido ${pctBr(calc.ir_withheld_pct)}%` : ''} · diferido {calc.pay_deferred ? 'repassado à equipe' : 'fica com a empresa'}</>}</p>
             {notMine ? <p className="text-muted">Os valores desta comissão são visíveis para o vendedor da proposta e para o financeiro.</p> : <>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-[13px]">
@@ -95,7 +98,7 @@ export async function CommissionCard({ supabase, access, proposalId, closed }: {
                   })}
                   <tr className="border-t-2 border-line-strong font-semibold">
                     <td className="py-2 pr-3 text-ink">Total do contrato</td>
-                    {visibleKinds.map(k => <td key={k} className="num px-3 py-2 text-right text-ink">{brl(toDecimalString(totals.get(k) ?? ZERO, 2))}</td>)}
+                    {visibleKinds.map(k => { const v = toDecimalString(totals.get(k) ?? ZERO, 2); return <td key={k} className={`num px-3 py-2 text-right ${k === 'company' && v.startsWith('-') ? 'text-[#B91C1C]' : 'text-ink'}`}>{brl(v)}</td> })}
                   </tr>
                 </tbody>
               </table>

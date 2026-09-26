@@ -19,7 +19,7 @@ export default async function LinePage({ params }: { params: Promise<{ id: strin
   const { supabase, membership } = await requireAppContext()
   if (!atLeast(membership.role, 'manager')) return <section><PageHeader title="Comissão da linha" /><Card className="p-5 text-sm text-ink-soft">Seu papel não altera comissões.</Card></section>
 
-  const { data: line } = await supabase.from('commercial_conditions').select('id,product_table_version_id,contract_type_id,term,term_min,term_max,amount_min,amount_max,rate,coefficient').eq('id', cid).maybeSingle()
+  const { data: line } = await supabase.from('commercial_conditions').select('id,product_table_version_id,contract_type_id,term,term_min,term_max,amount_min,amount_max,rate,coefficient,tax_pct').eq('id', cid).maybeSingle()
   if (!line) notFound()
   const [{ data: version }, { data: table }, { data: type }, { data: types }, { data: groups }, { data: rules }, { data: comp }, { data: gv }] = await Promise.all([
     supabase.from('product_table_versions').select('id,version,status,product_table_id').eq('id', line.product_table_version_id).maybeSingle(),
@@ -49,9 +49,14 @@ export default async function LinePage({ params }: { params: Promise<{ id: strin
           <form action={saveLineValues} className="grid gap-5">
             <input type="hidden" name="table_id" value={id} /><input type="hidden" name="version_id" value={version.id} /><input type="hidden" name="condition_id" value={cid} />
             <p className="text-[13px] text-ink-soft">Digite <b>2,5</b> para 2,5% da operação ou <b>R$ 25,00</b> para valor fixo. Vazio = não vale para esta linha.</p>
-            <label className="text-[13px] font-medium text-ink-soft">Base de cálculo da empresa
-              <select name="calculation_base" defaultValue={base} className="field mt-1.5 max-w-xs"><option value="">Não informada</option><option value="BRUTO">Bruto</option><option value="LÍQUIDO">Líquido</option></select>
-            </label>
+            <div className="grid gap-4 sm:grid-cols-2 sm:max-w-xl">
+              <label className="text-[13px] font-medium text-ink-soft">Base de cálculo
+                <select name="calculation_base" defaultValue={base} className="field mt-1.5"><option value="">Não informada</option><option value="BRUTO">Bruto (valor do contrato)</option><option value="LÍQUIDO">Líquido (valor liberado)</option></select>
+              </label>
+              <label className="text-[13px] font-medium text-ink-soft">Imposto (%)
+                <input name="tax_pct" inputMode="decimal" defaultValue={Number(line.tax_pct) ? decimalBr(String(line.tax_pct)) : ''} placeholder="0 = não paga" className="field mt-1.5" />
+              </label>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[640px] text-left text-[13px]">
                 <thead className="border-y border-line bg-surface-muted text-xs text-muted">

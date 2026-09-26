@@ -3,7 +3,7 @@
 export type Registration = { href: string; label: string; hint: string; teamOnly?: boolean }
 
 export const REGISTRATIONS: Registration[] = [
-  { href: '/app/comercial/instituicoes', label: 'Bancos', hint: 'Bancos com que a empresa trabalha e isenção de imposto por banco.' },
+  { href: '/app/comercial/instituicoes', label: 'Bancos', hint: 'Bancos com que a empresa trabalha, IR retido na fonte e se paga imposto (pelas tabelas).' },
   { href: '/app/comercial/convenios', label: 'Convênios', hint: 'Convênios nacionais habilitados e convênios próprios.' },
   { href: '/app/comercial/origens', label: 'Promotoras parceiras', hint: 'Masters, promotoras e correspondentes por onde a empresa também digita.' },
   { href: '/app/comercial/tipos-contrato', label: 'Tipos de contrato', hint: 'Novo, Refinanciamento, Portabilidade e tipos próprios.' },
