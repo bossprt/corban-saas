@@ -1,4 +1,4 @@
--- Contract test for 20260926000300_commission_group_values_v1 (local test company, see data-scope-contract.sql).
+-- Contract test for 20260926010227_commission_group_values_v1 (local test company, see data-scope-contract.sql).
 -- One transaction, rolled back.  psql -v ON_ERROR_STOP=1 -f tests/security/commission-group-values-contract.sql
 
 begin;
