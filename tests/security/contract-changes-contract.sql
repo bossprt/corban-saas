@@ -1,4 +1,4 @@
--- Contract test for 20260926070000_contract_changes_v1 (part C2, ADR-0039): payout change per commission type (owner
+-- Contract test for 20260926161438_contract_changes_v1 (part C2, ADR-0039): payout change per commission type (owner
 -- or manager, with reason, never above the receipt), edits with history and recalculation (also after paid, owner or
 -- manager with reason), notes, what the seller sees, and the lock once the seller received the commission.
 -- Local test company: table v2 (6% à vista + 14% diferido on the gross), group Ouro (3% / 7%), seller bound to vendedor@.
