@@ -219,15 +219,16 @@ insert into results select 'other seller sees no commission',
               where c.proposal_id in (select id from made where label in ('fab', 'elv')));
 reset role;
 
--- Paid contracts are frozen.
+-- A paid contract is still recalculated (part C2: it may be edited until the seller receives; see
+-- contract-changes-contract.sql for the lock once the seller received).
 select pg_temp.act_as((select admin_user from ids));
 set local role authenticated;
 select public.move_operational_case((select id from public.operational_cases where proposal_id = (select id from made where label = 'fab')), 'paid', 'Pago ao cliente', null);
 do $$ begin
   begin
     perform public.calculate_contract_commission((select id from made where label = 'fab'));
-    insert into results values ('paid contract commission is frozen', false);
-  exception when others then insert into results values ('paid contract commission is frozen', sqlerrm = 'commission_frozen'); end;
+    insert into results values ('paid contract is still recalculated', true);
+  exception when others then insert into results values ('paid contract is still recalculated', false); end;
 end $$;
 reset role;
 

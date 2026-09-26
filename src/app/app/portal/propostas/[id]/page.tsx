@@ -71,7 +71,7 @@ export default async function PortalProposalPage({ params }: { params: Promise<{
         )}
       </Card>
 
-      {s.status === 'validated' && <CommissionCard supabase={supabase} access={access} proposalId={p.id} closed={['paid', 'rejected', 'cancelled'].includes(p.status)} />}
+      {s.status === 'validated' && <CommissionCard supabase={supabase} access={access} proposalId={p.id} closed={['rejected', 'cancelled'].includes(p.status)} canOverride={false} />}
     </section>
   )
 }

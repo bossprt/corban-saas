@@ -154,7 +154,7 @@ test('direct proposal runs through the pipeline to paid and counts in the goal',
 
   const due = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10)
   await page.getByLabel('Mover para').selectOption('pending_external')
-  await page.getByLabel('Observação').fill('Falta comprovante de residência')
+  await page.getByLabel('Observação', { exact: true }).fill('Falta comprovante de residência')
   await page.getByLabel('Prazo da pendência').fill(due)
   await page.getByRole('button', { name: 'Salvar etapa' }).click()
   await expect(page.getByText('Pendência:', { exact: false })).toBeVisible()
@@ -167,7 +167,7 @@ test('direct proposal runs through the pipeline to paid and counts in the goal',
   await page.getByRole('button', { name: 'Salvar etapa' }).click()
   await expect(page.getByText('Escreva uma observação')).toBeVisible()
   await page.getByLabel('Mover para').selectOption('paid')
-  await page.getByLabel('Observação').fill('Pago no portal do Banco Teste')
+  await page.getByLabel('Observação', { exact: true }).fill('Pago no portal do Banco Teste')
   await page.getByRole('button', { name: 'Salvar etapa' }).click()
   await expect(page.getByText('Etapa atualizada.')).toBeVisible()
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-proposta-paga.png`, fullPage: true })
@@ -204,7 +204,7 @@ test('the proposal commission follows the table and the seller group', async ({ 
   await expect(page.getByText('Proposta registrada na esteira.')).toBeVisible()
 
   await page.getByRole('button', { name: 'Calcular comissão' }).click()
-  await expect(page.getByText('Comissão calculada e congelada nesta proposta.')).toBeVisible()
+  await expect(page.getByText('Comissão calculada.')).toBeVisible()
   const upfront = page.getByRole('row', { name: /^À vista/ })
   await expect(upfront).toContainText('R$ 600,00')
   await expect(upfront).toContainText('R$ 300,00')
@@ -245,7 +245,7 @@ test('finance imports a bank report, resolves the lines and confirms the receipt
   await page.getByRole('button', { name: 'Registrar proposta' }).click()
   await expect(page.getByText('Proposta registrada na esteira.')).toBeVisible()
   await page.getByRole('button', { name: 'Calcular comissão' }).click()
-  await expect(page.getByText('Comissão calculada e congelada nesta proposta.')).toBeVisible()
+  await expect(page.getByText('Comissão calculada.')).toBeVisible()
   const proposalUrl = page.url().split('?')[0]
 
   // The bank report: the contract above (exact 600,00), a contract of another company, a title block.
@@ -773,7 +773,7 @@ test('commission C1: line tax, bank IR, contract commission and search, table ex
   await page.getByRole('button', { name: 'Registrar proposta' }).click()
   await expect(page.getByText('Proposta registrada na esteira.')).toBeVisible()
   await page.getByRole('button', { name: 'Calcular comissão' }).click()
-  await expect(page.getByText('Comissão calculada e congelada nesta proposta.')).toBeVisible()
+  await expect(page.getByText('Comissão calculada.')).toBeVisible()
   // 600,00 received; 6% tax = 36,00; 0,5% IR = 3,00; Ouro 3% = 300,00; margin 261,00.
   const upfront = page.getByRole('row', { name: /^À vista/ })
   for (const v of ['R$ 600,00', 'R$ 36,00', 'R$ 3,00', 'R$ 300,00', 'R$ 261,00']) await expect(upfront).toContainText(v)
@@ -819,4 +819,52 @@ test('tables: Nova pesquisa keeps the filters; bank export imports back as draft
 
   await page.goto('/app/comercial/tabelas?nome=Tabela+Teste+INSS&vigencia=todas')
   await expect(page.getByRole('row', { name: /Tabela Teste INSS/ })).toContainText('Rascunho')
+})
+
+// Part C2 (owner decisions 26/09/2026): the owner changes the seller's payout per commission type with a reason, edits
+// the contract (the commission follows), writes a note, and the Contratos screen marks and filters changed payouts.
+test('contract C2: payout change, contract edit with recalculation, note and history', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  const ade = `E2E-C2-${Date.now()}`
+  await page.goto('/app/propostas/nova')
+  await page.getByLabel('Cliente').selectOption({ index: 1 })
+  await page.getByLabel('Banco e tabela').selectOption({ label: 'Banco Teste · Tabela Teste INSS (v2)' })
+  await page.getByLabel('Valor solicitado (R$)').fill('10.000,00')
+  await page.getByLabel('Prazo (meses)').fill('120')
+  await page.getByLabel('Vendedor').selectOption({ label: 'Vendedor Teste' })
+  await page.getByLabel('Já digitada no banco').check()
+  await page.getByLabel('Número da proposta no banco (ADE)').fill(ade)
+  await page.getByRole('button', { name: 'Registrar proposta' }).click()
+  await expect(page.getByText('Proposta registrada na esteira.')).toBeVisible({ timeout: 30_000 })
+  await page.getByRole('button', { name: 'Calcular comissão' }).click()
+  await expect(page.getByText('Comissão calculada.')).toBeVisible({ timeout: 30_000 })
+
+  // 2% of the R$ 10.000,00 base instead of the rule (3% for group Ouro).
+  await page.getByText('Alterar repasse do vendedor — À vista').click()
+  await page.getByLabel('Repasse À vista').fill('2')
+  await page.getByLabel('Motivo À vista').fill('empresa lucra mais')
+  await page.getByRole('button', { name: 'Salvar repasse' }).first().click()
+  await expect(page.getByText('Repasse do vendedor alterado.')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByRole('row', { name: /^À vista/ })).toContainText('R$ 200,00')
+
+  // The contract grows to R$ 12.000,00: recalculated, the change (2% of the base) follows.
+  await page.getByRole('button', { name: 'Editar contrato' }).click()
+  await page.getByLabel('Valor bruto (R$)').fill('12.000,00')
+  await page.getByRole('button', { name: 'Salvar alterações' }).click()
+  await expect(page.getByText('Contrato atualizado. A comissão foi recalculada.')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByRole('row', { name: /^À vista/ })).toContainText('R$ 240,00')
+
+  await page.getByLabel('Nova observação').fill('Cliente pediu retorno amanhã.')
+  await page.getByRole('button', { name: 'Registrar observação' }).click()
+  await expect(page.getByText('Observação registrada.')).toBeVisible({ timeout: 30_000 })
+  const history = page.locator('#historico')
+  await expect(history).toContainText('Valor bruto: R$ 10.000,00 → R$ 12.000,00')
+  await expect(history).toContainText('Repasse do vendedor (à vista)')
+  await expect(history).toContainText('Cliente pediu retorno amanhã.')
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-contrato-c2.png`, fullPage: true })
+
+  await page.goto(`/app/contratos?alterado=1&q=${ade}`)
+  const row = page.getByRole('row').filter({ hasText: ade })
+  await expect(row).toContainText('Alterado')
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-contratos-alterados.png`, fullPage: true })
 })
