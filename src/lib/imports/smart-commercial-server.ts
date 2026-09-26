@@ -37,12 +37,13 @@ export async function parseSmartCommercialFile(ctx:Ctx,file:File,repassMap:Repas
  }
  const raw=read.rows
 
- const [types,settings,groups,components,rules]=await Promise.all([
+ const [types,settings,groups,components,rules,providers]=await Promise.all([
   ctx.supabase.from('contract_types').select('id,name,tech_key,is_active,organization_id').order('sort_order').order('name'),
   ctx.supabase.from('organization_contract_type_settings').select('contract_type_id,is_enabled,use_in_pipeline,use_in_commission'),
   ctx.supabase.from('commission_groups').select('id,name,is_active').eq('is_active',true).order('sort_order').order('name'),
   ctx.supabase.from('commission_component_types').select('id,tech_key,name,is_active').eq('is_active',true).order('sort_order'),
   ctx.supabase.from('commission_group_rules').select('group_id,version,own_production').order('version',{ascending:false}),
+  ctx.supabase.from('organization_providers').select('id,name').eq('is_active',true),
  ])
  // Own-production groups have no columns: a column named after one is an unknown group.
  const current=new Map<string,boolean>()
@@ -59,6 +60,7 @@ export async function parseSmartCommercialFile(ctx:Ctx,file:File,repassMap:Repas
   components:(components.data??[]) as {id:string;tech_key:string;name:string}[],
   repassMap,
   defaultBase,
+  providers:(providers.data??[]) as {id:string;name:string}[],
  })}
 }
 
@@ -88,6 +90,7 @@ export const SMART_IMPORT_ISSUES:Record<string,string>={
  calculation_base_required:'A planilha não diz a base de cálculo das comissões (bruto ou líquido). Escolha abaixo para continuar.',
  invalid_calculation_base:'Base de cálculo inválida: use Bruto ou Líquido.',
  missing_calculation_base:'Linha sem base de cálculo (Bruto ou Líquido).',
+ unknown_provider:'Promotora parceira não cadastrada (ou inativa): confira o nome na coluna "Promotora parceira" (vazio = produção própria).',
  invalid_tax:'Imposto inválido: use um percentual de 0 a 100 (vazio = não paga imposto).',
  empty_file:'Arquivo vazio.',
  unsupported_file:'Formato não suportado. Use CSV, XLSX, XLS ou PDF com texto.',

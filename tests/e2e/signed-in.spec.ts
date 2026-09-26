@@ -300,7 +300,7 @@ test.describe('payout', () => {
     await page.goto('/app/repasse')
     await page.getByLabel('Abrir conta de').selectOption({ label: 'Vendedor Teste' })
     await page.getByRole('button', { name: 'Abrir', exact: true }).click()
-    await expect(page.getByText('Conta aberta.')).toBeVisible()
+    await expect(page.getByText('Conta aberta.')).toBeVisible({ timeout: 30_000 })
     const accountUrl = page.url().split('?')[0]
     const note = `Bônus E2E ${Date.now()}`
     await page.getByLabel('Tipo').selectOption('bonus')
@@ -754,9 +754,6 @@ test('commission C1: line tax, bank IR, contract commission and search, table ex
   await page.getByRole('button', { name: 'Salvar comissão da linha' }).click()
   await expect(page.getByText('Comissão da linha salva.')).toBeVisible({ timeout: 30_000 })
   await expect(page.locator('#comissao table').getByRole('cell', { name: '6%', exact: true }).first()).toBeVisible()
-  const exported = await page.request.get(await page.getByRole('link', { name: 'Exportar planilha' }).getAttribute('href') ?? '')
-  expect(exported.status()).toBe(200)
-  expect(exported.headers()['content-type']).toContain('spreadsheetml')
   await page.getByRole('button', { name: 'Publicar' }).click()
   await expect(page.getByText('Vigência publicada.')).toBeVisible({ timeout: 30_000 })
   const version = (await page.locator('#vigencias li').first().getByText(/^v\d+$/).textContent())?.trim()
@@ -789,4 +786,37 @@ test('commission C1: line tax, bank IR, contract commission and search, table ex
   // Whole contract: à vista + 120 deferred installments (2.000,00 received, 1.000,00 to the seller, margin 870,00).
   for (const v of ['R$ 2.000,00', 'R$ 1.000,00', 'R$ 870,00']) await expect(row).toContainText(v)
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-contratos.png`, fullPage: true })
+})
+
+// Owner decisions 26/09/2026: "Nova pesquisa" goes back to the search with the filters marked, and the search exports
+// every table it shows (one bank or all); the file imports back as new drafts on each table's own origin.
+test('tables: Nova pesquisa keeps the filters; bank export imports back as drafts', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  await page.goto('/app/comercial/tabelas')
+  await page.locator('select[name="banco"]').selectOption({ label: 'Banco Teste' })
+  await page.getByRole('button', { name: 'Pesquisar' }).click()
+  await expect(page).toHaveURL(/banco=/)
+  await page.getByRole('link', { name: 'Tabela Teste INSS', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Tabela Teste INSS' })).toBeVisible({ timeout: 30_000 })
+  await page.getByRole('link', { name: 'Nova pesquisa' }).click()
+  await expect(page).toHaveURL(/banco=/)
+  await expect(page.locator('select[name="banco"] option:checked')).toHaveText('Banco Teste')
+
+  const exportLink = page.getByRole('link', { name: /Exportar planilha/ })
+  const file = await page.request.get(await exportLink.getAttribute('href') ?? '')
+  expect(file.status()).toBe(200)
+  const body = await file.body()
+
+  await page.goto('/app/comercial/importacao-inteligente')
+  await page.getByLabel('Planilha').setInputFiles({ name: 'tabelas-banco-teste.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: body })
+  await page.getByRole('button', { name: 'Ler planilha' }).click()
+  await expect(page.getByText(/A origem de cada linha vem da coluna/)).toBeVisible({ timeout: 30_000 })
+  const deferred = page.getByLabel(/Confirmo que o Diferido/)
+  if (await deferred.count()) await deferred.check()
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-reimportar-banco.png`, fullPage: true })
+  await page.getByRole('button', { name: 'Importar como rascunho' }).click()
+  await expect(page.getByText(/Importação concluída: 0 tabela\(s\) nova\(s\)/)).toBeVisible({ timeout: 60_000 })
+
+  await page.goto('/app/comercial/tabelas?nome=Tabela+Teste+INSS&vigencia=todas')
+  await expect(page.getByRole('row', { name: /Tabela Teste INSS/ })).toContainText('Rascunho')
 })

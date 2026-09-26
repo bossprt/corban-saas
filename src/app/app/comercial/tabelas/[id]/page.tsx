@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, CircleDollarSign, CopyPlus, Download, Search } from 'lucide-react'
+import { CircleDollarSign, CopyPlus, Search } from 'lucide-react'
 import { Badge, Card, CardHeader, PageHeader } from '@/components/ui'
 import { SubmitButton } from '@/components/SubmitButton'
 import { requireAppContext } from '@/lib/appContext'
@@ -9,6 +9,7 @@ import { isUuid } from '@/lib/team'
 import { decimalBr, PAGE_SIZES, pageSize, rangeText, termText, valueText, VERSION_STATUS } from '@/lib/commission/tableValues'
 import { fetchAll } from '@/lib/fetchAll'
 import { cloneVersion, publishVersion, renameTable } from '../actions'
+import { NewSearchLink } from '../NewSearchLink'
 
 type SP = Record<string, string | string[] | undefined>
 const one = (v: string | string[] | undefined) => (typeof v === 'string' ? v : '')
@@ -93,7 +94,7 @@ export default async function TablePage({ params, searchParams }: { params: Prom
 
   return (
     <section>
-      <Link href="/app/comercial/tabelas" className="mb-3 inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink"><ArrowLeft size={15} aria-hidden />Tabelas</Link>
+      <NewSearchLink />
       <PageHeader title={table.name} description={<span className="flex flex-wrap items-center gap-2">
         <span>{bank?.name ?? 'Banco'} · {agreement?.name ?? 'Convênio'} · {provider?.name ? `por ${provider.name}` : 'produção própria'}</span>
         {table.code && !table.code.startsWith('t-') && <span className="font-mono text-xs">{table.code}</span>}
@@ -137,10 +138,7 @@ export default async function TablePage({ params, searchParams }: { params: Prom
 
       {seeCommission && <Card id="comissao" className="mt-4">
         <CardHeader title={<span className="flex flex-wrap items-center gap-2">Comissão {selected && <><span className="text-sm font-normal text-muted">v{selected.version}</span><Badge tone={TONE[selected.status] ?? 'neutral'}>{VERSION_STATUS[selected.status]}</Badge></>}</span>}
-          action={<span className="flex flex-wrap items-center gap-3">
-            {selected?.status !== 'draft' && canEdit && <span className="text-xs text-muted">Para alterar, crie uma nova vigência a partir desta.</span>}
-            {selected && <a href={`/api/comercial/tabelas/${id}/exportar?v=${selected.id}`} className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line-strong bg-surface px-3 text-sm text-ink hover:bg-surface-muted"><Download size={15} aria-hidden />Exportar planilha</a>}
-          </span>} />
+          action={selected?.status !== 'draft' && canEdit ? <span className="text-xs text-muted">Para alterar, crie uma nova vigência a partir desta.</span> : undefined} />
         <div className="flex flex-wrap gap-1.5 px-5 pt-3" role="tablist" aria-label="Ver comissão de">
           {views.map(x => <Link key={x.key} href={qs({ ver: x.key, p: 1 })} role="tab" aria-selected={view === x.key}
             className={`rounded-full border px-3 py-1 text-[13px] ${view === x.key ? 'border-brand bg-brand text-white' : 'border-line text-ink-soft hover:bg-surface-muted'}`}>{x.label}</Link>)}

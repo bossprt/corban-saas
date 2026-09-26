@@ -2,6 +2,7 @@ import { normalizeHeader, parseTerm, parseDecimal } from '../commercial'
 
 export type SmartImportContractType={id:string;name:string;tech_key:string}
 export type SmartImportGroup={id:string;name:string}
+export type SmartImportProvider={id:string;name:string}
 export type SmartImportComponent={id:string;tech_key:string;name:string}
 export type SmartImportIssue={line:number;code:string;detail?:string}
 export type SmartImportComponentValue={
@@ -40,6 +41,9 @@ export type SmartImportRow={
  group_values:SmartImportGroupValue[]
  // Imposto (%) of the line; only present when the file has the column (empty cell = 0 = no tax).
  tax_pct?:string
+ // Origin of the line; only present when the file has a "Promotora parceira" column (empty = own production).
+ production_origin?:'own'|'third_party'
+ provider_id?:string|null
 }
 export type SmartImportResult={
  rows:SmartImportRow[]
@@ -47,6 +51,7 @@ export type SmartImportResult={
  summary:{
   sourceRows:number
   expandedRows:number
+  hasOriginColumn?:boolean
   tables:string[]
   components:string[]
   hasDeferred:boolean
@@ -78,6 +83,7 @@ const baseAliases={
  factorDate:['data_fator','vigencia_fator','data_do_fator','data_referencia','data'],
  tax:['imposto','imposto_percentual','percentual_imposto','aliquota_imposto','aliquota'],
  base:['base_de_calculo','base_calculo','base_calculo_comissao','base'],
+ provider:['promotora_parceira','promotora','empresa_de_origem'],
 } as const
 export const SMART_HEADER_ALIASES=baseAliases
 
@@ -177,7 +183,7 @@ const factorMode=(raw:string):'daily'|'fixed'|null=>{
 
 export function mapSmartCommercialRows(
  rawRows:readonly (readonly unknown[])[],
- ctx:{contractTypes:readonly SmartImportContractType[];groups:readonly SmartImportGroup[];components:readonly SmartImportComponent[];repassMap?:RepassMap;defaultBase?:CalculationBase}
+ ctx:{contractTypes:readonly SmartImportContractType[];groups:readonly SmartImportGroup[];components:readonly SmartImportComponent[];repassMap?:RepassMap;defaultBase?:CalculationBase;providers?:readonly SmartImportProvider[]}
 ):SmartImportResult{
  const issues:SmartImportIssue[]=[]
  const rows:SmartImportRow[]=[]
@@ -196,7 +202,7 @@ export function mapSmartCommercialRows(
   contract:firstIndex(head,baseAliases.contract),term:firstIndex(head,baseAliases.term),termMin:firstIndex(head,baseAliases.termMin),termMax:firstIndex(head,baseAliases.termMax),
   coefficient:firstIndex(head,baseAliases.coefficient),rate:firstIndex(head,baseAliases.rate),factor:firstIndex(head,baseAliases.factor),
   factorMode:firstIndex(head,baseAliases.factorMode),factorDate:firstIndex(head,baseAliases.factorDate),
-  tax:firstIndex(head,baseAliases.tax),base:firstIndex(head,baseAliases.base),
+  tax:firstIndex(head,baseAliases.tax),base:firstIndex(head,baseAliases.base),provider:firstIndex(head,baseAliases.provider),
  }
  for(const [k,v] of Object.entries({bank:col.bank,agreement:col.agreement,table:col.table,contract:col.contract}))if(v===undefined)issues.push({line:1,code:`missing_${k}`})
  if(col.term===undefined&&col.termMin===undefined)issues.push({line:1,code:'missing_term'})
@@ -284,6 +290,11 @@ export function mapSmartCommercialRows(
   const rowBase=baseRaw?parseCalculationBase(baseRaw):ctx.defaultBase??null
   if(baseRaw&&!rowBase){issues.push({line,code:'invalid_calculation_base',detail:baseRaw.slice(0,20)});return}
   if(!rowBase&&col.base!==undefined){issues.push({line,code:'missing_calculation_base'});return}
+  // Empty or "Própria" = own production; anything else must be a registered active partner (never guessed).
+  const providerRaw=col.provider===undefined?'':cell(r,col.provider)
+  const ownOrigin=!providerRaw||/^(propria|producao_propria)$/.test(n(providerRaw))
+  const provider=ownOrigin?null:(ctx.providers??[]).find(p=>n(p.name)===n(providerRaw))??null
+  if(col.provider!==undefined&&!ownOrigin&&!provider){issues.push({line,code:'unknown_provider',detail:providerRaw.slice(0,60)});return}
 
   const comps:SmartImportComponentValue[]=[]
   for(const cc of componentCols){
@@ -323,6 +334,7 @@ export function mapSmartCommercialRows(
    factor_mode:fMode,factor_value:factor,factor_date:fDate,
    components:comps,group_values:groupValues,
    ...(tax===undefined?{}:{tax_pct:tax}),
+   ...(col.provider===undefined?{}:{production_origin:provider?'third_party' as const:'own' as const,provider_id:provider?.id??null}),
   })
  })
 
@@ -336,7 +348,7 @@ export function mapSmartCommercialRows(
    sourceRows,expandedRows:rows.length,tables,components:[...componentNames],
    hasDeferred:componentNames.has('deferred'),hasPlastic:componentNames.has('plastic'),
    hasBonus:['bonus_1','bonus_2','bonus_3'].some(x=>componentNames.has(x)),
-   hasGenericRepasseColumns:genericRepasse,genericRepasseSlots,hasUnmappedRepassValues:hasUnmappedValue,
+   hasGenericRepasseColumns:genericRepasse,genericRepasseSlots,hasUnmappedRepassValues:hasUnmappedValue,hasOriginColumn:col.provider!==undefined,
    groups:[...new Set(rows.flatMap(r=>r.group_values.map(v=>v.group_id)))].map(id=>ctx.groups.find(g=>g.id===id)?.name??id),
   }
  }

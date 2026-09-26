@@ -286,3 +286,18 @@ test('part C1: "Base de Cálculo" and "Imposto (%)" columns; a file without a ba
   assert.deepEqual(bad('Bruto', 'seis'), ['invalid_tax'])
   assert.deepEqual(bad('Bruto', '6%'), [])
 })
+
+test('export round trip: "Promotora parceira" gives each row its origin; empty or "Própria" is own; unknown names are refused', () => {
+  const head = ['Banco', 'Convênio', 'Tabela', 'Tipo de Contrato', 'Prazo Inicial', 'Prazo Final', 'Promotora parceira', 'Coeficiente', 'Taxa a.m. (%)', 'Base de Cálculo', 'Imposto (%)', 'À Vista (Empresa)']
+  const providers = [{ id: 'p-bev', name: 'Bevicred' }]
+  const r = mapSmartCommercialRows([head,
+    ['Daycoval', 'INSS', 'T1', 'Novo', '84', '84', 'Bevicred', '0,02', '1,8', 'Bruto', '0', '5'],
+    ['Hope', 'Gov. AC', 'T2', 'Novo', '60', '60', '', '', '1,85', 'Líquido', '6', '9,5'],
+    ['Hope', 'Gov. AC', 'T3', 'Novo', '72', '72', 'Própria', '', '1,85', 'Líquido', '6', '11']], { ...ctx, providers })
+  assert.deepEqual(r.issues, [])
+  assert.equal(r.summary.hasOriginColumn, true)
+  assert.deepEqual(r.rows.map(x => [x.production_origin, x.provider_id]), [['third_party', 'p-bev'], ['own', null], ['own', null]])
+  assert.equal('production_origin' in map(ROWS).rows[0], false, 'no column: the screen choice decides')
+  const bad = mapSmartCommercialRows([head, ['Daycoval', 'INSS', 'T1', 'Novo', '84', '84', 'Promotora X', '0,02', '1,8', 'Bruto', '0', '5']], { ...ctx, providers })
+  assert.deepEqual(bad.issues.map(i => i.code), ['unknown_provider'])
+})
