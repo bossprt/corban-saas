@@ -1,4 +1,4 @@
--- Contract test for 20260926170000_auto_calculate_v1 (ADR-0040): contracts are born calculated, whoever creates them;
+-- Contract test for 20260926233413_auto_calculate_v1 (ADR-0040): contracts are born calculated, whoever creates them;
 -- a failure is recorded (the contract still exists); portal proposals are calculated only when approved.
 -- The calculation runs at commit (deferred trigger); "set constraints all immediate" fires it inside this test.
 -- One transaction, rolled back.  psql -v ON_ERROR_STOP=1 -f tests/security/auto-calculate-contract.sql
