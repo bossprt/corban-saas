@@ -203,8 +203,7 @@ test('the proposal commission follows the table and the seller group', async ({ 
   await page.getByRole('button', { name: 'Registrar proposta' }).click()
   await expect(page.getByText('Proposta registrada na esteira.')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Calcular comissão' }).click()
-  await expect(page.getByText('Comissão calculada.')).toBeVisible()
+  // Born calculated (ADR-0040): no click needed.
   const upfront = page.getByRole('row', { name: /^À vista/ })
   await expect(upfront).toContainText('R$ 600,00')
   await expect(upfront).toContainText('R$ 300,00')
@@ -244,8 +243,7 @@ test('finance imports a bank report, resolves the lines and confirms the receipt
   await page.getByLabel('Número da proposta no banco (ADE)').fill(ade)
   await page.getByRole('button', { name: 'Registrar proposta' }).click()
   await expect(page.getByText('Proposta registrada na esteira.')).toBeVisible()
-  await page.getByRole('button', { name: 'Calcular comissão' }).click()
-  await expect(page.getByText('Comissão calculada.')).toBeVisible()
+  // Born calculated (ADR-0040): no click needed.
   const proposalUrl = page.url().split('?')[0]
 
   // The bank report: the contract above (exact 600,00), a contract of another company, a title block.
@@ -772,8 +770,7 @@ test('commission C1: line tax, bank IR, contract commission and search, table ex
   await page.getByLabel('Número da proposta no banco (ADE)').fill(ade)
   await page.getByRole('button', { name: 'Registrar proposta' }).click()
   await expect(page.getByText('Proposta registrada na esteira.')).toBeVisible()
-  await page.getByRole('button', { name: 'Calcular comissão' }).click()
-  await expect(page.getByText('Comissão calculada.')).toBeVisible()
+  // Born calculated (ADR-0040): no click needed.
   // 600,00 received; 6% tax = 36,00; 0,5% IR = 3,00; Ouro 3% = 300,00; margin 261,00.
   const upfront = page.getByRole('row', { name: /^À vista/ })
   for (const v of ['R$ 600,00', 'R$ 36,00', 'R$ 3,00', 'R$ 300,00', 'R$ 261,00']) await expect(upfront).toContainText(v)
@@ -836,8 +833,7 @@ test('contract C2: payout change, contract edit with recalculation, note and his
   await page.getByLabel('Número da proposta no banco (ADE)').fill(ade)
   await page.getByRole('button', { name: 'Registrar proposta' }).click()
   await expect(page.getByText('Proposta registrada na esteira.')).toBeVisible({ timeout: 30_000 })
-  await page.getByRole('button', { name: 'Calcular comissão' }).click()
-  await expect(page.getByText('Comissão calculada.')).toBeVisible({ timeout: 30_000 })
+  // Born calculated (ADR-0040): no click needed.
 
   // 2% of the R$ 10.000,00 base instead of the rule (3% for group Ouro).
   await page.getByText('Alterar repasse do vendedor — À vista').click()

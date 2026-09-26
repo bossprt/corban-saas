@@ -4,6 +4,7 @@ import { brlText } from '@/lib/receipts/format'
 import { decimalBr } from '@/lib/commission/tableValues'
 import { memberEmails } from '@/lib/team.server'
 import { addContractNote } from './contract-actions'
+import { CALC_FAILURE } from './CommissionCard'
 
 type Supa = Awaited<ReturnType<typeof import('@/lib/appContext').requireAppContext>>['supabase']
 type ContractEvent = { id: string; kind: string; detail: Record<string, unknown>; reason: string | null; actor_user_id: string | null; created_at: string }
@@ -34,6 +35,7 @@ function describe(e: ContractEvent): string {
   }
   if (e.kind === 'payout_override_cleared') return `Repasse do vendedor (${COMPONENT[String(d.component)] ?? d.component}) voltou para a regra: ${money(d.payable)}`
   if (e.kind === 'recalculated') return 'Comissão recalculada'
+  if (e.kind === 'calc_failed') return `Comissão não calculada: ${CALC_FAILURE[String(d.code)] ?? String(d.code ?? '')}`
   return e.kind
 }
 
