@@ -4,6 +4,7 @@ import { atLeast } from '@/lib/rbac'
 import { parseBaseChoice, parseRepassMap, parseSmartCommercialFile, SMART_IMPORT_ISSUES } from '@/lib/imports/smart-commercial-server'
 
 export const dynamic='force-dynamic'
+const BLOCK=500
 const uuid=(v:string)=>/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v)
 
 export async function POST(req:Request){
@@ -30,16 +31,23 @@ export async function POST(req:Request){
     contract_type_id:r.contract_type_id,contract_type_name:r.contract_type_name,term:r.term,
     coefficient:r.coefficient,rate:r.rate,effective_from:r.effective_from,effective_until:r.effective_until,
     factor_mode:r.factor_mode,factor_value:r.factor_value,factor_date:r.factor_date,components:r.components,group_values:r.group_values,...(r.tax_pct===undefined?{}:{tax_pct:r.tax_pct}),
+    ...(r.production_origin===undefined?{}:{production_origin:r.production_origin,provider_id:r.provider_id}),
   }))
-  const {data,error}=await ctx.supabase.rpc('import_smart_commercial_rows',{
-   p_organization:ctx.membership.organization_id,
-   p_production_origin:origin,
-   p_provider:origin==='third_party'?provider:null,
-   p_policy_version:null,
-   p_rows:payload
-  })
-  if(error)return Response.json({error:error.message||'Importação recusada pelo banco de dados.'},{status:400})
-  return Response.json({ok:true,result:data,summary:parsed.summary})
+  // The database takes up to 1.000 rows per call: big files (a whole bank, or every table) go in blocks. Each block is
+  // all or nothing; a later block that fails leaves only drafts, and importing the file again reuses those drafts.
+  const total:Record<string,number>={}
+  for(let i=0;i<payload.length;i+=BLOCK){
+   const {data,error}=await ctx.supabase.rpc('import_smart_commercial_rows',{
+    p_organization:ctx.membership.organization_id,
+    p_production_origin:origin,
+    p_provider:origin==='third_party'?provider:null,
+    p_policy_version:null,
+    p_rows:payload.slice(i,i+BLOCK)
+   })
+   if(error)return Response.json({error:`${i>0?`As primeiras ${i} linhas já entraram como rascunho. `:''}${error.message||'Importação recusada pelo banco de dados.'}`},{status:400})
+   for(const [k,v] of Object.entries((data??{}) as Record<string,number>))total[k]=(total[k]??0)+Number(v)
+  }
+  return Response.json({ok:true,result:total,summary:parsed.summary})
  }catch{
   return Response.json({error:'Não foi possível concluir a importação.'},{status:500})
  }

@@ -20,9 +20,6 @@ export function valueColumns(components: readonly { name: string }[], groups: re
 export const sheetValue = (kind: string | undefined, v: string | null | undefined) =>
   v === undefined || v === null || v === '' ? '' : kind === 'fixed_brl' ? `R$ ${decimalBr(v, true)}` : decimalBr(v)
 
-// Calendar day stored at 00:00 UTC -> "01/09/2026".
-export const sheetDate = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '')
-
 export const baseLabel = (b: string | null | undefined) => (!b ? '' : /^l/i.test(b) ? 'Líquido' : 'Bruto')
 
 export const fileSlug = (s: string) =>

@@ -7,7 +7,7 @@ type Provider={id:string;name:string;provider_type:string}
 type Preview={
  ok:boolean
  fileName:string
- summary:{sourceRows:number;expandedRows:number;tables:string[];components:string[];hasDeferred:boolean;hasPlastic:boolean;hasBonus:boolean;hasGenericRepasseColumns:boolean;genericRepasseSlots:string[];hasUnmappedRepassValues?:boolean;groups?:string[]}
+ summary:{sourceRows:number;expandedRows:number;tables:string[];components:string[];hasDeferred:boolean;hasPlastic:boolean;hasBonus:boolean;hasGenericRepasseColumns:boolean;genericRepasseSlots:string[];hasUnmappedRepassValues?:boolean;groups?:string[];hasOriginColumn?:boolean}
  groupOptions:{id:string;name:string}[]
  issues:{line:number;code:string;detail?:string;message:string}[]
  sample:{bank:string;agreement:string;table:string;contract:string;term:number;rate:string|null;factor:string|null;components:number;groupValues:number}[]
@@ -53,12 +53,12 @@ export function SmartImportClient({providers}:{providers:Provider[]}){
 
  async function apply(){
   if(!file||!preview)return
-  if(origin==='third_party'&&!provider){setMessage('Escolha a promotora parceira.');return}
+  if(!preview.summary.hasOriginColumn&&origin==='third_party'&&!provider){setMessage('Escolha a promotora parceira.');return}
   if(optionalQuestions.some(([k])=>!answers[k])){setMessage('Confirme os tipos de comissão detectados antes de importar.');return}
   setBusy(true);setMessage('')
   try{
    const fd=new FormData()
-   fd.set('file',file);fd.set('production_origin',origin);fd.set('provider_id',origin==='third_party'?provider:'');fd.set('repass_map',repassMap());fd.set('calculation_base',base)
+   fd.set('file',file);fd.set('production_origin',preview.summary.hasOriginColumn?'own':origin);fd.set('provider_id',!preview.summary.hasOriginColumn&&origin==='third_party'?provider:'');fd.set('repass_map',repassMap());fd.set('calculation_base',base)
    const res=await fetch('/api/comercial/importacao-inteligente/apply',{method:'POST',body:fd})
    const body=await res.json()
    if(!res.ok){setMessage(body.error??'Importação recusada.');return}
@@ -125,10 +125,11 @@ export function SmartImportClient({providers}:{providers:Provider[]}){
   {preview&&!blocking.length&&<Card>
    <CardHeader title="3. Importar" />
    <div className="grid gap-3 px-5 pb-5 pt-3">
+    {preview.summary.hasOriginColumn ? <p className="text-[13px] text-ink-soft">A origem de cada linha vem da coluna <b className="text-ink">Promotora parceira</b> da planilha (vazio = produção própria).</p> :
     <div className="grid gap-3 sm:grid-cols-2">
      <label className={lbl}>Origem da produção<select value={origin} onChange={e=>setOrigin(e.target.value as 'own'|'third_party')} className="field mt-1.5"><option value="own">Produção própria</option><option value="third_party">Por promotora parceira</option></select></label>
      <label className={lbl}>Promotora parceira<select disabled={origin==='own'} value={provider} onChange={e=>setProvider(e.target.value)} className="field mt-1.5"><option value="">—</option>{providers.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
-    </div>
+    </div>}
     {!!optionalQuestions.length&&<div className="rounded-[12px] border border-line p-4 text-sm">
      <strong className="text-ink">Confirme os tipos de comissão encontrados</strong>
      <div className="mt-2 grid gap-1.5">{optionalQuestions.map(([k,label])=><label key={k} className="flex items-center gap-2 text-ink-soft"><input type="checkbox" checked={answers[k]} onChange={e=>setAnswers(a=>({...a,[k]:e.target.checked}))} className="accent-[var(--brand)]" />Confirmo que o <b className="text-ink">{label}</b> desta planilha deve entrar nas tabelas.</label>)}</div>

@@ -429,3 +429,11 @@
 - **Decisão 4:** a % without its base (gross or net) is never guessed: the import reads a "Base de Cálculo" column or asks for one on screen, the line form requires it, and the engine refuses the line.
 - **Decisão 5:** a bank receipt no longer credits the seller for contracts of the new engine; the credit comes with the paid contract and its physical file (C3). The "Contratos" screen searches contracts with company receipt, seller payout and margin (finance only). The contract file as an editable form moves to C2 with "Alterar vendedor".
 - **Legado:** `calculate_proposal_commission`, `commission_rule_versions` and the tax/exemption screen in Configurações > Comissão stay unused until C4 (owner: remove only if still without use).
+
+## ADR-0038 - Tables export by bank or all; import rows carry their origin; "Nova pesquisa"
+- **Data:** 26/09/2026 - **Status:** aceita (decisões do dono).
+- **Decisão 1:** "Exportar planilha" lives on the tables search and exports the current vigência of every table the filters show (one bank, or all), in the import layout. Vigência is left empty (imported back, the new vigência starts when published, never retroactive). Tables without a published vigência or with amount ranges (the import has no ranges yet) are listed on a "Fora da exportação" sheet. The per-table export is removed.
+- **Decisão 2:** the file carries "Promotora parceira" (empty = own production), and `import_smart_commercial_rows` reads the origin per row (`production_origin`, `provider_id`, active partner of the company only); rows without it keep the origin chosen on screen. Big files are sent in blocks of 500 rows; a failed later block leaves only drafts, which importing again reuses.
+- **Decisão 3:** the table page's back link is "Nova pesquisa", returning to the search with the filters marked (kept only in the browser tab).
+- **Dados (26/09/2026):** by the owner's request, the 13 Hope own-production tables got a new vigência with 6% tax on every line and group values = company value × 0,94 × owner's percentage, truncated to 2 decimals (219 values; one-off data update through the governed functions, as the owner). Daycoval (only through partners) and Valor Financiamento (no tables) unchanged. The percentages are the owner's personal choice, not a system rule.
+
