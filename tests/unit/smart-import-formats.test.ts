@@ -16,6 +16,8 @@ const ctx = {
   contractTypes: [T('t-novo', 'Novo', 'novo'), T('t-rp', 'Refin/Portabilidade', 'refin_portabilidade'), T('t-cd', 'Compra de Dívida', 'compra_de_divida')],
   groups: [{ id: 'g-cor', name: 'Corretor' }, { id: 'g-par', name: 'Parceiro' }],
   components: [T('c-up', 'À Vista', 'upfront'), T('c-df', 'Diferido', 'deferred'), T('c-pl', 'Plástico', 'plastic'), T('c-b1', 'Bônus', 'bonus_1'), T('c-sf', 'Seguro fixo', 'insurance_fixed')],
+  // the base chosen on screen for files without a "Base de Cálculo" column
+  defaultBase: 'BRUTO' as const,
 }
 const HEAD = ['Banco', 'Convênio', 'Produto', 'Tipo de Contrato', 'Prazo', 'Taxa a.m', 'À Vista (Empresa)']
 const ROWS = [HEAD, ['HOPE', 'Gov. AC', 'Tabela 001', 'Novo', '84', '1,85', '7,00'], ['HOPE', 'Gov. AC', 'Tabela 001', 'Refin/Portabilidade', '96', '1,90', '6,50']]
@@ -262,4 +264,25 @@ test('an XLS with more rows than the ceiling is refused by the mapper, not silen
   const big = [HEAD, ...Array.from({ length: SMART_LIMITS.sourceRows + 30 }, (_, i) => ['H', 'G', `T${i}`, 'Novo', '84', '1', '7'])]
   const r = await readSmartFile(xlsBytes(big), 'big.xls')
   assert.equal(map(r.rows).issues[0].code, 'file_too_large_for_import')
+})
+
+test('part C1: "Base de Cálculo" and "Imposto (%)" columns; a file without a base needs one chosen on screen', () => {
+  const head = ['Banco', 'Convênio', 'Produto', 'Tipo de Contrato', 'Prazo', 'Taxa a.m', 'Base de Cálculo', 'Imposto (%)', 'À Vista (Empresa)']
+  const r = mapSmartCommercialRows([head, ['HOPE', 'Gov. AC', 'T1', 'Novo', '60', '1,85', 'Líquido', '6', '9,5'], ['HOPE', 'Gov. AC', 'T1', 'Novo', '96', '1,85', 'B', '', '14']], { ...ctx, defaultBase: undefined })
+  assert.deepEqual(r.issues, [])
+  assert.equal(r.rows[0].components[0].calculation_base, 'LÍQUIDO')
+  assert.equal(r.rows[0].tax_pct, '6')
+  assert.equal(r.rows[1].components[0].calculation_base, 'BRUTO')
+  assert.equal(r.rows[1].tax_pct, '0', 'empty tax = the company pays no tax on the line')
+  // No base column and no choice yet: the file waits for the answer (like the Repasse mapping).
+  const noBase = mapSmartCommercialRows(ROWS, { ...ctx, defaultBase: undefined })
+  assert.deepEqual(noBase.issues.map(i => i.code), ['calculation_base_required'])
+  assert.equal(mapSmartCommercialRows(ROWS, { ...ctx, defaultBase: 'LÍQUIDO' }).rows[0].components[0].calculation_base, 'LÍQUIDO')
+  // Without a tax column the rows carry no tax at all (the line keeps its tax when imported again).
+  assert.equal('tax_pct' in map(ROWS).rows[0], false)
+  const bad = (base: string, tax: string) => mapSmartCommercialRows([head, ['HOPE', 'Gov. AC', 'T1', 'Novo', '60', '1,85', base, tax, '9,5']], ctx).issues.map(i => i.code)
+  assert.deepEqual(bad('Médio', '6'), ['invalid_calculation_base'])
+  assert.deepEqual(bad('Bruto', '101'), ['invalid_tax'])
+  assert.deepEqual(bad('Bruto', 'seis'), ['invalid_tax'])
+  assert.deepEqual(bad('Bruto', '6%'), [])
 })

@@ -191,18 +191,9 @@ test('pipeline kanban and stage settings', async ({ page }, info) => {
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-etapas.png`, fullPage: true })
 })
 
-test('owner configures the commission and the proposal shows the approved example', async ({ page, browser }, info) => {
+test('the proposal commission follows the table and the seller group', async ({ page, browser }, info) => {
   test.skip(info.project.name === 'mobile', 'one run is enough')
-  await page.goto('/app/configuracao/comissao')
-  await page.getByLabel('Cascata: imposto').check()
-  await page.getByLabel('Imposto do regime (%)').fill('6')
-  await page.getByLabel(/Lucro da empresa/).fill('40')
-  await page.getByLabel('Gerente (%)').first().fill('10')
-  await page.getByLabel('Supervisor (%)').first().fill('15')
-  await page.getByLabel(/Vendedor \(%\)/).first().fill('75')
-  await page.getByRole('button', { name: 'Salvar nova versão' }).click()
-  await expect(page.getByText('Regra de comissão salva')).toBeVisible()
-
+  // Part C1: the commission comes from the table line and the seller's group (Ouro: 3% of the gross on the à vista).
   await page.goto('/app/propostas/nova')
   await page.getByLabel('Cliente').selectOption({ index: 1 })
   await page.getByLabel('Banco e tabela').selectOption({ label: 'Banco Teste · Tabela Teste INSS (v2)' })
@@ -216,8 +207,7 @@ test('owner configures the commission and the proposal shows the approved exampl
   await expect(page.getByText('Comissão calculada e congelada nesta proposta.')).toBeVisible()
   const upfront = page.getByRole('row', { name: /^À vista/ })
   await expect(upfront).toContainText('R$ 600,00')
-  await expect(upfront).toContainText('R$ 36,00')
-  await expect(upfront).toContainText('R$ 253,80')
+  await expect(upfront).toContainText('R$ 300,00')
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-comissao.png`, fullPage: true })
 
   // ADR-0031: the seller of the proposal sees only their own share, never what the company receives or the percentages.
@@ -232,7 +222,7 @@ test('owner configures the commission and the proposal shows the approved exampl
   await seller.waitForURL(/\/app(\/|$)/)
   await seller.goto(proposalUrl)
   const sellerRow = seller.getByRole('row', { name: /^À vista/ })
-  await expect(sellerRow).toContainText('R$ 253,80')
+  await expect(sellerRow).toContainText('R$ 300,00')
   await expect(sellerRow).not.toContainText('R$ 600,00')
   await expect(seller.getByText('Você vê apenas a sua parte (Vendedor).')).toBeVisible()
   await expect(seller.getByText(/imposto 6%/)).toHaveCount(0)
@@ -243,15 +233,6 @@ test('owner configures the commission and the proposal shows the approved exampl
 test('finance imports a bank report, resolves the lines and confirms the receipt', async ({ page }, info) => {
   test.skip(info.project.name === 'mobile', 'one run is enough')
   const ade = `E2E-REC-${Date.now()}`
-  await page.goto('/app/configuracao/comissao')
-  await page.getByLabel('Cascata: imposto').check()
-  await page.getByLabel('Imposto do regime (%)').fill('6')
-  await page.getByLabel(/Lucro da empresa/).fill('40')
-  await page.getByLabel('Gerente (%)').first().fill('10')
-  await page.getByLabel('Supervisor (%)').first().fill('15')
-  await page.getByLabel(/Vendedor \(%\)/).first().fill('75')
-  await page.getByRole('button', { name: 'Salvar nova versão' }).click()
-  await expect(page.getByText('Regra de comissão salva')).toBeVisible()
 
   await page.goto('/app/propostas/nova')
   await page.getByLabel('Cliente').selectOption({ index: 1 })
@@ -720,7 +701,9 @@ test('commission tables: 2tech file with Repasse mapping, view per group, edit a
   await expect(page.getByText('A planilha usa colunas Repasse. De qual grupo é cada uma?')).toBeVisible({ timeout: 30_000 })
   await page.getByLabel('Repasse 1').selectOption({ label: 'Ouro' })
   await page.getByLabel('Repasse 2').selectOption({ label: 'Não usar esta coluna' })
-  await page.getByRole('button', { name: 'Aplicar e ver a prévia de novo' }).click()
+  // The 2tech file does not carry the base: it is chosen on screen (part C1).
+  await page.getByLabel('Base de cálculo').selectOption('LÍQUIDO')
+  await page.getByRole('button', { name: 'Aplicar e ver a prévia de novo' }).first().click()
   await expect(page.getByText('Grupos: Ouro')).toBeVisible({ timeout: 30_000 })
   await page.getByLabel(/Confirmo que o Diferido/).check()
   await page.getByRole('button', { name: 'Importar como rascunho' }).click()
@@ -749,4 +732,61 @@ test('commission tables: 2tech file with Repasse mapping, view per group, edit a
   await page.getByRole('button', { name: /Nova vigência a partir da v1/ }).click()
   await expect(page.getByText(/Rascunho da nova vigência pronto/)).toBeVisible({ timeout: 30_000 })
   await expect(page.locator('#vigencias').getByText('v2', { exact: true })).toBeVisible()
+})
+
+// Part C1 (owner decisions 26/09/2026): tax per table line, IR withheld by the bank, the contract commission with both,
+// the contract search with the margin, and the table export in the import layout.
+test('commission C1: line tax, bank IR, contract commission and search, table export', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  const ade = `E2E-C1-${Date.now()}`
+  await page.goto('/app/comercial/instituicoes')
+  await page.getByLabel('IR retido de Banco Teste').fill('0,5')
+  await page.getByRole('row', { name: /Banco Teste/ }).getByRole('button', { name: 'Salvar' }).first().click()
+  await expect(page.getByText('IR retido do banco salvo.')).toBeVisible({ timeout: 30_000 })
+
+  // New vigência of the test table with 6% tax on its line, published.
+  await page.goto('/app/comercial/tabelas?nome=Tabela+Teste+INSS')
+  await page.getByRole('link', { name: 'Tabela Teste INSS', exact: true }).click()
+  await page.getByRole('button', { name: /Nova vigência a partir da v/ }).click()
+  await expect(page.getByText(/Rascunho da nova vigência pronto/)).toBeVisible({ timeout: 30_000 })
+  await page.locator('#comissao table').getByRole('link', { name: 'Alterar comissão' }).first().click()
+  await page.getByLabel('Imposto (%)').fill('6')
+  await page.getByRole('button', { name: 'Salvar comissão da linha' }).click()
+  await expect(page.getByText('Comissão da linha salva.')).toBeVisible({ timeout: 30_000 })
+  await expect(page.locator('#comissao table').getByRole('cell', { name: '6%', exact: true }).first()).toBeVisible()
+  const exported = await page.request.get(await page.getByRole('link', { name: 'Exportar planilha' }).getAttribute('href') ?? '')
+  expect(exported.status()).toBe(200)
+  expect(exported.headers()['content-type']).toContain('spreadsheetml')
+  await page.getByRole('button', { name: 'Publicar' }).click()
+  await expect(page.getByText('Vigência publicada.')).toBeVisible({ timeout: 30_000 })
+  const version = (await page.locator('#vigencias li').first().getByText(/^v\d+$/).textContent())?.trim()
+
+  await page.goto('/app/comercial/instituicoes')
+  await expect(page.getByRole('row', { name: /Banco Teste/ })).toContainText('Paga imposto')
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-bancos.png`, fullPage: true })
+
+  await page.goto('/app/propostas/nova')
+  await page.getByLabel('Cliente').selectOption({ index: 1 })
+  await page.getByLabel('Banco e tabela').selectOption({ label: `Banco Teste · Tabela Teste INSS (${version})` })
+  await page.getByLabel('Valor solicitado (R$)').fill('10.000,00')
+  await page.getByLabel('Prazo (meses)').fill('120')
+  await page.getByLabel('Vendedor').selectOption({ label: 'Vendedor Teste' })
+  await page.getByLabel('Já digitada no banco').check()
+  await page.getByLabel('Número da proposta no banco (ADE)').fill(ade)
+  await page.getByRole('button', { name: 'Registrar proposta' }).click()
+  await expect(page.getByText('Proposta registrada na esteira.')).toBeVisible()
+  await page.getByRole('button', { name: 'Calcular comissão' }).click()
+  await expect(page.getByText('Comissão calculada e congelada nesta proposta.')).toBeVisible()
+  // 600,00 received; 6% tax = 36,00; 0,5% IR = 3,00; Ouro 3% = 300,00; margin 261,00.
+  const upfront = page.getByRole('row', { name: /^À vista/ })
+  for (const v of ['R$ 600,00', 'R$ 36,00', 'R$ 3,00', 'R$ 300,00', 'R$ 261,00']) await expect(upfront).toContainText(v)
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-comissao-c1.png`, fullPage: true })
+
+  await page.goto(`/app/contratos?q=${ade}`)
+  const row = page.getByRole('row').filter({ hasText: ade })
+  await expect(row).toContainText('Vendedor Teste')
+  await expect(row).toContainText('***.')
+  // Whole contract: à vista + 120 deferred installments (2.000,00 received, 1.000,00 to the seller, margin 870,00).
+  for (const v of ['R$ 2.000,00', 'R$ 1.000,00', 'R$ 870,00']) await expect(row).toContainText(v)
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-contratos.png`, fullPage: true })
 })

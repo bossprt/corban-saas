@@ -19,6 +19,8 @@ const NAV: (NavItem & { show?: (role: string) => boolean; module?: string; perm?
   { key: 'dashboard', href: '/app', label: 'Dashboard' },
   { key: 'clientes', href: '/app/clientes', label: 'Clientes', module: 'clientes' },
   { key: 'esteira', href: '/app/propostas', label: 'Esteira', module: 'esteira' },
+  // Contract search with the commission of each one (part C1).
+  { key: 'contratos', href: '/app/contratos', label: 'Contratos', module: 'esteira' },
   { key: 'metas', href: '/app/metas', label: 'Metas' },
   { key: 'financeiro', href: '/app/financeiro', label: 'Financeiro', module: 'financeiro', perm: 'financeiro.view' },
   // Everyone may have a payout account (their own statement); finance sees all accounts on the same screen.

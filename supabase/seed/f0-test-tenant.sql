@@ -124,4 +124,17 @@ select '00000000-0000-4000-8000-0000000c0801', '00000000-0000-4000-8000-00000000
        (select id from auth.users where email = 'vendedor@corban-teste.local'), true
 where not exists (select 1 from public.commercial_sellers where id = '00000000-0000-4000-8000-0000000c0801');
 
+-- Part C1: group Ouro pays 100% of its own column on every commission type (the approved example: 50% of 6% = 3% on
+-- the à vista), and the table gets its per-group values from today's share (the part B conversion).
+select set_config('corban.group_rule_rpc', 'on', true);
+insert into public.commission_group_rules (id, organization_id, group_id, version, own_production, supervisor_basis, supervisor_pct, manager_basis, manager_pct)
+select '00000000-0000-4000-8000-0000000c0701', '00000000-0000-4000-8000-00000000c0b1', '00000000-0000-4000-8000-0000000c0601', 1, false, 'spread', 0, 'spread', 0
+where not exists (select 1 from public.commission_group_rules where group_id = '00000000-0000-4000-8000-0000000c0601');
+insert into public.commission_group_rule_items (rule_id, organization_id, component_type_id, reference_kind, reference_group_id, distributed_pct)
+select '00000000-0000-4000-8000-0000000c0701', '00000000-0000-4000-8000-00000000c0b1', t.id, 'own', null, 100
+from public.commission_component_types t
+where t.is_active and not exists (select 1 from public.commission_group_rule_items i where i.rule_id = '00000000-0000-4000-8000-0000000c0701' and i.component_type_id = t.id);
+select set_config('corban.group_rule_rpc', 'off', true);
+select private.convert_shares_to_group_values('00000000-0000-4000-8000-00000000c0b1');
+
 commit;

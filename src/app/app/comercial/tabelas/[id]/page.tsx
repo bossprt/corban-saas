@@ -1,12 +1,12 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, CircleDollarSign, CopyPlus, Search } from 'lucide-react'
+import { ArrowLeft, CircleDollarSign, CopyPlus, Download, Search } from 'lucide-react'
 import { Badge, Card, CardHeader, PageHeader } from '@/components/ui'
 import { SubmitButton } from '@/components/SubmitButton'
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast, canViewCommission } from '@/lib/rbac'
 import { isUuid } from '@/lib/team'
-import { PAGE_SIZES, pageSize, rangeText, termText, valueText, VERSION_STATUS } from '@/lib/commission/tableValues'
+import { decimalBr, PAGE_SIZES, pageSize, rangeText, termText, valueText, VERSION_STATUS } from '@/lib/commission/tableValues'
 import { fetchAll } from '@/lib/fetchAll'
 import { cloneVersion, publishVersion, renameTable } from '../actions'
 
@@ -53,8 +53,8 @@ export default async function TablePage({ params, searchParams }: { params: Prom
   const view = one(sp.ver) || 'empresa'
   const typeName = new Map((types ?? []).map(t => [t.id, t.name]))
 
-  type Line = { id: string; contract_type_id: string; term: number; term_min: number | null; term_max: number | null; amount_min: string | null; amount_max: string | null; coefficient: string | null; rate: string | null }
-  const conditions = selected ? await fetchAll<Line>((a, b) => supabase.from('commercial_conditions').select('id,contract_type_id,term,term_min,term_max,amount_min,amount_max,coefficient,rate')
+  type Line = { id: string; contract_type_id: string; term: number; term_min: number | null; term_max: number | null; amount_min: string | null; amount_max: string | null; coefficient: string | null; rate: string | null; tax_pct: string }
+  const conditions = selected ? await fetchAll<Line>((a, b) => supabase.from('commercial_conditions').select('id,contract_type_id,term,term_min,term_max,amount_min,amount_max,coefficient,rate,tax_pct')
     .eq('product_table_version_id', selected.id).order('term_min').order('term').order('id').range(a, b)) : []
   // Values are read by vigência (joined through the line), page by page: a big table has thousands of them.
   const [comp, gv] = selected ? await Promise.all([
@@ -137,7 +137,10 @@ export default async function TablePage({ params, searchParams }: { params: Prom
 
       {seeCommission && <Card id="comissao" className="mt-4">
         <CardHeader title={<span className="flex flex-wrap items-center gap-2">Comissão {selected && <><span className="text-sm font-normal text-muted">v{selected.version}</span><Badge tone={TONE[selected.status] ?? 'neutral'}>{VERSION_STATUS[selected.status]}</Badge></>}</span>}
-          action={selected?.status !== 'draft' && canEdit ? <span className="text-xs text-muted">Para alterar, crie uma nova vigência a partir desta.</span> : undefined} />
+          action={<span className="flex flex-wrap items-center gap-3">
+            {selected?.status !== 'draft' && canEdit && <span className="text-xs text-muted">Para alterar, crie uma nova vigência a partir desta.</span>}
+            {selected && <a href={`/api/comercial/tabelas/${id}/exportar?v=${selected.id}`} className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line-strong bg-surface px-3 text-sm text-ink hover:bg-surface-muted"><Download size={15} aria-hidden />Exportar planilha</a>}
+          </span>} />
         <div className="flex flex-wrap gap-1.5 px-5 pt-3" role="tablist" aria-label="Ver comissão de">
           {views.map(x => <Link key={x.key} href={qs({ ver: x.key, p: 1 })} role="tab" aria-selected={view === x.key}
             className={`rounded-full border px-3 py-1 text-[13px] ${view === x.key ? 'border-brand bg-brand text-white' : 'border-line text-ink-soft hover:bg-surface-muted'}`}>{x.label}</Link>)}
@@ -154,7 +157,7 @@ export default async function TablePage({ params, searchParams }: { params: Prom
             <thead className="border-y border-line bg-surface-muted text-xs text-muted">
               <tr>
                 <th className="px-4 py-2 font-medium">Tipo</th><th className="px-3 py-2 font-medium">Prazo</th><th className="px-3 py-2 font-medium">Valor da operação</th>
-                <th className="px-3 py-2 text-right font-medium">Taxa / coef.</th><th className="px-3 py-2 font-medium">Base</th>
+                <th className="px-3 py-2 text-right font-medium">Taxa / coef.</th><th className="px-3 py-2 font-medium">Base</th><th className="px-3 py-2 text-right font-medium">Imposto</th>
                 {view === 'resumo'
                   ? [{ id: 'empresa', name: 'Empresa' }, ...payGroups].map(p => <th key={p.id} className="px-3 py-2 text-right font-medium">{p.name}</th>)
                   : usedTypes.map(t => <th key={t.id} className="px-3 py-2 text-right font-medium">{t.name}</th>)}
@@ -169,6 +172,7 @@ export default async function TablePage({ params, searchParams }: { params: Prom
                   <td className="num px-3 py-2 text-ink-soft">{rangeText(c.amount_min, c.amount_max)}</td>
                   <td className="num px-3 py-2 text-right">{c.rate ?? c.coefficient ?? '—'}</td>
                   <td className="px-3 py-2 text-xs text-muted">{baseOf.get(c.id) ?? '—'}</td>
+                  <td className="num px-3 py-2 text-right">{Number(c.tax_pct) ? `${decimalBr(c.tax_pct)}%` : <span className="text-muted">Não paga</span>}</td>
                   {view === 'resumo'
                     ? [{ id: 'empresa' }, ...payGroups].map(p => <td key={p.id} className="num px-3 py-2 text-right">{upfront ? cell(c.id, p.id, upfront.id) || '—' : '—'}</td>)
                     : usedTypes.map(t => <td key={t.id} className="num px-3 py-2 text-right">{cell(c.id, view, t.id) || <span className="text-muted">—</span>}</td>)}

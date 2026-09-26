@@ -1,7 +1,7 @@
 
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
-import { parseRepassMap, parseSmartCommercialFile, SMART_IMPORT_ISSUES } from '@/lib/imports/smart-commercial-server'
+import { parseBaseChoice, parseRepassMap, parseSmartCommercialFile, SMART_IMPORT_ISSUES } from '@/lib/imports/smart-commercial-server'
 import { safeFileName } from '@/lib/imports/file-guards'
 
 export const dynamic='force-dynamic'
@@ -13,8 +13,8 @@ export async function POST(req:Request){
   const fd=await req.formData()
   const file=fd.get('file')
   if(!(file instanceof File))return Response.json({error:'Envie um arquivo.'},{status:400})
-  const parsed=await parseSmartCommercialFile(ctx,file,parseRepassMap(fd.get('repass_map')))
-  const hard=parsed.issues.filter(x=>x.code!=='generic_repass_requires_mapping')
+  const parsed=await parseSmartCommercialFile(ctx,file,parseRepassMap(fd.get('repass_map')),parseBaseChoice(fd.get('calculation_base')))
+  const hard=parsed.issues.filter(x=>x.code!=='generic_repass_requires_mapping'&&x.code!=='calculation_base_required')
   return Response.json({
    ok:hard.length===0,
    fileName:safeFileName(file.name),

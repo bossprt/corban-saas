@@ -16,6 +16,8 @@ const ctx={
   {id:'00000000-0000-4000-8000-000000000021',tech_key:'deferred',name:'Diferido'},
   {id:'00000000-0000-4000-8000-000000000022',tech_key:'plastic',name:'Plástico'},
  ],
+ // the base chosen on screen for files without a "Base de Cálculo" column
+ defaultBase:'BRUTO' as const,
 }
 
 test('maps HOPE-style row and expands term range',()=>{
