@@ -445,3 +445,8 @@
 - **Decisão 4:** nothing changes once the seller received the commission of the contract (a commission entry of theirs in a paid or settled statement/payout): no edit, no payout change, no recalculation, refused by the database. A contract "pago ao cliente" can still be recalculated. Until C3 posts the credit, no contract is locked.
 - **Achado:** a guard written as `current_setting(...) = 'on'` is NULL when the setting was never set; negated inside an OR it silently opened the guard. Every new flag check is wrapped in `coalesce(..., false)` and a contract test proves direct writes stay refused.
 
+## ADR-0040 - Contracts are born calculated
+- **Data:** 26/09/2026 - **Status:** aceita (decisão do dono).
+- **Decisão:** a contract created on a table with its commission registered gets its commission at once, whoever creates it (the calculation is a system action: `private.contract_commission_core`, run by a deferred trigger at commit). Portal proposals are calculated when the company approves them. When the calculation cannot run, the contract is still created and the reason is recorded in its history (`calc_failed`); the screen shows it with "Tentar de novo". `calculate_contract_commission` keeps the caller checks for manual recalculation.
+- **Dados (26/09/2026):** by the owner's request, the two real Hope contracts of the 2tech report were registered in production through the governed functions (current vigência with 6% tax; seller payouts changed to 4% and 8%; real dates recorded as notes).
+

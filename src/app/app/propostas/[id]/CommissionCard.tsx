@@ -18,6 +18,16 @@ const R = (v: string | number | null | undefined) => fromDecimalString(String(v 
 const money = (v: Rational) => brlText(toDecimalString(v, 2))
 const pctBr = (v?: string | null) => decimalBr(String(v ?? '0')) || '0'
 const lbl = 'text-[13px] font-medium text-ink-soft'
+// Why the automatic calculation could not run (ADR-0040), as the screen says it.
+export const CALC_FAILURE: Record<string, string> = {
+  condition_not_found: 'a tabela não tem linha para o prazo e o valor deste contrato',
+  condition_ambiguous: 'há mais de uma linha da tabela para este contrato',
+  proposal_without_seller: 'o contrato não tem vendedor',
+  seller_without_group: 'o vendedor não tem grupo',
+  group_rule_missing: 'o grupo do vendedor não tem regra de repasse',
+  calculation_base_missing: 'a linha da tabela tem % sem base de cálculo (bruto ou líquido)',
+  payout_exceeds_received: 'a regra do grupo paga mais do que a empresa recebe nesta linha',
+}
 
 type Calc = { id: string; mode?: string; tax_rate_pct?: string; tax_exempt?: boolean; ir_withheld_pct?: string | null; pay_deferred?: boolean; installments?: number | null; calculated_at: string }
 type Mine = { calculated: boolean; calculated_at?: string; mine?: boolean; payable?: { component_key: string; amount: string }[] }
@@ -50,6 +60,9 @@ export async function CommissionCard({ supabase, access, proposalId, closed, can
     if (mine?.calculated && mine.calculated_at) calc = { id: '', calculated_at: mine.calculated_at }
   }
   const received = payouts.some(p => p.locked)
+  // The last automatic calculation that failed, when there is no calculation.
+  const { data: failure } = !calc ? await supabase.from('contract_events').select('detail').eq('proposal_id', proposalId).eq('kind', 'calc_failed').order('created_at', { ascending: false }).limit(1).maybeSingle() : { data: null }
+  const failureCode = String((failure?.detail as { code?: string } | null)?.code ?? '')
   const canCalc = (can(access, 'propostas.edit') || can(access, 'financeiro.edit')) && !closed && !received
 
   // What the paying source actually paid for this contract (confirmed reports), for finance.
@@ -81,13 +94,15 @@ export async function CommissionCard({ supabase, access, proposalId, closed, can
         action={canCalc ? (
           <form action={calculateCommission}>
             <input type="hidden" name="proposal_id" value={proposalId} />
-            <button className="h-9 rounded-[10px] border border-line bg-surface px-3 text-sm hover:bg-surface-muted">{calc ? 'Recalcular' : 'Calcular comissão'}</button>
+            <button className="h-9 rounded-[10px] border border-line bg-surface px-3 text-sm hover:bg-surface-muted">{calc ? 'Recalcular' : failureCode ? 'Tentar de novo' : 'Calcular comissão'}</button>
           </form>
         ) : undefined}
       />
       <div className="p-5 pt-3 text-sm">
         {!calc ? (
-          <p className="text-muted">Comissão ainda não calculada. O cálculo usa a linha da tabela (o que a empresa recebe, o imposto e o valor de cada grupo), a regra do grupo do vendedor, o IR retido pelo banco e a hierarquia do vendedor.</p>
+          failureCode
+            ? <p role="alert" className="rounded-[10px] border border-[#FCA5A5] bg-[#FEF2F2] px-3 py-2 text-[#991B1B]">Comissão não calculada: {CALC_FAILURE[failureCode] ?? failureCode}. Corrija e clique em “Tentar de novo”.</p>
+            : <p className="text-muted">Comissão ainda não calculada. Ela é calculada sozinha quando o contrato é criado (no portal, quando a empresa aprova): linha da tabela, grupo do vendedor, imposto e IR retido.</p>
         ) : !finance ? (
           mine?.mine ? (
             <table className="w-full text-left text-[13px]">
