@@ -14,21 +14,17 @@ export default async function ConfigurationPage() {
     <Card role="alert" className="p-5 text-sm text-ink-soft">A configuração da empresa é restrita aos perfis administrador e gerente.</Card>
   </section>
   const head = { count: 'exact', head: true } as const
-  const [members, routes, versions, checklists, stages, banks, providers, agreements, products, modalities, orgBanks, orgAgreements, groups] = await Promise.all([
+  const [members, routes, versions, stages, orgBanks, orgAgreements, groups] = await Promise.all([
     supabase.from('organization_memberships').select('*', head).eq('status', 'active'),
     supabase.from('organization_product_routes').select('*', head).eq('status', 'active'),
     supabase.from('product_table_versions').select('*', head).eq('status', 'published'),
-    supabase.from('document_checklist_templates').select('*', head).eq('status', 'published'),
     supabase.from('operational_stages').select('canonical_state').eq('is_active', true),
-    supabase.from('banks').select('*', head), supabase.from('providers').select('*', head), supabase.from('agreements').select('*', head),
-    supabase.from('products').select('*', head), supabase.from('modalities').select('*', head),
     supabase.from('organization_banks').select('*', head).eq('is_active', true), supabase.from('organization_agreements').select('*', head).eq('is_active', true),
     supabase.from('commission_groups').select('*', head).eq('is_active', true),
   ])
-  // V3 (tenant-owned bank + agreement) OR the legacy global reference catalog
-  const referenceReady = ((orgBanks.count ?? 0) > 0 && (orgAgreements.count ?? 0) > 0) || [banks, providers, agreements, products, modalities].every(r => (r.count ?? 0) > 0)
+  const referenceReady = (orgBanks.count ?? 0) > 0 && (orgAgreements.count ?? 0) > 0
   const items = setupItems({
-    activeMembers: members.count ?? 0, routes: routes.count ?? 0, publishedVersions: versions.count ?? 0, publishedChecklists: checklists.count ?? 0,
+    activeMembers: members.count ?? 0, routes: routes.count ?? 0, publishedVersions: versions.count ?? 0,
     stageStates: (stages.data ?? []).map(s => s.canonical_state), referenceReady, commissionGroups: groups.count ?? 0,
   })
   const done = items.filter(i => i.done).length
