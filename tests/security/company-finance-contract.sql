@@ -1,4 +1,4 @@
--- Contract test for 20260927600000_company_finance_v1 (F6.5, ADR-0045): standard chart, payables/receivables with
+-- Contract test for 20260927204141_company_finance_v1 (F6.5, ADR-0045): standard chart, payables/receivables with
 -- installments, settle/undo/cancel with history, automatic posting of bank receipts and paid payouts (or by hand when the
 -- company turns it off), OFX lines reconciled or turned into entries, cash flow and income statement, access.
 -- One transaction, rolled back.  psql -v ON_ERROR_STOP=1 -f tests/security/company-finance-contract.sql

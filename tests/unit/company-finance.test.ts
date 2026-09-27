@@ -47,7 +47,7 @@ test('OFX: anything else is refused, never guessed', () => {
 
 test('income statement order covers every kind but transfers, which stay out of it', () => {
   assert.deepEqual(DRE_ORDER.map(r => r.kind).sort(), Object.keys(FIN_KIND_LABEL).filter(k => k !== 'transfer').sort())
-  const m = read('supabase/migrations/20260927600000_company_finance_v1.sql')
+  const m = read('supabase/migrations/20260927204141_company_finance_v1.sql')
   assert.match(m, /a\.kind <> 'transfer'/)
   assert.doesNotMatch(m, /\b(real|double precision|float)\b/i)
   assert.match(m, /revoke all on public\.fin_chart_accounts, public\.fin_bank_accounts, public\.fin_settings, public\.fin_entries/)
