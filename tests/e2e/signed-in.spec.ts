@@ -1029,3 +1029,62 @@ test('legacy base: a file bigger than the request limit is read in the browser a
   await page.getByRole('button', { name: 'Descartar' }).click()
   await expect(page.getByText('Importação descartada.')).toBeVisible({ timeout: 30_000 })
 })
+
+// F6.5: company finance — bank account, a payable, the OFX statement reconciled (a match and a bank fee), reports.
+test('company finance: bank account, payable, OFX reconciliation, cash flow and DRE', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  const ts = Date.now()
+  const cents = String(ts % 100).padStart(2, '0')
+  const value = `2${String(ts % 97).padStart(2, '0')},${cents}`
+  const ofxValue = `-2${String(ts % 97).padStart(2, '0')}.${cents}`
+  const bill = `Energia E2E ${ts}`
+  const bank = `C6 E2E ${ts}`
+
+  await page.goto('/app/financeiro/empresa/contas')
+  const newAccount = page.locator('section').filter({ has: page.getByText('Nova conta', { exact: true }) }).last()
+  await newAccount.getByLabel('Nome da conta').fill(bank)
+  await newAccount.getByLabel('Saldo inicial (R$)').fill('1.000,00')
+  await newAccount.getByRole('button', { name: 'Cadastrar conta' }).click()
+  await expect(page.getByText('Conta bancária salva.')).toBeVisible({ timeout: 30_000 })
+
+  await page.goto('/app/financeiro/empresa')
+  await page.getByText('+ Novo lançamento').click()
+  await page.getByLabel('Descrição').fill(bill)
+  await page.getByLabel('Conta do plano').selectOption({ label: '4.4 Energia, água e internet' })
+  await page.getByLabel('Valor total (R$)').fill(value)
+  await page.getByRole('button', { name: 'Registrar' }).click()
+  await expect(page.getByText('Lançamento registrado.')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByRole('row').filter({ hasText: bill })).toBeVisible()
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-financeiro-empresa.png`, fullPage: true })
+
+  const day = new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10).replace(/-/g, '')
+  const ofx = `OFXHEADER:100\n<OFX><BANKMSGSRSV1><STMTTRNRS><STMTRS><BANKTRANLIST>\n`
+    + `<STMTTRN><TRNTYPE>DEBIT<DTPOSTED>${day}<TRNAMT>${ofxValue}<FITID>E2E-${ts}-1<MEMO>ENERGIA ${ts}\n`
+    + `<STMTTRN><TRNTYPE>DEBIT<DTPOSTED>${day}<TRNAMT>-3.21<FITID>E2E-${ts}-2<MEMO>TARIFA E2E ${ts}\n`
+    + `</BANKTRANLIST></STMTRS></STMTTRNRS></BANKMSGSRSV1></OFX>`
+  await page.goto('/app/financeiro/empresa/extrato')
+  await page.getByLabel('Conta bancária do extrato').selectOption({ label: bank })
+  await page.getByLabel('Extrato (arquivo OFX)').setInputFiles({ name: `extrato-${ts}.ofx`, mimeType: 'application/x-ofx', buffer: Buffer.from(ofx, 'utf-8') })
+  await page.getByRole('button', { name: 'Importar extrato' }).click()
+  await expect(page.getByText('2 lançamento(s) lidos do extrato.')).toBeVisible({ timeout: 30_000 })
+  const energyLine = page.locator('li').filter({ hasText: `ENERGIA ${ts}` })
+  await expect(energyLine.getByText(bill)).toBeVisible({ timeout: 30_000 })
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-financeiro-extrato.png`, fullPage: true })
+  await energyLine.getByRole('button', { name: 'Conciliar' }).click()
+  await expect(page.getByText('Linha do extrato conciliada.')).toBeVisible({ timeout: 30_000 })
+  const feeLine = page.locator('li').filter({ hasText: `TARIFA E2E ${ts}` })
+  await feeLine.getByText(/Criar lançamento/).click()
+  await feeLine.getByLabel('Conta do plano').selectOption({ label: '5.2 Tarifas bancárias e juros' })
+  await feeLine.getByRole('button', { name: 'Criar' }).click()
+  await expect(page.getByText('Linha do extrato conciliada.')).toBeVisible({ timeout: 30_000 })
+  await expect(page.locator('li').filter({ hasText: `TARIFA E2E ${ts}` })).toHaveCount(0)
+
+  await page.goto('/app/financeiro/empresa?ver=baixados')
+  await expect(page.getByRole('row').filter({ hasText: bill })).toContainText(bank)
+  await page.goto('/app/financeiro/empresa/relatorios')
+  await expect(page.getByText('4.4 Energia, água e internet')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByText('5.2 Tarifas bancárias e juros')).toBeVisible()
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-financeiro-dre.png`, fullPage: true })
+  await page.goto('/app/financeiro/empresa/a-lancar')
+  await expect(page.getByText(/Automático:|Manual:/)).toBeVisible({ timeout: 30_000 })
+})

@@ -57,7 +57,8 @@ export function SideNav({ items }: { items: NavItem[] }) {
             {children && inSection && (
               <ul className="mb-1 ml-[21px] mt-0.5 flex flex-col gap-0.5 border-l border-line pl-2">
                 {children.map(c => {
-                  const on = isActive(pathname, c.href)
+                  // Only the most specific child is marked (/app/financeiro vs /app/financeiro/empresa).
+                  const on = isActive(pathname, c.href) && !children.some(o => o.href.length > c.href.length && isActive(pathname, o.href))
                   return (
                     <li key={c.href}>
                       <Link href={c.href} aria-current={on ? 'page' : undefined}
