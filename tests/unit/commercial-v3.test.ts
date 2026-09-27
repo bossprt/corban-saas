@@ -95,10 +95,10 @@ test('setup status: V3 asks for commission groups only when the caller provides 
 })
 test('simulation on a condition: governed RPC, amount as decimal string, condition-not-found has a message, no commission on the simulations screen for operators', () => {
   const a = read('src/app/app/simulacoes/actions.ts')
-  assert.ok(/rpc\('create_simulation_for_condition'/.test(a) && /parseDecimal\(formData\.get\('requested_amount'\)/.test(a))
+  assert.ok(/rpc\('create_simulation_for_condition'/.test(a) && /money\(formData\.get\('requested_amount'\)\)/.test(a) && /parseMoneyInput/.test(a) && !/Number\(/.test(a))
   assert.ok(isFeedbackCode('erro:sim_condition_not_found'))
   const p = read('src/app/app/simulacoes/page.tsx')
-  assert.ok(!/commission|comiss/i.test(code(p)) || /Não calculado/.test(p))
+  assert.ok(!/commission|comiss/i.test(code(p).replace(/use_in_commission/g, ''))) // the contract-type flag is not commission data
   assert.ok(!/commercial_condition_(commissions|shares)/.test(p)) // the operator screen never reads commission or shares
 })
 test('production origin is enforced by the database and offered by the app', () => {

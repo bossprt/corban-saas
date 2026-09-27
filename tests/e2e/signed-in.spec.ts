@@ -6,6 +6,11 @@ import ExcelJS from 'exceljs'
 const email = process.env.E2E_EMAIL
 const password = process.env.E2E_PASSWORD
 const shots = process.env.E2E_SCREENSHOTS
+// Client field of the forms (ClientPicker): search by name and pick the seed client.
+const pickClient = async (page: import('@playwright/test').Page, name = 'Ana Teste Lopes') => {
+  await page.getByLabel('Cliente', { exact: true }).fill(name.split(' ').slice(0, 2).join(' '))
+  await page.getByRole('option', { name: new RegExp(name) }).first().click()
+}
 
 test.skip(!email || !password, 'E2E_EMAIL and E2E_PASSWORD are not set')
 // A dev server compiles each route on first visit.
@@ -137,7 +142,8 @@ test('registering an existing CPF recognizes the client instead of duplicating',
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-contratos-cpf.png`, fullPage: true })
   await page.getByRole('link', { name: 'Cadastrar contrato para este cliente' }).click()
   await expect(page).toHaveURL(/\/app\/propostas\/nova\?cliente=/)
-  await expect(page.getByLabel('Cliente')).toHaveValue(/[0-9a-f-]{36}/)
+  await expect(page.getByText('Cliente E2E Identidade').first()).toBeVisible()
+  await expect(page.locator('input[type=hidden][name=customer_id]')).toHaveValue(/[0-9a-f-]{36}/)
   // A CPF nobody has: offer to register the client.
   await page.goto('/app/contratos')
   await page.getByPlaceholder('Nome, CPF ou nº do contrato').fill('529.982.247-25')
@@ -170,14 +176,14 @@ test('direct proposal runs through the pipeline to paid and counts in the goal',
   test.skip(info.project.name === 'mobile', 'one run is enough')
   const ade = `E2E-${Date.now()}`
   await page.goto('/app/propostas/nova')
-  await page.getByLabel('Cliente').selectOption({ index: 1 })
+  await pickClient(page)
   await page.getByLabel('Banco e tabela').selectOption({ index: 1 })
   await page.getByLabel('Valor liberado (R$)').fill('9.500,00')
   await page.getByLabel('Prazo (meses)').fill('84')
   await page.getByLabel('Já digitada no banco').check()
   await page.getByLabel('Número da proposta no banco (ADE)').fill(ade)
   await page.getByRole('button', { name: 'Registrar proposta' }).click()
-  await expect(page.getByText('Proposta registrada na esteira.')).toBeVisible()
+  await expect(page.getByText('Proposta registrada na esteira.')).toBeVisible({ timeout: 20_000 })
 
   const due = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10)
   await page.getByLabel('Mover para').selectOption('pending_external')
@@ -223,13 +229,13 @@ test('the proposal commission follows the table and the seller group', async ({ 
   test.skip(info.project.name === 'mobile', 'one run is enough')
   // Part C1: the commission comes from the table line and the seller's group (Ouro: 3% of the gross on the à vista).
   await page.goto('/app/propostas/nova')
-  await page.getByLabel('Cliente').selectOption({ index: 1 })
+  await pickClient(page)
   await page.getByLabel('Banco e tabela').selectOption({ label: 'Banco Teste · Tabela Teste INSS (v2)' })
   await page.getByLabel('Valor solicitado (R$)').fill('10.000,00')
   await page.getByLabel('Prazo (meses)').fill('120')
   await page.getByLabel('Vendedor').selectOption({ label: 'Vendedor Teste' })
   await page.getByRole('button', { name: 'Registrar proposta' }).click()
-  await expect(page.getByText('Proposta registrada na esteira.')).toBeVisible()
+  await expect(page.getByText('Proposta registrada na esteira.')).toBeVisible({ timeout: 20_000 })
 
   // Born calculated (ADR-0040): no click needed.
   const upfront = page.getByRole('row', { name: /^À vista/ })
@@ -262,7 +268,7 @@ test('finance imports a bank report, resolves the lines and confirms the receipt
   const ade = `E2E-REC-${Date.now()}`
 
   await page.goto('/app/propostas/nova')
-  await page.getByLabel('Cliente').selectOption({ index: 1 })
+  await pickClient(page)
   await page.getByLabel('Banco e tabela').selectOption({ label: 'Banco Teste · Tabela Teste INSS (v2)' })
   await page.getByLabel('Valor solicitado (R$)').fill('10.000,00')
   await page.getByLabel('Prazo (meses)').fill('120')
@@ -270,7 +276,7 @@ test('finance imports a bank report, resolves the lines and confirms the receipt
   await page.getByLabel('Já digitada no banco').check()
   await page.getByLabel('Número da proposta no banco (ADE)').fill(ade)
   await page.getByRole('button', { name: 'Registrar proposta' }).click()
-  await expect(page.getByText('Proposta registrada na esteira.')).toBeVisible()
+  await expect(page.getByText('Proposta registrada na esteira.')).toBeVisible({ timeout: 20_000 })
   // Born calculated (ADR-0040): no click needed.
   const proposalUrl = page.url().split('?')[0]
 
@@ -789,7 +795,7 @@ test('commission C1: line tax, bank IR, contract commission and search, table ex
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-bancos.png`, fullPage: true })
 
   await page.goto('/app/propostas/nova')
-  await page.getByLabel('Cliente').selectOption({ index: 1 })
+  await pickClient(page)
   await page.getByLabel('Banco e tabela').selectOption({ label: `Banco Teste · Tabela Teste INSS (${version})` })
   await page.getByLabel('Valor solicitado (R$)').fill('10.000,00')
   await page.getByLabel('Prazo (meses)').fill('120')
@@ -797,7 +803,7 @@ test('commission C1: line tax, bank IR, contract commission and search, table ex
   await page.getByLabel('Já digitada no banco').check()
   await page.getByLabel('Número da proposta no banco (ADE)').fill(ade)
   await page.getByRole('button', { name: 'Registrar proposta' }).click()
-  await expect(page.getByText('Proposta registrada na esteira.')).toBeVisible()
+  await expect(page.getByText('Proposta registrada na esteira.')).toBeVisible({ timeout: 20_000 })
   // Born calculated (ADR-0040): no click needed.
   // 600,00 received; 6% tax = 36,00; 0,5% IR = 3,00; Ouro 3% = 300,00; margin 261,00.
   const upfront = page.getByRole('row', { name: /^À vista/ })
@@ -859,7 +865,7 @@ test('contract C2: payout change, contract edit with recalculation, note and his
   test.skip(info.project.name === 'mobile', 'one run is enough')
   const ade = `E2E-C2-${Date.now()}`
   await page.goto('/app/propostas/nova')
-  await page.getByLabel('Cliente').selectOption({ index: 1 })
+  await pickClient(page)
   await page.getByLabel('Banco e tabela').selectOption({ label: 'Banco Teste · Tabela Teste INSS (v2)' })
   await page.getByLabel('Valor solicitado (R$)').fill('10.000,00')
   await page.getByLabel('Prazo (meses)').fill('120')
@@ -908,7 +914,7 @@ test('seller credit C3: paid date, bank reconciliation, physical milestones, out
   const today = new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10)
   const create = async (ade: string) => {
     await page.goto('/app/propostas/nova')
-    await page.getByLabel('Cliente').selectOption({ index: 1 })
+    await pickClient(page)
     await page.getByLabel('Banco e tabela').selectOption({ label: 'Banco Teste · Tabela Teste INSS (v2)' })
     await page.getByLabel('Valor solicitado (R$)').fill('10.000,00')
     await page.getByLabel('Prazo (meses)').fill('120')
@@ -1113,4 +1119,26 @@ test('company finance: bank account, payable, OFX reconciliation, cash flow and 
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-financeiro-dre.png`, fullPage: true })
   await page.goto('/app/financeiro/empresa/a-lancar')
   await expect(page.getByText(/Automático:|Manual:/)).toBeVisible({ timeout: 30_000 })
+})
+
+// Validation (27/09/2026): simulation in the new look, client picked by search (works past 300 clients), amount typed
+// as "10.000,00" (exact decimal, no float), and the simulation becomes a proposal.
+test('simulation: pick the client by search, simulate, turn into a proposal', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  await page.goto('/app/propostas')
+  await page.getByRole('link', { name: 'Simular' }).click()
+  await expect(page.getByRole('heading', { name: 'Simulações', exact: true })).toBeVisible()
+  await pickClient(page)
+  // Only tables in force, each paired with the contract types of its conditions.
+  await expect(page.locator('select[name="table_choice"] option', { hasText: 'Tabela Teste INSS · v1' })).toHaveCount(0)
+  await page.locator('select[name="table_choice"]').selectOption({ label: 'Tabela Teste INSS · v3 · Novo (teste) · 12–120 meses' })
+  await page.getByLabel('Valor solicitado (R$)').fill('10.000,00')
+  await page.getByLabel('Prazo (meses)').fill('84')
+  await page.getByRole('button', { name: 'Simular' }).click()
+  await expect(page.getByText('Simulação registrada')).toBeVisible()
+  const row = page.getByRole('row').filter({ hasText: 'Ana Teste Lopes' }).first()
+  await expect(row).toContainText('R$ 10.000,00')
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-simulacoes.png`, fullPage: true })
+  await row.getByRole('button', { name: 'Criar proposta' }).click()
+  await expect(page).toHaveURL(/\/app\/propostas/)
 })

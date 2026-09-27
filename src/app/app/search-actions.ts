@@ -57,6 +57,24 @@ export async function findClientByCpf(raw: string): Promise<{ id: string; name: 
   return data ? { id: data.id, name: data.full_name } : null
 }
 
+// Client picker of the forms (proposal, simulation): name or CPF (any part), by POST. At most 10 clients, RLS applies.
+export async function searchClients(raw: string): Promise<{ id: string; name: string; cpf: string | null }[]> {
+  const { supabase } = await requireAppContext()
+  const q = searchTerm(raw)
+  if (!q) return []
+  const digits = digitsOnly(q)
+  const onlyDigits = digits.length > 0 && digits.length === q.replace(/[\s.\-/]/g, '').length
+  let query = supabase.from('clients').select('id,full_name,cpf').is('deleted_at', null).order('full_name').limit(10)
+  if (onlyDigits) {
+    if (digits.length < 3) return []
+    query = digits.length === 11 ? query.eq('cpf', digits) : query.like('cpf', `%${digits}%`)
+  } else {
+    query = query.ilike('full_name', `%${q}%`)
+  }
+  const { data } = await query
+  return (data ?? []).map(c => ({ id: c.id, name: c.full_name, cpf: formatCpf(c.cpf) }))
+}
+
 function formatCpf(cpf: string | null) {
   const d = digitsOnly(cpf ?? '')
   return d.length === 11 ? `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}` : null

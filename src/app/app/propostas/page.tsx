@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { FilePlus2 } from 'lucide-react'
+import { FilePlus2, Calculator } from 'lucide-react'
 import { Badge, ButtonLink, Card, PageHeader, type Tone } from '@/components/ui'
 import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
@@ -63,6 +63,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
         description={`${openCount} propostas em andamento${alerts ? ` · ${alerts} com alerta` : ''}`}
         actions={<>
           {can(access, 'esteira.edit') && (portalPending ?? 0) > 0 && <ButtonLink href="/app/propostas/validacao" variant="secondary">Aguardando validação <span className="num">{portalPending}</span></ButtonLink>}
+          {can(access, 'propostas.create') && <ButtonLink href="/app/simulacoes" variant="secondary"><Calculator size={16} aria-hidden />Simular</ButtonLink>}
           {can(access, 'propostas.create') && <ButtonLink href="/app/propostas/nova"><FilePlus2 size={16} aria-hidden />Nova proposta</ButtonLink>}
         </>}
       />
