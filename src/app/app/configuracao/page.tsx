@@ -31,6 +31,7 @@ export default async function ConfigurationPage() {
   const shortcuts: [string, string, string][] = [
     ['Repasse', '/app/configuracao/repasse', 'Fechamento ou conta interna, frequência e limite de desconto do saldo negativo.'],
     ['Etapas da esteira', '/app/configuracao/etapas', 'Nome, ordem e prazo de cada etapa.'],
+    ['Base antiga', '/app/configuracao/base-antiga', 'Clientes e contratos do sistema anterior, só para consulta.'],
     ['API', '/app/configuracao/api', 'Chaves para outros sistemas (ex.: DeskcommCRM) enviarem leads.'],
     ['Papéis e permissões', '/app/configuracao/papeis', 'O que cada papel pode fazer em cada módulo e quais dados enxerga.'],
   ]
