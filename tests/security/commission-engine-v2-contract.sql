@@ -211,7 +211,20 @@ insert into results select 'originator does not see the calc header',
 insert into results select 'originator sees only originator lines',
   not exists (select 1 from public.proposal_commission_lines where line_kind <> 'originator')
   and exists (select 1 from public.proposal_commission_lines l where l.line_kind = 'originator' and l.amount = 1235.00);
+-- Moved from the old engine's contract (removed in part C4): the seller cannot calculate nor edit a line.
+do $$ begin
+  begin
+    perform public.calculate_contract_commission((select id from made where label = 'fab'));
+    insert into results values ('seller without propostas.edit cannot calculate', false);
+  exception when others then insert into results values ('seller without propostas.edit cannot calculate', sqlerrm = 'not_authorized'); end;
+end $$;
 reset role;
+do $$ begin
+  begin
+    update public.proposal_commission_lines set amount = 1 where calc_id in (select id from public.proposal_commission_calcs where proposal_id = (select id from made where label = 'fab'));
+    insert into results values ('commission lines cannot be edited', not exists (select 1 from public.proposal_commission_lines where amount = 1));
+  exception when others then insert into results values ('commission lines cannot be edited', true); end;
+end $$;
 select pg_temp.act_as((select v2 from ids));
 set local role authenticated;
 insert into results select 'other seller sees no commission',

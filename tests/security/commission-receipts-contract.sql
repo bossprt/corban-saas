@@ -31,16 +31,15 @@ insert into made select 'bank', r.org_bank_id
 from public.product_table_versions v join public.product_tables t on t.id = v.product_table_id join public.organization_product_routes r on r.id = t.route_id
 where v.id = (select tv from ids);
 
--- Two proposals of the example (R$ 10.000,00 gross, 120 installments) with the commission calculated; a third without.
+-- Two proposals of the example (R$ 10.000,00 gross, 120 installments) born calculated; a third without a calculation
+-- (typed with 200 months, which no line of the table covers).
 select pg_temp.act_as((select admin_user from ids));
 set local role authenticated;
-select public.save_commission_rule((select org from ids), 'global', null, 'cascade', 6, 40, 10, 15, 75, true, 'regra do exemplo');
 insert into made select 'client', u.client_id from public.upsert_client((select org from ids), '52998224725', 'Cliente Recebimento', '68999770009', null, 'manual') u;
 insert into made select 'p1', d.proposal_id from public.create_direct_proposal((select org from ids), (select id from made where label = 'client'), (select tv from ids), (select seller from ids), 10000, 9500, 250, 120, 'ADE-REC-1', 'submitted') d;
 insert into made select 'p2', d.proposal_id from public.create_direct_proposal((select org from ids), (select id from made where label = 'client'), (select tv from ids), (select seller from ids), 10000, 9500, 250, 120, 'ADE-REC-2', 'submitted') d;
-insert into made select 'p3', d.proposal_id from public.create_direct_proposal((select org from ids), (select id from made where label = 'client'), (select tv from ids), (select seller from ids), 10000, 9500, 250, 120, 'ADE-REC-3', 'submitted') d;
-select public.calculate_proposal_commission((select id from made where label = 'p1'));
-select public.calculate_proposal_commission((select id from made where label = 'p2'));
+insert into made select 'p3', d.proposal_id from public.create_direct_proposal((select org from ids), (select id from made where label = 'client'), (select tv from ids), (select seller from ids), 10000, 9500, 250, 200, 'ADE-REC-3', 'submitted') d;
+set constraints all immediate; set constraints all deferred;  -- as at commit (contracts are born calculated)
 
 -- Upfront report: exact, divergent by one cent, ADE printed differently, unknown, no commission, repeated.
 insert into made select 'r1', public.import_receipt_report((select org from ids), 'bank', (select id from made where label = 'bank'), 'upfront', '2026-09-15',
@@ -74,8 +73,9 @@ do $$ begin
   exception when others then insert into results values ('cannot confirm with unresolved lines', sqlerrm = 'receipt_report_has_unresolved_lines'); end;
 end $$;
 
--- Resolve: calculate p3, ignore the unknown line, link the repeated line by hand, then ignore it.
-select public.calculate_proposal_commission((select id from made where label = 'p3'));
+-- Resolve: fix p3's term and calculate it, ignore the unknown line, link the repeated line by hand, then ignore it.
+select public.update_contract((select id from made where label = 'p3'), '{"term":"120"}'::jsonb, null);
+select public.calculate_contract_commission((select id from made where label = 'p3'));
 select public.rematch_receipt_report((select id from made where label = 'r1'));
 insert into results select 'after calculating, the proposal is compared (400 vs 600 divergent)', pg_temp.line((select id from made where label = 'r1'), 4) = 'divergent:600.00';
 select public.ignore_receipt_line((select id from public.receipt_lines where report_id = (select id from made where label = 'r1') and row_number = 3), 'contrato de outra empresa');

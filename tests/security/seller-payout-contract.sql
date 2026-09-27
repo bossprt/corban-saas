@@ -1,7 +1,9 @@
--- Contract test for 20260924190449_seller_payout_v1: credits from reconciled receipts with the frozen split, seller
--- without login paid on the seller account, divergent receipts only after acceptance, proportional chargeback never
--- beyond what was received, manual entries with two eyes and installments, closing with the 30% debt limit,
--- withdrawal up to the available balance, model switch without paying twice, visibility and immutability.
+-- Contract test for 20260924190449_seller_payout_v1, on the table and group engine (rewritten in part C4, ADR-0042):
+-- credits once the contract is paid and the bank's commission reconciled, with the frozen hierarchy, seller without
+-- login paid on the seller account, divergent receipts only after acceptance, proportional chargeback never beyond what
+-- was received, manual entries with two eyes and installments, closing with the 30% debt limit, withdrawal up to the
+-- available balance, model switch without paying twice, visibility and immutability.
+-- Group Ouro: 100% of its own column (3% à vista, 7% diferido on the gross); supervisor 10% and manager 5% of the spread.
 -- One transaction, rolled back.  psql -v ON_ERROR_STOP=1 -f tests/security/seller-payout-contract.sql
 
 begin;
@@ -30,6 +32,15 @@ $$;
 create function pg_temp.balance(p_account uuid) returns numeric language sql as $$
   select coalesce(sum(amount), 0) from public.payout_entries where account_id = p_account and status = 'approved'
 $$;
+create function pg_temp.items(p_pct text) returns jsonb language sql as $$
+  select jsonb_agg(jsonb_build_object('component', t.tech_key, 'reference', 'own', 'group', null, 'pct', p_pct))
+  from public.commission_component_types t where t.is_active
+$$;
+grant execute on function pg_temp.items(text) to authenticated;
+create function pg_temp.case_of(p_label text) returns uuid language sql as $$
+  select id from public.operational_cases where proposal_id = (select id from made where label = p_label)
+$$;
+grant execute on function pg_temp.case_of(text) to authenticated;
 create function pg_temp.receive(p_label text, p_kind text, p_rows jsonb) returns uuid language plpgsql as $$
 declare v uuid;
 begin
@@ -47,22 +58,24 @@ where v.id = (select tv from ids);
 update public.organization_memberships set role_id = (select id from public.organization_roles where organization_id = (select org from ids) and key = 'financeiro')
 where organization_id = (select org from ids) and user_id = (select v2 from ids);
 
--- Hierarchy (supervisor leads vendedor; admin leads supervisor), owner rule, three proposals of the example.
+-- Hierarchy (supervisor leads vendedor; admin leads supervisor), group rule, three contracts paid to the client.
 select pg_temp.act_as((select admin_user from ids));
 set local role authenticated;
 select public.set_member_hierarchy((select id from public.organization_memberships where user_id = (select v1 from ids)), null, (select sup_user from ids), null);
 select public.set_member_hierarchy((select id from public.organization_memberships where user_id = (select sup_user from ids)), null, (select admin_user from ids), null);
-select public.save_commission_rule((select org from ids), 'global', null, 'cascade', 6, 40, 10, 15, 75, true, 'regra do exemplo');
+select public.save_seller_group((select org from ids), '00000000-0000-4000-8000-0000000c0601', 'Ouro', false, pg_temp.items('100'), 'spread', '10', 'spread', '5');
 select public.save_payout_settings((select org from ids), 'closing', 'monthly', 30);
 insert into made select 'client', u.client_id from public.upsert_client((select org from ids), '52998224725', 'Cliente Repasse', '68999770009', null, 'manual') u;
 insert into made select 'p1', d.proposal_id from public.create_direct_proposal((select org from ids), (select id from made where label = 'client'), (select tv from ids), (select seller from ids), 10000, 9500, 250, 120, 'ADE-PAY-1', 'submitted') d;
 insert into made select 'p2', d.proposal_id from public.create_direct_proposal((select org from ids), (select id from made where label = 'client'), (select tv from ids), (select seller from ids), 10000, 9500, 250, 120, 'ADE-PAY-2', 'submitted') d;
 insert into made select 'p3', d.proposal_id from public.create_direct_proposal((select org from ids), (select id from made where label = 'client'), (select tv from ids), (select seller from ids), 10000, 9500, 250, 120, 'ADE-PAY-3', 'submitted') d;
-select public.calculate_proposal_commission((select id from made where label = 'p1'));
-select public.calculate_proposal_commission((select id from made where label = 'p2'));
-select public.calculate_proposal_commission((select id from made where label = 'p3'));
-insert into made select 'acc_seller', id from public.payout_accounts where seller_id = (select seller from ids);
+set constraints all immediate; set constraints all deferred;  -- as at commit
+select public.move_operational_case(pg_temp.case_of(l), 'paid', 'Pago ao cliente', null, current_date) from unnest(array['p1', 'p2', 'p3']) l;
+set constraints all immediate; set constraints all deferred;  -- as at commit
 reset role;
+select set_config('corban.seller_rpc', 'on', true);
+update public.commercial_sellers set receives_deferred = true where id = (select seller from ids);
+select set_config('corban.seller_rpc', 'off', true);
 
 -- Upfront report: p1 exact, p2 one cent short (divergent), p3 exact. Confirmed by finance.
 select pg_temp.act_as((select v2 from ids));
@@ -72,38 +85,43 @@ select pg_temp.receive('up', 'upfront', jsonb_build_array(
   jsonb_build_object('row', 2, 'ade', 'ADE-PAY-2', 'amount', '599.99'),
   jsonb_build_object('row', 3, 'ade', 'ADE-PAY-3', 'amount', '600.00')));
 select public.confirm_receipt_report((select id from made where label = 'up'));
+set constraints all immediate; set constraints all deferred;  -- as at commit
 insert into made select 'acc_seller', a.id from public.payout_accounts a where a.seller_id = (select seller from ids) and not exists (select 1 from made where label = 'acc_seller');
 insert into made select 'acc_sup', a.id from public.payout_accounts a where a.user_id = (select sup_user from ids);
 insert into made select 'acc_mgr', a.id from public.payout_accounts a where a.user_id = (select admin_user from ids);
-insert into results select 'seller account credited with the approved example (253,80)',
-  (select sum(amount) from public.payout_entries where account_id = (select id from made where label = 'acc_seller') and proposal_id = (select id from made where label = 'p1')) = 253.80;
-insert into results select 'supervisor and manager credited from the frozen hierarchy (50,76 / 33,84)',
-  (select sum(amount) from public.payout_entries where account_id = (select id from made where label = 'acc_sup') and proposal_id = (select id from made where label = 'p1')) = 50.76
-  and (select sum(amount) from public.payout_entries where account_id = (select id from made where label = 'acc_mgr') and proposal_id = (select id from made where label = 'p1')) = 33.84;
+insert into results select 'seller account credited 300,00 (3% of 10.000,00)',
+  (select sum(amount) from public.payout_entries where account_id = (select id from made where label = 'acc_seller') and proposal_id = (select id from made where label = 'p1')) = 300.00;
+insert into results select 'supervisor and manager credited from the frozen hierarchy (30,00 / 15,00)',
+  (select sum(amount) from public.payout_entries where account_id = (select id from made where label = 'acc_sup') and proposal_id = (select id from made where label = 'p1')) = 30.00
+  and (select sum(amount) from public.payout_entries where account_id = (select id from made where label = 'acc_mgr') and proposal_id = (select id from made where label = 'p1')) = 15.00;
 insert into results select 'divergent receipt credits nobody before acceptance',
   not exists (select 1 from public.payout_entries where proposal_id = (select id from made where label = 'p2'));
 select public.accept_receipt_divergence(x.id, 'banco pagou um centavo a menos')
 from public.commission_receipts x where x.proposal_id = (select id from made where label = 'p2');
-insert into results select 'accepted divergence splits what actually arrived (599,99 -> 253,79)',
-  (select sum(amount) from public.payout_entries where account_id = (select id from made where label = 'acc_seller') and proposal_id = (select id from made where label = 'p2')) = 253.79;
+set constraints all immediate; set constraints all deferred;  -- as at commit
+insert into results select 'accepted divergence releases the commission (300,00)',
+  (select sum(amount) from public.payout_entries where account_id = (select id from made where label = 'acc_seller') and proposal_id = (select id from made where label = 'p2')) = 300.00;
 
--- Deferred installment 1 of p1 (the rule pays the deferred to the team).
+-- Deferred installment 1 of p1: the seller receives the deferred (7% of 10.000,00 over 120 = 5,83).
 select pg_temp.receive('dif', 'deferred', jsonb_build_array(jsonb_build_object('row', 1, 'ade', 'ADE-PAY-1', 'amount', '11.67')));
 select public.confirm_receipt_report((select id from made where label = 'dif'));
-insert into results select 'deferred installment split 4,94 / 0,99 / 0,66',
+set constraints all immediate; set constraints all deferred;  -- as at commit
+insert into results select 'deferred installment 5,83 to the seller',
   (select string_agg(e.amount::text, '/' order by e.amount desc) from public.payout_entries e join public.commission_receipts x on x.id = e.receipt_id
-   where x.report_id = (select id from made where label = 'dif')) = '4.94/0.99/0.66';
+   where x.report_id = (select id from made where label = 'dif')) = '5.83';
 
 -- Chargebacks on p3: half, then more than what is left (divergent, accepted): never beyond what was received.
 select pg_temp.receive('cb1', 'chargeback', jsonb_build_array(jsonb_build_object('row', 1, 'ade', 'ADE-PAY-3', 'amount', '300.00')));
 select public.confirm_receipt_report((select id from made where label = 'cb1'));
-insert into results select 'half chargeback: -126,90 / -25,38 / -16,92',
+set constraints all immediate; set constraints all deferred;  -- as at commit
+insert into results select 'half chargeback: -150,00 / -15,00 / -7,50',
   (select string_agg(e.amount::text, '/' order by e.amount) from public.payout_entries e join public.commission_receipts x on x.id = e.receipt_id
-   where x.report_id = (select id from made where label = 'cb1')) = '-126.90/-25.38/-16.92';
+   where x.report_id = (select id from made where label = 'cb1')) = '-150.00/-15.00/-7.50';
 select pg_temp.receive('cb2', 'chargeback', jsonb_build_array(jsonb_build_object('row', 1, 'ade', 'ADE-PAY-3', 'amount', '400.00')));
 select public.confirm_receipt_report((select id from made where label = 'cb2'));
 select public.accept_receipt_divergence(x.id, 'estorno acima do recebido, conferido com o banco')
 from public.commission_receipts x where x.report_id = (select id from made where label = 'cb2');
+set constraints all immediate; set constraints all deferred;  -- as at commit
 insert into results select 'chargeback beyond the received amount stops at zero per person',
   not exists (select 1 from public.payout_entries where proposal_id = (select id from made where label = 'p3')
               group by account_id having sum(amount) <> 0);
@@ -152,9 +170,9 @@ select pg_temp.act_as((select admin_user from ids));
 set local role authenticated;
 select public.close_payout_period((select org from ids), current_date);
 insert into made select 'st_sup', id from public.payouts where account_id = (select id from made where label = 'acc_sup') and status = 'pending';
--- Supervisor net 102,51 (50,76 + 0,99 + 50,76 + 50,76 - 25,38 - 25,38): deduction trunc(30%) = 30,75, pays 71,76, carries -69,25.
-insert into results select 'closing deducts at most 30% of the net: 102,51 -> pays 71,76, carries -69,25',
-  (select period_net = 102.51 and debt_deduction = 30.75 and amount = 71.76 and carry_out = -69.25 from public.payouts where id = (select id from made where label = 'st_sup'));
+-- Supervisor net 60,00 (30,00 + 30,00 + 30,00 - 15,00 - 15,00): deduction trunc(30%) = 18,00, pays 42,00, carries -82,00.
+insert into results select 'closing deducts at most 30% of the net: 60,00 -> pays 42,00, carries -82,00',
+  (select period_net = 60.00 and debt_deduction = 18.00 and amount = 42.00 and carry_out = -82.00 from public.payouts where id = (select id from made where label = 'st_sup'));
 insert into results select 'a second closing does not duplicate an unpaid statement', public.close_payout_period((select org from ids), current_date) = 0;
 do $$ begin
   begin
@@ -167,7 +185,7 @@ select pg_temp.act_as((select v2 from ids));
 set local role authenticated;
 select public.decide_payout((select id from made where label = 'st_sup'), true, null);
 select public.mark_payout_paid((select id from made where label = 'st_sup'), current_date, 'PIX 123456');
-insert into results select 'after payment the ledger balance equals the carry', pg_temp.balance((select id from made where label = 'acc_sup')) = -69.25;
+insert into results select 'after payment the ledger balance equals the carry', pg_temp.balance((select id from made where label = 'acc_sup')) = -82.00;
 reset role;
 
 -- The seller moves to the account model and withdraws up to the available balance.
@@ -176,16 +194,16 @@ set local role authenticated;
 select public.decide_payout(id, false, 'seller moves to account model') from public.payouts where account_id = (select id from made where label = 'acc_seller') and status = 'pending';
 select public.set_payout_account_model((select id from made where label = 'acc_seller'), 'account');
 reset role;
--- Seller balance available today: 253,80 + 253,79 + 4,94 + 253,80 - 126,90 - 126,90 - 200,00 (first advance installment) = 312,53.
+-- Seller balance available today: 300,00 + 300,00 + 5,83 + 300,00 - 150,00 - 150,00 - 200,00 (first advance installment) = 405,83.
 select pg_temp.act_as((select v2 from ids));
 set local role authenticated;
 do $$ begin
   begin
-    perform public.request_payout_withdrawal((select id from made where label = 'acc_seller'), 312.54, null);
+    perform public.request_payout_withdrawal((select id from made where label = 'acc_seller'), 405.84, null);
     insert into results values ('withdrawal limited to the available balance', false);
   exception when others then insert into results values ('withdrawal limited to the available balance', sqlerrm = 'insufficient_balance'); end;
 end $$;
-insert into made select 'wd', public.request_payout_withdrawal((select id from made where label = 'acc_seller'), 312.53, 'saque do mês');
+insert into made select 'wd', public.request_payout_withdrawal((select id from made where label = 'acc_seller'), 405.83, 'saque do mês');
 reset role;
 select pg_temp.act_as((select admin_user from ids));
 set local role authenticated;
@@ -204,7 +222,9 @@ update public.commercial_sellers set user_id = null where id = (select seller fr
 select pg_temp.act_as((select admin_user from ids));
 set local role authenticated;
 insert into made select 'p4', d.proposal_id from public.create_direct_proposal((select org from ids), (select id from made where label = 'client'), (select tv from ids), (select seller from ids), 10000, 9500, 250, 120, 'ADE-PAY-4', 'submitted') d;
-select public.calculate_proposal_commission((select id from made where label = 'p4'));
+set constraints all immediate; set constraints all deferred;  -- as at commit (born calculated)
+select public.move_operational_case(pg_temp.case_of('p4'), 'paid', 'Pago ao cliente', null, current_date);
+set constraints all immediate; set constraints all deferred;  -- as at commit
 insert into results select 'seller without login: originator is the seller, no inherited hierarchy',
   (select originator_user_id is null and supervisor_user_id is null and manager_user_id is null and seller_id = (select seller from ids)
    from public.proposal_commission_calcs where proposal_id = (select id from made where label = 'p4') and status = 'active');
@@ -213,9 +233,10 @@ select pg_temp.act_as((select v2 from ids));
 set local role authenticated;
 select pg_temp.receive('up4', 'upfront', jsonb_build_array(jsonb_build_object('row', 1, 'ade', 'ADE-PAY-4', 'amount', '600.00')));
 select public.confirm_receipt_report((select id from made where label = 'up4'));
-insert into results select 'seller without login credited 253,80 and nobody else',
+set constraints all immediate; set constraints all deferred;  -- as at commit
+insert into results select 'seller without login credited 300,00 and nobody else',
   (select string_agg(account_id::text || '=' || amount::text, ',') from public.payout_entries where proposal_id = (select id from made where label = 'p4'))
-  = (select id from made where label = 'acc_seller')::text || '=253.80';
+  = (select id from made where label = 'acc_seller')::text || '=300.00';
 reset role;
 update public.commercial_sellers set user_id = (select v1 from ids) where id = (select seller from ids);
 

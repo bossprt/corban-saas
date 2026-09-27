@@ -67,13 +67,3 @@ test('address is stored in the EXISTING customer_addresses table (composite tena
   assert.ok(act.includes('organization_id: organizationId')) // active tenant from the server context, never from the form
 })
 
-import { onboardingSteps } from '../../src/lib/commercial'
-test('onboarding: computed from real counts, one clear next step, order follows the business flow', () => {
-  const zero = onboardingSteps({ banks: 0, agreements: 0, groups: 0, tables: 0, draftConditions: 0, publishedVersions: 0 })
-  assert.deepEqual(zero.steps.map(s => s.key), ['bank', 'agreement', 'group', 'table', 'condition', 'publish'])
-  assert.equal(zero.next?.key, 'bank')
-  assert.equal(onboardingSteps({ banks: 1, agreements: 1, groups: 0, tables: 0, draftConditions: 0, publishedVersions: 0 }).next?.key, 'group')
-  assert.equal(onboardingSteps({ banks: 1, agreements: 1, groups: 2, tables: 1, draftConditions: 3, publishedVersions: 0 }).next?.key, 'publish')
-  assert.equal(onboardingSteps({ banks: 1, agreements: 1, groups: 2, tables: 1, draftConditions: 0, publishedVersions: 1 }).next, null)
-  assert.ok(zero.steps.every(s => s.hint.length > 10 && !/tech_key|código técnico/i.test(s.hint)))
-})

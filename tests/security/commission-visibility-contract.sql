@@ -23,16 +23,20 @@ create function pg_temp.act_as(p_user uuid) returns void language sql as $$
   select set_config('request.jwt.claims', json_build_object('sub', p_user, 'role', 'authenticated')::text, true);
 $$;
 
--- Setup as admin: hierarchy, rule, one proposal of the seller bound to vendedor, one proposal of nobody's seller.
+-- A second seller without login (same group), whose contract vendedor must not see.
+select set_config('corban.seller_rpc', 'on', true);
+insert into public.commercial_sellers (id, organization_id, tech_key, name, seller_category, commission_group_id, is_active)
+values ('00000000-0000-4000-8000-0000000c0899', (select org from ids), 'vendedor_outro', 'Vendedor Outro', 'pf', '00000000-0000-4000-8000-0000000c0601', true);
+select set_config('corban.seller_rpc', 'off', true);
+
+-- Setup as admin: hierarchy, one contract of the seller bound to vendedor, one of the other seller (both born calculated).
 select pg_temp.act_as((select admin_user from ids));
 set local role authenticated;
 select public.set_member_hierarchy((select id from public.organization_memberships where user_id = (select v1 from ids)), null, (select sup_user from ids), null);
-select public.save_commission_rule((select org from ids), 'global', null, 'cascade', 6, 40, 10, 15, 75, true, 'regra do teste');
 insert into made select 'client', u.client_id from public.upsert_client((select org from ids), '39053344705', 'Cliente Visibilidade', '68999770010', null, 'manual') u;
 insert into made select 'mine', d.proposal_id from public.create_direct_proposal((select org from ids), (select id from made where label = 'client'), (select tv from ids), (select seller from ids), 10000, 9500, 250, 120, 'ADE-VIS-1', 'submitted') d;
-insert into made select 'other', d.proposal_id from public.create_direct_proposal((select org from ids), (select id from made where label = 'client'), (select tv from ids), null, 10000, 9500, 250, 120, 'ADE-VIS-2', 'submitted') d;
-select public.calculate_proposal_commission((select id from made where label = 'mine'));
-select public.calculate_proposal_commission((select id from made where label = 'other'));
+insert into made select 'other', d.proposal_id from public.create_direct_proposal((select org from ids), (select id from made where label = 'client'), (select tv from ids), '00000000-0000-4000-8000-0000000c0899', 10000, 9500, 250, 120, 'ADE-VIS-2', 'submitted') d;
+set constraints all immediate; set constraints all deferred;  -- as at commit (contracts are born calculated)
 insert into made select 'calc_mine', c.id from public.proposal_commission_calcs c where c.proposal_id = (select id from made where label = 'mine') and c.status = 'active';
 insert into made select 'calc_other', c.id from public.proposal_commission_calcs c where c.proposal_id = (select id from made where label = 'other') and c.status = 'active';
 reset role;
@@ -86,7 +90,7 @@ select pg_temp.act_as((select fin from ids));
 set local role authenticated;
 insert into results select 'finance reads the header and every line kind',
   exists (select 1 from public.proposal_commission_calcs where id = (select id from made where label = 'calc_mine'))
-  and (select count(distinct line_kind) from public.proposal_commission_lines where calc_id = (select id from made where label = 'calc_mine')) = 6;
+  and (select count(distinct line_kind) from public.proposal_commission_lines where calc_id = (select id from made where label = 'calc_mine')) = 7;  -- received, tax, IR, manager, supervisor, seller, company
 reset role;
 
 insert into results select 'expected_commission_amount removed from proposals_v2 and simulations',
