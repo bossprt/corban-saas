@@ -14,7 +14,7 @@ export function readTableFilters(get: (k: string) => string): TableFilters {
 export type TableVersion = { id: string; product_table_id: string; version: number; status: string; effective_from: string | null; effective_until: string | null; published_at: string | null; metadata: unknown }
 type Named = { id: string; name: string }
 type Route = { id: string; org_bank_id: string; org_agreement_id: string; org_provider_id: string | null }
-type Table = { id: string; route_id: string; code: string | null; name: string; status: string }
+type Table = { id: string; route_id: string; code: string | null; name: string; status: string; formalization: string }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the scoped Supabase client is untyped in this codebase
 export async function searchTables(supabase: { from: (table: string) => any }, f: TableFilters) {
@@ -24,7 +24,7 @@ export async function searchTables(supabase: { from: (table: string) => any }, f
     supabase.from('organization_providers').select('id,name').order('name'),
     supabase.from('contract_types').select('id,name').order('sort_order'),
     supabase.from('organization_product_routes').select('id,org_bank_id,org_agreement_id,org_provider_id').not('org_bank_id', 'is', null),
-    supabase.from('product_tables').select('id,route_id,code,name,status').order('name'),
+    supabase.from('product_tables').select('id,route_id,code,name,status,formalization').order('name'),
     fetchAll<TableVersion>((a, b) => supabase.from('product_table_versions').select('id,product_table_id,version,status,effective_from,effective_until,published_at,metadata').order('version', { ascending: false }).order('id').range(a, b)),
     fetchAll<{ product_table_version_id: string; contract_type_id: string }>((a, b) => supabase.from('commercial_conditions').select('product_table_version_id,contract_type_id').order('id').range(a, b)),
   ])

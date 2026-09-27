@@ -301,3 +301,18 @@ test('export round trip: "Promotora parceira" gives each row its origin; empty o
   const bad = mapSmartCommercialRows([head, ['Daycoval', 'INSS', 'T1', 'Novo', '84', '84', 'Promotora X', '0,02', '1,8', 'Bruto', '0', '5']], { ...ctx, providers })
   assert.deepEqual(bad.issues.map(i => i.code), ['unknown_provider'])
 })
+
+test('"Tipo de formalização": Físico makes the table physical, Digital or empty digital; mixed lines of one table are refused', () => {
+  const head = ['Banco', 'Convênio', 'Tabela', 'Tipo de Contrato', 'Prazo', 'Tipo de formalização', 'Taxa a.m. (%)', 'À Vista (Empresa)']
+  const r = mapSmartCommercialRows([head,
+    ['Hope', 'Gov. AC', 'T1', 'Novo', '60', 'DIGITAL', '1,85', '9,5'],
+    ['Hope', 'Gov. AC', 'T1', 'Novo', '72', '', '1,85', '9,5'],
+    ['Daycoval', 'INSS', 'T2', 'Novo', '84', 'Físico', '1,8', '5']], ctx)
+  assert.deepEqual(r.issues, [])
+  assert.deepEqual(r.rows.map(x => x.formalization), ['digital', 'digital', 'physical'])
+  assert.equal('formalization' in map(ROWS).rows[0], false, 'no column: the table keeps what it has')
+  const mixed = mapSmartCommercialRows([head, ['Hope', 'Gov. AC', 'T1', 'Novo', '60', 'Digital', '1,85', '9,5'], ['Hope', 'Gov. AC', 'T1', 'Novo', '72', 'Físico', '1,85', '9,5']], ctx)
+  assert.deepEqual(mixed.issues.map(i => [i.line, i.code]), [[3, 'formalization_conflict']])
+  const bad = mapSmartCommercialRows([head, ['Hope', 'Gov. AC', 'T1', 'Novo', '60', 'Híbrido', '1,85', '9,5']], ctx)
+  assert.deepEqual(bad.issues.map(i => i.code), ['invalid_formalization'])
+})

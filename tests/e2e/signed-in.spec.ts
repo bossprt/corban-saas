@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import ExcelJS from 'exceljs'
 
 // Signed-in smoke tests. They run only against a local or test database whose test user is given through
 // E2E_EMAIL / E2E_PASSWORD (never a production account). Without those variables the suite is skipped.
@@ -804,6 +805,13 @@ test('tables: Nova pesquisa keeps the filters; bank export imports back as draft
   const file = await page.request.get(await exportLink.getAttribute('href') ?? '')
   expect(file.status()).toBe(200)
   const body = await file.body()
+  // The export carries "Tipo de formalização" (Digital here), read back by the import.
+  const wb = new ExcelJS.Workbook()
+  await wb.xlsx.load(body as unknown as ArrayBuffer)
+  const head = (wb.getWorksheet('Tabelas')?.getRow(1).values ?? []) as unknown[]
+  const formCol = head.indexOf('Tipo de formalização')
+  expect(formCol).toBeGreaterThan(0)
+  expect(wb.getWorksheet('Tabelas')?.getRow(2).getCell(formCol).value).toBe('Digital')
 
   await page.goto('/app/comercial/importacao-inteligente')
   await page.getByLabel('Planilha').setInputFiles({ name: 'tabelas-banco-teste.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: body })
