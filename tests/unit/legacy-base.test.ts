@@ -29,12 +29,12 @@ test('legacy rows: money and dates converted, unreadable values kept as they cam
 test('every database issue has a text; CPF is the only required column', () => {
   for (const c of ['invalid_cpf', 'full_name_required', 'invalid_value', 'invalid_date', 'after_cutoff', 'already_in_corban', 'duplicate_contract']) assert.ok(LEGACY_ISSUE_LABEL[c], c)
   assert.deepEqual(LEGACY_FIELDS.filter(f => f.required).map(f => f.key), ['cpf'])
-  const m = read('supabase/migrations/20260927400000_legacy_base_v1.sql')
+  const m = read('supabase/migrations/20260927160750_legacy_base_v1.sql')
   for (const c of Object.keys(LEGACY_ISSUE_LABEL)) assert.match(m, new RegExp(`'${c}'`), c)
 })
 
 test('the legacy base stays out of the pipeline, commission and finance', () => {
-  const m = read('supabase/migrations/20260927400000_legacy_base_v1.sql')
+  const m = read('supabase/migrations/20260927160750_legacy_base_v1.sql')
   assert.doesNotMatch(m, /insert into public\.(proposals_v2|payout_entries|commission_receipts|proposal_commission_calcs)/)
   assert.match(m, /revoke all on public\.organization_legacy_settings, public\.legacy_import_batches, public\.legacy_import_rows, public\.legacy_contracts from public, anon, authenticated/)
   // The screen never puts a CPF in a URL: batches and clients are addressed by id.

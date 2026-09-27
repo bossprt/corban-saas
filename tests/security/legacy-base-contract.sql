@@ -1,4 +1,4 @@
--- Contract test for 20260927400000_legacy_base_v1 (F5.5, ADR-0044): legacy clients and contracts come in by batch with
+-- Contract test for 20260927160750_legacy_base_v1 (F5.5, ADR-0044): legacy clients and contracts come in by batch with
 -- a preview of every row's issue, never duplicate nor change an existing client, respect the cutoff date, stay out of
 -- the pipeline, are seen only by whoever sees the client, and a whole batch can be undone.
 -- One transaction, rolled back.  psql -v ON_ERROR_STOP=1 -f tests/security/legacy-base-contract.sql
