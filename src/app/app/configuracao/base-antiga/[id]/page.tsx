@@ -21,13 +21,14 @@ export default async function LegacyBatchPage({ params }: { params: Promise<{ id
   if (!atLeast(membership.role, 'manager')) notFound()
   const { data: b } = await supabase.from('legacy_import_batches').select('*').eq('id', id).maybeSingle()
   if (!b) notFound()
-  const [{ data: issues }, { data: sample }, { data: byIssue }] = await Promise.all([
+  const [{ data: issues }, { data: sample }, ...byIssue] = await Promise.all([
     supabase.from('legacy_import_rows').select('row_number,cpf,full_name,ade,contract_on,issue').eq('batch_id', id).not('issue', 'is', null).order('row_number').limit(200),
     supabase.from('legacy_import_rows').select('row_number,cpf,full_name,bank_name,ade,contract_on,requested_amount,seller_name').eq('batch_id', id).is('issue', null).order('row_number').limit(20),
-    supabase.from('legacy_import_rows').select('issue').eq('batch_id', id).not('issue', 'is', null),
+    // One exact count per reason (a batch can have tens of thousands of lines; row reads stop at 1.000).
+    ...Object.keys(LEGACY_ISSUE_LABEL).map(k => supabase.from('legacy_import_rows').select('*', { count: 'exact', head: true }).eq('batch_id', id).eq('issue', k)),
   ])
   const count = new Map<string, number>()
-  for (const r of byIssue ?? []) count.set(r.issue as string, (count.get(r.issue as string) ?? 0) + 1)
+  Object.keys(LEGACY_ISSUE_LABEL).forEach((k, i) => { const n = byIssue[i]?.count ?? 0; if (n) count.set(k, n) })
   const ok = b.rows_total - b.rows_with_issue
   const st = LEGACY_STATUS[b.status] ?? { label: b.status, tone: 'neutral' as const }
 

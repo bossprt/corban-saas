@@ -48,3 +48,14 @@ test('the 2tech contract search export is recognized column by column', () => {
     ade: 'NumeroProposta', contract_number: 'NumeroContrato', legacy_ref: 'ContratoId', contract_on: 'DataContrato', requested_amount: 'ValorBruto', released_amount: 'ValorLiquido',
     installment_amount: 'ValorParcela', term: 'Prazo', seller_name: 'NomeCorretor', status_text: 'StatusProposta' })
 })
+
+test('browser reader: spreadsheet cells become plain text without float noise, the title line is found', async () => {
+  const { cellText, splitSheet } = await import('../../src/lib/legacy/browser-read')
+  assert.equal(cellText(0.1 + 0.2), '0.3')
+  assert.equal(cellText(10000), '10000')
+  assert.equal(cellText(1234.5), '1234.5')
+  assert.equal(cellText(new Date(2025, 4, 10)), '2025-05-10')
+  assert.equal(cellText(null), '')
+  const s = splitSheet([['Relatório'], ['', ''], ['CPF', 'Nome'], ['1', 'A']])
+  assert.deepEqual(s, { headers: ['CPF', 'Nome'], body: [['1', 'A']], headerRow: 3 })
+})
