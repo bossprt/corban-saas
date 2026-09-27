@@ -26,11 +26,10 @@ exception when others then
   return sqlerrm = p_error;
 end $$;
 
--- The conversion: the seed line pays 6% upfront and 14% deferred; the Ouro group had 50% of what the company receives.
--- (The seed is loaded after the migration, so the conversion runs here; running it twice changes nothing.)
-insert into results select 'the conversion is repeatable', private.convert_shares_to_group_values((select org from ids)) >= 0 and private.convert_shares_to_group_values((select org from ids)) = 0;
-insert into results select 'today''s shares were converted exactly', (select count(*) from public.commercial_condition_group_values
-  where condition_id = (select published_condition from ids) and source = 'converted') = 2
+-- The seed line pays 6% upfront and 14% deferred; the Ouro group has 3% and 7% (the old shares were converted in part
+-- B and removed in part C4, ADR-0042).
+insert into results select 'the published line carries the group values exactly', (select count(*) from public.commercial_condition_group_values
+  where condition_id = (select published_condition from ids)) = 2
   and exists (select 1 from public.commercial_condition_group_values where condition_id = (select published_condition from ids)
     and component_type_id = (select upfront from ids) and value = 3 and value::text = '3')
   and exists (select 1 from public.commercial_condition_group_values where condition_id = (select published_condition from ids) and value::text = '7');
@@ -113,7 +112,7 @@ reset role;
 
 select check_name, ok from results order by ok, check_name;
 do $$ begin
-  if (select count(*) from results) <> 16 or exists (select 1 from results where not ok) then raise exception 'commission group values contract failed'; end if;
+  if (select count(*) from results) <> 15 or exists (select 1 from results where not ok) then raise exception 'commission group values contract failed'; end if;
 end $$;
 
 rollback;

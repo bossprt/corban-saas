@@ -64,9 +64,9 @@ begin
  perform pg_temp.check_that(pg_temp.run_as(uB,format($q$with u as (update public.proposals_v2 set status='cancelled' where id=%L returning 1) select count(*)::text from u$q$,pA))='0','B cannot change an A proposal');
  perform pg_temp.expect_err(uB,format($q$insert into public.payout_entries(organization_id,account_id,kind,amount,effective_on,status) values(%L,%L,'bonus',100,current_date,'approved')$q$,o1,accA),'permission denied|row-level security|governed','B cannot write a payout entry into tenant A');
  -- RPC attacks
- perform pg_temp.expect_err(uB,format($q$select public.calculate_proposal_commission(%L)$q$,pA),'not_authorized','B cannot calculate the commission of an A proposal');
+ perform pg_temp.expect_err(uB,format($q$select public.calculate_contract_commission(%L)$q$,pA),'not_authorized','B cannot calculate the commission of an A proposal');
  perform pg_temp.expect_err(uB,format($q$select public.proposal_commission_mine(%L)$q$,pA),'not_authorized','B cannot read the commission view of an A proposal');
- perform pg_temp.expect_err(uB,format($q$select public.save_commission_rule(%L,'global',null,'cascade',6,40,10,15,75,true,'x')$q$,o1),'.','B cannot save a commission rule in tenant A');
+ perform pg_temp.expect_err(uB,format($q$select public.save_seller_group(%L,null,'x',true,'[]'::jsonb,'spread','0','spread','0')$q$,o1),'.','B cannot save a seller group rule in tenant A');
  perform pg_temp.expect_err(uB,format($q$select public.import_receipt_report(%L,'bank',gen_random_uuid(),'upfront',current_date,'x.csv',md5('x'),null,'[]'::jsonb)$q$,o1),'.','B cannot import a receipt report into tenant A');
  perform pg_temp.expect_err(uB,format($q$select public.finance_alerts(%L)$q$,o1),'.','B cannot read the finance alerts of tenant A');
  perform pg_temp.expect_err(uB,format($q$select public.ensure_payout_account(%L,null,%L)$q$,o1,uAg),'not_authorized','B cannot open a payout account in tenant A');

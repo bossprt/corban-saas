@@ -111,9 +111,13 @@ where not exists (select 1 from public.commercial_condition_components x where x
 insert into public.commission_groups (id, organization_id, tech_key, name, kind, calculation_basis, is_active, sort_order)
 values ('00000000-0000-4000-8000-0000000c0601', '00000000-0000-4000-8000-00000000c0b1', 'ouro', 'Ouro', 'broker', 'percent_of_received_commission', true, 10)
 on conflict (id) do nothing;
-insert into public.commercial_condition_shares (organization_id, condition_id, group_id, share_pct, effective_pct, source)
-select '00000000-0000-4000-8000-00000000c0b1', '00000000-0000-4000-8000-0000000c0501', '00000000-0000-4000-8000-0000000c0601', 50, 3, 'manual'
-where not exists (select 1 from public.commercial_condition_shares x where x.condition_id = '00000000-0000-4000-8000-0000000c0501' and x.group_id = '00000000-0000-4000-8000-0000000c0601');
+-- Group Ouro's values on the line: 3% à vista and 7% diferido on the gross (half of what the company receives).
+select set_config('corban.group_values_rpc', 'on', true);
+insert into public.commercial_condition_group_values (organization_id, condition_id, group_id, component_type_id, value_kind, value, source)
+select '00000000-0000-4000-8000-00000000c0b1', '00000000-0000-4000-8000-0000000c0501', '00000000-0000-4000-8000-0000000c0601', t.id, 'percentage', v.pct, 'manual'
+from (values ('upfront', 3), ('deferred', 7)) v(k, pct) join public.commission_component_types t on t.tech_key = v.k
+where not exists (select 1 from public.commercial_condition_group_values x where x.condition_id = '00000000-0000-4000-8000-0000000c0501' and x.component_type_id = t.id);
+select set_config('corban.group_values_rpc', 'off', true);
 update public.product_table_versions set status = 'published', published_at = now()
 where id = '00000000-0000-4000-8000-0000000c0302' and status = 'draft';
 
@@ -125,7 +129,7 @@ select '00000000-0000-4000-8000-0000000c0801', '00000000-0000-4000-8000-00000000
 where not exists (select 1 from public.commercial_sellers where id = '00000000-0000-4000-8000-0000000c0801');
 
 -- Part C1: group Ouro pays 100% of its own column on every commission type (the approved example: 50% of 6% = 3% on
--- the à vista), and the table gets its per-group values from today's share (the part B conversion).
+-- the à vista).
 select set_config('corban.group_rule_rpc', 'on', true);
 insert into public.commission_group_rules (id, organization_id, group_id, version, own_production, supervisor_basis, supervisor_pct, manager_basis, manager_pct)
 select '00000000-0000-4000-8000-0000000c0701', '00000000-0000-4000-8000-00000000c0b1', '00000000-0000-4000-8000-0000000c0601', 1, false, 'spread', 0, 'spread', 0
@@ -135,6 +139,5 @@ select '00000000-0000-4000-8000-0000000c0701', '00000000-0000-4000-8000-00000000
 from public.commission_component_types t
 where t.is_active and not exists (select 1 from public.commission_group_rule_items i where i.rule_id = '00000000-0000-4000-8000-0000000c0701' and i.component_type_id = t.id);
 select set_config('corban.group_rule_rpc', 'off', true);
-select private.convert_shares_to_group_values('00000000-0000-4000-8000-00000000c0b1');
 
 commit;

@@ -27,7 +27,6 @@ grant execute on function pg_temp.err(text) to authenticated;
 -- The seller's client (CPF 529.982.247-25) exists before the broker sends anything.
 select pg_temp.act_as((select admin_user from ids));
 set local role authenticated;
-select public.save_commission_rule((select org from ids), 'global', null, 'cascade', 6, 40, 10, 15, 75, true, 'regra do teste');
 reset role;
 select pg_temp.act_as((select v1 from ids));
 set local role authenticated;
@@ -82,7 +81,7 @@ insert into results select 'queue flags the existing client and its portfolio, n
   (select client_preexisted and client_owner_name = 'Vendedor Teste' from public.broker_submission_queue((select org from ids)) where proposal_id = (select id from made where label = 'p_old'))
   and (select not client_preexisted and client_owner_name is null from public.broker_submission_queue((select org from ids)) where proposal_id = (select id from made where label = 'p_new'));
 insert into results select 'no commission is calculated before validation',
-  pg_temp.err(format($q$select public.calculate_proposal_commission(%L)$q$, (select id from made where label = 'p_new'))) = 'proposal_pending_validation';
+  pg_temp.err(format($q$select public.calculate_contract_commission(%L)$q$, (select id from made where label = 'p_new'))) = 'proposal_pending_validation';
 insert into results select 'refusal without a reason is refused',
   pg_temp.err(format($q$select public.decide_broker_proposal(%L, false, null)$q$, (select id from made where label = 'p_old'))) = 'reason_required';
 select public.decide_broker_proposal((select id from made where label = 'p_old'), false, 'Cliente já atendido por outro vendedor');
@@ -97,7 +96,7 @@ insert into results select 'validation opens the pipeline case',
   and (select status from public.proposal_submissions where proposal_id = (select id from made where label = 'p_new')) = 'validated';
 insert into results select 'a decided submission cannot be decided again',
   pg_temp.err(format($q$select public.decide_broker_proposal(%L, false, 'mudei de ideia')$q$, (select id from made where label = 'p_new'))) = 'submission_already_decided';
-select public.calculate_proposal_commission((select id from made where label = 'p_new'));
+select public.calculate_contract_commission((select id from made where label = 'p_new'));
 reset role;
 
 select pg_temp.act_as((select broker from ids));
