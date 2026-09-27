@@ -19,6 +19,7 @@ const ACTION_LABEL: Record<string, string> = {
 
 // Server-rendered per request: the earliest due date a pendency can have.
 const tomorrowIso = () => new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
+const todayIso = () => new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10)
 
 export async function PipelineCard({ supabase, access, proposalId }: { supabase: Supa; access: Access | null; proposalId: string }) {
   const { data: c } = await supabase.from('operational_cases')
@@ -40,7 +41,7 @@ export async function PipelineCard({ supabase, access, proposalId }: { supabase:
           <p className="rounded-lg bg-[#FEF3C7] px-3 py-2 text-[#92400E]"><strong>Pendência:</strong> {c.pendency_reason}{c.pendency_due_at ? ` · resolver até ${new Date(c.pendency_due_at).toLocaleDateString('pt-BR')}` : ''}</p>
         )}
         {editable && (
-          <form action={movePipeline} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+          <form action={movePipeline} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-end">
             <input type="hidden" name="proposal_id" value={proposalId} />
             <input type="hidden" name="case_id" value={c.id} />
             <label className="text-[13px] font-medium text-ink-soft">Mover para
@@ -54,7 +55,10 @@ export async function PipelineCard({ supabase, access, proposalId }: { supabase:
             <label className="text-[13px] font-medium text-ink-soft">Prazo da pendência
               <input name="pendency_due" type="date" min={tomorrow} className="field mt-1.5" />
             </label>
-            <div className="sm:col-span-3 flex justify-end">
+            <label className="text-[13px] font-medium text-ink-soft">Pago ao cliente em
+              <input name="paid_on" type="date" max={todayIso()} aria-label="Pago ao cliente em" className="field mt-1.5" />
+            </label>
+            <div className="sm:col-span-4 flex justify-end">
               <button className="h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Salvar etapa</button>
             </div>
           </form>

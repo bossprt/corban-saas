@@ -22,12 +22,16 @@ export async function movePipeline(formData: FormData) {
   // The due date comes from a date input (YYYY-MM-DD) and means the end of that day in Brazil.
   const dueAt = to === 'pending_external' && /^\d{4}-\d{2}-\d{2}$/.test(due) ? `${due}T23:59:59-03:00` : null
   if (to === 'pending_external' && !dueAt) return back('erro:prazo_pendencia')
+  // Part C3: the day the contract was paid to the client (not in the future).
+  const paidOn = String(formData.get('paid_on') ?? '')
+  if (to === 'paid' && !/^\d{4}-\d{2}-\d{2}$/.test(paidOn)) return back('erro:pago_data')
 
-  const { error } = await supabase.rpc('move_operational_case', { p_case_id: caseId, p_to_state: to, p_note: note || null, p_pendency_due_at: dueAt })
+  const { error } = await supabase.rpc('move_operational_case', { p_case_id: caseId, p_to_state: to, p_note: note || null, p_pendency_due_at: dueAt, p_paid_on: to === 'paid' ? paidOn : null })
   if (error) {
     const m = error.message ?? ''
     if (/note_required/.test(m)) return back('erro:nota_obrigatoria')
     if (/pendency_due_required/.test(m)) return back('erro:prazo_pendencia')
+    if (/invalid_paid_on/.test(m)) return back('erro:pago_data')
     if (/invalid_operational_state_transition|paid_requires/.test(m)) return back('erro:movimento_invalido')
     return back(classifyDbFeedback(error))
   }

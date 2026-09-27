@@ -15,6 +15,7 @@ import { PipelineCard } from './PipelineCard'
 import { CommissionCard } from './CommissionCard'
 import { ContractForm } from './ContractForm'
 import { HistoryCard } from './HistoryCard'
+import { PhysicalCard } from './PhysicalCard'
 
 // "10000.00" -> "10.000,00" (typed back the same way; parsed without floating point).
 const decimalInput = (v: string | number | null) => (v === null || v === undefined ? '' : decimalBr(Number.isInteger(v) ? `${v}.00` : String(v), true))
@@ -27,7 +28,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
   const { supabase, membership, access } = await requireAppContext()
 
   const { data: proposal } = await supabase.from('proposals_v2')
-    .select('id,status,customer_id,seller_id,product_table_version_id,requested_amount,released_amount,installment_amount,term,external_proposal_id,customer_snapshot,commercial_snapshot,created_at')
+    .select('id,status,customer_id,seller_id,product_table_version_id,requested_amount,released_amount,installment_amount,term,external_proposal_id,customer_snapshot,commercial_snapshot,created_at,formalization,paid_to_client_on,physical_received_at,physical_received_by,physical_sent_at,physical_sent_by,physical_bank_at,physical_bank_by')
     .eq('id', id).maybeSingle()
   if (!proposal) notFound()
 
@@ -81,7 +82,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
         <div>
           <div className="text-sm text-brand">Contrato {proposal.external_proposal_id ? `nº ${proposal.external_proposal_id}` : proposal.id.slice(0, 8)}</div>
           <h1 className="mt-1 text-2xl font-semibold text-ink"><Link href={`/app/clientes/${proposal.customer_id}`} className="hover:text-brand">{String(customer.full_name ?? 'Cliente')}</Link></h1>
-          <p className="mt-1 text-sm text-muted">Criado em {new Date(proposal.created_at).toLocaleString('pt-BR')}</p>
+          <p className="mt-1 text-sm text-muted">Criado em {new Date(proposal.created_at).toLocaleString('pt-BR')}{proposal.paid_to_client_on ? ` · pago ao cliente em ${new Date(`${proposal.paid_to_client_on}T12:00:00Z`).toLocaleDateString('pt-BR')}` : ''}</p>
         </div>
         <div className="text-right"><Badge tone={paid ? 'received' : closed ? 'neutral' : 'pending'}>{status.label}</Badge><p className="mt-2 max-w-xs text-xs text-muted">{status.next}</p></div>
       </div>
@@ -98,9 +99,13 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
         id: proposal.id, table_version_id: proposal.product_table_version_id, seller_id: proposal.seller_id,
         requested: decimalInput(proposal.requested_amount), released: decimalInput(proposal.released_amount), installment: decimalInput(proposal.installment_amount),
         term: proposal.term ? String(proposal.term) : '', ade: proposal.external_proposal_id,
+        formalization: proposal.formalization, paid_to_client_on: proposal.paid_to_client_on,
       }} tables={tableOptions} sellers={sellerOptions} canEdit={canEdit} paid={paid} received={received} />
       <PipelineCard supabase={supabase} access={access} proposalId={proposal.id} />
-      <CommissionCard supabase={supabase} access={access} proposalId={proposal.id} closed={closed} canOverride={manager} />
+      {proposal.formalization === 'physical' && <PhysicalCard proposalId={proposal.id} canEdit={can(access, 'esteira.edit')} p={{
+        received_at: proposal.physical_received_at, received_by: proposal.physical_received_by, sent_at: proposal.physical_sent_at,
+        sent_by: proposal.physical_sent_by, bank_at: proposal.physical_bank_at, bank_by: proposal.physical_bank_by }} />}
+      <CommissionCard supabase={supabase} access={access} proposalId={proposal.id} closed={closed} canOverride={manager} owner={atLeast(membership.role, 'admin')} />
 
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
         <Card>

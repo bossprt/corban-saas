@@ -27,7 +27,7 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
   const [{ data: groups }, { data: branches }, seller, profile, accounts, contacts] = await Promise.all([
     supabase.from('commission_groups').select('id,name,is_active').order('sort_order').order('name'),
     supabase.from('organization_branches').select('id,name,is_active').eq('is_active', true).order('name'),
-    isNew ? Promise.resolve({ data: null }) : supabase.from('commercial_sellers').select('id,code,name,tax_id,seller_category,commission_group_id,branch_id,is_active,user_id,origin,imported_at').eq('id', id).maybeSingle(),
+    isNew ? Promise.resolve({ data: null }) : supabase.from('commercial_sellers').select('id,code,name,tax_id,seller_category,commission_group_id,branch_id,is_active,user_id,origin,imported_at,commission_payment_frequency,receives_deferred').eq('id', id).maybeSingle(),
     isNew ? Promise.resolve({ data: null }) : supabase.from('seller_profiles').select('*').eq('seller_id', id).maybeSingle(),
     isNew || !canSeeBank ? Promise.resolve({ data: [] }) : supabase.from('seller_bank_accounts')
       .select('id,transfer_method,account_type,bank_code,bank_name,branch,account_number,account_digit,pix_key_type,pix_key,holder_name,holder_document,note,is_primary')
@@ -39,6 +39,7 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
   const p = (profile.data ?? {}) as Record<string, string | null>
   const values: SellerValues | undefined = s ? {
     id: s.id, code: s.code, name: s.name, tax_id: s.tax_id, seller_category: s.seller_category, commission_group_id: s.commission_group_id, branch_id: s.branch_id,
+    commission_payment_frequency: s.commission_payment_frequency, receives_deferred: s.receives_deferred,
     trade_name: p.trade_name ?? null, birth_or_opening_date: p.birth_or_opening_date ?? null, identity_or_registration_number: p.identity_or_registration_number ?? null,
     identity_issuer: p.identity_issuer ?? null, rg_issued_on: p.rg_issued_on ?? null, mother_name: p.mother_name ?? null, father_name: p.father_name ?? null,
     phone: p.phone ?? null, whatsapp: p.whatsapp ?? null, other_phones: p.other_phones ?? null, email: p.email ?? null,

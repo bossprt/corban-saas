@@ -8,7 +8,7 @@ import { atLeast, canViewCommission } from '@/lib/rbac'
 import { isUuid } from '@/lib/team'
 import { decimalBr, PAGE_SIZES, pageSize, rangeText, termText, valueText, VERSION_STATUS } from '@/lib/commission/tableValues'
 import { fetchAll } from '@/lib/fetchAll'
-import { cloneVersion, publishVersion, renameTable } from '../actions'
+import { cloneVersion, publishVersion, renameTable, setTableFormalization } from '../actions'
 import { NewSearchLink } from '../NewSearchLink'
 
 type SP = Record<string, string | string[] | undefined>
@@ -30,7 +30,7 @@ export default async function TablePage({ params, searchParams }: { params: Prom
   const sp = await searchParams
 
   const [{ data: table }, { data: versions }, { data: types }, { data: components }, { data: groups }, { data: rules }] = await Promise.all([
-    supabase.from('product_tables').select('id,route_id,code,name,status').eq('id', id).maybeSingle(),
+    supabase.from('product_tables').select('id,route_id,code,name,status,formalization').eq('id', id).maybeSingle(),
     supabase.from('product_table_versions').select('id,version,status,effective_from,effective_until,published_at,created_at').eq('product_table_id', id).order('version', { ascending: false }),
     supabase.from('contract_types').select('id,name'),
     supabase.from('commission_component_types').select('id,tech_key,name,sort_order').eq('is_active', true).order('sort_order'),
@@ -133,6 +133,13 @@ export default async function TablePage({ params, searchParams }: { params: Prom
               <SubmitButton className="h-10 rounded-[10px] border border-line-strong bg-surface px-4 text-sm text-ink hover:bg-surface-muted" pendingText="Salvando...">Salvar nome</SubmitButton>
             </form>
           ) : <p className="px-5 pb-5 pt-3 text-sm text-ink">{table.name}</p>}
+          {canEdit ? (
+            <form action={setTableFormalization} className="flex flex-wrap items-end gap-2 border-t border-line px-5 pb-5 pt-3">
+              <input type="hidden" name="table_id" value={id} />
+              <label className={`${lbl} flex-1`}>Formalização dos contratos<select name="formalization" defaultValue={table.formalization} className="field mt-1.5"><option value="digital">Digital</option><option value="physical">Física (repasse só depois do físico)</option></select></label>
+              <SubmitButton className="h-10 rounded-[10px] border border-line-strong bg-surface px-4 text-sm text-ink hover:bg-surface-muted" pendingText="Salvando...">Salvar formalização</SubmitButton>
+            </form>
+          ) : <p className="border-t border-line px-5 py-3 text-sm text-ink-soft">Formalização: {table.formalization === 'physical' ? 'Física' : 'Digital'}</p>}
         </Card>
       </div>
 

@@ -232,7 +232,7 @@ do $$ begin
 end $$;
 reset role;
 insert into results select 'anon cannot execute payout RPCs or read the ledger',
-  not has_function_privilege('anon', 'public.close_payout_period(uuid,date)', 'execute')
+  not has_function_privilege('anon', 'public.close_payout_period(uuid,date,text)', 'execute')
   and not has_function_privilege('anon', 'public.mark_payout_paid(uuid,date,text)', 'execute')
   and not has_table_privilege('anon', 'public.payout_entries', 'select');
 
