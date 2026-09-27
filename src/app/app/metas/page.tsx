@@ -30,7 +30,7 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
       <PageHeader title="Metas" description="Meta mensal por pessoa, medida pelo valor liberado dos contratos pagos no mês." />
       <form className="mb-4 flex items-end gap-2">
         <label className="text-[13px] font-medium text-ink-soft">Mês<input type="month" name="mes" defaultValue={month} className="field mt-1.5" /></label>
-        <button className="h-10 rounded-[10px] border border-line bg-surface px-4 text-sm hover:bg-surface-muted">Ver</button>
+        <button className="h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Ver</button>
       </form>
 
       <Card className="overflow-hidden">

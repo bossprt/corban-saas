@@ -99,7 +99,7 @@ export default async function CompanyFinancePage({ searchParams }: { searchParam
             <input type="date" name="de" defaultValue={from ?? ''} aria-label="De" className="field h-9 w-auto py-1" />
             <input type="date" name="ate" defaultValue={to ?? ''} aria-label="Até" className="field h-9 w-auto py-1" />
             <select name="filial" defaultValue={sp.filial ?? ''} aria-label="Filial" className="field h-9 w-auto py-1"><option value="">Todas as filiais</option>{(branches ?? []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select>
-            <button className="h-9 rounded-[10px] border border-line px-3 text-sm hover:bg-surface-muted">Filtrar</button>
+            <button className="inline-flex h-9 items-center rounded-[10px] bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong">Filtrar</button>
           </form>} />
         {!(rows ?? []).length ? <p className="px-5 pb-5 text-sm text-muted">Nada por aqui.</p> : (
           <div className="overflow-x-auto">

@@ -4,7 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import { SubmitButton } from '@/components/SubmitButton'
 import { Badge, Card, CardHeader, PageHeader, type Tone } from '@/components/ui'
 import { requireAppContext } from '@/lib/appContext'
-import { maskCpf } from '@/lib/cpf'
+import { formatCpf } from '@/lib/cpf'
 import { proposalStatusLabel } from '@/lib/operational'
 import { isPortalUser, SUBMISSION_LABEL } from '@/lib/portal'
 import { brlText } from '@/lib/receipts/format'
@@ -36,7 +36,7 @@ export default async function PortalProposalPage({ params }: { params: Promise<{
   return (
     <section>
       <Link href="/app/portal" className="mb-3 inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink"><ArrowLeft size={15} aria-hidden />Minhas propostas</Link>
-      <PageHeader title={client.full_name ?? 'Proposta'} description={<>CPF {maskCpf(client.cpf)} · enviada em {new Date(s.created_at).toLocaleString('pt-BR')}</>} />
+      <PageHeader title={client.full_name ?? 'Proposta'} description={<>CPF {formatCpf(client.cpf)} · enviada em {new Date(s.created_at).toLocaleString('pt-BR')}</>} />
 
       <Card className="mb-4 p-5">
         <div className="flex flex-wrap items-center gap-2"><Badge tone={TONE[s.status] ?? 'neutral'}>{situation}</Badge>

@@ -47,6 +47,16 @@ export async function searchAll(raw: string): Promise<SearchHit[]> {
   return hits
 }
 
+// CPF typed in a list filter (Clientes, Contratos): looked up here, by POST, so the CPF never goes in the URL; the
+// screen then filters by the client's id. RLS limits the answer to the clients the user can see.
+export async function findClientByCpf(raw: string): Promise<{ id: string; name: string } | null> {
+  const { supabase } = await requireAppContext()
+  const cpf = digitsOnly(String(raw ?? ''))
+  if (cpf.length !== 11) return null
+  const { data } = await supabase.from('clients').select('id,full_name').eq('cpf', cpf).is('deleted_at', null).limit(1).maybeSingle()
+  return data ? { id: data.id, name: data.full_name } : null
+}
+
 function formatCpf(cpf: string | null) {
   const d = digitsOnly(cpf ?? '')
   return d.length === 11 ? `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}` : null

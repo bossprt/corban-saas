@@ -116,6 +116,18 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Tailwind 4 leaves buttons with the default arrow; everything clickable shows the hand. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  select:not(:disabled),
+  summary,
+  label:has(> input[type="checkbox"]:not(:disabled)),
+  input[type="file"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
 @layer components {
   .field {
     @apply w-full rounded-lg border border-line-strong bg-surface px-3 py-2.5 text-sm text-ink outline-none placeholder:text-muted focus:border-brand focus:ring-2 focus:ring-brand/20;

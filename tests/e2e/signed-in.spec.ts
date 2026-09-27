@@ -119,6 +119,32 @@ test('registering an existing CPF recognizes the client instead of duplicating',
   await expect(page.getByText('(68) 98822-0002')).toBeVisible()
   await expect(page.getByText('(68) 99911-0001')).toBeVisible()
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-cliente-ficha.png`, fullPage: true })
+
+  // Owner (validation, 27/09/2026): the lists search by CPF too, and the CPF never goes in the URL.
+  const masked = `${cpf.slice(0, 3)}.${cpf.slice(3, 6)}.${cpf.slice(6, 9)}-${cpf.slice(9)}`
+  await page.goto('/app/clientes')
+  await page.getByLabel('Filtrar clientes').fill(masked)
+  await page.getByRole('button', { name: 'Filtrar' }).click()
+  await expect(page.getByRole('heading', { name: 'Cliente E2E Identidade' })).toBeVisible()
+  expect(page.url()).not.toContain(cpf.slice(0, 9))
+  await page.goto('/app/contratos')
+  await page.getByPlaceholder('Nome, CPF ou nº do contrato').fill(cpf)
+  await page.getByRole('button', { name: 'Buscar', exact: true }).click()
+  await expect(page.getByText('Este cliente ainda não tem contrato.')).toBeVisible()
+  expect(page.url()).toContain('cliente=')
+  expect(page.url()).not.toContain(cpf.slice(0, 9))
+  await expect(page.getByText(masked)).toBeVisible()
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-contratos-cpf.png`, fullPage: true })
+  await page.getByRole('link', { name: 'Cadastrar contrato para este cliente' }).click()
+  await expect(page).toHaveURL(/\/app\/propostas\/nova\?cliente=/)
+  await expect(page.getByLabel('Cliente')).toHaveValue(/[0-9a-f-]{36}/)
+  // A CPF nobody has: offer to register the client.
+  await page.goto('/app/contratos')
+  await page.getByPlaceholder('Nome, CPF ou nº do contrato').fill('529.982.247-25')
+  await page.getByRole('button', { name: 'Buscar', exact: true }).click()
+  await expect(page.getByText('Nenhum cliente com este CPF.')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Cadastrar novo cliente' })).toBeVisible()
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-contratos-cpf-sem-cliente.png` })
 })
 
 test('administrator creates an API key and an external system sends a lead with it', async ({ page, request }, info) => {
@@ -781,7 +807,7 @@ test('commission C1: line tax, bank IR, contract commission and search, table ex
   await page.goto(`/app/contratos?q=${ade}`)
   const row = page.getByRole('row').filter({ hasText: ade })
   await expect(row).toContainText('Vendedor Teste')
-  await expect(row).toContainText('***.')
+  await expect(row).toContainText(/\d{3}\.\d{3}\.\d{3}-\d{2}/)
   // Whole contract: à vista + 120 deferred installments (2.000,00 received, 1.000,00 to the seller, margin 870,00).
   for (const v of ['R$ 2.000,00', 'R$ 1.000,00', 'R$ 870,00']) await expect(row).toContainText(v)
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-contratos.png`, fullPage: true })

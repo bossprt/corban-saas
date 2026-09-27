@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ChevronRight, Search } from 'lucide-react'
+import { ChevronRight, FilePlus2, Search, X } from 'lucide-react'
 import { Badge, Card, CardHeader, PageHeader, type Tone } from '@/components/ui'
 import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
@@ -7,6 +7,9 @@ import { fetchAll } from '@/lib/fetchAll'
 import { add, fromDecimalString, mul, sub, toDecimalString, type Rational } from '@/lib/commission/money'
 import { PAGE_SIZES, pageSize, termText } from '@/lib/commission/tableValues'
 import { brlText } from '@/lib/receipts/format'
+import { formatCpf } from '@/lib/cpf'
+import { isUuid } from '@/lib/team'
+import { CpfSearchForm } from '@/components/CpfSearchForm'
 
 type SP = Record<string, string | string[] | undefined>
 const one = (v: string | string[] | undefined) => (typeof v === 'string' ? v : '')
@@ -16,13 +19,11 @@ const STATUS_LABEL: Record<string, string> = {
   approved: 'Aprovado', paid: 'Pago ao cliente', rejected: 'Recusado', cancelled: 'Cancelado',
 }
 const STATUS_TONE: Record<string, Tone> = { paid: 'received', approved: 'received', pending_external: 'diverged', rejected: 'reversed', cancelled: 'neutral' }
-// CPF is personal data: the list shows only the middle digits; the full CPF stays in the contract file.
-const maskCpf = (v: unknown) => { const d = String(v ?? '').replace(/\D/g, ''); return d.length === 11 ? `***.${d.slice(3, 6)}.${d.slice(6, 9)}-**` : '—' }
 const CPF_LIKE = /^\s*\d{3}\.?\d{3}\.?\d{3}-?\d{2}\s*$/
 const ZERO = fromDecimalString('0')
 const money = (v: Rational | undefined) => brlText(toDecimalString(v ?? ZERO, 2))
 
-type Contract = { id: string; external_proposal_id: string | null; status: string; requested_amount: string | null; released_amount: string | null; term: number | null; customer_snapshot: { full_name?: string; cpf?: string } | null; seller_id: string | null; product_table_version_id: string | null; created_at: string }
+type Contract = { id: string; external_proposal_id: string | null; status: string; requested_amount: string | null; released_amount: string | null; term: number | null; customer_snapshot: { full_name?: string; cpf?: string } | null; customer_id: string | null; seller_id: string | null; product_table_version_id: string | null; created_at: string }
 // The embedded calculation comes back as one object (many-to-one); typed loosely by the untyped client.
 type CalcLine = { line_kind: string; amount: string; multiplier: number; proposal_commission_calcs: { proposal_id: string } | { proposal_id: string }[] }
 
@@ -31,18 +32,20 @@ type CalcLine = { line_kind: string; amount: string; multiplier: number; proposa
 // the company values. A row opens the contract file.
 export default async function ContractsPage({ searchParams }: { searchParams: Promise<SP> }) {
   const { supabase, access, membership } = await requireAppContext()
+  const canCreate = can(access, 'propostas.create')
   const finance = can(access, 'financeiro.view')
   const sp = await searchParams
   const text = one(sp.q).trim()
   const f = {
     de: one(sp.de), ate: one(sp.ate), banco: one(sp.banco), convenio: one(sp.convenio), vendedor: one(sp.vendedor), grupo: one(sp.grupo),
-    situacao: one(sp.situacao), comissao: one(sp.comissao), alterado: one(sp.alterado), repasse: one(sp.repasse),
-    // A CPF typed in the search is never used (and the form refuses it): CPF must not travel in a URL.
+    situacao: one(sp.situacao), cliente: isUuid(one(sp.cliente)) ? one(sp.cliente) : '', comissao: one(sp.comissao), alterado: one(sp.alterado), repasse: one(sp.repasse),
+    // A CPF typed in the search is looked up by POST (CpfSearchForm) and becomes cliente=<id>; a CPF that still reaches
+    // the URL is ignored.
     q: CPF_LIKE.test(text) ? '' : text.toLowerCase(),
   }
 
   const [contracts, { data: versions }, { data: tables }, { data: routes }, { data: banks }, { data: agreements }, { data: sellers }, { data: groups }] = await Promise.all([
-    fetchAll<Contract>((a, b) => supabase.from('proposals_v2').select('id,external_proposal_id,status,requested_amount,released_amount,term,customer_snapshot,seller_id,product_table_version_id,created_at')
+    fetchAll<Contract>((a, b) => supabase.from('proposals_v2').select('id,external_proposal_id,status,requested_amount,released_amount,term,customer_snapshot,customer_id,seller_id,product_table_version_id,created_at')
       .order('created_at', { ascending: false }).order('id').range(a, b)),
     supabase.from('product_table_versions').select('id,product_table_id,version'),
     supabase.from('product_tables').select('id,name,route_id'),
@@ -96,7 +99,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
     (!f.de || c.created_at.slice(0, 10) >= f.de) && (!f.ate || c.created_at.slice(0, 10) <= f.ate)
     && (!f.banco || w.bank === f.banco) && (!f.convenio || w.agreement === f.convenio)
     && (!f.vendedor || c.seller_id === f.vendedor) && (!f.grupo || s?.commission_group_id === f.grupo)
-    && (!f.situacao || c.status === f.situacao)
+    && (!f.situacao || c.status === f.situacao) && (!f.cliente || c.customer_id === f.cliente)
     && (!f.comissao || (f.comissao === 'calculada') === totals.has(c.id))
     && (!f.alterado || !!payout.get(c.id)?.overridden)
     && (!f.repasse || repasseOf(c.id) === f.repasse)
@@ -110,15 +113,20 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
     return `/app/contratos?${q.toString()}`
   }
 
+  const { data: chosenClient } = f.cliente ? await supabase.from('clients').select('id,full_name,cpf').eq('id', f.cliente).maybeSingle() : { data: null }
+  const newHref = `/app/propostas/nova${f.cliente ? `?cliente=${f.cliente}` : ''}`
+  const newButton = (label: string) => canCreate ? <Link href={newHref} className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><FilePlus2 size={16} aria-hidden />{label}</Link> : null
+
   return (
     <section>
-      <PageHeader title="Contratos" description="Busque os contratos e veja a comissão de cada um: o que a empresa recebe, o que o vendedor recebe pela tabela e o grupo dele, e a margem." />
+      <PageHeader title="Contratos" description="Busque os contratos e veja a comissão de cada um: o que a empresa recebe, o que o vendedor recebe pela tabela e o grupo dele, e a margem." actions={newButton('Novo contrato')} />
 
       <Card className="mb-4">
-        <form className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-4">
-          <label className={lbl}>Cliente (nome) ou nº do contrato
-            <input name="q" defaultValue={f.q ? text : ''} maxLength={80} pattern="^(?!\s*\d{3}\.?\d{3}\.?\d{3}-?\d{2}\s*$).*$" title="Para buscar por CPF, use a tela Clientes." className="field mt-1.5" />
+        <CpfSearchForm action="/app/contratos" mode="filter" className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-4">
+          <label className={lbl}>Cliente (nome ou CPF) ou nº do contrato
+            <input name="q" defaultValue={f.q ? text : ''} maxLength={80} placeholder="Nome, CPF ou nº do contrato" className="field mt-1.5" />
           </label>
+          {f.cliente && <input type="hidden" name="cliente" value={f.cliente} />}
           <label className={lbl}>De<input type="date" name="de" defaultValue={f.de} className="field mt-1.5" /></label>
           <label className={lbl}>Até<input type="date" name="ate" defaultValue={f.ate} className="field mt-1.5" /></label>
           <label className={lbl}>Situação<select name="situacao" defaultValue={f.situacao} className="field mt-1.5"><option value="">Todas</option>{Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
@@ -134,7 +142,13 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
             <button className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><Search size={15} aria-hidden />Buscar</button>
             <Link href="/app/contratos" className="inline-flex h-10 items-center rounded-[10px] border border-line px-3 text-sm text-ink-soft hover:bg-surface-muted">Limpar</Link>
           </div>
-        </form>
+        </CpfSearchForm>
+        {f.cliente && (
+          <div className="flex flex-wrap items-center gap-3 border-t border-line px-5 py-3 text-sm">
+            <span className="text-ink-soft">Cliente: <Link href={`/app/clientes/${f.cliente}`} className="font-medium text-ink hover:text-brand">{chosenClient?.full_name ?? '—'}</Link> <span className="font-mono text-[13px] text-muted">{formatCpf(chosenClient?.cpf)}</span></span>
+            <Link href={qs({ cliente: '', p: 1 })} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-ink-soft hover:bg-surface-muted"><X size={14} aria-hidden />Tirar filtro do cliente</Link>
+          </div>
+        )}
       </Card>
 
       {finance && <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -163,7 +177,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
                   <tr key={c.id} className="border-t border-line hover:bg-surface-muted/60">
                     <td className="px-5 py-2.5">
                       <span className="block font-medium text-ink">{c.customer_snapshot?.full_name ?? '—'}</span>
-                      <span className="text-xs text-muted">{maskCpf(c.customer_snapshot?.cpf)}{c.external_proposal_id ? ` · nº ${c.external_proposal_id}` : ''} · {new Date(c.created_at).toLocaleDateString('pt-BR')}</span>
+                      <span className="text-xs text-muted">{formatCpf(c.customer_snapshot?.cpf)}{c.external_proposal_id ? ` · nº ${c.external_proposal_id}` : ''} · {new Date(c.created_at).toLocaleDateString('pt-BR')}</span>
                     </td>
                     <td className="px-3 py-2.5"><span className="block text-ink">{s?.name ?? '—'}</span><span className="text-xs text-muted">{s?.commission_group_id ? groupName.get(s.commission_group_id) ?? '' : 'sem grupo'}</span></td>
                     <td className="px-3 py-2.5"><span className="block text-ink">{bankName.get(w.bank) ?? '—'} · {agreementName.get(w.agreement) ?? '—'}</span><span className="text-xs text-muted">{w.table}{c.term ? ` · ${termText(c.term, c.term, c.term)}` : ''}</span></td>
@@ -179,7 +193,10 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
                   </tr>
                 )
               })}
-              {!rows.length && <tr><td colSpan={10} className="px-5 py-8 text-center text-muted">{contracts.length ? 'Nenhum contrato com esses filtros.' : 'Nenhum contrato cadastrado ainda.'}</td></tr>}
+              {!rows.length && <tr><td colSpan={10} className="px-5 py-8 text-center text-muted">
+                <span className="block">{f.cliente ? 'Este cliente ainda não tem contrato.' : contracts.length ? 'Nenhum contrato com esses filtros.' : 'Nenhum contrato cadastrado ainda.'}</span>
+                {canCreate && <span className="mt-3 inline-block">{newButton(f.cliente ? 'Cadastrar contrato para este cliente' : 'Cadastrar novo contrato')}</span>}
+              </td></tr>}
             </tbody>
           </table>
         </div>

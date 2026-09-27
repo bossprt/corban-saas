@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { FEEDBACK, classifyDbFeedback, feedbackTone, feedbackUrl, isFeedbackCode } from '../../src/lib/feedback'
 import { checkUpload, safeFileName, sniffDocumentMime } from '../../src/lib/documents'
-import { isValidCpf, maskCpf } from '../../src/lib/cpf'
+import { formatCpf, isValidCpf } from '../../src/lib/cpf'
 import { digitsOnly, searchTerm } from '../../src/lib/search'
 import { proposalStatusLabel } from '../../src/lib/operational'
 
@@ -95,12 +95,12 @@ test('upload action decides on the real bytes before touching the database or st
 })
 
 // ---- CPF / search / PII in URLs
-test('cpf: check digits, masking', () => {
+test('cpf: check digits and display (shown in full, owner decision)', () => {
   assert.equal(isValidCpf('52998224725'), true)
   for (const bad of ['11111111111', '12345678900', '5299822472', '529982247255', 'abcdefghijk', '']) assert.equal(isValidCpf(bad), false, bad)
-  assert.equal(maskCpf('52998224725'), '***.982.247-**')
-  assert.equal(maskCpf(null), '—')
-  assert.equal(maskCpf('123'), '***.***.***-**')
+  assert.equal(formatCpf('52998224725'), '529.982.247-25')
+  assert.equal(formatCpf(null), '—')
+  assert.equal(formatCpf('123'), '—')
 })
 test('search: filter-language characters are stripped; short terms ignored; CPF is never a search key', () => {
   assert.equal(searchTerm('  Ana  Souza '), 'Ana Souza')
