@@ -1,8 +1,10 @@
+import { Badge, Card, PageHeader } from '@/components/ui'
 import { requireAppContext } from '@/lib/appContext'
 import { uploadCustomerDocument } from './actions'
 import { SubmitButton } from '@/components/SubmitButton'
 
 const DOC_STATUS: Record<string, string> = { active: 'Ativo', archived: 'Arquivado', expired: 'Vencido', rejected: 'Recusado' }
+const DOC_TONE: Record<string, 'received' | 'neutral' | 'diverged' | 'reversed'> = { active: 'received', archived: 'neutral', expired: 'diverged', rejected: 'reversed' }
 
 export default async function DocumentsPage() {
   const { supabase } = await requireAppContext()
@@ -18,39 +20,38 @@ export default async function DocumentsPage() {
   const customerNames = new Map((customersResult.data ?? []).map(c => [c.id, c.full_name]))
 
   return <section>
-    <div className="mb-6">
-      <h1 className="text-3xl font-semibold">Documentos</h1>
-      <p className="mt-2 text-sm text-slate-400">Cofre documental privado e versionado do tenant.</p>
-    </div>
+    <PageHeader title="Documentos" description="Cofre documental privado e versionado do tenant." />
 
-    <form action={uploadCustomerDocument} className="mb-6 grid gap-3 rounded-2xl border border-slate-800 bg-slate-900 p-5 md:grid-cols-4">
-      <select required name="customer_id" defaultValue="" className="field">
-        <option value="" disabled>Cliente</option>
-        {customersResult.data?.map(c => <option key={c.id} value={c.id}>{c.full_name}</option>)}
-      </select>
-      <select required name="document_type_id" defaultValue="" className="field">
-        <option value="" disabled>Tipo de documento</option>
-        {typesResult.data?.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-      </select>
-      <input required type="file" name="file" accept=".pdf,image/jpeg,image/png,image/webp" className="field"/>
-      <SubmitButton className="rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-slate-950" pendingText="Enviando...">Enviar documento</SubmitButton>
-      <p className="text-xs text-slate-500 md:col-span-4">Arquivo privado · PDF, JPG, PNG ou WebP · máximo 4 MB · o tipo é conferido pelo conteúdo do arquivo · nada é sobrescrito (um novo envio vira uma nova versão).</p>
+    <form action={uploadCustomerDocument} className="mb-6 grid gap-3 md:grid-cols-4">
+      <Card className="col-span-full grid gap-3 p-5 md:grid-cols-4">
+        <select required name="customer_id" defaultValue="" className="field">
+          <option value="" disabled>Cliente</option>
+          {customersResult.data?.map(c => <option key={c.id} value={c.id}>{c.full_name}</option>)}
+        </select>
+        <select required name="document_type_id" defaultValue="" className="field">
+          <option value="" disabled>Tipo de documento</option>
+          {typesResult.data?.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+        </select>
+        <input required type="file" name="file" accept=".pdf,image/jpeg,image/png,image/webp" className="field"/>
+        <SubmitButton className="inline-flex h-10 items-center justify-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Enviando...">Enviar documento</SubmitButton>
+        <p className="text-xs text-muted md:col-span-4">Arquivo privado · PDF, JPG, PNG ou WebP · máximo 4 MB · o tipo é conferido pelo conteúdo do arquivo · nada é sobrescrito (um novo envio vira uma nova versão).</p>
+      </Card>
     </form>
 
-    <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">
+    <Card className="overflow-hidden">
       <div className="overflow-x-auto"><table className="w-full text-left text-sm">
-        <thead className="border-b border-slate-800 text-slate-400"><tr><th className="p-4">Cliente</th><th className="p-4">Documento</th><th className="p-4">Arquivo</th><th className="p-4">Versão</th><th className="p-4">Status</th></tr></thead>
+        <thead className="bg-surface-muted text-xs font-semibold text-muted"><tr><th className="px-4 py-2.5">Cliente</th><th className="px-4 py-2.5">Documento</th><th className="px-4 py-2.5">Arquivo</th><th className="px-4 py-2.5">Versão</th><th className="px-4 py-2.5">Status</th></tr></thead>
         <tbody>
-          {documentsResult.data?.map(d => <tr key={d.id} className="border-b border-slate-800/60 last:border-0">
-            <td className="p-4 font-medium">{customerNames.get(d.customer_id) ?? 'Cliente'}</td>
-            <td className="p-4">{typeNames.get(d.document_type_id) ?? 'Documento'}</td>
-            <td className="p-4 text-slate-400">{d.original_file_name}</td>
-            <td className="p-4 text-slate-400">v{d.version}</td>
-            <td className="p-4"><span className="rounded-full bg-slate-800 px-2.5 py-1 text-xs">{DOC_STATUS[d.status] ?? d.status}</span></td>
+          {documentsResult.data?.map(d => <tr key={d.id} className="border-t border-line-strong/60 hover:bg-surface-muted">
+            <td className="px-4 py-2.5 font-medium text-ink">{customerNames.get(d.customer_id) ?? 'Cliente'}</td>
+            <td className="px-4 py-2.5 text-ink-soft">{typeNames.get(d.document_type_id) ?? 'Documento'}</td>
+            <td className="px-4 py-2.5 text-ink-soft">{d.original_file_name}</td>
+            <td className="px-4 py-2.5 text-ink-soft">v{d.version}</td>
+            <td className="px-4 py-2.5"><Badge tone={DOC_TONE[d.status] ?? 'neutral'}>{DOC_STATUS[d.status] ?? d.status}</Badge></td>
           </tr>)}
-          {!documentsResult.data?.length && <tr><td colSpan={5} className="p-8 text-center text-slate-500">Nenhum documento ainda. Escolha o cliente, o tipo e o arquivo acima. Depois, na proposta, anexe o documento ao item do checklist.</td></tr>}
+          {!documentsResult.data?.length && <tr><td colSpan={5} className="px-4 py-10 text-center text-sm text-muted">Nenhum documento ainda. Escolha o cliente, o tipo e o arquivo acima. Depois, na proposta, anexe o documento ao item do checklist.</td></tr>}
         </tbody>
       </table></div>
-    </div>
+    </Card>
   </section>
 }

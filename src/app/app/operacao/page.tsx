@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Card, PageHeader } from '@/components/ui'
 import { requireAppContext } from '@/lib/appContext'
 import { transitionOperationalCase } from './actions'
 import { atLeast } from '@/lib/rbac'
@@ -18,49 +19,48 @@ export default async function OperationsPage({ searchParams }: { searchParams: P
   ])
 
   return <section>
-    <h1 className="text-3xl font-semibold">Operação</h1>
-    <p className="mt-2 text-sm text-slate-400">Fila de digitação e esteira técnica separadas da apresentação comercial.</p>
-    {isOperationalErrorCode(sp.erro) && <p role="alert" className="mt-4 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200">{OPERATIONAL_MESSAGES[sp.erro]}</p>}
-    {sp.ok && <p role="status" className="mt-4 rounded-xl border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm text-emerald-200">Transição registrada.</p>}
-    {(casesResult.error || jobsResult.error) && <p role="alert" className="mt-4 rounded-xl border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">Não foi possível carregar toda a esteira agora. Os dados abaixo podem estar incompletos.</p>}
+    <PageHeader title="Operação" description="Fila de digitação e esteira técnica separadas da apresentação comercial." />
+    {isOperationalErrorCode(sp.erro) && <p role="alert" className="mb-4 rounded-[10px] border border-[#F3D9A4] bg-[#FDF3DC] px-4 py-3 text-sm text-[#92400E]">{OPERATIONAL_MESSAGES[sp.erro]}</p>}
+    {sp.ok && <p role="status" className="mb-4 rounded-[10px] border border-[#BBE5C8] bg-[#E3F5E9] px-4 py-3 text-sm text-[#15803D]">Transição registrada.</p>}
+    {(casesResult.error || jobsResult.error) && <p role="alert" className="mb-4 rounded-[10px] border border-[#F5C2C0] bg-[#FDE2E1] px-4 py-3 text-sm text-[#991B1B]">Não foi possível carregar toda a esteira agora. Os dados abaixo podem estar incompletos.</p>}
 
-    <div className="mt-6 grid gap-6 xl:grid-cols-2">
+    <div className="grid gap-6 xl:grid-cols-2">
       <div>
-        <div className="mb-3 flex items-center justify-between"><h2 className="font-semibold">Fila de digitação</h2><span className="text-xs text-slate-500">{jobsResult.data?.length ?? 0} ativo(s)</span></div>
+        <div className="mb-3 flex items-center justify-between"><h2 className="font-semibold text-ink">Fila de digitação</h2><span className="text-xs text-muted">{jobsResult.data?.length ?? 0} ativo(s)</span></div>
         <div className="grid gap-3">
-          {jobsResult.data?.map(j => <div key={j.id} className="rounded-xl border border-slate-800 bg-slate-900 p-5">
+          {jobsResult.data?.map(j => <Card key={j.id} className="p-5">
             <div className="flex items-center justify-between gap-3">
-              <div><div className="text-xs text-slate-500"><Link href={`/app/propostas/${j.proposal_id}`} className="hover:text-emerald-400">Proposta {j.proposal_id.slice(0, 8)}</Link></div><div className="mt-1 font-medium">{jobStatusLabel(j.status)}</div></div>
-              <div className="text-right text-xs text-slate-500"><div>Prioridade {j.priority}</div><div>Tentativas {j.attempt_count}</div></div>
+              <div><div className="text-xs text-muted"><Link href={`/app/propostas/${j.proposal_id}`} className="hover:text-brand">Proposta {j.proposal_id.slice(0, 8)}</Link></div><div className="mt-1 font-medium text-ink">{jobStatusLabel(j.status)}</div></div>
+              <div className="text-right text-xs text-muted"><div>Prioridade {j.priority}</div><div>Tentativas {j.attempt_count}</div></div>
             </div>
-            {j.last_error && <p className="mt-3 rounded-lg bg-red-500/10 p-2 text-xs text-red-300">{j.last_error}</p>}
-          </div>)}
-          {!jobsResult.data?.length && <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8 text-center text-slate-500">Fila vazia.</div>}
+            {j.last_error && <p className="mt-3 rounded-[10px] bg-[#FDE2E1] p-2 text-xs text-[#991B1B]">{j.last_error}</p>}
+          </Card>)}
+          {!jobsResult.data?.length && <Card className="p-8 text-center text-sm text-muted">Fila vazia.</Card>}
         </div>
       </div>
 
       <div>
-        <div className="mb-3 flex items-center justify-between"><h2 className="font-semibold">Casos operacionais</h2><span className="text-xs text-slate-500">{casesResult.data?.length ?? 0} caso(s)</span></div>
+        <div className="mb-3 flex items-center justify-between"><h2 className="font-semibold text-ink">Casos operacionais</h2><span className="text-xs text-muted">{casesResult.data?.length ?? 0} caso(s)</span></div>
         <div className="grid gap-3">
-          {casesResult.data?.map(c => <div key={c.id} className="rounded-xl border border-slate-800 bg-slate-900 p-5">
+          {casesResult.data?.map(c => <Card key={c.id} className="p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div><div className="text-xs text-slate-500"><Link href={`/app/propostas/${c.proposal_id}`} className="hover:text-emerald-400">Proposta {c.proposal_id.slice(0, 8)}</Link></div><div className="mt-1 font-medium">{caseStateLabel(c.canonical_state).label}</div><div className="mt-1 text-xs text-slate-400">{caseStateLabel(c.canonical_state).next}</div></div>
-              <div className="text-sm text-slate-400">{c.external_status_raw ?? 'Sem status externo'}</div>
+              <div><div className="text-xs text-muted"><Link href={`/app/propostas/${c.proposal_id}`} className="hover:text-brand">Proposta {c.proposal_id.slice(0, 8)}</Link></div><div className="mt-1 font-medium text-ink">{caseStateLabel(c.canonical_state).label}</div><div className="mt-1 text-xs text-ink-soft">{caseStateLabel(c.canonical_state).next}</div></div>
+              <div className="text-sm text-ink-soft">{c.external_status_raw ?? 'Sem status externo'}</div>
             </div>
-            {c.due_at && <div className="mt-3 text-xs text-slate-500">SLA: {new Date(c.due_at).toLocaleString('pt-BR')}</div>}
+            {c.due_at && <div className="mt-3 text-xs text-muted">SLA: {new Date(c.due_at).toLocaleString('pt-BR')}</div>}
             {!['approved','paid','rejected','cancelled'].includes(c.canonical_state) && <form action={transitionOperationalCase} className="mt-4 flex flex-wrap gap-2">
               <input type="hidden" name="case_id" value={c.id}/>
-              {c.canonical_state === 'digitization_queue' && <button name="to_state" value="digitizing" className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white">Iniciar digitação</button>}
-              {c.canonical_state === 'digitizing' && <button name="to_state" value="submitted" className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white">Marcar enviado</button>}
-              {c.canonical_state === 'submitted' && <button name="to_state" value="pending_external" className="rounded-lg bg-slate-700 px-3 py-2 text-xs font-semibold">Aguardando banco</button>}
+              {c.canonical_state === 'digitization_queue' && <button name="to_state" value="digitizing" className="inline-flex h-9 items-center rounded-[10px] bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-strong">Iniciar digitação</button>}
+              {c.canonical_state === 'digitizing' && <button name="to_state" value="submitted" className="inline-flex h-9 items-center rounded-[10px] bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-strong">Marcar enviado</button>}
+              {c.canonical_state === 'submitted' && <button name="to_state" value="pending_external" className="inline-flex h-9 items-center rounded-[10px] border border-line bg-surface px-3 text-xs font-semibold text-ink hover:bg-surface-muted">Aguardando banco</button>}
               {['submitted','pending_external'].includes(c.canonical_state) && atLeast(membership.role,'supervisor') && <>
-                <button name="to_state" value="approved" className="rounded-lg bg-emerald-500 px-3 py-2 text-xs font-semibold text-slate-950">Aprovado</button>
-                <button name="to_state" value="rejected" className="rounded-lg bg-red-500/20 px-3 py-2 text-xs font-semibold text-red-300">Rejeitado</button>
+                <button name="to_state" value="approved" className="inline-flex h-9 items-center rounded-[10px] bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-strong">Aprovado</button>
+                <button name="to_state" value="rejected" className="inline-flex h-9 items-center rounded-[10px] bg-[#FDE2E1] px-3 text-xs font-semibold text-[#991B1B]">Rejeitado</button>
               </>}
-              {atLeast(membership.role,'supervisor') && <button name="to_state" value="cancelled" className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300">Cancelar</button>}
+              {atLeast(membership.role,'supervisor') && <button name="to_state" value="cancelled" className="inline-flex h-9 items-center rounded-[10px] border border-line bg-surface px-3 text-xs text-ink-soft hover:bg-surface-muted">Cancelar</button>}
             </form>}
-          </div>)}
-          {!casesResult.data?.length && <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8 text-center text-slate-500">Nenhum caso operacional.</div>}
+          </Card>)}
+          {!casesResult.data?.length && <Card className="p-8 text-center text-sm text-muted">Nenhum caso operacional.</Card>}
         </div>
       </div>
     </div>

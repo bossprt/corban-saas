@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ClientPicker } from '@/components/ClientPicker'
 import { ArrowLeft } from 'lucide-react'
 import { SubmitButton } from '@/components/SubmitButton'
 import { Card, PageHeader } from '@/components/ui'
@@ -19,8 +20,9 @@ export default async function NewProposalPage({ searchParams }: { searchParams: 
     return <section><PageHeader title="Nova proposta" /><Card className="p-5 text-sm text-ink-soft">Seu papel não pode criar propostas.</Card></section>
   }
 
-  const [{ data: clients }, { data: sellers }, options] = await Promise.all([
-    supabase.from('clients').select('id,full_name,cpf').is('deleted_at', null).order('full_name').limit(300),
+  const clienteId = /^[0-9a-f-]{36}$/.test(sp.cliente ?? '') ? sp.cliente! : null
+  const [{ data: initialClient }, { data: sellers }, options] = await Promise.all([
+    clienteId ? supabase.from('clients').select('id,full_name,cpf').eq('id', clienteId).is('deleted_at', null).maybeSingle() : Promise.resolve({ data: null }),
     supabase.from('commercial_sellers').select('id,name').eq('is_active', true).order('name'),
     loadTableOptions(supabase),
   ])
@@ -31,13 +33,10 @@ export default async function NewProposalPage({ searchParams }: { searchParams: 
       <PageHeader title="Nova proposta" description="Simulou em outro lugar (portal do banco, planilha, outro CRM)? Registre aqui. Mesmo banco + ADE nunca duplica." />
       <Card className="max-w-3xl p-5">
         <form action={createDirectProposal} className="grid gap-4 sm:grid-cols-2">
-          <label className={`${label} sm:col-span-2`}>Cliente
-            <select name="customer_id" required defaultValue={sp.cliente ?? ''} className="field mt-1.5">
-              <option value="" disabled>Escolha o cliente</option>
-              {(clients ?? []).map(c => <option key={c.id} value={c.id}>{c.full_name} · {formatCpf(c.cpf)}</option>)}
-            </select>
-            <span className="mt-1 block text-xs text-muted">Cliente novo? Cadastre em <Link href="/app/clientes?novo=1" className="text-brand underline">Clientes</Link> primeiro.</span>
-          </label>
+          <div className={`${label} sm:col-span-2`}>Cliente
+            <ClientPicker name="customer_id" initial={initialClient ? { id: initialClient.id, name: initialClient.full_name, cpf: formatCpf(initialClient.cpf) } : null} />
+            <span className="mt-1 block text-xs font-normal text-muted">Cliente novo? Cadastre em <Link href="/app/clientes?novo=1" className="text-brand underline">Clientes</Link> primeiro.</span>
+          </div>
           <label className={`${label} sm:col-span-2`}>Banco e tabela
             <select name="table_version_id" required defaultValue="" className="field mt-1.5">
               <option value="" disabled>Escolha a tabela</option>

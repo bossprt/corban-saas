@@ -123,7 +123,7 @@ test('proposal statuses have labels and a next step; paid is evidence-only', () 
   assert.match(proposalStatusLabel('paid').label, /evidência/)
 })
 test('unknown money is "Não calculado", never R$ 0,00', () => {
-  assert.match(read('src/app/app/simulacoes/page.tsx'), /value === null \? 'Não calculado'/)
+  assert.match(read('src/app/app/simulacoes/page.tsx'), /installment_amount === null \? 'Não calculada'/)
   // The contract file (part C2) shows amounts in its form: an unknown amount is an empty field, never "0,00".
   assert.match(read('src/app/app/propostas/[id]/page.tsx'), /v === null \|\| v === undefined \? ''/)
 })
@@ -145,7 +145,7 @@ test('agent dashboard is scoped to the agent own records', () => {
 })
 test('the simulation page guides an empty organization and never shows a table UUID', () => {
   const s = read('src/app/app/simulacoes/page.tsx')
-  assert.match(s, /Nenhuma tabela comercial publicada/)
+  assert.match(s, /Nenhuma tabela publicada/)
   assert.doesNotMatch(s, /product_table_id\.slice/)
 })
 test('submit buttons disable themselves while pending on the main forms', () => {

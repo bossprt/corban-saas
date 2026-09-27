@@ -1,8 +1,7 @@
 import Link from 'next/link'
+import { Card, PageHeader } from '@/components/ui'
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
-
-const card = 'block rounded-2xl border border-slate-800 bg-slate-900 p-5 hover:border-emerald-500/40 hover:bg-slate-900/80'
 
 export default async function ReportsHubPage() {
   const { membership } = await requireAppContext()
@@ -13,9 +12,19 @@ export default async function ReportsHubPage() {
     ['Central de atenção', 'Pendências e sinais objetivos da organização.', '/app/atencao', supervisor],
   ] as const
   return <section>
-    <p className="text-sm text-emerald-400">Relatórios</p>
-    <h1 className="mt-1 text-3xl font-semibold">Relatórios e gestão</h1>
-    <p className="mt-2 max-w-3xl text-sm text-slate-400">Esta central reúne as visões gerenciais já existentes. Relatórios dedicados de produção, vendas, formalização e comissões serão incorporados aqui sem espalhar novas telas pelo menu principal.</p>
-    <div className="mt-6 grid gap-4 md:grid-cols-2">{items.filter(i => i[3]).map(([title,desc,href]) => <Link key={href} href={href} className={card}><h2 className="font-semibold">{title}</h2><p className="mt-2 text-sm text-slate-400">{desc}</p></Link>)}</div>
+    <PageHeader
+      title="Relatórios e gestão"
+      description="Esta central reúne as visões gerenciais já existentes. Relatórios dedicados de produção, vendas, formalização e comissões serão incorporados aqui sem espalhar novas telas pelo menu principal."
+    />
+    <div className="grid gap-4 md:grid-cols-2">
+      {items.filter(i => i[3]).map(([title, desc, href]) => (
+        <Link key={href} href={href} className="block">
+          <Card className="p-5 hover:bg-surface-muted">
+            <h2 className="font-semibold text-ink">{title}</h2>
+            <p className="mt-2 text-sm text-muted">{desc}</p>
+          </Card>
+        </Link>
+      ))}
+    </div>
   </section>
 }
