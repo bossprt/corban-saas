@@ -168,6 +168,7 @@ test('direct proposal runs through the pipeline to paid and counts in the goal',
   await expect(page.getByText('Escreva uma observação')).toBeVisible()
   await page.getByLabel('Mover para').selectOption('paid')
   await page.getByLabel('Observação', { exact: true }).fill('Pago no portal do Banco Teste')
+  await page.getByLabel('Pago ao cliente em').fill(new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10))
   await page.getByRole('button', { name: 'Salvar etapa' }).click()
   await expect(page.getByText('Etapa atualizada.')).toBeVisible()
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-proposta-paga.png`, fullPage: true })
@@ -863,4 +864,93 @@ test('contract C2: payout change, contract edit with recalculation, note and his
   const row = page.getByRole('row').filter({ hasText: ade })
   await expect(row).toContainText('Alterado')
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-contratos-alterados.png`, fullPage: true })
+})
+
+// Part C3 (owner decisions 26/09/2026): the seller's commission is released only when the contract is paid to the client
+// (physical: once the company received the file) and the bank's commission was received and reconciled; a payment made
+// outside Corban is registered even before the bank pays and locks the contract; Contratos filters by payout status.
+test('seller credit C3: paid date, bank reconciliation, physical milestones, outside payment', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  const today = new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10)
+  const create = async (ade: string) => {
+    await page.goto('/app/propostas/nova')
+    await page.getByLabel('Cliente').selectOption({ index: 1 })
+    await page.getByLabel('Banco e tabela').selectOption({ label: 'Banco Teste · Tabela Teste INSS (v2)' })
+    await page.getByLabel('Valor solicitado (R$)').fill('10.000,00')
+    await page.getByLabel('Prazo (meses)').fill('120')
+    await page.getByLabel('Vendedor').selectOption({ label: 'Vendedor Teste' })
+    await page.getByLabel('Já digitada no banco').check()
+    await page.getByLabel('Número da proposta no banco (ADE)').fill(ade)
+    await page.getByRole('button', { name: 'Registrar proposta' }).click()
+    await expect(page.getByText('Proposta registrada na esteira.')).toBeVisible({ timeout: 30_000 })
+  }
+  const pay = async () => {
+    await page.getByLabel('Mover para').selectOption('paid')
+    await page.getByLabel('Observação', { exact: true }).fill('Pago ao cliente')
+    await page.getByLabel('Pago ao cliente em').fill(today)
+    await page.getByRole('button', { name: 'Salvar etapa' }).click()
+    await expect(page.getByText('Etapa atualizada.')).toBeVisible({ timeout: 30_000 })
+  }
+  // The bank's à vista report with this contract (exact 600,00), confirmed by finance.
+  const receive = async (ade: string) => {
+    const back = page.url().split('?')[0]
+    const csv = `Contrato;Valor comissão;Pago em
+${ade};600,00;10/09/2026
+`
+    await page.goto('/app/financeiro/importar')
+    await page.getByLabel('Fonte pagadora').selectOption({ label: 'Banco Teste · banco' })
+    await page.getByLabel('Tipo do relatório').selectOption('upfront')
+    await page.getByLabel(/Arquivo/).setInputFiles({ name: `avista-${ade}.csv`, mimeType: 'text/csv', buffer: Buffer.from(csv, 'utf-8') })
+    await page.getByRole('button', { name: 'Ler colunas do arquivo' }).click()
+    await page.getByLabel(/Contrato \(ADE/).selectOption('Contrato')
+    await page.getByLabel(/Valor da comissão/).selectOption('Valor comissão')
+    await page.getByLabel(/Data do pagamento/).selectOption('Pago em')
+    await page.getByRole('button', { name: 'Importar para conferência' }).click()
+    await expect(page.getByText('Relatório importado.')).toBeVisible({ timeout: 20_000 })
+    await page.getByRole('button', { name: 'Confirmar e lançar recebimentos' }).click()
+    await expect(page.getByText('Relatório confirmado.')).toBeVisible({ timeout: 20_000 })
+    await page.goto(back)
+  }
+
+  // Digital, paid to the client, the bank has not paid: the owner registers a payment already made outside Corban.
+  const ade1 = `E2E-C3-${Date.now()}`
+  await create(ade1)
+  await expect(page.locator('#comissao')).toContainText('Aguardando pagamento ao cliente')
+  await pay()
+  await expect(page.locator('#comissao')).toContainText('Aguardando comissão do banco')
+  await page.getByText('Registrar pagamento feito fora do Corban').click()
+  await page.getByLabel('Pago em').fill(today)
+  await page.getByLabel('Comprovante / referência').fill('PIX E2E C3')
+  await page.getByRole('button', { name: 'Registrar pagamento' }).click()
+  await expect(page.getByText(/Pagamento feito fora do Corban registrado/)).toBeVisible({ timeout: 30_000 })
+  await expect(page.locator('#comissao')).toContainText('Pago ao vendedor em')
+  await expect(page.locator('#contrato')).toContainText('Vendedor já recebeu')
+
+  // Physical: the table says physical; the credit waits for the file received by the company.
+  await page.goto('/app/comercial/tabelas?nome=Tabela+Teste+INSS')
+  await page.getByRole('link', { name: 'Tabela Teste INSS', exact: true }).click()
+  await page.getByLabel('Formalização dos contratos').selectOption('physical')
+  await page.getByRole('button', { name: 'Salvar formalização' }).click()
+  await expect(page.getByText('Formalização da tabela salva.')).toBeVisible({ timeout: 30_000 })
+  const ade2 = `E2E-C3F-${Date.now()}`
+  await create(ade2)
+  await pay()
+  await expect(page.locator('#comissao')).toContainText('Aguardando o físico')
+  await page.locator('#fisico').getByRole('button', { name: 'Registrar' }).click()
+  await expect(page.getByText('Físico registrado.')).toBeVisible({ timeout: 30_000 })
+  await expect(page.locator('#comissao')).toContainText('Aguardando comissão do banco')
+  await receive(ade2)
+  await expect(page.locator('#comissao')).toContainText('Liberado R$ 300,00')
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-contrato-c3.png`, fullPage: true })
+
+  await page.goto(`/app/contratos?repasse=pago&q=${ade1}`)
+  await expect(page.getByRole('row').filter({ hasText: ade1 })).toContainText('pago em')
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-contratos-repasse.png`, fullPage: true })
+
+  // Back to digital, so the other tests keep their table as they expect it.
+  await page.goto('/app/comercial/tabelas?nome=Tabela+Teste+INSS')
+  await page.getByRole('link', { name: 'Tabela Teste INSS', exact: true }).click()
+  await page.getByLabel('Formalização dos contratos').selectOption('digital')
+  await page.getByRole('button', { name: 'Salvar formalização' }).click()
+  await expect(page.getByText('Formalização da tabela salva.')).toBeVisible({ timeout: 30_000 })
 })

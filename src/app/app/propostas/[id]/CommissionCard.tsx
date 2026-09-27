@@ -5,7 +5,7 @@ import { add, fromDecimalString, mul, sub, toDecimalString, type Rational } from
 import { decimalBr } from '@/lib/commission/tableValues'
 import { brlText } from '@/lib/receipts/format'
 import { calculateCommission } from './commission-actions'
-import { setPayoutOverride } from './contract-actions'
+import { registerExternalPayout, setPayoutOverride } from './contract-actions'
 
 type Supa = Awaited<ReturnType<typeof import('@/lib/appContext').requireAppContext>>['supabase']
 type Line = { component_key: string; part: string; multiplier: number; line_kind: string; amount: string }
@@ -35,7 +35,7 @@ type Mine = { calculated: boolean; calculated_at?: string; mine?: boolean; payab
 // The contract commission (parts C1/C2). Finance sees, per commission type, what the company receives, tax, IR, the
 // seller by the rule and what is payable (the owner's or a manager's change, with reason), supervisor, manager and the
 // margin. Anyone else sees only what they receive, on their own contracts (ADR-0031).
-export async function CommissionCard({ supabase, access, proposalId, closed, canOverride }: { supabase: Supa; access: Access | null; proposalId: string; closed: boolean; canOverride: boolean }) {
+export async function CommissionCard({ supabase, access, proposalId, closed, canOverride, owner = false }: { supabase: Supa; access: Access | null; proposalId: string; closed: boolean; canOverride: boolean; owner?: boolean }) {
   const finance = can(access, 'financeiro.view')
   let calc: Calc | null = null
   let lines: Line[] = []
@@ -60,6 +60,9 @@ export async function CommissionCard({ supabase, access, proposalId, closed, can
     if (mine?.calculated && mine.calculated_at) calc = { id: '', calculated_at: mine.calculated_at }
   }
   const received = payouts.some(p => p.locked)
+  // Where the seller's payout stands (part C3): waiting, credited, paid.
+  const { data: creditRows } = finance && calc ? await supabase.rpc('contract_credit', { p_proposal: proposalId }) : { data: [] }
+  const credit = ((creditRows ?? []) as { waiting: string | null; credited: string; paid_on: string | null; reference: string | null }[])[0]
   // The last automatic calculation that failed, when there is no calculation.
   const { data: failure } = !calc ? await supabase.from('contract_events').select('detail').eq('proposal_id', proposalId).eq('kind', 'calc_failed').order('created_at', { ascending: false }).limit(1).maybeSingle() : { data: null }
   const failureCode = String((failure?.detail as { code?: string } | null)?.code ?? '')
@@ -144,6 +147,31 @@ export async function CommissionCard({ supabase, access, proposalId, closed, can
               </table>
             </div>
             {anyOverride && <p className="mt-2 text-[13px] text-ink-soft">Ganho da empresa com a alteração do repasse: <strong className="text-ink">{money(sumRows('gain'))}</strong></p>}
+            {credit && (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-line px-4 py-3 text-sm">
+                <span className="flex flex-wrap items-center gap-2">Repasse do vendedor:
+                  {credit.paid_on ? <Badge tone="received">Pago ao vendedor em {new Date(`${credit.paid_on}T12:00:00Z`).toLocaleDateString('pt-BR')}</Badge>
+                    : credit.waiting === 'client' ? <Badge tone="neutral">Aguardando pagamento ao cliente</Badge>
+                    : credit.waiting === 'physical' ? <Badge tone="pending">Aguardando o físico</Badge>
+                    : credit.waiting === 'bank' ? <Badge tone="pending">Aguardando comissão do banco</Badge>
+                    : credit.waiting === 'divergent' ? <Badge tone="pending">Comissão do banco divergente · aguardando financeiro</Badge>
+                    : credit.waiting === 'calculation' ? <Badge tone="neutral">Aguardando cálculo</Badge>
+                    : <Badge tone="brand">Liberado {brlText(String(credit.credited))} · a pagar no fechamento</Badge>}
+                  {credit.reference && <span className="text-xs text-muted">({credit.reference})</span>}
+                </span>
+                {owner && !credit.paid_on && credit.waiting !== 'client' && credit.waiting !== 'calculation' && (
+                  <details className="w-full sm:w-auto">
+                    <summary className="cursor-pointer text-xs text-muted underline hover:text-ink">Registrar pagamento feito fora do Corban</summary>
+                    <form action={registerExternalPayout} className="mt-2 flex flex-wrap items-end gap-2">
+                      <input type="hidden" name="proposal_id" value={proposalId} />
+                      <label className={lbl}>Pago em<input type="date" name="paid_on" required className="field mt-1.5" /></label>
+                      <label className={lbl}>Comprovante / referência<input name="reference" required minLength={3} maxLength={120} className="field mt-1.5" /></label>
+                      <SubmitButton className="h-10 rounded-[10px] border border-line-strong bg-surface px-4 text-sm text-ink hover:bg-surface-muted" pendingText="...">Registrar pagamento</SubmitButton>
+                    </form>
+                  </details>
+                )}
+              </div>
+            )}
 
             {canOverride && !received && rows.length > 0 && (
               <div className="mt-4 grid gap-2 border-t border-line pt-4">

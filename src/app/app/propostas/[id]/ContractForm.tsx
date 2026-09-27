@@ -10,6 +10,7 @@ type Option = { id: string; label: string }
 export type ContractData = {
   id: string; table_version_id: string | null; seller_id: string | null; requested: string; released: string; installment: string; term: string
   ade: string | null
+  formalization: string; paid_to_client_on: string | null
 }
 const lbl = 'text-[13px] font-medium text-ink-soft'
 
@@ -49,7 +50,9 @@ export function ContractForm({ c, tables, sellers, canEdit, paid, received }: {
           <label className={lbl}>Valor líquido (R$)<input name="released_amount" inputMode="decimal" defaultValue={c.released} className="field mt-1.5" /></label>
           <label className={lbl}>Parcela (R$)<input name="installment_amount" inputMode="decimal" defaultValue={c.installment} className="field mt-1.5" /></label>
           <label className={lbl}>Prazo (meses)<input name="term" inputMode="numeric" defaultValue={c.term} className="field mt-1.5" /></label>
-          <div className={`${lbl} md:col-span-2`}>Nº no banco (ADE)<div className="field mt-1.5 flex items-center bg-surface-muted font-mono">{c.ade ?? '—'}</div></div>
+          <label className={lbl}>Formalização<select name="formalization" defaultValue={c.formalization} className="field mt-1.5"><option value="digital">Digital</option><option value="physical">Física</option></select></label>
+          {paid && <label className={lbl}>Pago ao cliente em<input type="date" name="paid_to_client_on" defaultValue={c.paid_to_client_on ?? ''} className="field mt-1.5" /></label>}
+          <div className={`${lbl} ${paid ? '' : 'md:col-span-2'}`}>Nº no banco (ADE)<div className="field mt-1.5 flex items-center bg-surface-muted font-mono">{c.ade ?? '—'}</div></div>
           {editing && <label className={`${lbl} md:col-span-2`}>Motivo{paid ? ' (obrigatório: contrato pago)' : ''}
             <input name="reason" required={paid} minLength={paid ? 3 : undefined} maxLength={2000} placeholder="Ex.: prazo digitado errado" className="field mt-1.5" />
           </label>}

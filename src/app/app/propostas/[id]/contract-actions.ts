@@ -23,6 +23,7 @@ const dbCode = (m: string, fallback: FeedbackCode): FeedbackCode =>
     : /seller_not_found/.test(m) ? 'erro:contrato_vendedor'
     : /invalid_amount/.test(m) ? 'erro:valor_invalido'
     : /invalid_term/.test(m) ? 'erro:prazo_invalido'
+    : /invalid_paid_on/.test(m) ? 'erro:pago_data'
     : /condition_not_found/.test(m) ? 'erro:comissao_sem_condicao'
     : /condition_ambiguous/.test(m) ? 'erro:comissao_ambigua'
     : /calculation_base_missing/.test(m) ? 'erro:comissao_sem_base'
@@ -44,8 +45,10 @@ export async function updateContract(f: FormData) {
   if (requested === 'invalid' || released === 'invalid' || installment === 'invalid' || (!requested && !released)) return back(id, 'erro:valor_invalido', '#contrato')
   const termText = text(f, 'term')
   if (termText && !/^\d{1,3}$/.test(termText)) return back(id, 'erro:prazo_invalido', '#contrato')
+  const formalization = text(f, 'formalization'), paidOn = text(f, 'paid_to_client_on')
+  if (!['digital', 'physical'].includes(formalization) || (paidOn && !/^\d{4}-\d{2}-\d{2}$/.test(paidOn))) return back(id, 'erro:requisicao_invalida', '#contrato')
   const data = {
-    table_version_id: table, seller_id: seller, term: termText,
+    table_version_id: table, seller_id: seller, term: termText, formalization, ...(paidOn ? { paid_to_client_on: paidOn } : {}),
     requested_amount: requested ?? '', released_amount: released ?? '', installment_amount: installment ?? '',
   }
   const { error } = await supabase.rpc('update_contract', { p_proposal: id, p_data: data, p_reason: text(f, 'reason') || null })
@@ -83,4 +86,35 @@ export async function addContractNote(f: FormData) {
   const { error } = await supabase.rpc('add_contract_note', { p_proposal: id, p_text: note })
   if (error) return back(id, classifyDbFeedback(error), '#historico')
   return back(id, 'ok:observacao_salva', '#historico')
+}
+
+// Part C3: one physical milestone (received by the company, sent to the bank, received by the bank), in order.
+export async function setContractPhysical(f: FormData) {
+  const id = text(f, 'proposal_id')
+  if (!isUuid(id)) return redirect('/app/contratos')
+  const step = text(f, 'step'), at = text(f, 'at')
+  if (!['received', 'sent', 'bank'].includes(step) || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(at)) return back(id, 'erro:fisico_data', '#fisico')
+  const { supabase } = await requireAppContext()
+  // datetime-local is Brazil's local time (UTC-3).
+  const { error } = await supabase.rpc('set_contract_physical', { p_proposal: id, p_step: step, p_at: `${at}:00-03:00` })
+  if (error) {
+    const m = error.message ?? ''
+    return back(id, /out_of_order/.test(m) ? 'erro:fisico_ordem' : /invalid_physical_date/.test(m) ? 'erro:fisico_data' : classifyDbFeedback(error), '#fisico')
+  }
+  return back(id, 'ok:fisico_registrado', '#fisico')
+}
+
+// Part C3: a payment of this contract's commission already made outside Corban (owner only).
+export async function registerExternalPayout(f: FormData) {
+  const id = text(f, 'proposal_id')
+  if (!isUuid(id)) return redirect('/app/contratos')
+  const paidOn = text(f, 'paid_on'), reference = text(f, 'reference')
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(paidOn) || reference.length < 3) return back(id, 'erro:repasse_comprovante', '#comissao')
+  const { supabase } = await requireAppContext()
+  const { error } = await supabase.rpc('register_external_payout', { p_proposal: id, p_paid_on: paidOn, p_reference: reference })
+  if (error) {
+    const m = error.message ?? ''
+    return back(id, /nothing_to_pay/.test(m) ? 'erro:repasse_nada_a_pagar' : /invalid_paid_on|reference_required/.test(m) ? 'erro:repasse_comprovante' : classifyDbFeedback(error), '#comissao')
+  }
+  return back(id, 'ok:repasse_pago_fora', '#comissao')
 }

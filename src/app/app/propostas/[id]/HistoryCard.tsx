@@ -14,11 +14,12 @@ const STATE: Record<string, string> = {
   digitization_queue: 'Aguardando digitação', digitizing: 'Em digitação', submitted: 'Em análise', pending_external: 'Pendência',
   approved: 'Aprovado', paid: 'Pago ao cliente', rejected: 'Recusado', cancelled: 'Cancelado',
 }
-const FIELD: Record<string, string> = { table_version_id: 'Tabela', seller_id: 'Vendedor', requested_amount: 'Valor bruto', released_amount: 'Valor líquido', installment_amount: 'Parcela', term: 'Prazo' }
+const FIELD: Record<string, string> = { table_version_id: 'Tabela', seller_id: 'Vendedor', requested_amount: 'Valor bruto', released_amount: 'Valor líquido', installment_amount: 'Parcela', term: 'Prazo', formalization: 'Formalização', paid_to_client_on: 'Pago ao cliente em' }
 const COMPONENT: Record<string, string> = { upfront: 'à vista', deferred: 'diferido', bonus_1: 'bônus 1', bonus_2: 'bônus 2', bonus_3: 'bônus 3', plastic: 'plástico', insurance_fixed: 'seguro' }
 const money = (v: unknown) => (v === null || v === undefined || v === '' ? '—' : brlText(String(v)))
 const fieldValue = (k: string, side: unknown, label?: unknown) =>
-  k.endsWith('_amount') ? money(side) : k === 'term' ? (side ? `${String(side)}x` : '—') : String(label ?? '—')
+  k.endsWith('_amount') ? money(side) : k === 'term' ? (side ? `${String(side)}x` : '—')
+    : k === 'formalization' ? (side === 'physical' ? 'Física' : 'Digital') : k === 'paid_to_client_on' ? (side ? new Date(`${String(side)}T12:00:00Z`).toLocaleDateString('pt-BR') : '—') : String(label ?? '—')
 
 function describe(e: ContractEvent): string {
   const d = e.detail ?? {}
@@ -35,6 +36,8 @@ function describe(e: ContractEvent): string {
   }
   if (e.kind === 'payout_override_cleared') return `Repasse do vendedor (${COMPONENT[String(d.component)] ?? d.component}) voltou para a regra: ${money(d.payable)}`
   if (e.kind === 'recalculated') return 'Comissão recalculada'
+  if (e.kind === 'physical') return `${({ received: 'Físico recebido pela empresa', sent: 'Físico enviado ao banco', bank: 'Físico recepcionado pelo banco' } as Record<string, string>)[String(d.step)] ?? 'Físico'} em ${new Date(String(d.at)).toLocaleString('pt-BR')}`
+  if (e.kind === 'external_payout') return `Repasse pago fora do Corban: ${money(d.amount)} em ${new Date(`${String(d.paid_on)}T12:00:00Z`).toLocaleDateString('pt-BR')}`
   if (e.kind === 'calc_failed') return `Comissão não calculada: ${CALC_FAILURE[String(d.code)] ?? String(d.code ?? '')}`
   return e.kind
 }
@@ -48,7 +51,7 @@ export async function HistoryCard({ supabase, proposalId }: { supabase: Supa; pr
     oc ? supabase.from('operational_events').select('id,from_state,to_state,actor_user_id,metadata,occurred_at').eq('operational_case_id', oc.id).order('occurred_at', { ascending: false }).limit(200) : Promise.resolve({ data: [] }),
   ])
   const items = [
-    ...((events ?? []) as ContractEvent[]).map(e => ({ id: `c-${e.id}`, at: e.created_at, actor: e.actor_user_id, title: e.kind === 'note' ? 'Observação' : e.kind === 'edit' ? 'Contrato alterado' : e.kind.startsWith('payout') ? 'Repasse alterado' : 'Comissão', text: describe(e), reason: e.kind === 'note' ? null : e.reason })),
+    ...((events ?? []) as ContractEvent[]).map(e => ({ id: `c-${e.id}`, at: e.created_at, actor: e.actor_user_id, title: e.kind === 'note' ? 'Observação' : e.kind === 'edit' ? 'Contrato alterado' : e.kind.startsWith('payout') ? 'Repasse alterado' : e.kind === 'physical' ? 'Físico' : e.kind === 'external_payout' ? 'Repasse pago' : 'Comissão', text: describe(e), reason: e.kind === 'note' ? null : e.reason })),
     ...((stages ?? []) as StageEvent[]).map(s => ({ id: `s-${s.id}`, at: s.occurred_at, actor: s.actor_user_id, title: 'Esteira', text: `${s.from_state ? `${STATE[s.from_state] ?? s.from_state} → ` : ''}${STATE[s.to_state ?? ''] ?? s.to_state ?? ''}`, reason: typeof s.metadata?.note === 'string' ? s.metadata.note : null })),
   ].sort((a, b) => b.at.localeCompare(a.at))
   const who = await memberEmails(items.map(i => i.actor).filter((x): x is string => !!x))

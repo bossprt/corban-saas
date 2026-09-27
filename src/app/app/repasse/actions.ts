@@ -78,7 +78,10 @@ export async function closePeriod(formData: FormData) {
   const { supabase, organization } = await requireAppContext()
   const end = String(formData.get('period_end') ?? '')
   if (!/^\d{4}-\d{2}-\d{2}$/.test(end)) return go('/app/repasse', 'erro:repasse_dados')
-  const { error } = await supabase.rpc('close_payout_period', { p_org: organization.id, p_period_end: end })
+  const freq = String(formData.get('frequency') ?? '')
+  if (!['daily', 'weekly', 'biweekly', 'monthly'].includes(freq)) return go('/app/repasse', 'erro:repasse_dados')
+  // Part C3: one frequency at a time (each seller has theirs).
+  const { error } = await supabase.rpc('close_payout_period', { p_org: organization.id, p_period_end: end, p_frequency: freq })
   if (error) return fail('/app/repasse', error)
   revalidatePath('/app/repasse')
   return go('/app/repasse', 'ok:periodo_fechado')

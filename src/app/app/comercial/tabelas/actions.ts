@@ -25,6 +25,15 @@ export async function renameTable(f: FormData) {
   return go(tablePage(id), error ? classifyDbFeedback(error) : 'ok:tabela_renomeada')
 }
 
+// Part C3: whether the table's contracts are digital or physical (the default each new contract takes).
+export async function setTableFormalization(f: FormData) {
+  const id = text(f, 'table_id'), value = text(f, 'formalization')
+  if (!isUuid(id) || !['digital', 'physical'].includes(value)) return go(LIST, 'erro:requisicao_invalida')
+  const ctx = await manager(); if (!ctx) return go(tablePage(id), 'erro:sem_permissao')
+  const { error } = await ctx.supabase.rpc('set_table_formalization', { p_table: id, p_formalization: value })
+  return go(`${tablePage(id)}#nome`, error ? classifyDbFeedback(error) : 'ok:tabela_formalizacao')
+}
+
 // $ Start a new "vigência" as a copy of the chosen one (or open the draft that already exists).
 export async function cloneVersion(f: FormData) {
   const id = text(f, 'table_id'), version = text(f, 'version_id')
