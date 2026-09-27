@@ -1,4 +1,4 @@
--- Contract test for 20260927100000_import_formalization_v1 (ADR-0041): the "Tipo de formalização" of an imported row
+-- Contract test for 20260927041919_import_formalization_v1 (ADR-0041): the "Tipo de formalização" of an imported row
 -- sets the table's formalization; a row without it leaves the table as it is; any other value is refused. A contract
 -- whose seller was already paid can still have its formalization corrected, and nothing else.
 -- One transaction, rolled back.  psql -v ON_ERROR_STOP=1 -f tests/security/import-formalization-contract.sql
