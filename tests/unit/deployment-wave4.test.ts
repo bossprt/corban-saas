@@ -117,7 +117,7 @@ test('preflight: origin shape, https in production, swapped keys, leaked NEXT_PU
   assert.equal(worstLevel(preflight({ ...GOOD, SUPABASE_SERVICE_ROLE_KEY: 'anon' }, ALL_FILES, 'v22.0.0')), 'BLOCKED')
   assert.equal(worstLevel(preflight({ ...GOOD, NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY: 'x' }, ALL_FILES, 'v22.0.0')), 'BLOCKED')
   assert.equal(worstLevel(preflight(GOOD, ALL_FILES, 'v18.0.0')), 'BLOCKED')
-  assert.equal(worstLevel(preflight(GOOD, p => p !== 'proxy.ts', 'v22.0.0')), 'BLOCKED')
+  assert.equal(worstLevel(preflight(GOOD, p => p !== 'src/proxy.ts', 'v22.0.0')), 'BLOCKED')
   assert.equal(worstLevel(preflight({ ...GOOD, NODE_ENV: 'development', NEXT_PUBLIC_SITE_URL: undefined }, ALL_FILES, 'v22.0.0')), 'WARN')
 })
 test('every file the preflight requires really exists', () => { for (const f of REQUIRED_FILES) assert.ok(existsSync(join(process.cwd(), f)), f) })

@@ -37,6 +37,8 @@ export async function updateSession(request: NextRequest) {
     !user &&
     !request.nextUrl.pathname.startsWith('/login') &&
     !request.nextUrl.pathname.startsWith('/auth') &&
+    // API routes check the session themselves and answer 401 (a redirect to an HTML page breaks fetch callers)
+    !request.nextUrl.pathname.startsWith('/api/') &&
     // liveness/readiness probe: returns no data, secrets or configuration values
     request.nextUrl.pathname !== '/api/health'
   ) {
