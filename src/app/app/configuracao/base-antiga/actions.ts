@@ -1,21 +1,15 @@
 'use server'
 
-import { createHash } from 'crypto'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
 import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedback'
 import { isUuid } from '@/lib/team'
-import { readReceiptFile, splitHeader } from '@/lib/receipts/parse'
-import { buildLegacyRows, guessLegacyMapping, LEGACY_FIELDS, type LegacyMapping } from '@/lib/legacy/parse'
+import { buildLegacyRows, LEGACY_FIELDS, type LegacyMapping } from '@/lib/legacy/parse'
 
 const PATH = '/app/configuracao/base-antiga'
-const BLOCK = 1000
-const FILE_ERROR: Record<string, string> = {
-  empty_file: 'O arquivo está vazio.', file_too_large: 'Arquivo acima de 10 MB.', unsupported_file: 'Formato não aceito. Envie XLSX, XLS ou CSV.',
-  xlsx_unreadable: 'Não foi possível ler a planilha.', no_header: 'Não encontrei a linha de títulos das colunas.',
-}
+const BLOCK = 500
 const back = (code: FeedbackCode, path = PATH): never => { revalidatePath(PATH); return redirect(feedbackUrl(path, code)) }
 const legacyError = (e: { message?: string; code?: string }): FeedbackCode => {
   const m = String(e.message ?? '')
@@ -27,17 +21,6 @@ const legacyError = (e: { message?: string; code?: string }): FeedbackCode => {
   return classifyDbFeedback(e)
 }
 
-async function readUpload(formData: FormData) {
-  const file = formData.get('file')
-  if (!(file instanceof File) || file.size === 0) return { error: FILE_ERROR.empty_file } as const
-  const bytes = new Uint8Array(await file.arrayBuffer())
-  const read = await readReceiptFile(bytes, file.name)
-  if (read.error) return { error: FILE_ERROR[read.error] ?? 'Não foi possível ler o arquivo.' } as const
-  const sheet = splitHeader(read.rows)
-  if (!sheet) return { error: FILE_ERROR.no_header } as const
-  return { file, sheet, sha: createHash('sha256').update(bytes).digest('hex') } as const
-}
-
 export async function saveLegacyCutoff(formData: FormData) {
   const { supabase, membership } = await requireAppContext()
   if (membership.role !== 'admin') return back('erro:sem_permissao')
@@ -47,47 +30,40 @@ export async function saveLegacyCutoff(formData: FormData) {
   return back(error ? legacyError(error) : 'ok:legado_corte')
 }
 
-export type LegacyInspect = { ok: false; error: string } | { ok: true; headers: string[]; sample: string[][]; rowCount: number; mapping: LegacyMapping }
-
-// Step 1: reads the file and pre-selects the columns. Nothing is stored.
-export async function inspectLegacyFile(formData: FormData): Promise<LegacyInspect> {
-  const { membership } = await requireAppContext()
-  if (!atLeast(membership.role, 'manager')) return { ok: false, error: 'Seu perfil não importa a base antiga.' }
-  const up = await readUpload(formData)
-  if ('error' in up) return { ok: false, error: up.error! }
-  return { ok: true, headers: up.sheet.headers, sample: up.sheet.body.filter(r => r.some(c => String(c).trim())).slice(0, 5), rowCount: up.sheet.body.length, mapping: guessLegacyMapping(up.sheet.headers) }
+export type LegacyChunk = {
+  batch: string | null; source: string; fileName: string; sha: string
+  // Only the chosen columns travel; headerRow + offset keeps the line numbers of the original file.
+  headers: string[]; headerRow: number; offset: number; rows: string[][]; mapping: LegacyMapping
 }
+export type LegacyChunkResult = { ok: true; batch: string } | { ok: false; error: string }
 
-// Step 2: stages every row (in blocks) into a draft batch and opens its preview.
-export async function stageLegacyFile(formData: FormData): Promise<{ ok: false; error: string }> {
+// The browser reads the file and sends it in blocks: each block is staged into the same draft batch. Nothing reaches
+// clients or contracts until the batch is confirmed on the preview screen.
+export async function stageLegacyChunk(c: LegacyChunk): Promise<LegacyChunkResult> {
   const { supabase, membership } = await requireAppContext()
   if (!atLeast(membership.role, 'manager')) return { ok: false, error: 'Seu perfil não importa a base antiga.' }
-  const source = String(formData.get('source') ?? '').trim().toLowerCase()
+  const source = String(c?.source ?? '').trim().toLowerCase()
   if (!/^[a-z0-9_-]{2,30}$/.test(source)) return { ok: false, error: 'Informe o sistema de origem (ex.: 2tech).' }
+  if (c.batch !== null && !isUuid(c.batch)) return { ok: false, error: 'Importação inválida. Comece de novo.' }
+  if (!/^[0-9a-f]{64}$/.test(String(c.sha)) || !Array.isArray(c.headers) || c.headers.length > LEGACY_FIELDS.length || !Array.isArray(c.rows) || c.rows.length > BLOCK
+      || !Number.isInteger(c.headerRow) || !Number.isInteger(c.offset) || c.offset < 0) return { ok: false, error: 'Não foi possível ler o arquivo. Comece de novo.' }
   const mapping: LegacyMapping = {}
-  for (const f of LEGACY_FIELDS) { const v = String(formData.get(`col_${f.key}`) ?? '').trim(); if (v) mapping[f.key] = v }
+  for (const f of LEGACY_FIELDS) { const v = String(c.mapping?.[f.key] ?? '').trim(); if (v) mapping[f.key] = v }
   if (!mapping.cpf) return { ok: false, error: 'Indique a coluna do CPF.' }
-  const up = await readUpload(formData)
-  if ('error' in up) return { ok: false, error: up.error! }
-  if (Object.values(mapping).some(h => h && !up.sheet.headers.includes(h))) return { ok: false, error: 'Uma coluna escolhida não existe neste arquivo.' }
-  const rows = buildLegacyRows(up.sheet, mapping)
-  if (!rows.length) return { ok: false, error: 'O arquivo não tem linhas.' }
-
-  let batch: string | null = null
-  for (let i = 0; i < rows.length; i += BLOCK) {
-    const { data, error } = await supabase.rpc('stage_legacy_rows', {
-      p_org: membership.organization_id, p_batch: batch, p_source: source, p_file_name: up.file.name.slice(0, 200), p_file_sha256: up.sha, p_rows: rows.slice(i, i + BLOCK),
-    })
-    if (error) {
-      const m = String(error.message ?? '')
-      if (m.includes('legacy_cutoff_required')) return { ok: false, error: 'Defina antes a data de corte.' }
-      if (m.includes('legacy_file_already_imported')) return { ok: false, error: 'Este arquivo já foi importado (ou está em conferência).' }
-      return { ok: false, error: 'Não foi possível ler as linhas do arquivo.' }
-    }
-    batch = data as string
+  if (Object.values(mapping).some(h => h && !c.headers.includes(h))) return { ok: false, error: 'Uma coluna escolhida não existe neste arquivo.' }
+  const rows = buildLegacyRows({ headers: c.headers.map(String), body: c.rows.map(r => (Array.isArray(r) ? r : []).map(v => String(v ?? ''))), headerRow: c.headerRow + c.offset }, mapping)
+  if (!rows.length) return c.batch ? { ok: true, batch: c.batch } : { ok: false, error: 'O arquivo não tem linhas.' }
+  const { data, error } = await supabase.rpc('stage_legacy_rows', {
+    p_org: membership.organization_id, p_batch: c.batch, p_source: source, p_file_name: String(c.fileName ?? '').slice(0, 200) || 'arquivo', p_file_sha256: c.sha, p_rows: rows,
+  })
+  if (error) {
+    const m = String(error.message ?? '')
+    if (m.includes('legacy_cutoff_required')) return { ok: false, error: 'Defina antes a data de corte.' }
+    if (m.includes('legacy_file_already_imported')) return { ok: false, error: 'Este arquivo já foi importado (ou está em conferência).' }
+    return { ok: false, error: 'Não foi possível ler as linhas do arquivo.' }
   }
   revalidatePath(PATH)
-  redirect(feedbackUrl(`${PATH}/${batch}`, 'ok:legado_em_conferencia'))
+  return { ok: true, batch: data as string }
 }
 
 const batchId = (f: FormData) => { const id = String(f.get('batch_id') ?? ''); return isUuid(id) ? id : null }

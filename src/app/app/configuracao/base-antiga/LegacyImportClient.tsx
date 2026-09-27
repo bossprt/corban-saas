@@ -1,41 +1,60 @@
 'use client'
 
 import { useState } from 'react'
-import { inspectLegacyFile, stageLegacyFile, type LegacyInspect } from './actions'
-import { LEGACY_FIELDS } from '@/lib/legacy/fields'
+import { useRouter } from 'next/navigation'
+import { stageLegacyChunk } from './actions'
+import { guessLegacyMapping, LEGACY_FIELDS } from '@/lib/legacy/fields'
+import { readLegacyFileInBrowser, type LegacySheet } from '@/lib/legacy/browser-read'
+import { feedbackUrl } from '@/lib/feedback'
 
 const label = 'text-[13px] font-medium text-ink-soft'
+const BLOCK = 500
 
-// Two steps on the same file: read the columns (nothing stored), then send every row to the preview.
+// The browser reads the file (any size) and shows its columns; then only the chosen columns go to the server, in blocks
+// of 500 lines, into one draft batch whose preview opens at the end. Nothing is written until the preview is confirmed.
 export function LegacyImportClient() {
+  const router = useRouter()
   const [file, setFile] = useState<File | null>(null)
   const [source, setSource] = useState('2tech')
-  const [inspect, setInspect] = useState<Extract<LegacyInspect, { ok: true }> | null>(null)
+  const [sheet, setSheet] = useState<LegacySheet | null>(null)
   const [cols, setCols] = useState<Record<string, string>>({})
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [progress, setProgress] = useState('')
 
   async function readColumns() {
     if (!file) { setError('Escolha o arquivo.'); return }
-    setBusy(true); setError(''); setInspect(null)
+    setBusy(true); setError(''); setSheet(null); setProgress('Lendo o arquivo...')
     try {
-      const fd = new FormData(); fd.set('file', file)
-      const r = await inspectLegacyFile(fd)
-      if (!r.ok) { setError(r.error); return }
-      setInspect(r)
-      setCols(Object.fromEntries(Object.entries(r.mapping).filter(([, v]) => v)) as Record<string, string>)
-    } finally { setBusy(false) }
+      const r = await readLegacyFileInBrowser(file)
+      if ('error' in r) { setError(r.error); return }
+      setSheet(r)
+      setCols(Object.fromEntries(Object.entries(guessLegacyMapping(r.headers)).filter(([, v]) => v)) as Record<string, string>)
+    } catch {
+      setError('Não foi possível ler o arquivo.')
+    } finally { setBusy(false); setProgress('') }
   }
 
   async function send() {
+    if (!sheet || !file) return
     setBusy(true); setError('')
     try {
-      const fd = new FormData(); fd.set('file', file!); fd.set('source', source)
-      for (const f of LEGACY_FIELDS) fd.set(`col_${f.key}`, cols[f.key] ?? '')
-      const r = await stageLegacyFile(fd)
-      // On success the action opens the preview; only failures come back here.
-      if (r && !r.ok) setError(r.error)
-    } finally { setBusy(false) }
+      const chosen = [...new Set(Object.values(cols).filter(Boolean))]
+      const index = chosen.map(h => sheet.headers.indexOf(h))
+      const mapping = Object.fromEntries(LEGACY_FIELDS.map(f => [f.key, cols[f.key] ?? '']).filter(([, v]) => v))
+      let batch: string | null = null
+      for (let i = 0; i < sheet.body.length; i += BLOCK) {
+        setProgress(`Enviando linhas ${i + 1} a ${Math.min(i + BLOCK, sheet.body.length)} de ${sheet.body.length}...`)
+        const rows = sheet.body.slice(i, i + BLOCK).map(r => index.map(j => r[j] ?? ''))
+        const r = await stageLegacyChunk({ batch, source, fileName: file.name, sha: sheet.sha, headers: chosen, headerRow: sheet.headerRow, offset: i, rows, mapping })
+        if (!r.ok) { setError(r.error); return }
+        batch = r.batch
+      }
+      if (!batch) { setError('O arquivo não tem linhas.'); return }
+      router.push(feedbackUrl(`/app/configuracao/base-antiga/${batch}`, 'ok:legado_em_conferencia'))
+    } catch {
+      setError('A conexão caiu no meio do envio. As linhas já enviadas ficaram em conferência: descarte essa importação e envie de novo.')
+    } finally { setBusy(false); setProgress('') }
   }
 
   return (
@@ -45,38 +64,33 @@ export function LegacyImportClient() {
           <input value={source} onChange={e => setSource(e.target.value)} maxLength={30} className="field mt-1.5" />
         </label>
         <label className={label}>Arquivo exportado (XLSX, XLS ou CSV)
-          <input type="file" accept=".xlsx,.xls,.csv,.txt" onChange={e => { setFile(e.target.files?.[0] ?? null); setInspect(null) }} className="field mt-1.5" />
+          <input type="file" accept=".xlsx,.xls,.csv,.txt" onChange={e => { setFile(e.target.files?.[0] ?? null); setSheet(null); setError('') }} className="field mt-1.5" />
         </label>
       </div>
       <div className="flex justify-end">
         <button type="button" onClick={readColumns} disabled={busy || !file} className="h-10 rounded-[10px] border border-line bg-surface px-4 text-sm font-medium hover:bg-surface-muted disabled:opacity-50">Ler colunas do arquivo</button>
       </div>
 
-      {inspect && (
+      {sheet && (
         <div className="grid gap-4 border-t border-line pt-5">
-          <p className="text-sm text-ink">{inspect.rowCount} linha(s) após os títulos. Diga qual coluna é qual; as que o sistema reconheceu já vêm marcadas.</p>
+          <p className="text-sm text-ink">{sheet.body.filter(r => r.some(c => c !== "")).length} linha(s) após os títulos. Diga qual coluna é qual; as que o sistema reconheceu já vêm marcadas.</p>
           <div className="grid gap-4 sm:grid-cols-3">
             {LEGACY_FIELDS.map(f => (
               <label key={f.key} className={label}>{f.label}{f.required && ' *'}
                 <select value={cols[f.key] ?? ''} onChange={e => setCols(c => ({ ...c, [f.key]: e.target.value }))} className="field mt-1.5">
                   <option value="">{f.required ? 'Escolha a coluna' : 'Não tem'}</option>
-                  {inspect.headers.filter(Boolean).map(h => <option key={h} value={h}>{h}</option>)}
+                  {sheet.headers.filter(Boolean).map(h => <option key={h} value={h}>{h}</option>)}
                 </select>
               </label>
             ))}
           </div>
-          <div className="overflow-x-auto rounded-[10px] border border-line">
-            <table className="w-full text-left text-[12px]">
-              <thead className="bg-surface-muted text-muted"><tr>{inspect.headers.map((h, i) => <th key={i} className="whitespace-nowrap px-3 py-2 font-medium">{h}</th>)}</tr></thead>
-              <tbody>{inspect.sample.map((r, i) => <tr key={i} className="border-t border-line">{inspect.headers.map((_, j) => <td key={j} className="whitespace-nowrap px-3 py-1.5 text-ink-soft">{r[j]}</td>)}</tr>)}</tbody>
-            </table>
-          </div>
           <div className="flex justify-end">
-            <button type="button" onClick={send} disabled={busy || !cols.cpf} className="h-10 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50">{busy ? 'Lendo as linhas...' : 'Enviar para conferência'}</button>
+            <button type="button" onClick={send} disabled={busy || !cols.cpf} className="h-10 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50">{busy ? 'Enviando...' : 'Enviar para conferência'}</button>
           </div>
         </div>
       )}
 
+      {progress && <p role="status" className="text-sm text-ink-soft">{progress}</p>}
       {error && <div role="alert" className="rounded-[10px] border border-[#F5C2C0] bg-[#FDE2E1] px-4 py-3 text-sm text-[#991B1B]">{error}</div>}
     </div>
   )

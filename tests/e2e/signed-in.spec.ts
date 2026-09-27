@@ -1008,3 +1008,24 @@ test('legacy base: cutoff, file preview with refused lines, import, client file,
   await page.getByRole('button', { name: 'Desfazer', exact: true }).click()
   await expect(page.getByText('Importação desfeita.')).toBeVisible({ timeout: 30_000 })
 })
+
+// The 2tech export has 6 MB: the file is read in the browser and sent in blocks, so a file bigger than the server's
+// request limit (4.5 MB on Vercel) still comes in.
+test('legacy base: a file bigger than the request limit is read in the browser and sent in blocks', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  const pad = 'x'.repeat(3000)
+  const lines = ['CPF;Nome do Cliente;Contrato;Data Contrato;Observacao']
+  for (let i = 1; i <= 2600; i++) lines.push(`000.000.000-00;Linha ${i};BIG-${Date.now()}-${i};10/05/2025;${pad}`)
+  const buffer = Buffer.from(lines.join(String.fromCharCode(10)), 'utf-8')
+  expect(buffer.length).toBeGreaterThan(7_000_000)
+  await page.goto('/app/configuracao/base-antiga')
+  await page.getByLabel(/Arquivo exportado/).setInputFiles({ name: `grande-${Date.now()}.csv`, mimeType: 'text/csv', buffer })
+  await page.getByRole('button', { name: 'Ler colunas do arquivo' }).click()
+  await expect(page.getByText('2600 linha(s) após os títulos.', { exact: false })).toBeVisible({ timeout: 60_000 })
+  await page.getByRole('button', { name: 'Enviar para conferência' }).click()
+  await expect(page.getByText('Arquivo lido. Confira as linhas antes de confirmar: nada foi gravado ainda.')).toBeVisible({ timeout: 180_000 })
+  await expect(page.getByText(/2600 linha\(s\)/)).toBeVisible()
+  await expect(page.getByText(/CPF inválido: 2600/)).toBeVisible()
+  await page.getByRole('button', { name: 'Descartar' }).click()
+  await expect(page.getByText('Importação descartada.')).toBeVisible({ timeout: 30_000 })
+})
