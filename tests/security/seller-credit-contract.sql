@@ -1,4 +1,4 @@
--- Contract test for 20260927000000_seller_credit_v1 (part C3, ADR-0041): the seller's commission is released only when
+-- Contract test for 20260927032418_seller_credit_v1 (part C3, ADR-0041): the seller's commission is released only when
 -- the contract is paid to the client, the physical file arrived (when physical) and the bank's commission was received by
 -- the company and reconciled; adjustments follow any later change, deferred is credited per installment only to enabled
 -- sellers, closing goes by frequency, and a payment made outside Corban is registered even before the bank pays.
