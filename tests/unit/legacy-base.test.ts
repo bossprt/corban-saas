@@ -8,7 +8,7 @@ const read = (p: string) => readFileSync(join(process.cwd(), p), 'utf8')
 
 test('legacy columns: obvious names are pre-selected, each column once, unknown ones left for the person', () => {
   const m = guessLegacyMapping(['CPF', 'Nome do Cliente', 'Celular', 'Banco', 'Contrato', 'Data Contrato', 'Valor Bruto', 'Parcela', 'Prazo', 'Corretor', 'Situação', 'Coluna X'])
-  assert.deepEqual(m, { cpf: 'CPF', full_name: 'Nome do Cliente', phone: 'Celular', bank_name: 'Banco', ade: 'Contrato', contract_on: 'Data Contrato',
+  assert.deepEqual(m, { cpf: 'CPF', full_name: 'Nome do Cliente', phone: 'Celular', bank_name: 'Banco', contract_number: 'Contrato', contract_on: 'Data Contrato',
     requested_amount: 'Valor Bruto', installment_amount: 'Parcela', term: 'Prazo', seller_name: 'Corretor', status_text: 'Situação' })
   assert.equal(Object.values(guessLegacyMapping(['Valor', 'Valor'])).length, 1)
 })
@@ -39,4 +39,12 @@ test('the legacy base stays out of the pipeline, commission and finance', () => 
   assert.match(m, /revoke all on public\.organization_legacy_settings, public\.legacy_import_batches, public\.legacy_import_rows, public\.legacy_contracts from public, anon, authenticated/)
   // The screen never puts a CPF in a URL: batches and clients are addressed by id.
   assert.doesNotMatch(read('src/app/app/configuracao/base-antiga/[id]/page.tsx'), /href=\{`[^`]*cpf/)
+})
+
+test('the 2tech contract search export is recognized column by column', () => {
+  const m = guessLegacyMapping(['ContratoId', 'NumeroProposta', 'NumeroContrato', 'DataContrato', 'NomeCliente', 'CpfCliente', 'Banco', 'Convenio', 'TipoContrato', 'Prazo',
+    'ValorBruto', 'ValorLiquido', 'ValorParcela', 'NomeCorretor', 'StatusProposta', 'TelefoneCliente'])
+  assert.deepEqual(m, { cpf: 'CpfCliente', full_name: 'NomeCliente', phone: 'TelefoneCliente', bank_name: 'Banco', agreement_name: 'Convenio', contract_type: 'TipoContrato',
+    ade: 'NumeroProposta', contract_number: 'NumeroContrato', legacy_ref: 'ContratoId', contract_on: 'DataContrato', requested_amount: 'ValorBruto', released_amount: 'ValorLiquido',
+    installment_amount: 'ValorParcela', term: 'Prazo', seller_name: 'NomeCorretor', status_text: 'StatusProposta' })
 })

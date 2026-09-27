@@ -35,7 +35,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
     supabase.from('customer_bank_accounts').select('id,bank_code,bank_name,branch,account_number,account_digit,account_type,is_primary').eq('customer_id', id).order('is_primary', { ascending: false }).order('created_at'),
     supabase.from('client_registrations').select('id,agreement_id,agency_name,registration_number,status,margin_amount,margin_as_of,portal_login,has_portal_password,notes').eq('customer_id', id).order('status').order('created_at'),
     supabase.from('organization_agreements').select('id,name').eq('is_active', true).order('name'),
-    supabase.from('legacy_contracts').select('id,source_system,bank_name,agreement_name,contract_type,ade,contract_on,paid_on,requested_amount,released_amount,installment_amount,term,seller_name,status_text').eq('client_id', id).order('contract_on', { ascending: false, nullsFirst: false }).limit(100),
+    supabase.from('legacy_contracts').select('id,source_system,bank_name,agreement_name,contract_type,ade,contract_number,legacy_ref,contract_on,paid_on,requested_amount,released_amount,installment_amount,term,seller_name,status_text').eq('client_id', id).order('contract_on', { ascending: false, nullsFirst: false }).limit(100),
   ])
   if (!customer) notFound()
   const open = (proposals ?? []).filter(p => !DONE.includes(p.status))
@@ -147,7 +147,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
                       <tr key={c.id} className="border-t border-line">
                         <td className="num px-3 py-2 text-muted">{c.contract_on ? day(`${c.contract_on}T12:00:00Z`) : '—'}</td>
                         <td className="px-3 py-2 text-ink-soft">{c.bank_name ?? '—'}{c.contract_type ? <span className="block text-xs text-muted">{c.contract_type}</span> : null}</td>
-                        <td className="px-3 py-2 font-mono text-[13px] text-ink-soft">{c.ade ?? '—'}</td>
+                        <td className="px-3 py-2 font-mono text-[13px] text-ink-soft">{c.ade ?? c.contract_number ?? '—'}{c.legacy_ref ? <span className="block font-sans text-xs text-muted">{c.source_system} {c.legacy_ref}</span> : null}</td>
                         <td className="px-3 py-2"><Badge tone="neutral">{c.status_text ?? c.source_system}</Badge></td>
                         <td className="num px-3 py-2 text-right text-ink">{brl(c.released_amount ?? c.requested_amount)}</td>
                         <td className="num px-3 py-2 text-right text-ink-soft">{c.installment_amount ? `${brl(c.installment_amount)}${c.term ? ` × ${c.term}` : ''}` : '—'}</td>

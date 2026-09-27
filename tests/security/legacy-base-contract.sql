@@ -33,7 +33,7 @@ create function pg_temp.rows() returns jsonb language sql as $$
   select jsonb_build_array(
     jsonb_build_object('row', 1, 'cpf', '390.533.447-05', 'full_name', 'Cliente Antigo Novo', 'phone', '(68) 99911-2233', 'bank_name', 'Banco Antigo', 'agreement_name', 'Gov AC',
                        'contract_type', 'Novo', 'ade', 'L-1', 'contract_on', '2025-05-10', 'paid_on', '2025-05-12', 'requested_amount', '10000.00', 'released_amount', '9500.00',
-                       'installment_amount', '250.00', 'term', '96', 'seller_name', 'Vendedor Teste', 'status_text', 'PAGO'),
+                       'installment_amount', '250.00', 'term', '96', 'seller_name', 'Vendedor Teste', 'status_text', 'PAGO', 'legacy_ref', '9001'),
     jsonb_build_object('row', 2, 'cpf', '11144477735', 'full_name', 'Nome Antigo Diferente', 'bank_name', 'Banco Antigo', 'ade', 'L-2', 'contract_on', '2024-01-15', 'requested_amount', '5000'),
     jsonb_build_object('row', 3, 'cpf', '11111111111', 'full_name', 'CPF Inválido', 'ade', 'L-3', 'contract_on', '2025-01-01'),
     jsonb_build_object('row', 4, 'cpf', '12345678909', 'full_name', 'Depois do Corte', 'ade', 'L-4', 'contract_on', '2026-09-10'),
@@ -43,6 +43,9 @@ create function pg_temp.rows() returns jsonb language sql as $$
     jsonb_build_object('row', 8, 'cpf', '12345678909', 'full_name', 'Só Cadastro Antigo', 'ade', 'ADE-LIVE-1', 'contract_on', '2025-02-02'))
 $$;
 grant execute on function pg_temp.rows() to authenticated;
+
+-- Start without a cutoff date (a screen test may have saved one in the local company).
+delete from public.organization_legacy_settings where organization_id = (select org from ids);
 
 select pg_temp.act_as((select admin_user from ids));
 set local role authenticated;
@@ -89,6 +92,18 @@ insert into results select 'the historical contract keeps its data',
 insert into results select 'nothing enters the pipeline', (select count(*) from public.proposals_v2 where organization_id = (select org from ids) and external_proposal_id in ('L-1', 'L-2')) = 0;
 insert into results select 'the same file is not imported twice',
   pg_temp.err(format('select public.stage_legacy_rows(%L, null, %L, %L, %L, %L::jsonb)', (select org from ids), '2tech', 'base.xlsx', pg_temp.sha(), pg_temp.rows())) = 'legacy_file_already_imported';
+-- A second export of the old system: the same contract (same old code, no ADE) and one whose contract number is in the
+-- pipeline are refused.
+insert into made select 'batch2', public.stage_legacy_rows((select org from ids), null, '2tech', 'base2.xlsx', encode(sha256(convert_to('segunda-exportacao', 'utf8')), 'hex'),
+  jsonb_build_array(jsonb_build_object('row', 1, 'cpf', '39053344705', 'full_name', 'Cliente Antigo Novo', 'legacy_ref', '9001', 'contract_on', '2025-05-10'),
+                    jsonb_build_object('row', 2, 'cpf', '11144477735', 'contract_number', 'ADE-LIVE-1', 'contract_on', '2025-02-02'),
+                    jsonb_build_object('row', 3, 'cpf', '11144477735', 'legacy_ref', '9002', 'contract_on', '2025-03-03')));
+insert into results select 'same old-system code in a new export is a repeated contract',
+  (select issue = 'duplicate_contract' from public.legacy_import_rows where batch_id = (select id from made where label = 'batch2') and row_number = 1);
+insert into results select 'the contract number column is also checked against the pipeline',
+  (select issue = 'already_in_corban' from public.legacy_import_rows where batch_id = (select id from made where label = 'batch2') and row_number = 2);
+insert into results select 'a new old-system code enters', (select issue is null from public.legacy_import_rows where batch_id = (select id from made where label = 'batch2') and row_number = 3);
+select public.discard_legacy_batch((select id from made where label = 'batch2'));
 insert into results select 'legacy contracts cannot be written directly',
   pg_temp.err(format('insert into public.legacy_contracts (organization_id, batch_id, client_id, source_system) values (%L, %L, %L, %L)',
     (select org from ids), (select id from made where label = 'batch'), (select id from made where label = 'existing'), 'x')) <> 'ok';
@@ -123,7 +138,7 @@ insert into results select 'anon has no access to the legacy tables',
 
 select check_name, ok from results order by ok, check_name;
 do $$ begin
-  if exists (select 1 from results where not ok) or (select count(*) from results) < 27 then raise exception 'legacy base contract failed'; end if;
+  if exists (select 1 from results where not ok) or (select count(*) from results) < 30 then raise exception 'legacy base contract failed'; end if;
 end $$;
 
 rollback;
