@@ -60,14 +60,14 @@ test('scoped client filters select/update/delete on tenant tables to the active 
 test('global catalog tables are not filtered; insert and rpc pass through untouched',()=>{
  const f=fakeClient()
  const s=scopeToOrganization(f.client,A)
- ;(s.from('banks') as unknown as {select:(c:string)=>unknown}).select('*')
+ ;(s.from('contract_types') as unknown as {select:(c:string)=>unknown}).select('*')
  ;(s.from('organizations') as unknown as {select:(c:string)=>unknown}).select('id')
  ;(s.from('clients') as unknown as {insert:(v:object)=>unknown}).insert({organization_id:A})
  assert.equal((s as unknown as {rpc:(n:string)=>string}).rpc('x'),'rpc-result')
- assert.deepEqual(f.calls,['banks.select(*)','organizations.select(id)','clients.insert','rpc(x)'])
+ assert.deepEqual(f.calls,['contract_types.select(*)','organizations.select(id)','clients.insert','rpc(x)'])
 })
 
 test('the free-table list matches the live schema (tables WITHOUT organization_id)',()=>{
- assert.equal(TENANT_FREE_TABLES.size,11) // + contract_types, national_agreement_templates (Commercial Model V3), commission_component_types (global commission types); integration_adapters/integration_field_mappings removed with F5 step 0
+ assert.equal(TENANT_FREE_TABLES.size,6) // global catalog removed in part C5; + contract_types, national_agreement_templates (Commercial Model V3), commission_component_types (global commission types); integration_adapters/integration_field_mappings removed with F5 step 0
  assert.ok(TENANT_FREE_TABLES.has('organizations')&&!TENANT_FREE_TABLES.has('clients')&&!TENANT_FREE_TABLES.has('organization_memberships'))
 })

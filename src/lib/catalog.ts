@@ -18,33 +18,11 @@ export function missingStages(existingStates: readonly string[]) {
   return STANDARD_STAGES.filter(s => !have.has(s.state))
 }
 
-const dec = (v: FormDataEntryValue | null): number | null | 'invalid' => {
-  const t = String(v ?? '').trim().replace(',', '.')
-  if (t === '') return null
-  const n = Number(t)
-  return Number.isFinite(n) && n >= 0 && n < 1e6 ? n : 'invalid'
-}
-const int = (v: FormDataEntryValue | null): number | null | 'invalid' => {
-  const t = String(v ?? '').trim()
-  if (t === '') return null
-  return /^\d{1,4}$/.test(t) && Number(t) > 0 ? Number(t) : 'invalid'
-}
-
-export type VersionInput = { rate: number | null; coefficient: number | null; termMin: number | null; termMax: number | null }
-export function parseVersionForm(f: FormData): VersionInput | null {
-  const rate = dec(f.get('rate')), coefficient = dec(f.get('coefficient')), termMin = int(f.get('term_min')), termMax = int(f.get('term_max'))
-  if (rate === 'invalid' || coefficient === 'invalid' || termMin === 'invalid' || termMax === 'invalid') return null
-  if (rate === null && coefficient === null) return null
-  if (termMin !== null && termMax !== null && termMin > termMax) return null
-  return { rate, coefficient, termMin, termMax }
-}
-
-export const isCode = (v: unknown): v is string => typeof v === 'string' && /^[A-Za-z0-9_.-]{1,40}$/.test(v)
 export const isLabel = (v: unknown, max = 120): v is string => typeof v === 'string' && v.trim().length >= 1 && v.trim().length <= max
 
 // Setup checklist for the organization admin: deterministic, computed from real rows only.
 export type SetupInput = {
-  activeMembers: number; routes: number; publishedVersions: number; publishedChecklists: number; stageStates: readonly string[]; referenceReady: boolean
+  activeMembers: number; routes: number; publishedVersions: number; stageStates: readonly string[]; referenceReady: boolean
   // V3: number of active commission groups; when omitted (legacy callers) the item is not shown
   commissionGroups?: number
 }
@@ -57,7 +35,6 @@ export function setupItems(i: SetupInput): SetupItem[] {
     ...(i.commissionGroups === undefined ? [] : [{ key: 'groups', label: 'Grupos de vendedores cadastrados', done: i.commissionGroups > 0, hint: 'Crie os grupos (corretor, parceiro, equipe...) que dividem a comissão.', href: '/app/comercial/grupos' }]),
     { key: 'routes', label: 'Tabela comercial criada', done: i.routes > 0, hint: 'Escolha banco e convênio e dê um nome à tabela.', href: '/app/comercial/tabelas' },
     { key: 'table', label: 'Tabela com versão publicada', done: i.publishedVersions > 0, hint: 'Sem tabela publicada ninguém consegue simular.', href: '/app/comercial/tabelas' },
-    { key: 'checklist', label: 'Checklist de documentos publicado', done: i.publishedChecklists > 0, hint: 'Sem checklist publicado o operador não prepara documentos.', href: '/app/catalogo' },
-    { key: 'stages', label: 'Etapas da operação configuradas', done: missing === 0, hint: missing ? `Faltam ${missing} etapa(s); use "Criar etapas padrão".` : 'Todas as etapas existem.', href: '/app/catalogo' },
+    { key: 'stages', label: 'Etapas da operação configuradas', done: missing === 0, hint: missing ? `Faltam ${missing} etapa(s); use "Criar etapas padrão".` : 'Todas as etapas existem.', href: '/app/configuracao/etapas' },
   ]
 }

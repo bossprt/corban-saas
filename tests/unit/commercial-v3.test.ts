@@ -83,14 +83,15 @@ test('RBAC helpers used by the commercial screens keep their matrix', () => {
 test('the two new global tables are tenant-free (no organization_id filter is added to them)', () => {
   assert.ok(TENANT_FREE_TABLES.has('contract_types') && TENANT_FREE_TABLES.has('national_agreement_templates'))
   for (const t of ['organization_banks', 'organization_providers', 'organization_agreements', 'commission_groups', 'commercial_conditions']) assert.ok(!TENANT_FREE_TABLES.has(t), t)
+  for (const t of ['banks', 'agreements', 'providers', 'products', 'modalities']) assert.ok(!TENANT_FREE_TABLES.has(t), `${t} was removed in part C5`)
 })
 test('setup status: V3 asks for commission groups only when the caller provides the count; legacy callers unchanged', () => {
   const states = STANDARD_STAGES.map(s => s.state)
-  const legacy = setupItems({ activeMembers: 2, routes: 1, publishedVersions: 1, publishedChecklists: 1, stageStates: states, referenceReady: true })
+  const legacy = setupItems({ activeMembers: 2, routes: 1, publishedVersions: 1, stageStates: states, referenceReady: true })
   assert.ok(!legacy.some(i => i.key === 'groups'))
-  const v3 = setupItems({ activeMembers: 2, routes: 1, publishedVersions: 1, publishedChecklists: 1, stageStates: states, referenceReady: true, commissionGroups: 0 })
+  const v3 = setupItems({ activeMembers: 2, routes: 1, publishedVersions: 1, stageStates: states, referenceReady: true, commissionGroups: 0 })
   assert.equal(v3.find(i => i.key === 'groups')?.done, false)
-  assert.equal(setupItems({ activeMembers: 2, routes: 1, publishedVersions: 1, publishedChecklists: 1, stageStates: states, referenceReady: true, commissionGroups: 2 }).find(i => i.key === 'groups')?.done, true)
+  assert.equal(setupItems({ activeMembers: 2, routes: 1, publishedVersions: 1, stageStates: states, referenceReady: true, commissionGroups: 2 }).find(i => i.key === 'groups')?.done, true)
 })
 test('simulation on a condition: governed RPC, amount as decimal string, condition-not-found has a message, no commission on the simulations screen for operators', () => {
   const a = read('src/app/app/simulacoes/actions.ts')

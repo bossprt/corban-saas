@@ -32,6 +32,7 @@
 ## 4. Proposta, digitação e esteira
 
 - A proposta entra de três formas: antes da digitação (fila para digitador), depois da digitação (com número/ADE do banco), ou por importação de relatório.
+- O operacional pode digitar contratos de um corretor que tenha dificuldade de cadastrar (dono, 27/09/2026).
 - Deduplicação de proposta por banco + ADE.
 - Status atualizado de três formas: manual, relatório importado, API do banco ou de CRM que a promotora cede. Um adaptador por fonte.
 - Alertas configuráveis: proposta parada há X dias; pendência vencendo; contrato pago sem comissão após X dias; parcela diferida atrasada.

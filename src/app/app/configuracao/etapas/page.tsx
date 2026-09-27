@@ -1,7 +1,8 @@
 import { Card, PageHeader } from '@/components/ui'
 import { requireAppContext } from '@/lib/appContext'
 import { canManageTeam } from '@/lib/rbac'
-import { saveStage } from './actions'
+import { createDefaultStages, saveStage } from './actions'
+import { missingStages } from '@/lib/catalog'
 
 const STATE_LABEL: Record<string, string> = {
   digitization_queue: 'Aguardando digitação', digitizing: 'Em digitação', submitted: 'Em análise', pending_external: 'Pendência',
@@ -20,6 +21,12 @@ export default async function StagesPage() {
   return (
     <section>
       <PageHeader title="Etapas da esteira" description="Renomeie, reordene, defina o prazo de cada etapa ou desligue as que não usa. O tipo da etapa não muda: pagamento, comissão e relatórios dependem dele." />
+      {missingStages((stages ?? []).map(s => s.canonical_state)).length > 0 && (
+        <Card className="mb-4 flex flex-wrap items-center justify-between gap-3 p-4 text-sm">
+          <span className="text-ink-soft">Faltam etapas padrão da esteira.</span>
+          <form action={createDefaultStages}><button className="h-9 rounded-lg border border-line px-3 text-xs hover:bg-surface-muted">Criar etapas padrão</button></form>
+        </Card>
+      )}
       <Card className="overflow-hidden">
         <table className="w-full text-left text-sm">
           <thead className="bg-surface-muted text-xs font-semibold text-muted"><tr><th className="px-4 py-2.5"><div className="grid grid-cols-[1.6fr_1fr_80px_120px_70px_auto] gap-3"><span>Nome na esteira</span><span>Tipo</span><span>Ordem</span><span>Prazo (horas)</span><span>Ativa</span><span className="sr-only">Salvar</span></div></th></tr></thead>

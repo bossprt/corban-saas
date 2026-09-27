@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
 import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedback'
 import { isUuid } from '@/lib/team'
+import { atLeast } from '@/lib/rbac'
+import { missingStages } from '@/lib/catalog'
 
 const back = (code: FeedbackCode): never => redirect(feedbackUrl('/app/configuracao/etapas', code))
 
@@ -28,4 +30,17 @@ export async function saveStage(formData: FormData) {
   revalidatePath('/app/configuracao/etapas')
   revalidatePath('/app/propostas')
   return back('ok:etapa_salva')
+}
+
+// Creates only the standard stages the company is missing (moved from the old catalog screen, part C5). No time limit
+// is invented: the owner sets it.
+export async function createDefaultStages() {
+  const { supabase, membership } = await requireAppContext()
+  if (!atLeast(membership.role, 'manager')) return back('erro:sem_permissao')
+  const { data } = await supabase.from('operational_stages').select('canonical_state')
+  const todo = missingStages((data ?? []).map(s => s.canonical_state))
+  if (todo.length === 0) return back('ok:etapas_criadas')
+  const { error } = await supabase.from('operational_stages').insert(todo.map(s => ({ organization_id: membership.organization_id, code: s.code, name: s.name, canonical_state: s.state, sort_order: s.sort, sla_minutes: null, is_active: true })))
+  revalidatePath('/app/configuracao')
+  return back(error ? classifyDbFeedback(error) : 'ok:etapas_criadas')
 }

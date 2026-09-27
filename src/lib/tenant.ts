@@ -23,7 +23,7 @@ export function resolveActiveMembership(memberships:MembershipRow[],cookieValue:
 }
 
 // Tables without an organization_id column (global catalogs / tenants themselves). Every other table is tenant-scoped.
-export const TENANT_FREE_TABLES=new Set(['agreements','banks','commission_component_types','contract_types','document_types','modalities','national_agreement_templates','organizations','platform_administrators','products','providers'])
+export const TENANT_FREE_TABLES=new Set(['commission_component_types','contract_types','document_types','national_agreement_templates','organizations','platform_administrators'])
 
 type Chainable={eq:(column:string,value:unknown)=>unknown}
 
