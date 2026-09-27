@@ -55,7 +55,7 @@ export default async function TodayPage() {
           <>
             <ButtonLink href="/app/leads" variant="secondary" size="md"><UserPlus size={16} aria-hidden />Novo lead</ButtonLink>
             <ButtonLink href="/app/clientes" variant="secondary" size="md"><UserRoundPlus size={16} aria-hidden />Novo cliente</ButtonLink>
-            <ButtonLink href="/app/simulacoes" size="md"><FilePlus2 size={16} aria-hidden />Nova proposta</ButtonLink>
+            <ButtonLink href="/app/propostas/nova" size="md"><FilePlus2 size={16} aria-hidden />Nova proposta</ButtonLink>
           </>
         }
       />
