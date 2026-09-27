@@ -135,7 +135,29 @@ alter table public.payout_entries add constraint payout_entry_source check (
   and (kind in ('commission', 'chargeback') or source = 'contract' or beneficiary_role is null));
 create index payout_entries_contract_idx on public.payout_entries (proposal_id, source, beneficiary_role, account_id);
 
--- The contract's credit is due: paid to the client and, when physical, the file received by the company.
+-- Where the bank's commission of the contract stands: 'reconciled' once the company received it and it matches (or
+-- finance accepted the difference), 'divergent' while a difference waits for finance, null while nothing arrived. The
+-- receipt that counts is the à vista; a contract with no à vista counts its first receipt.
+create or replace function private.contract_bank_receipt(p_proposal uuid)
+returns text
+language sql
+stable
+security definer
+set search_path to ''
+as $$
+  with relevant as (
+    select r.reconciliation = 'matched' or exists (select 1 from public.commission_receipt_resolutions z where z.receipt_id = r.id) as reconciled
+    from public.commission_receipts r
+    where r.proposal_id = p_proposal and r.entry_kind = 'receipt'
+      and (r.component_key = 'upfront'
+           or not exists (select 1 from private.contract_payable(p_proposal) x where x.component_key = 'upfront' and x.received > 0))
+  )
+  select case when bool_or(reconciled) then 'reconciled' when count(*) > 0 then 'divergent' end from relevant
+$$;
+revoke all on function private.contract_bank_receipt(uuid) from public, anon, authenticated;
+
+-- The seller's commission is released only when all hold: paid to the client; when physical, the file received by the
+-- company; the calculation in force; and the bank's commission received by the company and reconciled.
 create or replace function private.contract_credit_released(p_proposal uuid)
 returns boolean
 language sql
@@ -145,13 +167,15 @@ set search_path to ''
 as $$
   select exists (select 1 from public.proposals_v2 p
                  where p.id = p_proposal and p.status = 'paid' and (p.formalization = 'digital' or p.physical_received_at is not null)
-                   and exists (select 1 from public.proposal_commission_calcs c where c.proposal_id = p.id and c.status = 'active'))
+                   and exists (select 1 from public.proposal_commission_calcs c where c.proposal_id = p.id and c.status = 'active')
+                   and private.contract_bank_receipt(p.id) = 'reconciled')
 $$;
 revoke all on function private.contract_credit_released(uuid) from public, anon, authenticated;
 
 -- Bring the contract's credits (everything but deferred) to what is due now, per account and role: the first credit is
--- a commission entry, any later difference an adjustment. Nothing moves once the seller received the commission.
-create or replace function private.sync_contract_credit(p_proposal uuid)
+-- a commission entry, any later difference an adjustment. The seller's part stops moving once the seller was paid.
+-- p_force credits the seller's part before release: only for a payment the owner already made outside Corban.
+create or replace function private.sync_contract_credit(p_proposal uuid, p_force boolean default false)
 returns void
 language plpgsql
 security definer
@@ -161,18 +185,22 @@ declare
   p public.proposals_v2%rowtype;
   c public.proposal_commission_calcs%rowtype;
   v_released boolean;
+  v_paid boolean;
   r record;
 begin
   select * into p from public.proposals_v2 where id = p_proposal;
-  if p.id is null or private.contract_payout_received(p.id) then return; end if;
+  if p.id is null then return; end if;
   select * into c from public.proposal_commission_calcs where proposal_id = p.id and status = 'active';
+  -- Calculations of the old rule credit per receipt (post_receipt); only the table and group engine credits here.
+  if c.id is not null and c.mode <> 'group_values' then return; end if;
   v_released := private.contract_credit_released(p.id);
+  v_paid := private.contract_payout_received(p.id);
   perform set_config('corban.payout_rpc', 'on', true);
   for r in
     with target as (
       select 'originator'::text as role, private.payout_account_for(p.organization_id, c.seller_id, c.originator_user_id) as account,
              coalesce((select sum(x.payable) from private.contract_payable(p.id) x where x.component_key <> 'deferred'), 0) as amount
-      where v_released
+      where (v_released or p_force) and c.id is not null and not v_paid
       union all
       select 'supervisor', private.payout_account_for(p.organization_id, null, c.supervisor_user_id),
              coalesce((select sum(l.amount * l.multiplier) from public.proposal_commission_lines l where l.calc_id = c.id and l.line_kind = 'supervisor' and l.component_key <> 'deferred'), 0)
@@ -186,6 +214,7 @@ begin
       select e.beneficiary_role as role, e.account_id as account, sum(e.amount) as amount
       from public.payout_entries e
       where e.proposal_id = p.id and e.source = 'contract' and e.status <> 'rejected'
+        and not (v_paid and e.beneficiary_role = 'originator')
       group by 1, 2
     )
     select coalesce(t.role, x.role) as role, coalesce(t.account, x.account) as account,
@@ -201,11 +230,22 @@ begin
     end if;
   end loop;
   perform set_config('corban.payout_rpc', 'off', true);
+  -- Deferred installments reconciled before the release are credited now (post_receipt skips what it already posted).
+  if v_released then
+    for r in select x.id from public.commission_receipts x
+             where x.proposal_id = p.id and x.entry_kind = 'receipt' and x.component_key = 'deferred'
+               and (x.reconciliation = 'matched' or exists (select 1 from public.commission_receipt_resolutions z where z.receipt_id = x.id))
+             order by x.installment_number loop
+      perform private.post_receipt(r.id);
+    end loop;
+    perform set_config('corban.payout_rpc', 'off', true);
+  end if;
 end
 $$;
-revoke all on function private.sync_contract_credit(uuid) from public, anon, authenticated;
+revoke all on function private.sync_contract_credit(uuid, boolean) from public, anon, authenticated;
 
--- At commit, after whatever changed the contract (status, physical, edit, calculation, payout change).
+-- At commit, after whatever changed the contract (status, physical, edit, calculation, payout change, bank receipt or
+-- the acceptance of a divergent one).
 create or replace function private.sync_contract_credit_trigger()
 returns trigger
 language plpgsql
@@ -215,6 +255,8 @@ as $$
 begin
   if tg_table_name = 'proposals_v2' then
     perform private.sync_contract_credit((to_jsonb(new)->>'id')::uuid);
+  elsif tg_table_name = 'commission_receipt_resolutions' then
+    perform private.sync_contract_credit((select x.proposal_id from public.commission_receipts x where x.id = (to_jsonb(new)->>'receipt_id')::uuid));
   else
     perform private.sync_contract_credit((to_jsonb(new)->>'proposal_id')::uuid);
   end if;
@@ -227,6 +269,10 @@ create constraint trigger proposals_v2_95_sync_credit after update on public.pro
 create constraint trigger proposal_commission_calcs_95_sync_credit after insert on public.proposal_commission_calcs
   deferrable initially deferred for each row execute function private.sync_contract_credit_trigger();
 create constraint trigger contract_payout_overrides_95_sync_credit after insert on public.contract_payout_overrides
+  deferrable initially deferred for each row execute function private.sync_contract_credit_trigger();
+create constraint trigger commission_receipts_95_sync_credit after insert on public.commission_receipts
+  deferrable initially deferred for each row execute function private.sync_contract_credit_trigger();
+create constraint trigger commission_receipt_resolutions_95_sync_credit after insert on public.commission_receipt_resolutions
   deferrable initially deferred for each row execute function private.sync_contract_credit_trigger();
 
 -- The calculation no longer stops at posted credits: a recalculation before the seller is paid becomes an adjustment.
@@ -429,7 +475,7 @@ begin
       -- credited here, installment by installment, only to a seller enabled to receive it and once the credit is due.
       if x.component_key <> 'deferred' or x.installment_number is null or coalesce(c.installments, 0) < 1 then return; end if;
       if not coalesce((select s.receives_deferred from public.commercial_sellers s where s.id = c.seller_id), false) then return; end if;
-      if not private.contract_credit_released(x.proposal_id) or private.contract_payout_received(x.proposal_id) then return; end if;
+      if not private.contract_credit_released(x.proposal_id) then return; end if;
       select payable into v_total from private.contract_payable(x.proposal_id) where component_key = 'deferred';
       if coalesce(v_total, 0) <= 0 then return; end if;
       select * into v_sched from private.deferred_schedule(v_total, c.installments);
@@ -972,6 +1018,8 @@ begin
   if p.id is null or auth.uid() is null or not public.has_active_organization_role(p.organization_id, array['admin']) then raise exception 'not_authorized'; end if;
   if p_paid_on is null or p_paid_on > current_date then raise exception 'invalid_paid_on'; end if;
   if length(btrim(coalesce(p_reference, ''))) < 3 then raise exception 'reference_required'; end if;
+  -- The owner already paid: the seller's part is credited even if the bank's commission is not reconciled yet.
+  perform private.sync_contract_credit(p.id, true);
   select e.account_id, sum(e.amount) into v_account, v_sum
   from public.payout_entries e
   where e.proposal_id = p.id and e.beneficiary_role = 'originator' and e.statement_id is null and e.status = 'approved' and e.source in ('contract', 'receipt')
@@ -1000,8 +1048,8 @@ $$;
 revoke all on function public.register_external_payout(uuid, date, text) from public, anon;
 grant execute on function public.register_external_payout(uuid, date, text) to authenticated;
 
--- Where the seller's payout of one contract stands: waiting (for the client payment or the physical file), credited,
--- paid (date and reference).
+-- Where the seller's payout of one contract stands: waiting (for the client payment, the physical file, the calculation,
+-- the bank's commission or finance on a divergent receipt), credited, paid (date and reference).
 create or replace function private.contract_credit_state(p_proposal uuid)
 returns table (waiting text, credited numeric, paid_on date, reference text)
 language sql
@@ -1012,6 +1060,8 @@ as $$
   select case when p.status <> 'paid' then 'client'
               when p.formalization = 'physical' and p.physical_received_at is null then 'physical'
               when not exists (select 1 from public.proposal_commission_calcs c where c.proposal_id = p.id and c.status = 'active') then 'calculation'
+              when private.contract_bank_receipt(p.id) is null then 'bank'
+              when private.contract_bank_receipt(p.id) = 'divergent' then 'divergent'
          end,
          coalesce((select sum(e.amount) from public.payout_entries e where e.proposal_id = p.id and e.beneficiary_role = 'originator' and e.source in ('contract', 'receipt') and e.status = 'approved'), 0),
          (select max(y.paid_on) from public.payout_entries e join public.payouts y on y.id = coalesce(e.statement_id, e.payout_id)
