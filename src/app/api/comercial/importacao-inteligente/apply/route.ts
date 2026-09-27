@@ -32,6 +32,7 @@ export async function POST(req:Request){
     coefficient:r.coefficient,rate:r.rate,effective_from:r.effective_from,effective_until:r.effective_until,
     factor_mode:r.factor_mode,factor_value:r.factor_value,factor_date:r.factor_date,components:r.components,group_values:r.group_values,...(r.tax_pct===undefined?{}:{tax_pct:r.tax_pct}),
     ...(r.production_origin===undefined?{}:{production_origin:r.production_origin,provider_id:r.provider_id}),
+    ...(r.formalization===undefined?{}:{formalization:r.formalization}),
   }))
   // The database takes up to 1.000 rows per call: big files (a whole bank, or every table) go in blocks. Each block is
   // all or nothing; a later block that fails leaves only drafts, and importing the file again reuses those drafts.

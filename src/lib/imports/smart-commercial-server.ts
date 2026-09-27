@@ -91,6 +91,8 @@ export const SMART_IMPORT_ISSUES:Record<string,string>={
  invalid_calculation_base:'Base de cálculo inválida: use Bruto ou Líquido.',
  missing_calculation_base:'Linha sem base de cálculo (Bruto ou Líquido).',
  unknown_provider:'Promotora parceira não cadastrada (ou inativa): confira o nome na coluna "Promotora parceira" (vazio = produção própria).',
+ invalid_formalization:'Tipo de formalização inválido: use "Digital" ou "Físico" (vazio = digital).',
+ formalization_conflict:'A mesma tabela veio com linhas digitais e físicas: uma tabela tem um só tipo de formalização.',
  invalid_tax:'Imposto inválido: use um percentual de 0 a 100 (vazio = não paga imposto).',
  empty_file:'Arquivo vazio.',
  unsupported_file:'Formato não suportado. Use CSV, XLSX, XLS ou PDF com texto.',

@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
 
   const wb = new ExcelJS.Workbook()
   const ws = wb.addWorksheet('Tabelas')
-  const columns = [...SHEET_LINE_COLUMNS, 'Promotora parceira', 'Coeficiente', 'Taxa a.m. (%)', ...SHEET_TAIL_COLUMNS, ...valueColumns(types2, payGroups)]
+  const columns = [...SHEET_LINE_COLUMNS, 'Promotora parceira', 'Tipo de formalização', 'Coeficiente', 'Taxa a.m. (%)', ...SHEET_TAIL_COLUMNS, ...valueColumns(types2, payGroups)]
   ws.addRow(columns)
   const skipped: [string, string, string][] = rows.filter(x => !x.current).map(x => [bankN.get(x.r.org_bank_id) ?? '', x.t.name, 'Sem vigência publicada'])
   let exported = 0
@@ -79,6 +79,7 @@ export async function GET(req: NextRequest) {
         '', '', typeN.get(l.contract_type_id) ?? '',
         l.term_min ?? l.term, l.term_max ?? l.term,
         x.r.org_provider_id ? provN.get(x.r.org_provider_id) ?? '' : '',
+        x.t.formalization === 'physical' ? 'Físico' : 'Digital',
         l.coefficient === null ? '' : decimalBr(l.coefficient), l.rate === null ? '' : decimalBr(l.rate),
         baseLabel(baseOf.get(l.id)), Number(l.tax_pct) ? decimalBr(l.tax_pct) : '0',
         ...types2.map(t => { const c = companyOf.get(`${l.id}:${t.id}`); return sheetValue(c?.value_kind, c?.received_value) }),
@@ -98,6 +99,7 @@ export async function GET(req: NextRequest) {
     ['2', 'Importe em Cadastros > Tabelas > Importar planilha. Cada tabela ganha uma nova vigência em rascunho; as publicadas não mudam.'],
     ['3', 'Confira e publique. Vigência Inicial vazia = a nova vigência começa quando você publicar (preencha só se quiser outra data).'],
     ['Promotora parceira', 'Vazio = produção própria. Mantenha o nome como está: é assim que cada tabela volta para a sua origem.'],
+    ['Tipo de formalização', 'Digital ou Físico (vazio = digital). Contrato de tabela física só libera o repasse depois do físico recebido.'],
   ])
   guide.getRow(1).font = { bold: true }
   guide.getColumn(1).width = 20; guide.getColumn(2).width = 110

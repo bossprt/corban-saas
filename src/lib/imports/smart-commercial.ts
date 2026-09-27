@@ -44,6 +44,8 @@ export type SmartImportRow={
  // Origin of the line; only present when the file has a "Promotora parceira" column (empty = own production).
  production_origin?:'own'|'third_party'
  provider_id?:string|null
+ // Digital or physical contracts of the table; only present when the file has a "Tipo de formalização" column.
+ formalization?:'digital'|'physical'
 }
 export type SmartImportResult={
  rows:SmartImportRow[]
@@ -84,6 +86,7 @@ const baseAliases={
  tax:['imposto','imposto_percentual','percentual_imposto','aliquota_imposto','aliquota'],
  base:['base_de_calculo','base_calculo','base_calculo_comissao','base'],
  provider:['promotora_parceira','promotora','empresa_de_origem'],
+ formalization:['tipo_de_formalizacao','tipo_formalizacao','formalizacao'],
 } as const
 export const SMART_HEADER_ALIASES=baseAliases
 
@@ -99,7 +102,7 @@ const componentAliases:Record<string,string[]>={
 
 // Columns that carry money but are not understood are REFUSED (silently dropping a commission column would be a financial error). Known harmless ones are listed.
 const MONEY_WORDS=/(comiss|bonus|repasse|diferido|a_vista|avista|plastico|seguro|spread|premio)/
-const IGNORABLE=/^(base_calculo|id_|idade|valor_contrato|taxa_inicial|taxa_final|tipo_de_formalizacao|ativacao)/
+const IGNORABLE=/^(base_calculo|id_|idade|valor_contrato|taxa_inicial|taxa_final|ativacao)/
 const n=(v:unknown)=>normalizeHeader(v)
 const cell=(row:readonly unknown[],i:number|undefined)=>i===undefined?'':String(row[i]??'').trim()
 const firstIndex=(head:string[],aliases:readonly string[])=>{
@@ -174,6 +177,14 @@ export const parseCalculationBase=(raw:string):CalculationBase|null=>{
  if(k==='l'||k.startsWith('liquido'))return 'LÍQUIDO'
  return null
 }
+// "Físico"/"Física" = physical, "Digital" or empty = digital; anything else (or both words) is refused, never guessed.
+export const parseFormalization=(raw:string):'digital'|'physical'|null=>{
+ const k=n(raw)
+ if(!k)return 'digital'
+ const physical=k.includes('fisic'),digital=k.includes('digital')
+ if(physical===digital)return null
+ return physical?'physical':'digital'
+}
 const factorMode=(raw:string):'daily'|'fixed'|null=>{
  const k=n(raw)
  if(k.includes('diario'))return 'daily'
@@ -203,6 +214,7 @@ export function mapSmartCommercialRows(
   coefficient:firstIndex(head,baseAliases.coefficient),rate:firstIndex(head,baseAliases.rate),factor:firstIndex(head,baseAliases.factor),
   factorMode:firstIndex(head,baseAliases.factorMode),factorDate:firstIndex(head,baseAliases.factorDate),
   tax:firstIndex(head,baseAliases.tax),base:firstIndex(head,baseAliases.base),provider:firstIndex(head,baseAliases.provider),
+  formalization:firstIndex(head,baseAliases.formalization),
  }
  for(const [k,v] of Object.entries({bank:col.bank,agreement:col.agreement,table:col.table,contract:col.contract}))if(v===undefined)issues.push({line:1,code:`missing_${k}`})
  if(col.term===undefined&&col.termMin===undefined)issues.push({line:1,code:'missing_term'})
@@ -254,6 +266,8 @@ export function mapSmartCommercialRows(
  }
 
  let hasUnmappedValue=false
+ // One formalization per table: lines of the same table that disagree are refused.
+ const tableForm=new Map<string,'digital'|'physical'>()
  rawRows.slice(1).forEach((r,idx)=>{
   const line=idx+2
   const bank=cell(r,col.bank),agreement=cell(r,col.agreement),table=cell(r,col.table),contractRaw=cell(r,col.contract)
@@ -295,6 +309,15 @@ export function mapSmartCommercialRows(
   const ownOrigin=!providerRaw||/^(propria|producao_propria)$/.test(n(providerRaw))
   const provider=ownOrigin?null:(ctx.providers??[]).find(p=>n(p.name)===n(providerRaw))??null
   if(col.provider!==undefined&&!ownOrigin&&!provider){issues.push({line,code:'unknown_provider',detail:providerRaw.slice(0,60)});return}
+  const formRaw=col.formalization===undefined?'':cell(r,col.formalization)
+  const form=col.formalization===undefined?undefined:parseFormalization(formRaw)
+  if(form===null){issues.push({line,code:'invalid_formalization',detail:formRaw.slice(0,30)});return}
+  if(form!==undefined){
+   const tk=[n(bank),n(agreement),n(table),provider?.id??'own'].join('|')
+   const seen=tableForm.get(tk)
+   if(seen&&seen!==form){issues.push({line,code:'formalization_conflict',detail:table.slice(0,60)});return}
+   tableForm.set(tk,form)
+  }
 
   const comps:SmartImportComponentValue[]=[]
   for(const cc of componentCols){
@@ -335,6 +358,7 @@ export function mapSmartCommercialRows(
    components:comps,group_values:groupValues,
    ...(tax===undefined?{}:{tax_pct:tax}),
    ...(col.provider===undefined?{}:{production_origin:provider?'third_party' as const:'own' as const,provider_id:provider?.id??null}),
+   ...(form===undefined?{}:{formalization:form}),
   })
  })
 
