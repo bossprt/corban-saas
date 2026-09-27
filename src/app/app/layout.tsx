@@ -31,6 +31,14 @@ const NAV: (NavItem & { show?: (role: string) => boolean; module?: string; perm?
   { key: 'configuracoes', href: '/app/configuracao', label: 'Configurações', show: canManageTeam },
 ]
 
+// Finance: the commission received from the banks and the company finance (F6.5).
+const FINANCE_PAGES = [
+  { href: '/app/financeiro', label: 'Comissão recebida' },
+  { href: '/app/financeiro/empresa', label: 'Contas a pagar e receber' },
+  { href: '/app/financeiro/empresa/extrato', label: 'Extrato bancário' },
+  { href: '/app/financeiro/empresa/relatorios', label: 'Fluxo de caixa e DRE' },
+]
+
 // Broker portal (F7): a member with the 'corretor' role gets only their own pages, mobile-first.
 const PORTAL_NAV: NavItem[] = [
   { key: 'portal', href: '/app/portal', label: 'Início' },
@@ -43,6 +51,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const items: NavItem[] = isPortalUser(access?.roleKey, modules) ? PORTAL_NAV : NAV.filter(n => (!n.show || n.show(membership.role)) && (!n.module || modules.has(n.module)) && (!n.perm || can(access, n.perm))).map(({ key, href, label, sections }) => ({
     key, href, label, sections,
     ...(key === 'comercial' ? { children: REGISTRATIONS.filter(r => !r.teamOnly || canManageTeam(membership.role)).map(r => ({ href: r.href, label: r.label })) } : {}),
+    ...(key === 'financeiro' ? { children: FINANCE_PAGES } : {}),
   }))
   const initial = (organization.name ?? 'C').trim().charAt(0).toUpperCase()
 
