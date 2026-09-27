@@ -1,53 +1,16 @@
-import { parseDelimited } from '../commercial'
-import { xlsxRows } from '../commercial-xlsx'
-import { fileExtension, inspectZip, sniffFormat } from '../imports/file-guards'
-import { xlsRows } from '../imports/legacy-xls'
+export { csvDelimiter } from '../commercial'
 import { parseMoneyInput } from '../money-input'
 
-// Commission reports of banks and promoters (F5): file -> header + rows of text -> lines for import_receipt_report.
-// Money never goes through a JavaScript number: cells arrive as text and become exact decimal strings, and any value
-// that is ambiguous or has more than two decimals is refused (the owner chose zero tolerance), never rounded.
+// Commission reports of banks and promoters (F5): the browser reads the file (lib/legacy/browser-read) into rows of
+// text; here the rows become lines for import_receipt_report. Spreadsheet numbers reach this point as plain decimal
+// text (cellText); every amount becomes an exact decimal string, and any value that is ambiguous or has more than two
+// decimals is refused (the owner chose zero tolerance), never rounded.
 
-export const RECEIPT_FILE_LIMITS = { bytes: 10_000_000, rows: 20_000 } as const
 export type ReceiptKind = 'upfront' | 'deferred' | 'chargeback'
 export type ReceiptMapping = { ade: string; amount: string; installment?: string; paid_on?: string; bank?: string }
 export type ReceiptRow = { row: number; ade: string; amount: string; installment?: string; paid_on?: string; bank?: string }
 export type ReceiptIssue = { row: number; code: 'amount_invalid' | 'amount_ambiguous' | 'amount_negative' | 'ade_missing' | 'installment_invalid' | 'date_invalid' }
 export type ReceiptSheet = { headers: string[]; body: string[][]; headerRow: number }
-
-const ALLOWED_EXT = new Set(['csv', 'txt', 'xlsx', 'xls'])
-
-// First worksheet (or CSV) as text rows. The reader is chosen from the content, never from the file name.
-export async function readReceiptFile(bytes: Uint8Array, fileName: string): Promise<{ rows: string[][]; error?: string }> {
-  if (bytes.length === 0) return { rows: [], error: 'empty_file' }
-  if (bytes.length > RECEIPT_FILE_LIMITS.bytes) return { rows: [], error: 'file_too_large' }
-  if (!ALLOWED_EXT.has(fileExtension(fileName))) return { rows: [], error: 'unsupported_file' }
-  const kind = sniffFormat(bytes)
-  if (kind === 'zip') {
-    const z = inspectZip(bytes)
-    if (!z.ok) return { rows: [], error: z.reason }
-    try { return { rows: await xlsxRows(Buffer.from(bytes), RECEIPT_FILE_LIMITS.rows + 50) } } catch { return { rows: [], error: 'xlsx_unreadable' } }
-  }
-  if (kind === 'ole') {
-    const r = xlsRows(bytes)
-    return r.issues.length ? { rows: [], error: r.issues[0].code } : { rows: r.rows }
-  }
-  if (kind === 'text') {
-    const text = Buffer.from(bytes).toString('utf-8')
-    return { rows: parseDelimited(text, csvDelimiter(text)) }
-  }
-  return { rows: [], error: 'unsupported_file' }
-}
-
-// Delimiter of a CSV whose first lines may be a title block: the one that appears most across the first 30 lines.
-// Ties go to ';' (Brazilian exports), because ',' is also the decimal separator of the amounts.
-export function csvDelimiter(text: string): ';' | ',' | '\t' {
-  const head = text.replace(/^﻿/, '').split(/\r?\n/).slice(0, 30).join('\n')
-  const n = (c: string) => head.split(c).length - 1
-  const semi = n(';'), tab = n('\t'), comma = n(',')
-  if (semi > 0 && semi >= tab && semi >= comma) return ';'
-  return tab > comma ? '\t' : ','
-}
 
 // Header = first row among the first 30 with at least two filled cells (reports often start with a title block).
 // Blank rows stay in the body so row numbers follow the file as read.
