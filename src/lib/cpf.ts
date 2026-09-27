@@ -10,12 +10,6 @@ export function isValidCpf(cpf: string): boolean {
   return digit(9) === Number(cpf[9]) && digit(10) === Number(cpf[10])
 }
 
-export function maskCpf(value: string | null | undefined): string {
-  if (!value) return '—'
-  const d = value.replace(/\D/g, '')
-  return d.length === 11 ? `***.${d.slice(3, 6)}.${d.slice(6, 9)}-**` : '***.***.***-**'
-}
-
 // Full CPF for screens (owner decision: no masking). Never put it in a URL or a log line.
 export function formatCpf(value: string | null | undefined): string {
   const d = String(value ?? '').replace(/\D/g, '')

@@ -48,7 +48,7 @@ export default async function FinanceReportsPage({ searchParams }: { searchParam
       <form className="mb-4 flex flex-wrap items-end gap-2" action="/app/financeiro/empresa/relatorios">
         <input name="ano" type="number" min={2020} max={2100} defaultValue={year} aria-label="Ano" className="field h-9 w-28 py-1" />
         <select name="filial" defaultValue={branch ?? ''} aria-label="Filial" className="field h-9 w-auto py-1"><option value="">Todas as filiais</option>{(branches ?? []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select>
-        <button className="h-9 rounded-[10px] border border-line px-3 text-sm hover:bg-surface-muted">Ver</button>
+        <button className="inline-flex h-9 items-center rounded-[10px] bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong">Ver</button>
       </form>
 
       <Card className="mb-4 overflow-hidden">

@@ -1,4 +1,4 @@
-import { parseDelimited } from '../commercial'
+import { csvDelimiter, parseDelimited } from '../commercial'
 
 // Legacy base (F5.5): the file is read in the browser, so an export of any size (the 2tech one has 6 MB) never hits the
 // request size limit of the server; only the chosen columns travel, in small blocks. XLSX/XLS through SheetJS (loaded
@@ -34,7 +34,7 @@ export async function readLegacyFileInBrowser(file: File): Promise<LegacySheet |
   if (ext === 'csv' || ext === 'txt') {
     let text = new TextDecoder('utf-8').decode(buf)
     if (text.includes('�')) text = new TextDecoder('windows-1252').decode(buf)
-    rows = parseDelimited(text)
+    rows = parseDelimited(text, csvDelimiter(text))
   } else if (ext === 'xlsx' || ext === 'xls') {
     try {
       const XLSX = await import('@e965/xlsx')

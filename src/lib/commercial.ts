@@ -24,6 +24,16 @@ export const normalizeHeader = (s: unknown) => String(s ?? '').normalize('NFD').
 
 // Minimal RFC-4180 reader: BOM, CRLF, quoted fields with "" escapes, delimiter chosen from the header (; , or tab).
 // `delimiter` overrides the choice (bank reports start with a title line that has no delimiter at all).
+// Delimiter of a CSV whose first lines may be a title block: the one that appears most across the first 30 lines.
+// Ties go to ';' (Brazilian exports), because ',' is also the decimal separator of the amounts.
+export function csvDelimiter(text: string): ';' | ',' | '\t' {
+  const head = text.replace(/^﻿/, '').split(/\r?\n/).slice(0, 30).join('\n')
+  const n = (c: string) => head.split(c).length - 1
+  const semi = n(';'), tab = n('\t'), comma = n(',')
+  if (semi > 0 && semi >= tab && semi >= comma) return ';'
+  return tab > comma ? '\t' : ','
+}
+
 export function parseDelimited(text: string, delimiter?: ';' | ',' | '\t'): string[][] {
   const src = text.replace(/^﻿/, '')
   const firstLine = src.split(/\r?\n/, 1)[0] ?? ''

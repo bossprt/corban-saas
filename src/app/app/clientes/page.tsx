@@ -7,6 +7,7 @@ import { formatCpf, formatPhone } from '@/lib/cpf'
 import { digitsOnly, searchTerm } from '@/lib/search'
 import { createCustomer } from './actions'
 import { ClientForm } from './ClientForm'
+import { CpfSearchForm } from '@/components/CpfSearchForm'
 
 const SOURCE_LABEL: Record<string, string> = { manual: 'Cadastro manual', corban_os: 'Cadastro manual', api: 'API', legado: 'Legado' }
 const sourceLabel = (s: string | null) => (s ? SOURCE_LABEL[s] ?? (s.startsWith('lead:') ? `Lead (${s.slice(5)})` : s) : '—')
@@ -14,7 +15,7 @@ const sourceLabel = (s: string | null) => (s ? SOURCE_LABEL[s] ?? (s.startsWith(
 export default async function CustomersPage({ searchParams }: { searchParams: Promise<{ q?: string; novo?: string }> }) {
   const { supabase, access } = await requireAppContext()
   const sp = await searchParams
-  // The list filter goes in the URL, so it only searches name and phone; CPF search is in Ctrl+K (server action, never in a URL).
+  // Name and phone filter through the URL; a CPF typed in the same box is looked up by POST (CpfSearchForm) and opens the client.
   const q = searchTerm(sp.q)
   let query = supabase.from('clients').select('id,full_name,cpf,phone,original_source,created_at').is('deleted_at', null).order('created_at', { ascending: false }).limit(100)
   if (q) {
@@ -44,13 +45,13 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
         </Card>
       )}
 
-      <form className="mb-4 flex gap-2" role="search">
+      <CpfSearchForm action="/app/clientes" mode="client" className="mb-4 flex gap-2">
         <label className="flex h-10 flex-1 items-center gap-2 rounded-[10px] border border-line bg-surface px-3">
           <Search size={16} className="text-muted" aria-hidden />
-          <input name="q" defaultValue={q ?? ''} placeholder="Filtrar por nome ou telefone (CPF: use Ctrl+K)" className="h-full flex-1 bg-transparent text-sm outline-none placeholder:text-muted" aria-label="Filtrar clientes" />
+          <input name="q" defaultValue={q ?? ''} placeholder="Nome, CPF ou telefone" className="h-full flex-1 bg-transparent text-sm outline-none placeholder:text-muted" aria-label="Filtrar clientes" />
         </label>
-        <button className="h-10 rounded-[10px] border border-line bg-surface px-4 text-sm hover:bg-surface-muted">Filtrar</button>
-      </form>
+        <button className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><Search size={15} aria-hidden />Filtrar</button>
+      </CpfSearchForm>
 
       {error ? (
         <Card className="p-5 text-sm text-[#991B1B]">Não foi possível carregar os clientes agora.</Card>
@@ -72,7 +73,10 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
                   </tr>
                 ))}
                 {!customers?.length && (
-                  <tr><td colSpan={5} className="px-4 py-10 text-center text-sm text-muted">{q ? 'Nenhum cliente encontrado com esse filtro.' : 'Nenhum cliente seu ainda. Converta um lead ou cadastre um cliente.'}</td></tr>
+                  <tr><td colSpan={5} className="px-4 py-10 text-center text-sm text-muted">
+                    {q ? 'Nenhum cliente encontrado com esse filtro.' : 'Nenhum cliente seu ainda. Converta um lead ou cadastre um cliente.'}
+                    {canCreate && <Link href="/app/clientes?novo=1" className="ml-3 inline-flex h-9 items-center rounded-[10px] bg-brand px-3 text-sm font-medium text-white hover:bg-brand-strong">Cadastrar novo cliente</Link>}
+                  </td></tr>
                 )}
               </tbody>
             </table>

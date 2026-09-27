@@ -1,3 +1,4 @@
+import { formatCpf } from '@/lib/cpf'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Badge, Card, CardHeader, PageHeader } from '@/components/ui'
@@ -11,7 +12,6 @@ import { confirmLegacyBatch, discardLegacyBatch, undoLegacyBatch } from '../acti
 
 const day = (d: string | null) => (d ? new Date(`${d.slice(0, 10)}T12:00:00Z`).toLocaleDateString('pt-BR') : '—')
 // CPF shown masked: only the last digits identify the row on screen.
-const maskCpf = (c: string | null) => (c && c.length === 11 ? `***.***.${c.slice(6, 9)}-${c.slice(9)}` : c ?? '—')
 
 // Preview of one batch: what enters, what is refused and why; confirm, discard or undo.
 export default async function LegacyBatchPage({ params }: { params: Promise<{ id: string }> }) {
@@ -74,7 +74,7 @@ export default async function LegacyBatchPage({ params }: { params: Promise<{ id
             <thead className="bg-surface-muted text-xs text-muted"><tr><th className="px-4 py-2">Linha</th><th className="px-4 py-2">CPF</th><th className="px-4 py-2">Nome</th><th className="px-4 py-2">Contrato</th><th className="px-4 py-2">Data</th><th className="px-4 py-2">Motivo</th></tr></thead>
             <tbody>{(issues ?? []).map(r => (
               <tr key={r.row_number} className="border-t border-line">
-                <td className="px-4 py-1.5">{r.row_number}</td><td className="px-4 py-1.5">{maskCpf(r.cpf)}</td><td className="px-4 py-1.5">{r.full_name ?? '—'}</td>
+                <td className="px-4 py-1.5">{r.row_number}</td><td className="px-4 py-1.5">{formatCpf(r.cpf)}</td><td className="px-4 py-1.5">{r.full_name ?? '—'}</td>
                 <td className="px-4 py-1.5">{r.ade ?? '—'}</td><td className="px-4 py-1.5">{day(r.contract_on)}</td><td className="px-4 py-1.5">{LEGACY_ISSUE_LABEL[r.issue as string] ?? r.issue}</td>
               </tr>
             ))}</tbody>
@@ -89,7 +89,7 @@ export default async function LegacyBatchPage({ params }: { params: Promise<{ id
             <thead className="bg-surface-muted text-xs text-muted"><tr><th className="px-4 py-2">Linha</th><th className="px-4 py-2">CPF</th><th className="px-4 py-2">Nome</th><th className="px-4 py-2">Banco</th><th className="px-4 py-2">Contrato</th><th className="px-4 py-2">Data</th><th className="px-4 py-2 text-right">Valor</th><th className="px-4 py-2">Vendedor</th></tr></thead>
             <tbody>{(sample ?? []).map(r => (
               <tr key={r.row_number} className="border-t border-line">
-                <td className="px-4 py-1.5">{r.row_number}</td><td className="px-4 py-1.5">{maskCpf(r.cpf)}</td><td className="px-4 py-1.5">{r.full_name ?? '—'}</td><td className="px-4 py-1.5">{r.bank_name ?? '—'}</td>
+                <td className="px-4 py-1.5">{r.row_number}</td><td className="px-4 py-1.5">{formatCpf(r.cpf)}</td><td className="px-4 py-1.5">{r.full_name ?? '—'}</td><td className="px-4 py-1.5">{r.bank_name ?? '—'}</td>
                 <td className="px-4 py-1.5">{r.ade ?? '—'}</td><td className="px-4 py-1.5">{day(r.contract_on)}</td><td className="px-4 py-1.5 text-right">{r.requested_amount === null ? '—' : brlText(r.requested_amount)}</td><td className="px-4 py-1.5">{r.seller_name ?? '—'}</td>
               </tr>
             ))}</tbody>
