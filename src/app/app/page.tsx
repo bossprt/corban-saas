@@ -25,7 +25,7 @@ export default async function DashboardPage() {
     own(supabase.from('proposals_v2').select('*', head).eq('status', 'draft')),
     supabase.from('operational_cases').select('*', head).not('canonical_state', 'in', '("paid","cancelled","rejected")').lt('due_at', isoAgo(0)),
     own(supabase.from('leads').select('*', head).in('status', ['new', 'contacted', 'qualified'])),
-    supabase.from('clients').select('*', head).is('deleted_at', null),
+    supabase.from('clients').select('*', head).is('deleted_at', null).not('original_source', 'like', 'legacy:%'), // the legacy base is consultation only (F5.5)
     own(supabase.from('proposals_v2').select('*', head)),
     supabase.from('digitization_jobs').select('*', head).in('status', ['queued', 'assigned', 'in_progress', 'blocked']),
     supabase.from('operational_cases').select('*', head).not('canonical_state', 'in', '("paid","cancelled","rejected")'),
