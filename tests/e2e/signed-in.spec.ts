@@ -962,3 +962,49 @@ ${ade};600,00;10/09/2026
   await page.getByRole('button', { name: 'Salvar formalização' }).click()
   await expect(page.getByText('Formalização da tabela salva.')).toBeVisible({ timeout: 30_000 })
 })
+
+// F5.5 (map 16a): the legacy base comes in by file with a preview, never enters the pipeline and shows on the client file.
+test('legacy base: cutoff, file preview with refused lines, import, client file, undo', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  // A valid CPF that no other run has used.
+  const digits = String(Date.now()).slice(-9).split('').map(Number)
+  const dv = (d: number[]) => { const s = d.reduce((a, n, i) => a + n * (d.length + 1 - i), 0) % 11; return s < 2 ? 0 : 11 - s }
+  const cpf = [...digits, dv(digits), dv([...digits, dv(digits)])].join('')
+  const name = `Cliente Antigo E2E ${Date.now()}`
+  const ade = `LEG-${Date.now()}`
+
+  await page.goto('/app/configuracao/base-antiga')
+  await page.getByLabel('Início do uso do Corban').fill('2026-09-01')
+  await page.getByRole('button', { name: 'Salvar data de corte' }).click()
+  await expect(page.getByText('Data de corte salva.')).toBeVisible({ timeout: 30_000 })
+
+  const csv = `CPF;Nome do Cliente;Banco;Contrato;Data Contrato;Valor Bruto;Parcela;Prazo;Corretor;Situação\n`
+    + `${cpf};${name};Banco Antigo;${ade};10/05/2025;10.000,00;250,00;96;Vendedor Teste;PAGO\n`
+    + `11111111111;CPF Errado;Banco Antigo;${ade}-X;10/05/2025;1.000,00;;;;\n`
+    + `${cpf};${name};Banco Antigo;${ade}-NOVO;10/09/2026;2.000,00;;;;\n`
+  await page.getByLabel(/Arquivo exportado/).setInputFiles({ name: `base-${Date.now()}.csv`, mimeType: 'text/csv', buffer: Buffer.from(csv, 'utf-8') })
+  await page.getByRole('button', { name: 'Ler colunas do arquivo' }).click()
+  await expect(page.getByLabel(/CPF do cliente/)).toHaveValue('CPF', { timeout: 30_000 })
+  await page.getByRole('button', { name: 'Enviar para conferência' }).click()
+  await expect(page.getByText('Arquivo lido. Confira as linhas antes de confirmar: nada foi gravado ainda.')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByText('CPF inválido', { exact: true })).toBeVisible()
+  await expect(page.getByText('Contrato depois da data de corte (entra pela esteira)', { exact: true })).toBeVisible()
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-base-antiga-conferencia.png`, fullPage: true })
+  await page.getByRole('button', { name: 'Confirmar importação' }).click()
+  await expect(page.getByText('Base antiga importada.')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByText(/1 cliente\(s\) novo\(s\), 0 já existente\(s\), 1 contrato\(s\)/)).toBeVisible()
+  const batchUrl = page.url().split('?')[0]
+
+  await page.goto(`/app/clientes?q=${encodeURIComponent(name)}`)
+  await page.getByRole('link', { name }).first().click()
+  await expect(page.getByText('Contratos antigos')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByText(ade, { exact: true })).toBeVisible()
+  await expect(page.getByText('Origem: base antiga (2tech)')).toBeVisible()
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-base-antiga-ficha.png`, fullPage: true })
+
+  await page.goto(batchUrl)
+  await page.getByText('Desfazer esta importação').click()
+  await page.getByLabel('Motivo').fill('teste e2e')
+  await page.getByRole('button', { name: 'Desfazer', exact: true }).click()
+  await expect(page.getByText('Importação desfeita.')).toBeVisible({ timeout: 30_000 })
+})

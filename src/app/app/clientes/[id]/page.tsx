@@ -14,7 +14,7 @@ import { BankAccounts, PersonalData, Registrations, type BankAccount, type Regis
 const brl = (v: unknown) => (v === null || v === undefined || v === '' ? '—' : Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }))
 const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('pt-BR') : '—')
 const SOURCE: Record<string, string> = { manual: 'cadastro manual', corban_os: 'cadastro manual', api: 'API', legado: 'legado' }
-const source = (s: string | null) => (s ? SOURCE[s] ?? (s.startsWith('lead:') ? `lead (${s.slice(5)})` : s) : '—')
+const source = (s: string | null) => (s ? SOURCE[s] ?? (s.startsWith('lead:') ? `lead (${s.slice(5)})` : s.startsWith('legacy:') ? `base antiga (${s.slice(7)})` : s) : '—')
 const EVENT: Record<string, string> = { 'customer.created': 'Cliente cadastrado', 'customer.recognized': 'CPF cadastrado de novo: contatos atualizados' }
 const LEAD_STATUS: Record<string, string> = { new: 'Novo', contacted: 'Em contato', qualified: 'Qualificado', converted: 'Convertido', lost: 'Perdido' }
 const DONE = ['paid', 'rejected', 'cancelled']
@@ -24,7 +24,7 @@ const DONE = ['paid', 'rejected', 'cancelled']
 export default async function CustomerDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const { supabase, access } = await requireAppContext()
-  const [{ data: customer }, { data: contacts }, { data: proposals }, { data: leads }, { data: timeline }, { data: address }, { data: documents }, { data: accountRows }, { data: registrationRows }, { data: agreementRows }] = await Promise.all([
+  const [{ data: customer }, { data: contacts }, { data: proposals }, { data: leads }, { data: timeline }, { data: address }, { data: documents }, { data: accountRows }, { data: registrationRows }, { data: agreementRows }, { data: legacy }] = await Promise.all([
     supabase.from('clients').select('id,full_name,cpf,phone,email,birth_date,original_source,created_at,updated_at,father_name,mother_name,rg_number,rg_issuer,rg_state,rg_issued_on,gender,marital_status,birthplace_city,birthplace_state,whatsapp').eq('id', id).is('deleted_at', null).maybeSingle(),
     supabase.from('client_contacts').select('id,kind,value,is_primary,source,first_seen_at,last_seen_at').eq('customer_id', id).order('is_primary', { ascending: false }).order('last_seen_at', { ascending: false }),
     supabase.from('proposals_v2').select('id,status,external_proposal_id,requested_amount,released_amount,installment_amount,term,created_at').eq('customer_id', id).order('created_at', { ascending: false }).limit(100),
@@ -35,6 +35,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
     supabase.from('customer_bank_accounts').select('id,bank_code,bank_name,branch,account_number,account_digit,account_type,is_primary').eq('customer_id', id).order('is_primary', { ascending: false }).order('created_at'),
     supabase.from('client_registrations').select('id,agreement_id,agency_name,registration_number,status,margin_amount,margin_as_of,portal_login,has_portal_password,notes').eq('customer_id', id).order('status').order('created_at'),
     supabase.from('organization_agreements').select('id,name').eq('is_active', true).order('name'),
+    supabase.from('legacy_contracts').select('id,source_system,bank_name,agreement_name,contract_type,ade,contract_on,paid_on,requested_amount,released_amount,installment_amount,term,seller_name,status_text').eq('client_id', id).order('contract_on', { ascending: false, nullsFirst: false }).limit(100),
   ])
   if (!customer) notFound()
   const open = (proposals ?? []).filter(p => !DONE.includes(p.status))
@@ -133,6 +134,31 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
               )}
             </div>
           </Card>
+
+          {(legacy ?? []).length > 0 && (
+            <Card>
+              <CardHeader title={<span className="flex items-center gap-2">Contratos antigos <Badge tone="neutral">{legacy!.length}</Badge></span>} />
+              <p className="px-5 text-xs text-muted">Histórico do sistema anterior, só para consulta: não entra em metas, comissão nem financeiro.</p>
+              <div className="overflow-x-auto px-2 pb-2 pt-2">
+                <table className="w-full text-left text-sm">
+                  <thead className="text-xs text-muted"><tr><th className="px-3 py-2 font-medium">Data</th><th className="px-3 py-2 font-medium">Banco</th><th className="px-3 py-2 font-medium">ADE</th><th className="px-3 py-2 font-medium">Situação</th><th className="px-3 py-2 text-right font-medium">Valor</th><th className="px-3 py-2 text-right font-medium">Parcela</th><th className="px-3 py-2 font-medium">Vendedor</th></tr></thead>
+                  <tbody>
+                    {legacy!.map(c => (
+                      <tr key={c.id} className="border-t border-line">
+                        <td className="num px-3 py-2 text-muted">{c.contract_on ? day(`${c.contract_on}T12:00:00Z`) : '—'}</td>
+                        <td className="px-3 py-2 text-ink-soft">{c.bank_name ?? '—'}{c.contract_type ? <span className="block text-xs text-muted">{c.contract_type}</span> : null}</td>
+                        <td className="px-3 py-2 font-mono text-[13px] text-ink-soft">{c.ade ?? '—'}</td>
+                        <td className="px-3 py-2"><Badge tone="neutral">{c.status_text ?? c.source_system}</Badge></td>
+                        <td className="num px-3 py-2 text-right text-ink">{brl(c.released_amount ?? c.requested_amount)}</td>
+                        <td className="num px-3 py-2 text-right text-ink-soft">{c.installment_amount ? `${brl(c.installment_amount)}${c.term ? ` × ${c.term}` : ''}` : '—'}</td>
+                        <td className="px-3 py-2 text-ink-soft">{c.seller_name ?? '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
 
           {(leads ?? []).length > 0 && (
             <Card>
