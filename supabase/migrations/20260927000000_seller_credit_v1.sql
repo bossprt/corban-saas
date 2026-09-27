@@ -5,12 +5,13 @@
 -- 2. Physical file: every table says whether its contracts are digital or physical (default digital); a contract takes
 --    it from its table and can be changed. A physical contract has three milestones (received by the company, sent to
 --    the bank, received by the bank), each with date, time and who.
--- 3. Seller credit: once the contract is paid to the client and (when physical) the company received the file, what is
---    payable to the seller (the rule or the owner's change) is credited to the seller's payout account automatically,
---    and supervisor/manager get theirs by the group rule. Deferred is credited month by month when the bank pays each
---    installment, only to sellers enabled to receive it. Any later change (edit, payout change, seller change) before
---    the seller is paid is posted as an adjustment with the difference; nothing is deleted. The ChatGPT-era credit on
---    bank receipts stays only for contracts of the old engine.
+-- 3. Seller credit: released only when the contract is paid to the client, (when physical) the company received the
+--    file, and the bank's commission was received by the company and reconciled (a divergent receipt waits until
+--    finance accepts it). Then what is payable to the seller (the rule or the owner's change) is credited to the
+--    seller's payout account automatically, and supervisor/manager get theirs by the group rule. Deferred is credited
+--    month by month when the bank pays each installment, only to sellers enabled to receive it. Any later change (edit,
+--    payout change, seller change) before the seller is paid is posted as an adjustment with the difference; nothing
+--    is deleted. The ChatGPT-era credit on bank receipts stays only for contracts of the old engine.
 -- 4. Closing by frequency: each seller has their own payment frequency (daily, weekly, biweekly, monthly); closing a
 --    period closes the accounts of one frequency. A payment already made outside Corban can be registered by the owner
 --    (date and reference), which also locks the contract.
