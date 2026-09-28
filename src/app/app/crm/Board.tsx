@@ -61,33 +61,33 @@ export function Board({ columns, showOwner }: { columns: BoardColumn[]; showOwne
               onDragOver={e => { if (dragging) { e.preventDefault(); setOver(col.stage) } }}
               onDragLeave={() => setOver(o => (o === col.stage ? null : o))}
               onDrop={e => { e.preventDefault(); drop(col.stage) }}
-              className={`flex min-h-[320px] flex-col rounded-[12px] border bg-surface-muted/60 p-2 transition-colors ${over === col.stage ? (DROPPABLE.has(col.stage) ? 'border-brand bg-brand/5' : 'border-[#DC2626]/40') : 'border-line'}`}
+              className={`flex min-h-[320px] min-w-0 flex-col rounded-[12px] border bg-surface-muted/60 p-2 transition-colors ${over === col.stage ? (DROPPABLE.has(col.stage) ? 'border-brand bg-brand/5' : 'border-[#DC2626]/40') : 'border-line'}`}
             >
               <header className="mb-2 flex items-center gap-2 px-1.5 pt-1">
                 <span className={`size-2 rounded-full ${ACCENT[col.stage]}`} aria-hidden />
                 <h2 className="text-[13px] font-semibold text-ink">{STAGE_LABEL[col.stage]}</h2>
                 <span className="num ml-auto text-xs text-muted">{col.total}</span>
               </header>
-              <ul className="grid gap-2">
+              <ul className="grid min-w-0 gap-2">
                 {col.cards.map(c => (
                   <li
                     key={c.id}
                     draggable
                     onDragStart={e => { setDragging(c); e.dataTransfer.effectAllowed = 'move' }}
                     onDragEnd={() => { setDragging(null); setOver(null) }}
-                    className={`rounded-[10px] border border-line bg-surface shadow-sm transition-opacity ${dragging?.id === c.id ? 'opacity-50' : ''}`}
+                    className={`min-w-0 overflow-hidden rounded-[10px] border border-line bg-surface shadow-sm transition-opacity ${dragging?.id === c.id ? 'opacity-50' : ''}`}
                   >
-                    <Link href={`/app/crm/leads/${c.id}`} className="block px-3 py-2.5 hover:bg-surface-muted/60">
-                      <span className="block truncate text-sm font-medium text-ink">{c.name}</span>
+                    <Link href={`/app/crm/leads/${c.id}`} title={c.name} className="block min-w-0 px-3 py-2.5 hover:bg-surface-muted/60">
+                      <span className="line-clamp-2 break-words text-sm font-medium leading-snug text-ink">{c.name}</span>
                       {c.campaign && <span className="block truncate text-xs text-muted">{c.campaign}</span>}
-                      <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                      <span className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs">
                         {c.nextContact && (
                           <span className={`inline-flex items-center gap-1 ${c.overdue ? 'font-semibold text-[#B91C1C]' : 'text-ink-soft'}`}>
                             <CalendarClock size={12} aria-hidden />{c.overdue ? 'Atrasado · ' : ''}{when(c.nextContact)}
                           </span>
                         )}
                         {c.isClient && <span className="rounded bg-brand/10 px-1.5 py-px font-medium text-brand">Cliente</span>}
-                        {showOwner && <span className="truncate text-muted">{c.owner ?? 'Sem vendedor'}</span>}
+                        {showOwner && <span className="block min-w-0 max-w-full truncate text-muted">{c.owner ?? 'Sem vendedor'}</span>}
                       </span>
                     </Link>
                   </li>
