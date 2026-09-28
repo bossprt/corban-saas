@@ -90,7 +90,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </main>
       </div>
 
-      <BottomNav items={items} />
+      <BottomNav items={items} footer={
+        <div className="text-sm text-muted">
+          <div>{access?.roleName ?? ROLE_LABEL[membership.role] ?? membership.role} · {organization.name}</div>
+          {membershipCount > 1 && <Link href="/organizacao" className="mt-2 inline-block underline">Trocar empresa</Link>}
+          <form action={signOut} className="mt-3">
+            <button type="submit" className="flex min-h-11 items-center gap-2 text-[15px] text-ink"><LogOut size={18} aria-hidden />Sair</button>
+          </form>
+        </div>
+      } />
     </div>
   )
 }

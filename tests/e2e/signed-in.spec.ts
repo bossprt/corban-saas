@@ -1267,3 +1267,18 @@ test('documents per bank: the list of Banco Teste becomes the checklist of a new
   await expect(page.locator('main')).toContainText('RG (documento de identidade)')
   await expect(page.locator('main')).toContainText('Comprovante de residência')
 })
+
+test('phone: the bottom bar has Vendas and "Mais" opens the whole menu with Sair', async ({ page }, info) => {
+  test.skip(info.project.name !== 'mobile', 'phone only')
+  await page.goto('/app/hoje')
+  const bar = page.getByRole('navigation', { name: 'Navegação inferior' })
+  await expect(bar.getByRole('link', { name: 'Vendas' })).toBeVisible()
+  await bar.getByRole('button', { name: 'Mais' }).click()
+  const menu = page.getByRole('dialog', { name: 'Menu' })
+  await expect(menu.getByRole('link', { name: 'Contratos' })).toBeVisible()
+  await expect(menu.getByRole('button', { name: 'Sair' })).toBeVisible()
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-menu.png` })
+  await menu.getByRole('link', { name: 'Contratos' }).click()
+  await expect(page).toHaveURL(/\/app\/contratos/, { timeout: 30_000 })
+  await expect(page.getByRole('dialog', { name: 'Menu' })).toHaveCount(0)
+})
