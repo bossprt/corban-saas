@@ -1,4 +1,4 @@
--- Contract test for 20260928000000_sales_crm_v1: campaigns from spreadsheets, distribution (queue / manual / round robin),
+-- Contract test for 20260928010142_sales_crm_v1: campaigns from spreadsheets, distribution (queue / manual / round robin),
 -- stages that follow the client's proposal, and a seller who only ever sees and works their own leads.
 -- Local test company and users admin / vendedor / vendedor2 @corban-teste.local. One transaction, rolled back.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/sales-crm-contract.sql
