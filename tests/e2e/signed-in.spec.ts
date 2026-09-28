@@ -1153,6 +1153,13 @@ test('sales CRM: campaign, spreadsheet, take the next lead, return, simulate, bo
   await expect(page.getByText('Campanha criada. Agora suba a planilha.')).toBeVisible({ timeout: 20_000 })
   await expect(page.getByRole('heading', { name })).toBeVisible()
   const campaignId = page.url().match(/campanhas\/([0-9a-f-]{36})/)![1]
+  // The upload button and the Excel template are in plain sight.
+  await expect(page.getByRole('link', { name: 'Subir planilha' })).toBeVisible()
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Baixar modelo em Excel' }).first().click()])
+  expect(download.suggestedFilename()).toBe('modelo-campanha-corban.xlsx')
+  const template = new ExcelJS.Workbook()
+  await template.xlsx.readFile(await download.path())
+  expect((template.getWorksheet('Leads')!.getRow(1).values as unknown[]).slice(1, 4)).toEqual(['Nome', 'CPF', 'Telefone'])
 
   // Spreadsheet: name, CPF, phone and a margin column; the header names are recognized.
   const csv = ['Nome;CPF;Telefone;Margem', `Lead E2E Um;314.159.265-90;(68) 9${stamp.slice(0, 4)}-${stamp.slice(3)};350,20`, `Lead E2E Dois;;(68) 8${stamp.slice(0, 4)}-${stamp.slice(3)};120,00`, ';;;'].join('\n')
