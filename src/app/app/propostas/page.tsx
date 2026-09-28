@@ -118,7 +118,36 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
           })}
         </div>
       ) : (
-      <Card className="overflow-hidden">
+      <>
+      {/* Phone: one card per proposal (client, stage, value), no sideways scrolling. */}
+      <ul className="grid gap-2 md:hidden" aria-label="Propostas">
+        {shown.map(c => {
+          const p = proposals.get(c.proposal_id)
+          const cust = (p?.customer_snapshot ?? {}) as Record<string, unknown>
+          const com = (p?.commercial_snapshot ?? {}) as Record<string, unknown>
+          const d = days(c.entered_stage_at)
+          const alert = alertOf(c)
+          return (
+            <li key={c.id}>
+              <Link href={`/app/propostas/${c.proposal_id}`} className="block rounded-[12px] border border-line bg-surface p-3.5 active:bg-surface-muted">
+                <span className="flex items-start justify-between gap-2">
+                  <span className="min-w-0 font-medium text-ink">{String(cust.full_name ?? cust.name ?? 'Cliente')}</span>
+                  <Badge tone={STATE_TONE[c.canonical_state] ?? 'neutral'} className="shrink-0">{stageName.get(c.current_stage_id) ?? c.canonical_state}</Badge>
+                </span>
+                <span className="mt-0.5 block truncate text-xs text-muted">{[com.bank, p?.external_proposal_id && `ADE ${p.external_proposal_id}`].filter(Boolean).join(' · ') || '—'}</span>
+                <span className="mt-2 flex items-center justify-between gap-2 text-[13px]">
+                  <span className="num font-semibold text-ink">{brl(p?.released_amount ?? p?.requested_amount ?? null)}</span>
+                  <span className="min-w-0 truncate text-xs text-ink-soft">{(p?.seller_id && sellerName.get(p.seller_id)) || ''}</span>
+                  <span className={`num shrink-0 text-xs ${d >= 4 && !CLOSED.includes(c.canonical_state) ? 'font-semibold text-diverged' : 'text-muted'}`}>{d === 0 ? 'hoje' : `${d} d`}</span>
+                </span>
+                {alert && <span className="mt-1.5 block text-xs font-medium text-diverged">{alert}</span>}
+              </Link>
+            </li>
+          )
+        })}
+        {shown.length === 0 && <li className="rounded-[12px] border border-line bg-surface px-4 py-8 text-center text-sm text-muted">Nenhuma proposta nesta etapa.</li>}
+      </ul>
+      <Card className="hidden overflow-hidden md:block">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-[13px]">
             <thead className="bg-surface-muted text-xs font-semibold text-muted">
@@ -153,6 +182,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
           </table>
         </div>
       </Card>
+      </>
       )}
     </section>
   )
