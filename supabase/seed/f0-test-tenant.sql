@@ -65,7 +65,7 @@ select '00000000-0000-4000-8000-00000000c0b1', v.status, v.channel, v.full_name,
 from (values
   ('new',       'api',      'Otávio Teste Reis',   '+5568999000011'),
   ('contacted', 'whatsapp', 'Helena Teste Costa',  '+5568999000012'),
-  ('qualified', 'manual',   'Fábio Teste Torres',  '+5568999000013')
+  ('negotiating', 'manual',   'Fábio Teste Torres',  '+5568999000013')
 ) as v(status, channel, full_name, phone)
 where not exists (
   select 1 from public.leads l

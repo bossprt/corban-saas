@@ -41,3 +41,6 @@ cliente pelo chat; dizer o número da proposta/ADE.
 
 | Data | Passo | Resultado | Correção |
 |---|---|---|---|
+| 27/09/2026 | Clientes / Contratos | busca por CPF só no Ctrl+K, CPF mascarado, sem Novo contrato | PR #41 |
+| 27/09/2026 | Nova proposta / Simulações | lista de clientes parava em 300; simulação com tabela vencida | PR #42 |
+| 27/09/2026 | CRM (Vendas) | campanha criada e planilha importada; faltava botão visível e modelo em Excel | PR #43, #44; conferido pelo dono |
