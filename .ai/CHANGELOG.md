@@ -21,6 +21,7 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 - Adicionado: ficha do lead com colunas da planilha, histórico, anotação, próximo contato (aparece na Hoje), WhatsApp e Simular (cadastra o cliente pelo CPF e abre a simulação).
 - Alterado: Proposta e Ganho seguem a proposta do cliente (criada, paga; recusada ou cancelada volta para Negociando). A fila de leads sem dono não é mais listada para o vendedor: ele pega o próximo.
 - Removido: a lista antiga de leads (`/app/leads` leva ao quadro).
+- Adicionado (validação): botão Subir planilha na campanha e na lista de campanhas, arrastar o arquivo, e modelo em Excel (aba Leads com as colunas e aba Instruções).
 
 ### Ficha completa do cliente (25/09/2026)
 - Dados pessoais (pais, RG, sexo, estado civil, naturalidade, WhatsApp, nascimento), dados bancários e várias matrículas por cliente com margem e acesso; senha da matrícula criptografada no cofre, mostrada só a quem pode editar e com registro de cada visualização.

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { FileSpreadsheet } from 'lucide-react'
+import { FileSpreadsheet, Upload } from 'lucide-react'
 import { readLegacyFileInBrowser, type LegacySheet } from '@/lib/legacy/browser-read'
 import { buildCampaignRows, CAMPAIGN_FIELDS, CAMPAIGN_FIELD_LABEL, CAMPAIGN_LIMITS, chunk, guessCampaignMapping, type CampaignField, type CampaignMapping } from '@/lib/crm'
 import { importCampaignChunk } from '../../actions'
@@ -63,9 +63,10 @@ export function CampaignImport({ campaignId, alreadyImported }: { campaignId: st
   const cols = sheet?.headers ?? []
   return (
     <div className="grid gap-4">
-      <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[12px] border border-dashed border-line-strong bg-surface-muted/50 px-4 py-6 text-center text-sm text-ink-soft hover:bg-surface-muted">
+      <label onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); pick(e.dataTransfer.files?.[0] ?? null) }} className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[12px] border border-dashed border-line-strong bg-surface-muted/50 px-4 py-6 text-center text-sm text-ink-soft hover:bg-surface-muted">
         <FileSpreadsheet size={22} className="text-brand" aria-hidden />
-        <span><span className="font-medium text-brand">Escolher planilha</span> (XLSX, XLS ou CSV)</span>
+        <span className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white"><Upload size={16} aria-hidden />Escolher planilha do computador</span>
+        <span>ou arraste o arquivo aqui (XLSX, XLS ou CSV)</span>
         <span className="text-xs text-muted">{file ? file.name : 'Precisa ter pelo menos o nome e o CPF ou telefone.'}</span>
         <input type="file" accept=".xlsx,.xls,.csv,.txt" aria-label="Planilha da campanha" className="sr-only" onChange={e => pick(e.target.files?.[0] ?? null)} />
       </label>

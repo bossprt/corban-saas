@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
-import { ArrowLeft, KanbanSquare } from 'lucide-react'
+import { ArrowLeft, KanbanSquare, Upload } from 'lucide-react'
 import { Badge, ButtonLink, Card, CardHeader, PageHeader } from '@/components/ui'
 import { SubmitButton } from '@/components/SubmitButton'
 import { can } from '@/lib/access'
@@ -9,6 +9,7 @@ import { isDistribution, STAGE_LABEL, LEAD_STAGES } from '@/lib/crm'
 import { leadOwners } from '@/lib/crm.server'
 import { assignLeads, saveCampaign } from '../../actions'
 import { CampaignFields } from '../CampaignFields'
+import { TemplateDownload } from '../TemplateDownload'
 import { CampaignImport } from './CampaignImport'
 
 const label = 'text-[13px] font-medium text-ink-soft'
@@ -52,7 +53,10 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
       <PageHeader
         title={<span className="flex flex-wrap items-center gap-3">{c.name}{c.status === 'closed' && <Badge tone="neutral">Encerrada</Badge>}</span>}
         description={c.description ?? undefined}
-        actions={<ButtonLink href={`/app/crm?campanha=${id}`} variant="secondary"><KanbanSquare size={16} aria-hidden />Ver no quadro</ButtonLink>}
+        actions={<>
+          <ButtonLink href={`/app/crm?campanha=${id}`} variant="secondary"><KanbanSquare size={16} aria-hidden />Ver no quadro</ButtonLink>
+          {c.status === 'active' && <ButtonLink href="#planilha"><Upload size={16} aria-hidden />Subir planilha</ButtonLink>}
+        </>}
       />
 
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
@@ -63,8 +67,11 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
 
       <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
         <div className="grid content-start gap-4">
-          <Card className="p-5">
-            <h2 className="mb-1 text-base font-semibold text-ink">Subir planilha</h2>
+          <Card id="planilha" className="scroll-mt-6 p-5">
+            <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-base font-semibold text-ink">Subir planilha</h2>
+              <TemplateDownload />
+            </div>
             <p className="mb-4 text-sm text-muted">Quem já é cliente fica ligado à ficha pelo CPF ou telefone, sem duplicar. Quem é novo entra como lead e vira cliente quando o vendedor simular.</p>
             {c.status === 'active'
               ? <CampaignImport campaignId={id} alreadyImported={(imports ?? []).map(i => i.file_sha256)} />

@@ -8,6 +8,7 @@ import { DISTRIBUTION_LABEL, isDistribution } from '@/lib/crm'
 import { leadOwners } from '@/lib/crm.server'
 import { saveCampaign } from '../actions'
 import { CampaignFields } from './CampaignFields'
+import { TemplateDownload } from './TemplateDownload'
 
 const pct = (a: number, b: number) => (b > 0 ? `${Math.round((a / b) * 100)}%` : '—')
 const day = (d: string | null) => (d ? d.split('-').reverse().join('/') : null)
@@ -37,14 +38,14 @@ export default async function CampaignsPage() {
   return (
     <section>
       <Link href="/app/crm" className="mb-3 inline-flex items-center gap-1 text-sm text-muted hover:text-ink"><ArrowLeft size={15} aria-hidden />Vendas</Link>
-      <PageHeader title="Campanhas" description="Cada planilha de clientes vira uma campanha: quem trabalha, como os leads são distribuídos e o resultado." />
+      <PageHeader title="Campanhas" description="Cada planilha de clientes vira uma campanha: crie a campanha, depois suba a planilha dentro dela." actions={<TemplateDownload />} />
 
       <Card className="mb-6 overflow-hidden">
         <CardHeader title="Campanhas" />
         <div className="mt-3 overflow-x-auto">
-          <table className="w-full min-w-[820px] text-left text-sm">
+          <table className="w-full min-w-[920px] text-left text-sm">
             <thead className="border-y border-line bg-surface-muted text-xs text-muted">
-              <tr><th className="px-5 py-2 font-medium">Campanha</th><th className="px-3 py-2 font-medium">Distribuição</th><th className="px-3 py-2 text-right font-medium">Leads</th><th className="px-3 py-2 text-right font-medium">Sem vendedor</th><th className="px-3 py-2 text-right font-medium">Em aberto</th><th className="px-3 py-2 text-right font-medium">Proposta</th><th className="px-3 py-2 text-right font-medium">Ganhos</th><th className="px-5 py-2 text-right font-medium">Conversão</th></tr>
+              <tr><th className="px-5 py-2 font-medium">Campanha</th><th className="px-3 py-2 font-medium">Distribuição</th><th className="px-3 py-2 text-right font-medium">Leads</th><th className="px-3 py-2 text-right font-medium">Sem vendedor</th><th className="px-3 py-2 text-right font-medium">Em aberto</th><th className="px-3 py-2 text-right font-medium">Proposta</th><th className="px-3 py-2 text-right font-medium">Ganhos</th><th className="px-3 py-2 text-right font-medium">Conversão</th><th className="px-5 py-2" /></tr>
             </thead>
             <tbody>
               {(campaigns ?? []).map(c => {
@@ -63,11 +64,12 @@ export default async function CampaignsPage() {
                     <td className="num px-3 py-2.5 text-right">{s.open}</td>
                     <td className="num px-3 py-2.5 text-right">{s.proposal}</td>
                     <td className="num px-3 py-2.5 text-right font-medium text-ink">{s.won}</td>
-                    <td className="num px-5 py-2.5 text-right">{pct(s.won, s.total)}</td>
+                    <td className="num px-3 py-2.5 text-right">{pct(s.won, s.total)}</td>
+                    <td className="px-5 py-2.5 text-right">{c.status === 'active' && <Link href={`/app/crm/campanhas/${c.id}#planilha`} className="inline-flex h-8 items-center rounded-[10px] bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-strong">Subir planilha</Link>}</td>
                   </tr>
                 )
               })}
-              {!campaigns?.length && <tr><td colSpan={8} className="px-5 py-10 text-center text-muted">Nenhuma campanha ainda. Crie a primeira abaixo e suba a planilha.</td></tr>}
+              {!campaigns?.length && <tr><td colSpan={9} className="px-5 py-10 text-center text-muted">Nenhuma campanha ainda. Crie a primeira abaixo e suba a planilha.</td></tr>}
             </tbody>
           </table>
         </div>
