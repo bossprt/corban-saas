@@ -6,6 +6,7 @@ import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
 import { missingProfileFields, type ProfileFields } from '@/lib/clients/profile'
 import { formatCpf, formatPhone } from '@/lib/cpf'
+import { CHANNEL_LABEL, STAGE_TONE, isLeadStage, stageLabel } from '@/lib/crm'
 import { proposalStatusLabel } from '@/lib/operational'
 import { updateCustomer } from '../actions'
 import { ClientForm, type ClientFormValues } from '../ClientForm'
@@ -16,7 +17,6 @@ const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('pt-
 const SOURCE: Record<string, string> = { manual: 'cadastro manual', corban_os: 'cadastro manual', api: 'API', legado: 'legado' }
 const source = (s: string | null) => (s ? SOURCE[s] ?? (s.startsWith('lead:') ? `lead (${s.slice(5)})` : s.startsWith('legacy:') ? `base antiga (${s.slice(7)})` : s) : '—')
 const EVENT: Record<string, string> = { 'customer.created': 'Cliente cadastrado', 'customer.recognized': 'CPF cadastrado de novo: contatos atualizados' }
-const LEAD_STATUS: Record<string, string> = { new: 'Novo', contacted: 'Em contato', qualified: 'Qualificado', converted: 'Convertido', lost: 'Perdido' }
 const DONE = ['paid', 'rejected', 'cancelled']
 
 // Client 360. The page is the client file: whoever can edit sees the full registration form, locked until "Editar cadastro"
@@ -28,7 +28,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
     supabase.from('clients').select('id,full_name,cpf,phone,email,birth_date,original_source,created_at,updated_at,father_name,mother_name,rg_number,rg_issuer,rg_state,rg_issued_on,gender,marital_status,birthplace_city,birthplace_state,whatsapp').eq('id', id).is('deleted_at', null).maybeSingle(),
     supabase.from('client_contacts').select('id,kind,value,is_primary,source,first_seen_at,last_seen_at').eq('customer_id', id).order('is_primary', { ascending: false }).order('last_seen_at', { ascending: false }),
     supabase.from('proposals_v2').select('id,status,external_proposal_id,requested_amount,released_amount,installment_amount,term,created_at').eq('customer_id', id).order('created_at', { ascending: false }).limit(100),
-    supabase.from('leads').select('id,status,channel,created_at').eq('customer_id', id).order('created_at', { ascending: false }).limit(20),
+    supabase.from('leads').select('id,status,channel,campaign,created_at').eq('customer_id', id).order('created_at', { ascending: false }).limit(20),
     supabase.from('customer_timeline_events').select('id,event_type,source,occurred_at').eq('customer_id', id).order('occurred_at', { ascending: false }).limit(20),
     supabase.from('customer_addresses').select('postal_code,street,number,complement,neighborhood,city,state').eq('customer_id', id).eq('is_primary', true).limit(1).maybeSingle(),
     supabase.from('customer_documents').select('id,status,created_at').eq('customer_id', id).order('created_at', { ascending: false }).limit(20),
@@ -165,9 +165,11 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
               <CardHeader title="Leads" />
               <ul className="px-2 pb-2 pt-2">
                 {(leads ?? []).map(l => (
-                  <li key={l.id} className="flex items-center justify-between border-t border-line px-3 py-2.5 text-sm first:border-t-0">
-                    <span className="text-ink-soft">{l.channel} · {day(l.created_at)}</span>
-                    <Badge tone={l.status === 'converted' ? 'received' : l.status === 'lost' ? 'neutral' : 'paid-out'}>{LEAD_STATUS[l.status] ?? l.status}</Badge>
+                  <li key={l.id}>
+                    <Link href={`/app/crm/leads/${l.id}`} className="flex items-center justify-between rounded-lg border-t border-line px-3 py-2.5 text-sm first:border-t-0 hover:bg-surface-muted">
+                      <span className="text-ink-soft">{l.campaign ?? CHANNEL_LABEL[l.channel] ?? l.channel} · {day(l.created_at)}</span>
+                      <Badge tone={isLeadStage(l.status) ? STAGE_TONE[l.status] : 'neutral'}>{stageLabel(l.status)}</Badge>
+                    </Link>
                   </li>
                 ))}
               </ul>

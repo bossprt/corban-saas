@@ -1142,3 +1142,74 @@ test('simulation: pick the client by search, simulate, turn into a proposal', as
   await row.getByRole('button', { name: 'Criar proposta' }).click()
   await expect(page).toHaveURL(/\/app\/propostas/)
 })
+
+test('sales CRM: campaign, spreadsheet, take the next lead, return, simulate, board', async ({ page, browser }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  const stamp = Date.now().toString().slice(-7)
+  const name = `Campanha E2E ${stamp}`
+  await page.goto('/app/crm/campanhas')
+  await page.getByLabel('Nome da campanha').fill(name)
+  await page.getByRole('button', { name: 'Criar campanha' }).click()
+  await expect(page.getByText('Campanha criada. Agora suba a planilha.')).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByRole('heading', { name })).toBeVisible()
+  const campaignId = page.url().match(/campanhas\/([0-9a-f-]{36})/)![1]
+
+  // Spreadsheet: name, CPF, phone and a margin column; the header names are recognized.
+  const csv = ['Nome;CPF;Telefone;Margem', `Lead E2E Um;314.159.265-90;(68) 9${stamp.slice(0, 4)}-${stamp.slice(3)};350,20`, `Lead E2E Dois;;(68) 8${stamp.slice(0, 4)}-${stamp.slice(3)};120,00`, ';;;'].join('\n')
+  await page.getByLabel('Planilha da campanha').setInputFiles({ name: 'campanha.csv', mimeType: 'text/csv', buffer: Buffer.from(csv, 'utf-8') })
+  await expect(page.getByLabel('Coluna Nome')).toHaveValue('0')
+  await expect(page.getByLabel('Coluna CPF')).toHaveValue('1')
+  await expect(page.getByLabel('Coluna Telefone', { exact: true })).toHaveValue('2')
+  await expect(page.getByRole('checkbox', { name: 'Margem' })).toBeChecked()
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-crm-importar.png`, fullPage: true })
+  await page.getByRole('button', { name: 'Importar 2 lead(s)' }).click()
+  await expect(page.getByText(/Importação concluída: 2 lead\(s\) novo\(s\)/)).toBeVisible({ timeout: 20_000 })
+
+  // The queue gives the first line of the file; the lead file shows the spreadsheet columns.
+  await page.goto(`/app/crm?campanha=${campaignId}`)
+  await page.getByRole('button', { name: /Pegar próximo lead/ }).click()
+  await expect(page.getByRole('heading', { name: /Lead E2E Um/ })).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByText('350,20')).toBeVisible()
+  await expect(page.getByText('314.159.265-90')).toBeVisible()
+  await page.getByLabel('Quando retornar').fill('2030-01-15T10:30')
+  await page.getByLabel('Anotação (opcional)').fill('Cliente pediu retorno de manhã')
+  await page.getByRole('button', { name: 'Marcar retorno' }).click()
+  await expect(page.getByText('Retorno marcado.')).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByText('Em contato', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Cliente pediu retorno de manhã')).toBeVisible()
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-crm-lead.png`, fullPage: true })
+
+  // Simular: the lead's CPF makes the client and the simulation opens with it chosen.
+  await page.getByRole('button', { name: 'Simular' }).click()
+  await expect(page).toHaveURL(/\/app\/simulacoes\?cliente=[0-9a-f-]{36}$/, { timeout: 20_000 })
+  await expect(page.getByText('Lead E2E Um')).toBeVisible()
+
+  // Board: the lead is negotiating; the second one is dragged from Novo to Em contato.
+  await page.goto(`/app/crm?campanha=${campaignId}`)
+  await expect(page.getByRole('region', { name: /^Negociando: 1$/ })).toContainText('Lead E2E Um')
+  const second = page.getByRole('region', { name: /^Novo: 1$/ }).getByRole('link', { name: /Lead E2E Dois/ })
+  await second.dragTo(page.getByRole('region', { name: /^Em contato/ }))
+  await expect(page.getByRole('region', { name: /^Em contato: 1$/ })).toContainText('Lead E2E Dois', { timeout: 20_000 })
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-crm-quadro.png`, fullPage: true })
+
+  // Campaign numbers.
+  await page.goto(`/app/crm/campanhas/${campaignId}`)
+  await expect(page.getByText('campanha.csv')).toBeVisible()
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-crm-campanha.png`, fullPage: true })
+
+  // A seller works the board but does not manage campaigns, and never sees the leads of the queue.
+  const sellerEmail = process.env.E2E_SELLER_EMAIL
+  if (!sellerEmail) return
+  const seller = await (await browser.newContext({ storageState: { cookies: [], origins: [] } })).newPage()
+  await seller.goto('/login')
+  await seller.locator('input[type="email"]').fill(sellerEmail)
+  await seller.locator('input[type="password"]').fill(password!)
+  await seller.locator('button[type="submit"]').click()
+  await seller.waitForURL(/\/app(\/|$)/)
+  await seller.goto(`/app/crm?campanha=${campaignId}`)
+  await expect(seller.getByRole('heading', { name: 'Vendas' })).toBeVisible()
+  await expect(seller.getByRole('link', { name: 'Campanhas' })).toHaveCount(0)
+  await expect(seller.getByText('Lead E2E Dois')).toHaveCount(0)
+  await seller.goto('/app/crm/campanhas')
+  await expect(seller).toHaveURL(/\/app\/crm$/)
+})

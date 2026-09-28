@@ -5,6 +5,7 @@ import { ClientPicker } from '@/components/ClientPicker'
 import { SubmitButton } from '@/components/SubmitButton'
 import { requireAppContext } from '@/lib/appContext'
 import { effectiveContractTypes } from '@/lib/contract-types'
+import { formatCpf } from '@/lib/cpf'
 import { brlText } from '@/lib/receipts/format'
 import { createProposalFromSimulation, createSimulation } from './actions'
 
@@ -22,9 +23,13 @@ function inForceNow<T extends VersionWindow>(versions: T[]): T[] {
   return versions.filter(v => new Date(v.effective_from ?? v.published_at ?? v.created_at).getTime() <= now && (!v.effective_until || now < new Date(v.effective_until).getTime()))
 }
 
-export default async function SimulationsPage() {
+// ?cliente=<uuid> (never a CPF) opens the form with that client chosen, e.g. from a lead's "Simular".
+export default async function SimulationsPage({ searchParams }: { searchParams: Promise<{ cliente?: string }> }) {
   const { supabase } = await requireAppContext()
-  const [tablesResult, versionsResult, simulationsResult, proposalsResult, typesResult, typeSettingsResult, conditionsResult] = await Promise.all([
+  const cliente = (await searchParams).cliente ?? ''
+  const clienteId = /^[0-9a-f-]{36}$/.test(cliente) ? cliente : null
+  const [initialClient, tablesResult, versionsResult, simulationsResult, proposalsResult, typesResult, typeSettingsResult, conditionsResult] = await Promise.all([
+    clienteId ? supabase.from('clients').select('id,full_name,cpf').eq('id', clienteId).is('deleted_at', null).maybeSingle() : Promise.resolve({ data: null }),
     supabase.from('product_tables').select('id,name,code'),
     supabase.from('product_table_versions')
       .select('id,version,product_table_id,term_min,term_max,effective_from,effective_until,published_at,created_at')
@@ -65,7 +70,7 @@ export default async function SimulationsPage() {
       <Card className="mb-6 p-5">
         <form action={createSimulation} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
           <div className={`${label} sm:col-span-2 lg:col-span-3`}>Cliente
-            <ClientPicker name="customer_id" />
+            <ClientPicker name="customer_id" initial={initialClient.data ? { id: initialClient.data.id, name: initialClient.data.full_name, cpf: formatCpf(initialClient.data.cpf) } : null} />
           </div>
           <label className={`${label} sm:col-span-2 lg:col-span-3`}>Tabela e tipo de contrato
             <select required name="table_choice" className="field mt-1.5" defaultValue="">

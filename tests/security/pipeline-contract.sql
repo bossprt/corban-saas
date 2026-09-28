@@ -95,7 +95,7 @@ insert into made select 'lead_rr', (public.api_ingest_lead_distributed((select a
 reset role;
 insert into results select 'round robin gives the lead to the eligible seller', owner_user_id = (select v2 from ids) and assigned_at is not null from public.leads where id = (select id from made where label = 'lead_rr');
 
--- Queue: an unassigned lead is visible to a seller and can be claimed once.
+-- Queue: an unassigned lead is counted in the seller's queue (not browsable since sales_crm_v1) and can be claimed once.
 select pg_temp.act_as((select admin_user from ids));
 set local role authenticated;
 select public.set_lead_distribution((select org from ids), 'queue');
@@ -105,7 +105,8 @@ insert into made select 'lead_q', (public.api_ingest_lead_distributed((select ap
 reset role;
 select pg_temp.act_as((select v1 from ids));
 set local role authenticated;
-insert into results select 'queue lead is visible to the seller', exists (select 1 from public.leads where id = (select id from made where label = 'lead_q'));
+insert into results select 'queue lead is counted for the seller, not shown', public.lead_queue_count((select org from ids)) >= 1
+  and not exists (select 1 from public.leads where id = (select id from made where label = 'lead_q'));
 select public.claim_lead((select id from made where label = 'lead_q'));
 reset role;
 select pg_temp.act_as((select v2 from ids));

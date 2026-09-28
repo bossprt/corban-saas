@@ -8,14 +8,16 @@ import { proposalStatusLabel } from '@/lib/operational'
 import { atLeast } from '@/lib/rbac'
 import { isPortalUser } from '@/lib/portal'
 import { Badge, ButtonLink, Card, CardHeader, PageHeader, type Tone } from '@/components/ui'
+import { OPEN_STAGES, stageLabel } from '@/lib/crm'
 
 const SEVERITY_TONE: Record<Severity, Tone> = { critical: 'reversed', high: 'diverged', medium: 'paid-out', low: 'neutral' }
-const LEAD_STATUS: Record<string, string> = { new: 'Novo', contacted: 'Em contato', qualified: 'Qualificado' }
 const OPEN_PROPOSAL = ['draft', 'documents_pending', 'ready_for_digitization', 'digitization', 'submitted', 'approved']
 
 const brl = (v: unknown) => (v === null || v === undefined || v === '' ? '—' : Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }))
 const monthStart = () => `${new Date().toISOString().slice(0, 7)}-01`
 const daysSince = (iso: string) => Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000))
+const isOverdue = (iso: string) => new Date(iso).getTime() < Date.now()
+const returnAt = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
 const ago = (iso: string) => {
   const d = daysSince(iso)
   return d === 0 ? 'hoje' : d === 1 ? 'há 1 dia' : `há ${d} dias`
@@ -30,7 +32,8 @@ export default async function TodayPage() {
 
   const [attention, leads, proposals, goals] = await Promise.all([
     loadAttention(ctx),
-    supabase.from('leads').select('id,full_name,status,channel,created_at').eq('owner_user_id', user.id).in('status', ['new', 'contacted', 'qualified']).order('created_at', { ascending: true }).limit(6),
+    // Returns first (the most overdue on top), then the oldest leads without a return.
+    supabase.from('leads').select('id,full_name,status,channel,created_at,next_contact_at').eq('owner_user_id', user.id).in('status', [...OPEN_STAGES]).order('next_contact_at', { ascending: true, nullsFirst: false }).order('created_at', { ascending: true }).limit(8),
     supabase.from('proposals_v2').select('id,status,requested_amount,updated_at,customer_snapshot').eq('created_by', user.id).in('status', OPEN_PROPOSAL).order('updated_at', { ascending: true }).limit(6),
     supabase.rpc('goal_progress', { p_org: ctx.organization.id, p_month: monthStart() }),
   ])
@@ -53,7 +56,7 @@ export default async function TodayPage() {
         description={today}
         actions={
           <>
-            <ButtonLink href="/app/leads" variant="secondary" size="md"><UserPlus size={16} aria-hidden />Novo lead</ButtonLink>
+            <ButtonLink href="/app/crm" variant="secondary" size="md"><UserPlus size={16} aria-hidden />Vendas</ButtonLink>
             <ButtonLink href="/app/clientes" variant="secondary" size="md"><UserRoundPlus size={16} aria-hidden />Novo cliente</ButtonLink>
             <ButtonLink href="/app/propostas/nova" size="md"><FilePlus2 size={16} aria-hidden />Nova proposta</ButtonLink>
           </>
@@ -107,16 +110,20 @@ export default async function TodayPage() {
 
         <div className="grid content-start gap-4">
           <Card>
-            <CardHeader title="Meus leads" action={<Link href="/app/leads" className="text-sm text-brand hover:text-brand-strong">Ver todos</Link>} />
+            <CardHeader title="Retornos e leads" action={<Link href="/app/crm" className="text-sm text-brand hover:text-brand-strong">Vendas</Link>} />
             <ul className="px-2 pb-2 pt-2">
-              {(leads.data ?? []).length === 0 && <li className="px-3 pb-3 text-sm text-muted">Nenhum lead aberto com você.</li>}
+              {(leads.data ?? []).length === 0 && <li className="px-3 pb-3 text-sm text-muted">Nenhum lead aberto com você. Pegue o próximo em Vendas.</li>}
               {(leads.data ?? []).map(l => (
-                <li key={l.id} className="flex items-center gap-3 border-t border-line px-3 py-2.5 first:border-t-0">
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-medium text-ink">{l.full_name}</span>
-                    <span className="block text-xs text-muted">{l.channel} · {ago(l.created_at)}</span>
-                  </span>
-                  <Badge tone={l.status === 'new' && daysSince(l.created_at) >= 2 ? 'diverged' : 'neutral'}>{LEAD_STATUS[l.status] ?? l.status}</Badge>
+                <li key={l.id}>
+                  <Link href={`/app/crm/leads/${l.id}`} className="flex items-center gap-3 rounded-lg border-t border-line px-3 py-2.5 first:border-t-0 hover:bg-surface-muted">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium text-ink">{l.full_name}</span>
+                      <span className={`block text-xs ${l.next_contact_at && isOverdue(l.next_contact_at) ? 'font-semibold text-[#B91C1C]' : 'text-muted'}`}>
+                        {l.next_contact_at ? `Retorno ${returnAt(l.next_contact_at)}` : `Entrou ${ago(l.created_at)}`}
+                      </span>
+                    </span>
+                    <Badge tone={l.status === 'new' && daysSince(l.created_at) >= 2 ? 'diverged' : 'neutral'}>{stageLabel(l.status)}</Badge>
+                  </Link>
                 </li>
               ))}
             </ul>
