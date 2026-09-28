@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Tipos de documento padrão (27/09/2026)
+- Adicionado: 16 tipos de documento de correspondente consignado (RG, CNH, comprovante de residência, contracheque, extrato do benefício, HISCON, saldo devedor, CCB...). Produção não tinha nenhum, então nenhum documento podia ser guardado.
+- Corrigido: Documentos carregava todos os clientes numa lista; agora o campo Cliente é a busca por nome ou CPF.
+
 ### CRM de vendas (27/09/2026)
 - Adicionado: menu Vendas com quadro por etapa (Novo, Em contato, Negociando, Proposta, Ganho, Perdido), arrastar para mudar a etapa, busca por nome, telefone ou CPF (CPF por POST).
 - Adicionado: campanhas com planilha (XLSX/XLS/CSV lida no navegador), escolha das colunas, cliente existente ligado pelo CPF ou telefone sem duplicar, distribuição por fila, supervisor ou rodízio, resultado por vendedor.
