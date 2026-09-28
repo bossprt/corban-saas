@@ -104,7 +104,7 @@ export async function CommissionCard({ supabase, access, proposalId, closed, can
       <div className="p-5 pt-3 text-sm">
         {!calc ? (
           failureCode
-            ? <p role="alert" className="rounded-[10px] border border-[#FCA5A5] bg-[#FEF2F2] px-3 py-2 text-[#991B1B]">Comissão não calculada: {CALC_FAILURE[failureCode] ?? failureCode}. Corrija e clique em “Tentar de novo”.</p>
+            ? <p role="alert" className="rounded-[10px] border border-[#FCA5A5] bg-[#FEF2F2] px-3 py-2 text-[#991B1B]">Comissão não calculada: {CALC_FAILURE[failureCode] ?? 'erro no cálculo'}. {failureCode === 'proposal_without_seller' ? 'Clique em “Editar contrato”, escolha o vendedor e salve; depois clique em “Tentar de novo”.' : 'Corrija e clique em “Tentar de novo”.'}</p>
             : <p className="text-muted">Comissão ainda não calculada. Ela é calculada sozinha quando o contrato é criado (no portal, quando a empresa aprova): linha da tabela, grupo do vendedor, imposto e IR retido.</p>
         ) : !finance ? (
           mine?.mine ? (

@@ -60,7 +60,7 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
                       <form action={saveGoal} className="flex items-center gap-2">
                         <input type="hidden" name="user_id" value={m.user_id} />
                         <input type="hidden" name="month" value={month} />
-                        <input name="target" inputMode="decimal" defaultValue={target ? String(r?.target_amount).replace('.', ',') : ''} placeholder="250.000,00" aria-label="Meta do mês" className="field h-9 w-36 py-1" />
+                        <input name="target" inputMode="decimal" defaultValue={target ? String(r?.target_amount).replace('.', ',') : ''} placeholder="Definir meta" aria-label="Meta do mês" className="field h-9 w-36 py-1" />
                         <button className="h-9 rounded-lg border border-line px-3 text-xs hover:bg-surface-muted">Salvar</button>
                       </form>
                     </td>

@@ -17,7 +17,8 @@ const brl = (v: unknown) => (v === null || v === undefined || v === '' ? '—' :
 const monthStart = () => `${new Date().toISOString().slice(0, 7)}-01`
 const daysSince = (iso: string) => Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000))
 const isOverdue = (iso: string) => new Date(iso).getTime() < Date.now()
-const returnAt = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
+// The year shows only when it is not this year (a return far ahead or long overdue).
+const returnAt = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', ...(new Date(iso).getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}), hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
 const ago = (iso: string) => {
   const d = daysSince(iso)
   return d === 0 ? 'hoje' : d === 1 ? 'há 1 dia' : `há ${d} dias`

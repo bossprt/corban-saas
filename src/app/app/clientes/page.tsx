@@ -10,7 +10,7 @@ import { ClientForm } from './ClientForm'
 import { CpfSearchForm } from '@/components/CpfSearchForm'
 
 const SOURCE_LABEL: Record<string, string> = { manual: 'Cadastro manual', corban_os: 'Cadastro manual', api: 'API', legado: 'Legado' }
-const sourceLabel = (s: string | null) => (s ? SOURCE_LABEL[s] ?? (s.startsWith('lead:') ? `Lead (${s.slice(5)})` : s) : '—')
+const sourceLabel = (s: string | null) => (s ? SOURCE_LABEL[s] ?? (s.startsWith('lead:') ? `Lead (${s.slice(5)})` : s.startsWith('legacy:') ? `Base antiga (${s.slice(7)})` : s) : '—')
 
 export default async function CustomersPage({ searchParams }: { searchParams: Promise<{ q?: string; novo?: string }> }) {
   const { supabase, access } = await requireAppContext()
