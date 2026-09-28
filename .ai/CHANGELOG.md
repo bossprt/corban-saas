@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Menu no celular (28/09/2026)
+- Corrigido: no celular a barra de baixo tinha só Hoje, Dashboard, Clientes e Esteira; Vendas, Contratos, Metas, Financeiro e Sair não tinham como ser abertos. Agora a barra tem Hoje, Clientes, Vendas, Esteira e "Mais", que abre o menu completo com as subpáginas e o Sair.
+
 ### Revisão das telas do fluxo diário (28/09/2026)
 - Corrigido: tabela de Contratos cabe na tela (coluna Margem cortada); proposta sem vendedor explica como corrigir a comissão; "Números no banco" sem código técnico; origem "legacy:2tech" aparece como "Base antiga (2tech)"; eventos da Equipe traduzidos; campo de meta sem valor de exemplo que parecia salvo; retorno na Hoje mostra o ano quando não é o ano atual.
 
