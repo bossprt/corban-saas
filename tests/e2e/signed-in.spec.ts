@@ -1266,6 +1266,24 @@ test('documents per bank: the list of Banco Teste becomes the checklist of a new
   await expect(page.getByText('Checklist de documentos preparado.')).toBeVisible({ timeout: 20_000 })
   await expect(page.locator('main')).toContainText('RG (documento de identidade)')
   await expect(page.locator('main')).toContainText('Comprovante de residência')
+  // The file is sent right on the checklist item and linked to it.
+  const png = Buffer.concat([Buffer.from('89504e470d0a1a0a0000000d4948445200000001000000010806000000' + '1f15c489', 'hex'), Buffer.from(`rg-${Date.now()}`)])
+  await page.getByLabel('Arquivo RG (documento de identidade)').setInputFiles({ name: 'rg.png', mimeType: 'image/png', buffer: png })
+  await page.getByRole('button', { name: 'Enviar arquivo' }).first().click()
+  await expect(page.getByText('Anexado, falta validar').first()).toBeVisible({ timeout: 20_000 })
+})
+
+test('client file: send a document right on the client page', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  await page.goto('/app/clientes')
+  await page.getByRole('link', { name: 'Ana Teste Lopes' }).first().click()
+  await page.getByLabel('Tipo de documento').selectOption({ label: 'Comprovante de residência' })
+  const png = Buffer.concat([Buffer.from('89504e470d0a1a0a0000000d4948445200000001000000010806000000' + '1f15c489', 'hex'), Buffer.from(`res-${Date.now()}`)])
+  await page.getByLabel('Arquivo do documento').setInputFiles({ name: 'conta-luz.png', mimeType: 'image/png', buffer: png })
+  await page.getByRole('button', { name: 'Enviar documento' }).click()
+  await expect(page.getByText('Documento enviado.')).toBeVisible({ timeout: 20_000 })
+  await expect(page).toHaveURL(/\/app\/clientes\/[0-9a-f-]{36}/)
+  await expect(page.locator('#documentos')).toContainText('conta-luz.png')
 })
 
 test('phone: the bottom bar has Vendas and "Mais" opens the whole menu with Sair', async ({ page }, info) => {

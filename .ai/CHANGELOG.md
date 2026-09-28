@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Documento na ficha e no checklist (28/09/2026)
+- Corrigido: a única tela de envio de documento (Documentos) não estava em nenhum menu. Agora o documento é enviado direto na ficha do cliente (quadro Documentos) e em cada item do checklist da proposta ("Enviar arquivo" já liga o arquivo ao item).
+- Alterado: situação dos itens do checklist em português (Falta, Anexado, falta validar, Validado...); a lista de documentos da ficha mostra tipo, versão e nome do arquivo.
+
 ### Esteira no celular (28/09/2026)
 - Alterado: no celular a Esteira mostra um cartão por proposta (cliente, etapa, banco e ADE, valor, vendedor, dias na etapa, alerta), sem a tabela larga que rolava para o lado. No computador nada muda.
 

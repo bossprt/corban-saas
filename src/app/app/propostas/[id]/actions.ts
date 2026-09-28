@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
+import { storeCustomerDocument } from '@/lib/documents.server'
 import { atLeast } from '@/lib/rbac'
 import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedback'
 
@@ -50,6 +51,30 @@ export async function attachDocument(formData: FormData) {
   const { error: statusError } = await supabase.from('proposal_document_requirements').update({ status: 'attached' }).eq('id', requirement.id)
   if (statusError) return back(id, 'erro:requisito')
   revalidatePath(`/app/propostas/${id}`)
+  return back(id, 'ok:doc_vinculado')
+}
+
+// Checklist item without a document yet: send the file and link it to the item in one step.
+export async function uploadForRequirement(formData: FormData) {
+  const id = idOf(formData)
+  const requirementId = String(formData.get('requirement_id') ?? '')
+  const file = formData.get('file')
+  if (!id || !UUID.test(requirementId) || !(file instanceof File)) return back(id, 'erro:requisicao_invalida')
+  const { supabase, user, membership } = await requireAppContext()
+  const [{ data: requirement }, { data: proposal }] = await Promise.all([
+    supabase.from('proposal_document_requirements').select('id,document_type_id,status').eq('id', requirementId).eq('proposal_id', id).maybeSingle(),
+    supabase.from('proposals_v2').select('id,customer_id').eq('id', id).maybeSingle(),
+  ])
+  if (!requirement || !proposal || ['validated', 'waived'].includes(requirement.status)) return back(id, 'erro:requisito')
+  const stored = await storeCustomerDocument({ supabase, userId: user.id, organizationId: membership.organization_id }, proposal.customer_id, requirement.document_type_id, file)
+  if (!stored.ok) return back(id, stored.code)
+  const { error: linkError } = await supabase.from('proposal_document_links').insert({
+    organization_id: membership.organization_id, requirement_id: requirement.id, customer_document_id: stored.id, linked_by: user.id,
+  })
+  if (linkError && linkError.code !== '23505') return back(id, classifyDbFeedback(linkError))
+  const { error: statusError } = await supabase.from('proposal_document_requirements').update({ status: 'attached' }).eq('id', requirement.id)
+  if (statusError) return back(id, 'erro:requisito')
+  revalidatePath(`/app/propostas/${id}`); revalidatePath(`/app/clientes/${proposal.customer_id}`)
   return back(id, 'ok:doc_vinculado')
 }
 

@@ -10,7 +10,9 @@ import { isUuid } from '@/lib/team'
 import { proposalStatusLabel } from '@/lib/operational'
 import { fetchAll } from '@/lib/fetchAll'
 import { decimalBr } from '@/lib/commission/tableValues'
-import { attachDocument, prepareDocuments, sendToDigitization, validateRequirement } from './actions'
+import { attachDocument, prepareDocuments, sendToDigitization, uploadForRequirement, validateRequirement } from './actions'
+
+const REQUIREMENT_STATUS: Record<string, string> = { missing: 'Falta', attached: 'Anexado, falta validar', validated: 'Validado', rejected: 'Recusado', waived: 'Dispensado' }
 import { PipelineCard } from './PipelineCard'
 import { CommissionCard } from './CommissionCard'
 import { ContractForm } from './ContractForm'
@@ -117,12 +119,19 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
               const compatible = (customerDocuments ?? []).filter(d => d.document_type_id === r.document_type_id)
               return (
                 <div key={r.id} className="rounded-[10px] border border-line p-3 text-sm">
-                  <div className="flex items-center justify-between gap-3"><span className="text-ink">{r.label_snapshot}{r.required_snapshot ? ' *' : ''}</span><span className="text-xs text-muted">{r.status}</span></div>
+                  <div className="flex items-center justify-between gap-3"><span className="text-ink">{r.label_snapshot}{r.required_snapshot ? ' *' : ''}</span><span className={`text-xs ${r.status === 'validated' ? 'font-medium text-[#166534]' : 'text-muted'}`}>{REQUIREMENT_STATUS[r.status] ?? r.status}</span></div>
                   {!['validated', 'waived'].includes(r.status) && compatible.length > 0 && (
                     <form action={attachDocument} className="mt-2 flex gap-2">
                       <input type="hidden" name="proposal_id" value={proposal.id} /><input type="hidden" name="requirement_id" value={r.id} />
                       <select name="document_id" className="field min-w-0 flex-1" defaultValue=""><option value="" disabled>Selecionar documento</option>{compatible.map(d => <option key={d.id} value={d.id}>{d.original_file_name} · v{d.version}</option>)}</select>
                       <button className={ghost}>Vincular</button>
+                    </form>
+                  )}
+                  {!['validated', 'waived'].includes(r.status) && (
+                    <form action={uploadForRequirement} className="mt-2 flex flex-wrap items-center gap-2">
+                      <input type="hidden" name="proposal_id" value={proposal.id} /><input type="hidden" name="requirement_id" value={r.id} />
+                      <input required type="file" name="file" accept=".pdf,image/jpeg,image/png,image/webp" aria-label={`Arquivo ${r.label_snapshot}`} className="min-w-0 flex-1 text-xs file:mr-2 file:rounded-md file:border file:border-line file:bg-surface file:px-2 file:py-1" />
+                      <SubmitButton className={ghost} pendingText="Enviando...">Enviar arquivo</SubmitButton>
                     </form>
                   )}
                   {r.status === 'attached' && atLeast(membership.role, 'supervisor') && (
