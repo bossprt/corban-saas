@@ -56,6 +56,7 @@
 - Validação V1 (27/09/2026, roteiro `.ai/VALIDACAO-OPERACAO.md`): busca por CPF em Clientes e Contratos (POST, nunca na URL), CPF completo, botão Novo contrato, relatório de comissão lido no navegador (PR #41, em produção). Depois: campo de cliente com busca (nome/CPF) em Nova proposta e Simulações (antes listava só 300 clientes), Simulações refeita (tabela em vigor + tipo de contrato numa escolha só, valor sem float), 14 telas antigas no visual novo, botão Simular na Esteira. (PR #42, em produção).
 - V2 CRM de vendas (ADR-0046): menu Vendas com quadro por etapa (arrastar), fila "Pegar próximo lead", ficha do lead (dados, colunas da planilha, histórico, retorno, Simular), campanhas com planilha, distribuição (fila / supervisor / rodízio) e resultado por vendedor; retornos na Hoje. Migration `20260928010142_sales_crm_v1` aplicada em produção 27/09/2026 (md5 conferido).
 - Tipos de documento padrão (16) em produção: migration `20260928031251_standard_document_types_v1` (md5 conferido); Documentos com busca de cliente.
+- Documentos por banco em produção: migration `20260928032919_bank_document_checklist_v1` (md5 conferido); Cadastros > Documentos por banco alimenta o "Preparar checklist" da proposta.
 - Engano corrigido: o contrato novo tinha sobrescrito `client-identity-contract.sql` (da F2); o original foi restaurado e o novo está em `client-identity-edit-contract.sql`.
 - Banco recriado do zero: 29/29 contratos; unit 187/187; e2e 35/35 (dois testes passaram ao rodar de novo, por demora de compilação); build OK.
 
