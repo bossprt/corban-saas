@@ -1,4 +1,4 @@
--- Contract test for 20260928200000_bank_document_checklist_v1: the documents each bank asks for, saved per route as a new
+-- Contract test for 20260928032919_bank_document_checklist_v1: the documents each bank asks for, saved per route as a new
 -- published version (the previous one superseded, never edited), only by supervision roles, only with active types.
 -- One transaction, rolled back.  psql -v ON_ERROR_STOP=1 -f tests/security/bank-checklist-contract.sql
 
