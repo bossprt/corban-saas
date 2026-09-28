@@ -88,7 +88,7 @@ test('file names: no traversal, separators, control or non-ASCII characters', ()
   assert.equal(safeFileName('x'.repeat(500) + '.pdf').length, 120)
 })
 test('upload action decides on the real bytes before touching the database or storage', () => {
-  const a = read('src/app/app/documentos/actions.ts')
+  const a = read('src/lib/documents.server.ts') // shared by the Documentos page, the client file and the checklist
   assert.ok(a.indexOf('checkUpload') < a.indexOf(".from('clients')"))
   assert.ok(a.indexOf('checkUpload') < a.indexOf('storage'))
   assert.match(a, /contentType: check\.mime/)
