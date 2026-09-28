@@ -18,6 +18,8 @@ const NAV: (NavItem & { show?: (role: string) => boolean; module?: string; perm?
   { key: 'hoje', href: '/app/hoje', label: 'Hoje' },
   { key: 'dashboard', href: '/app', label: 'Dashboard' },
   { key: 'clientes', href: '/app/clientes', label: 'Clientes', module: 'clientes' },
+  // Sales CRM (V2): campaigns, queue and the team's board.
+  { key: 'vendas', href: '/app/crm', label: 'Vendas', module: 'leads', perm: 'leads.view' },
   { key: 'esteira', href: '/app/propostas', label: 'Esteira', module: 'esteira' },
   // Contract search with the commission of each one (part C1).
   { key: 'contratos', href: '/app/contratos', label: 'Contratos', module: 'esteira' },

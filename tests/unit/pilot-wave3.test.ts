@@ -35,7 +35,7 @@ test('feedback: database errors map to codes without leaking their text', () => 
   assert.equal(classifyDbFeedback(null), 'erro:inesperado')
 })
 test('pilot actions redirect with codes instead of throwing raw errors', () => {
-  for (const f of ['src/app/app/leads/actions.ts', 'src/app/app/clientes/actions.ts', 'src/app/app/simulacoes/actions.ts', 'src/app/app/documentos/actions.ts']) {
+  for (const f of ['src/app/app/crm/actions.ts', 'src/app/app/clientes/actions.ts', 'src/app/app/simulacoes/actions.ts', 'src/app/app/documentos/actions.ts']) {
     const s = read(f)
     assert.doesNotMatch(s, /throw new Error/, f)
     assert.match(s, /feedbackUrl/, f)
@@ -110,10 +110,10 @@ test('search: filter-language characters are stripped; short terms ignored; CPF 
   assert.equal(searchTerm(['ana', 'x']), 'ana')
   assert.ok((searchTerm('x'.repeat(200)) ?? '').length <= 60)
   assert.equal(digitsOnly('(11) 99999-0000'), '11999990000')
-  for (const f of ['src/app/app/leads/page.tsx', 'src/app/app/clientes/page.tsx']) assert.doesNotMatch(read(f), /cpf\.(ilike|eq)|\.eq\('cpf'/i, f)
+  for (const f of ['src/app/app/crm/page.tsx', 'src/app/app/clientes/page.tsx']) assert.doesNotMatch(read(f), /cpf\.(ilike|eq)|\.eq\('cpf'/i, f)
 })
 test('no page or action puts a CPF in a URL', () => {
-  for (const f of ['src/app/app/leads/actions.ts', 'src/app/app/clientes/actions.ts']) assert.doesNotMatch(read(f), /feedbackUrl\([^)]*cpf|redirect\([^)]*cpf/i, f)
+  for (const f of ['src/app/app/crm/actions.ts', 'src/app/app/clientes/actions.ts']) assert.doesNotMatch(read(f), /feedbackUrl\([^)]*cpf|redirect\([^)]*cpf/i, f)
 })
 
 // ---- labels, nulls, navigation
@@ -149,7 +149,7 @@ test('the simulation page guides an empty organization and never shows a table U
   assert.doesNotMatch(s, /product_table_id\.slice/)
 })
 test('submit buttons disable themselves while pending on the main forms', () => {
-  for (const f of ['src/app/app/leads/page.tsx', 'src/app/app/clientes/ClientForm.tsx', 'src/app/app/simulacoes/page.tsx', 'src/app/app/documentos/page.tsx']) assert.match(read(f), /<SubmitButton/, f)
+  for (const f of ['src/app/app/crm/page.tsx', 'src/app/app/clientes/ClientForm.tsx', 'src/app/app/simulacoes/page.tsx', 'src/app/app/documentos/page.tsx']) assert.match(read(f), /<SubmitButton/, f)
   assert.match(read('src/components/SubmitButton.tsx'), /useFormStatus/)
 })
 

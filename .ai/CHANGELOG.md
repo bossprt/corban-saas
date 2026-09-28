@@ -15,6 +15,13 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### CRM de vendas (27/09/2026)
+- Adicionado: menu Vendas com quadro por etapa (Novo, Em contato, Negociando, Proposta, Ganho, Perdido), arrastar para mudar a etapa, busca por nome, telefone ou CPF (CPF por POST).
+- Adicionado: campanhas com planilha (XLSX/XLS/CSV lida no navegador), escolha das colunas, cliente existente ligado pelo CPF ou telefone sem duplicar, distribuição por fila, supervisor ou rodízio, resultado por vendedor.
+- Adicionado: ficha do lead com colunas da planilha, histórico, anotação, próximo contato (aparece na Hoje), WhatsApp e Simular (cadastra o cliente pelo CPF e abre a simulação).
+- Alterado: Proposta e Ganho seguem a proposta do cliente (criada, paga; recusada ou cancelada volta para Negociando). A fila de leads sem dono não é mais listada para o vendedor: ele pega o próximo.
+- Removido: a lista antiga de leads (`/app/leads` leva ao quadro).
+
 ### Ficha completa do cliente (25/09/2026)
 - Dados pessoais (pais, RG, sexo, estado civil, naturalidade, WhatsApp, nascimento), dados bancários e várias matrículas por cliente com margem e acesso; senha da matrícula criptografada no cofre, mostrada só a quem pode editar e com registro de cada visualização.
 

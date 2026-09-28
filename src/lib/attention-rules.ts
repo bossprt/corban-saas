@@ -38,7 +38,7 @@ const RULES: Rule[] = [
   { key: 'staleLeads', rule_key: 'stale_leads', allowed: r => atLeast(r, 'supervisor'), build: (s, now) => ({
     severity: s.count >= 20 || ageHours(s.oldest, now) > 24 * 7 ? 'high' : 'medium',
     title: `${s.count} lead(s) novo(s) sem primeiro contato há mais de 2 dias`, reason: 'O lead entrou e ninguém registrou contato.',
-    impact: 'Lead esfria: a chance de conversão cai a cada dia sem retorno.', recommendation: 'Distribua os leads mais antigos e cobre o primeiro contato.', href: '/app/leads' }) },
+    impact: 'Lead esfria: a chance de conversão cai a cada dia sem retorno.', recommendation: 'Distribua os leads mais antigos e cobre o primeiro contato.', href: '/app/crm' }) },
   { key: 'pendenciesDue', rule_key: 'pendencies_due', allowed: r => atLeast(r, 'supervisor'), build: (s, now) => ({
     severity: s.oldest && new Date(s.oldest).getTime() < now ? 'high' : 'medium',
     title: `${s.count} pendência(s) vencendo ou vencida(s)`, reason: 'O prazo para resolver a pendência pedida pelo banco termina em menos de 24 horas ou já passou.',

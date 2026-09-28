@@ -11,7 +11,7 @@ type Rule = { key: keyof ActionCounts; label: string; href: string; hint: string
 const RULES: Rule[] = [
   { key: 'overdueCases', label: 'Casos da operação com prazo vencido', href: '/app/operacao', hint: 'O prazo de atendimento da etapa passou.', allowed: () => true },
   { key: 'draftProposals', label: 'Propostas em rascunho', href: '/app/propostas', hint: 'Ainda não foram enviadas para a operação.', allowed: () => true },
-  { key: 'staleLeads', label: 'Leads novos há mais de 2 dias', href: '/app/leads', hint: 'Sem primeiro contato registrado.', allowed: () => true },
+  { key: 'staleLeads', label: 'Leads novos há mais de 2 dias', href: '/app/crm', hint: 'Sem primeiro contato registrado.', allowed: () => true },
 ]
 
 export function actionItems(role: string | null | undefined, counts: ActionCounts): ActionItem[] {

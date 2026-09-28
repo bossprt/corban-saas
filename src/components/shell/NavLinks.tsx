@@ -2,10 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BarChart3, CalendarCheck, FilePlus2, FileText, FolderOpen, HandCoins, Home, KanbanSquare, LayoutDashboard, Settings, Target, Users, WalletCards, type LucideIcon } from 'lucide-react'
+import { BarChart3, CalendarCheck, FilePlus2, FileText, FolderOpen, HandCoins, Handshake, Home, KanbanSquare, LayoutDashboard, Settings, Target, Users, WalletCards, type LucideIcon } from 'lucide-react'
 import { cn } from '@/components/ui'
 
-export type NavKey = 'hoje' | 'dashboard' | 'clientes' | 'esteira' | 'contratos' | 'metas' | 'financeiro' | 'repasse' | 'comercial' | 'relatorios' | 'configuracoes' | 'portal' | 'portal_nova'
+export type NavKey = 'hoje' | 'dashboard' | 'clientes' | 'vendas' | 'esteira' | 'contratos' | 'metas' | 'financeiro' | 'repasse' | 'comercial' | 'relatorios' | 'configuracoes' | 'portal' | 'portal_nova'
 export type NavLink = { href: string; label: string }
 // `children` open under the item while the user is in one of its `sections` (Cadastros lists every registration).
 export type NavItem = { key: NavKey; href: string; label: string; children?: NavLink[]; sections?: string[] }
@@ -14,6 +14,7 @@ const ICONS: Record<NavKey, LucideIcon> = {
   hoje: CalendarCheck,
   dashboard: LayoutDashboard,
   clientes: Users,
+  vendas: Handshake,
   esteira: KanbanSquare,
   contratos: FileText,
   metas: Target,
