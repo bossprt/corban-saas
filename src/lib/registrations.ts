@@ -10,6 +10,7 @@ export const REGISTRATIONS: Registration[] = [
   { href: '/app/comercial/tabelas', label: 'Tabelas', hint: 'Tabelas de comissão, versões, condições e importação.' },
   { href: '/app/comercial/grupos', label: 'Grupos de vendedores', hint: 'Corretor, Parceiro, Balcão...: a regra de repasse de cada tipo de vendedor.' },
   { href: '/app/cadastros/vendedores', label: 'Vendedores', hint: 'Cada vendedor, o grupo dele e a categoria PF/PJ/SUB.' },
+  { href: '/app/cadastros/documentos-banco', label: 'Documentos por banco', hint: 'O que cada banco e convênio pede de documento: vira o checklist da proposta.' },
   { href: '/app/comercial/fatores', label: 'Fatores', hint: 'Fatores diários e fixos usados nas simulações.' },
   { href: '/app/equipe', label: 'Equipe', hint: 'Quem acessa o sistema, convites e o papel de cada pessoa.', teamOnly: true },
 ]

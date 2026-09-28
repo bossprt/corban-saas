@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Documentos por banco (27/09/2026)
+- Adicionado: Cadastros > Documentos por banco. Marque o que cada banco pede (obrigatório ou opcional) para um ou vários convênios dele de uma vez; cada salvar publica uma nova versão por banco+convênio. Na proposta, "Preparar checklist" traz essa lista.
+
 ### Tipos de documento padrão (27/09/2026)
 - Adicionado: 16 tipos de documento de correspondente consignado (RG, CNH, comprovante de residência, contracheque, extrato do benefício, HISCON, saldo devedor, CCB...). Produção não tinha nenhum, então nenhum documento podia ser guardado.
 - Corrigido: Documentos carregava todos os clientes numa lista; agora o campo Cliente é a busca por nome ou CPF.
