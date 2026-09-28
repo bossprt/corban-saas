@@ -207,7 +207,7 @@ test('direct proposal runs through the pipeline to paid and counts in the goal',
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-proposta-paga.png`, fullPage: true })
 
   await page.goto('/app/propostas?etapa=paga')
-  await expect(page.getByText(ade)).toBeVisible()
+  await expect(page.getByText(ade).filter({ visible: true }).first()).toBeVisible()
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-esteira.png`, fullPage: true })
 })
 
@@ -1281,4 +1281,16 @@ test('phone: the bottom bar has Vendas and "Mais" opens the whole menu with Sair
   await menu.getByRole('link', { name: 'Contratos' }).click()
   await expect(page).toHaveURL(/\/app\/contratos/, { timeout: 30_000 })
   await expect(page.getByRole('dialog', { name: 'Menu' })).toHaveCount(0)
+})
+
+test('phone: Esteira shows one card per proposal, without the wide table', async ({ page }, info) => {
+  test.skip(info.project.name !== 'mobile', 'phone only')
+  await page.goto('/app/propostas')
+  const list = page.getByRole('list', { name: 'Propostas' })
+  await expect(list).toBeVisible()
+  await expect(page.locator('table')).toBeHidden()
+  await expect(list.getByRole('link').first()).toBeVisible()
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-esteira-lista.png` })
+  const width = await page.evaluate(() => document.documentElement.scrollWidth)
+  expect(width).toBeLessThanOrEqual(await page.evaluate(() => window.innerWidth))
 })

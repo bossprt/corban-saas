@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Esteira no celular (28/09/2026)
+- Alterado: no celular a Esteira mostra um cartão por proposta (cliente, etapa, banco e ADE, valor, vendedor, dias na etapa, alerta), sem a tabela larga que rolava para o lado. No computador nada muda.
+
 ### Corban instalável no celular (28/09/2026)
 - Adicionado: manifesto de app e ícones. No celular, "Adicionar à tela inicial" (Chrome/Android) ou Compartilhar > "Adicionar à Tela de Início" (Safari/iPhone) instala o Corban com ícone próprio, abrindo em tela cheia na tela Hoje. Sem loja de aplicativos.
 
