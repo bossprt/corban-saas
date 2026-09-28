@@ -2,32 +2,32 @@ import { Badge, Card, PageHeader } from '@/components/ui'
 import { requireAppContext } from '@/lib/appContext'
 import { uploadCustomerDocument } from './actions'
 import { SubmitButton } from '@/components/SubmitButton'
+import { ClientPicker } from '@/components/ClientPicker'
 
 const DOC_STATUS: Record<string, string> = { active: 'Ativo', archived: 'Arquivado', expired: 'Vencido', rejected: 'Recusado' }
 const DOC_TONE: Record<string, 'received' | 'neutral' | 'diverged' | 'reversed'> = { active: 'received', archived: 'neutral', expired: 'diverged', rejected: 'reversed' }
 
 export default async function DocumentsPage() {
   const { supabase } = await requireAppContext()
-  const [documentsResult, typesResult, customersResult] = await Promise.all([
+  const [documentsResult, typesResult] = await Promise.all([
     supabase.from('customer_documents')
       .select('id,customer_id,document_type_id,version,original_file_name,mime_type,file_size_bytes,status,issued_at,expires_at,created_at')
       .order('created_at', { ascending: false }).limit(200),
-    supabase.from('document_types').select('id,name,code').eq('is_active', true),
-    supabase.from('clients').select('id,full_name').is('deleted_at', null),
+    supabase.from('document_types').select('id,name,code').eq('is_active', true).order('name'),
   ])
 
   const typeNames = new Map((typesResult.data ?? []).map(t => [t.id, t.name]))
-  const customerNames = new Map((customersResult.data ?? []).map(c => [c.id, c.full_name]))
+  // Names only of the clients that have documents listed here (never the whole client base).
+  const ids = [...new Set((documentsResult.data ?? []).map(d => d.customer_id))]
+  const { data: customers } = ids.length ? await supabase.from('clients').select('id,full_name').in('id', ids) : { data: [] as { id: string; full_name: string }[] }
+  const customerNames = new Map((customers ?? []).map(c => [c.id, c.full_name]))
 
   return <section>
-    <PageHeader title="Documentos" description="Cofre documental privado e versionado do tenant." />
+    <PageHeader title="Documentos" description="Documentos dos clientes: arquivo privado, cada envio vira uma nova versão, nada é sobrescrito." />
 
     <form action={uploadCustomerDocument} className="mb-6 grid gap-3 md:grid-cols-4">
       <Card className="col-span-full grid gap-3 p-5 md:grid-cols-4">
-        <select required name="customer_id" defaultValue="" className="field">
-          <option value="" disabled>Cliente</option>
-          {customersResult.data?.map(c => <option key={c.id} value={c.id}>{c.full_name}</option>)}
-        </select>
+        <div className="md:col-span-4"><ClientPicker name="customer_id" /></div>
         <select required name="document_type_id" defaultValue="" className="field">
           <option value="" disabled>Tipo de documento</option>
           {typesResult.data?.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
