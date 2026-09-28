@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Revisão das telas do fluxo diário (28/09/2026)
+- Corrigido: tabela de Contratos cabe na tela (coluna Margem cortada); proposta sem vendedor explica como corrigir a comissão; "Números no banco" sem código técnico; origem "legacy:2tech" aparece como "Base antiga (2tech)"; eventos da Equipe traduzidos; campo de meta sem valor de exemplo que parecia salvo; retorno na Hoje mostra o ano quando não é o ano atual.
+
 ### Documentos por banco (27/09/2026)
 - Adicionado: Cadastros > Documentos por banco. Marque o que cada banco pede (obrigatório ou opcional) para um ou vários convênios dele de uma vez; cada salvar publica uma nova versão por banco+convênio. Na proposta, "Preparar checklist" traz essa lista.
 

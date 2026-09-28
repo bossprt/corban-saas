@@ -93,6 +93,6 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
     {past.length > 0 && <p className="mt-3 text-xs text-muted">Anteriores: {past.map(i => `${i.email} (${INVITE_STATUS_LABEL[i.status] ?? i.status})`).join(' · ')}</p>}
 
     <h2 className="mt-8 text-xl font-semibold text-ink">Últimas alterações</h2>
-    {!events.data?.length ? <Card className="mt-3 p-5"><p className="text-sm text-muted">Nenhuma alteração registrada.</p></Card> : <ul className="mt-3 space-y-1 text-xs text-muted">{events.data.map(e => <li key={e.id}>{new Date(e.occurred_at).toLocaleString('pt-BR')} · {AUDIT_LABEL[e.event_type] ?? e.event_type}{e.target_email ? ` · ${e.target_email}` : ''}</li>)}</ul>}
+    {!events.data?.length ? <Card className="mt-3 p-5"><p className="text-sm text-muted">Nenhuma alteração registrada.</p></Card> : <ul className="mt-3 space-y-1 text-xs text-muted">{events.data.map(e => <li key={e.id}>{new Date(e.occurred_at).toLocaleString('pt-BR')} · {AUDIT_LABEL[e.event_type] ?? 'Alteração de configuração'}{e.target_email ? ` · ${e.target_email}` : ''}</li>)}</ul>}
   </section>
 }

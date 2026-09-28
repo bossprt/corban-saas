@@ -60,7 +60,7 @@ export default async function SalesBoardPage({ searchParams }: { searchParams: P
     if (!isLeadStage(r.status)) continue
     byStage.get(r.status)!.push({
       id: r.id, name: r.full_name, status: r.status, campaign: r.campaign_id ? campaignName.get(r.campaign_id) ?? null : null,
-      owner: r.owner_user_id ? (r.owner_user_id === user.id ? 'Você' : emails.get(r.owner_user_id) ?? 'Vendedor') : null,
+      owner: r.owner_user_id ? (r.owner_user_id === user.id ? 'Você' : (emails.get(r.owner_user_id) ?? 'Vendedor').split('@')[0]) : null,
       nextContact: r.next_contact_at, overdue: !!r.next_contact_at && new Date(r.next_contact_at).getTime() < now, isClient: !!r.customer_id,
     })
   }

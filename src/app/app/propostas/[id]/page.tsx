@@ -139,7 +139,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
           <dl className="grid gap-3 p-5 pt-3 text-sm">
             <div><dt className="text-xs text-muted">Fila de digitação</dt><dd className="text-ink">{job?.status ?? 'Ainda não enviada'}</dd></div>
             <div><dt className="text-xs text-muted">Status no banco</dt><dd className="text-ink">{operationalCase?.external_status_raw ?? '—'}</dd></div>
-            <div><dt className="text-xs text-muted">Números no banco</dt><dd className="text-ink">{externalIds?.length ? externalIds.map(x => `${x.external_proposal_number} (${x.institution_key})`).join(', ') : '—'}</dd></div>
+            <div><dt className="text-xs text-muted">Números no banco</dt><dd className="text-ink">{externalIds?.length ? [...new Set(externalIds.map(x => x.external_proposal_number))].join(', ') : '—'}</dd></div>
           </dl>
         </Card>
       </div>

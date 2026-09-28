@@ -69,7 +69,7 @@ export function normalizeEmail(raw:unknown):string|null{
 export const AUDIT_LABEL:Record<string,string>={
  invite_created:'Convite criado',invite_revoked:'Convite cancelado',invite_accepted:'Convite aceito',
  member_role_changed:'Perfil alterado',member_deactivated:'Acesso desativado',member_reactivated:'Acesso reativado',
- role_created:'Papel criado',role_updated:'Papel alterado',member_access_role_changed:'Papel do membro alterado',member_hierarchy_changed:'Filial, equipe ou alcance alterados'
+ role_created:'Papel criado',api_key_created:'Chave de integração criada',api_key_revoked:'Chave de integração revogada',seller_created:'Vendedor cadastrado',seller_supervision_updated:'Supervisão do vendedor alterada',seller_user_binding_updated:'Acesso do vendedor ao sistema alterado',role_updated:'Papel alterado',member_access_role_changed:'Papel do membro alterado',member_hierarchy_changed:'Filial, equipe ou alcance alterados'
 }
 
 const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i

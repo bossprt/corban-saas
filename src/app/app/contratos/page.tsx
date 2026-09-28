@@ -160,7 +160,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
       <Card>
         <CardHeader title={<span className="flex items-center gap-2">Contratos <Badge tone="neutral">{filtered.length}</Badge></span>} />
         <div className="mt-3 overflow-x-auto">
-          <table className="w-full min-w-[1080px] text-left text-[13px]">
+          <table className="w-full min-w-[940px] text-left text-[13px]">
             <thead className="border-y border-line bg-surface-muted text-xs text-muted">
               <tr>
                 <th className="px-5 py-2 font-medium">Cliente</th><th className="px-3 py-2 font-medium">Vendedor</th><th className="px-3 py-2 font-medium">Banco · tabela</th>
