@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Corban instalável no celular (28/09/2026)
+- Adicionado: manifesto de app e ícones. No celular, "Adicionar à tela inicial" (Chrome/Android) ou Compartilhar > "Adicionar à Tela de Início" (Safari/iPhone) instala o Corban com ícone próprio, abrindo em tela cheia na tela Hoje. Sem loja de aplicativos.
+
 ### Menu no celular (28/09/2026)
 - Corrigido: no celular a barra de baixo tinha só Hoje, Dashboard, Clientes e Esteira; Vendas, Contratos, Metas, Financeiro e Sair não tinham como ser abertos. Agora a barra tem Hoje, Clientes, Vendas, Esteira e "Mais", que abre o menu completo com as subpáginas e o Sair.
 

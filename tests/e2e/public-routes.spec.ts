@@ -24,3 +24,12 @@ test('health endpoint reports database and auth probes', async ({ request }) => 
   expect(body).toHaveProperty('database')
   expect(body).toHaveProperty('auth')
 })
+
+test('installable app: manifest and icons load before login', async ({ request }) => {
+  const m = await request.get('/manifest.webmanifest', { maxRedirects: 0 })
+  expect(m.status()).toBe(200)
+  const body = await m.json()
+  expect(body).toMatchObject({ name: 'Corban', display: 'standalone', start_url: '/app/hoje' })
+  for (const icon of body.icons as { src: string }[]) expect((await request.get(icon.src, { maxRedirects: 0 })).status()).toBe(200)
+  expect((await request.get('/apple-touch-icon.png', { maxRedirects: 0 })).status()).toBe(200)
+})
