@@ -1368,7 +1368,7 @@ test('team access with password: created by the admin, first entry asks for a ne
   await form.getByLabel('Repita a senha').fill('Inicial#E2E2026')
   await expect(form.getByLabel('Pedir nova senha no primeiro acesso')).toBeChecked()
   await form.getByRole('button', { name: 'Criar acesso' }).click()
-  await expect(page.getByText(/Acesso criado/)).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByRole('status').filter({ hasText: /Acesso criado/ })).toBeVisible({ timeout: 30_000 })
   await expect(page.locator('main')).toContainText(person)
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-equipe-criar-acesso.png`, fullPage: true })
 
@@ -1454,5 +1454,5 @@ test('team access with password: a password refused by the login rules says why'
   await form.getByLabel('Senha', { exact: true }).fill('Smart#2026casa')
   await form.getByLabel('Repita a senha').fill('Smart#2026casa')
   await form.getByRole('button', { name: 'Criar acesso' }).click()
-  await expect(page.getByText(/Acesso criado/)).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByRole('status').filter({ hasText: /Acesso criado/ })).toBeVisible({ timeout: 30_000 })
 })
