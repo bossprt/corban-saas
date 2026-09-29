@@ -4,7 +4,9 @@ import { requireAppContext } from '@/lib/appContext'
 import { canManageMemberRole, canManageTeam, rolesAssignableBy } from '@/lib/rbac'
 import { AUDIT_LABEL, INVITE_STATUS_LABEL, ROLE_LABEL, STATUS_LABEL, TEAM_ERROR_MESSAGES, TEAM_OK_MESSAGES, isTeamErrorCode, isTeamOkCode } from '@/lib/team'
 import { memberEmails } from '@/lib/team.server'
-import { changeMemberHierarchy, changeMemberRole, changeMemberStatus, inviteMember, resendInvitation, revokeInvitation } from './actions'
+import { changeMemberHierarchy, changeMemberRole, changeMemberStatus, createMemberAccess, resetMemberPassword, revokeInvitation } from './actions'
+import { PasswordPair } from '@/components/PasswordPair'
+import { SubmitButton } from '@/components/SubmitButton'
 import { SCOPE_LABEL, SCOPES } from '@/lib/access'
 
 const btn = 'inline-flex h-8 items-center rounded-[10px] border border-line bg-surface px-2.5 text-xs text-ink hover:bg-surface-muted'
@@ -44,11 +46,14 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
     {isTeamOkCode(sp.ok) && <p role="status" className="mb-4 rounded-[10px] border border-[#BBE5C8] bg-[#E3F5E9] px-4 py-3 text-sm text-[#15803D]">{TEAM_OK_MESSAGES[sp.ok]}</p>}
 
     <Card className="mt-2 p-4">
-      <form action={inviteMember} className="flex flex-wrap items-end gap-3">
+      <h2 className="mb-3 text-base font-semibold text-ink">Criar acesso</h2>
+      <form action={createMemberAccess} className="flex flex-wrap items-end gap-3">
         <label className="text-xs text-muted">E-mail<input name="email" type="email" required maxLength={254} autoComplete="off" className="field mt-1 block w-72" /></label>
         <label className="text-xs text-muted">Perfil<select name="role" defaultValue="agent" className="field mt-1 block">{assignable.map(r => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}</select></label>
-        <button className="inline-flex h-10 items-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Convidar</button>
-        <p className="w-full text-xs text-muted">A pessoa recebe um e-mail para criar a senha. O convite vale por 7 dias e só dá acesso a esta organização.</p>
+        <PasswordPair idPrefix="novo" />
+        <label className="flex h-10 items-center gap-1.5 text-xs text-muted"><input type="checkbox" name="must_change" defaultChecked className="accent-[var(--brand)]" />Pedir nova senha no primeiro acesso</label>
+        <SubmitButton pendingText="Criando..." className="inline-flex h-10 items-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Criar acesso</SubmitButton>
+        <p className="w-full text-xs text-muted">A pessoa entra já com este e-mail e esta senha, sem esperar e-mail. Passe a senha para ela pessoalmente ou por um canal seu. O acesso vale só para esta empresa.</p>
       </form>
     </Card>
 
@@ -71,6 +76,13 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
               <button className={btn}>Salvar</button>
             </form>
           </details>
+          <details className="w-full basis-full text-xs text-muted"><summary className="cursor-pointer">Redefinir senha</summary>
+            <form action={resetMemberPassword} className="mt-2 flex flex-wrap items-end gap-2"><input type="hidden" name="membership_id" value={m.id} />
+              <PasswordPair idPrefix={`reset-${m.id}`} label="Nova senha" />
+              <label className="flex h-10 items-center gap-1.5"><input type="checkbox" name="must_change" defaultChecked className="accent-[var(--brand)]" />Pedir nova senha no próximo acesso</label>
+              <SubmitButton pendingText="Salvando..." className={btn}>Salvar senha</SubmitButton>
+            </form>
+          </details>
           <form action={changeMemberStatus}><input type="hidden" name="membership_id" value={m.id} />
             {m.status === 'active'
               ? <><input type="hidden" name="status" value="inactive" /><button className={btn} title="Bloqueia o acesso imediatamente; pode ser reativado">Desativar acesso</button></>
@@ -79,20 +91,20 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
       </Card>
     })}</div>}
 
-    <h2 className="mt-8 text-xl font-semibold text-ink">Convites pendentes</h2>
-    {!pending.length ? <Card className="mt-3 p-5"><p className="text-sm text-muted">Nenhum convite pendente.</p></Card> : <div className="mt-3 space-y-2">{pending.map(i => {
+    {pending.length > 0 && <><h2 className="mt-8 text-xl font-semibold text-ink">Convites por e-mail pendentes</h2>
+    <p className="mt-1 text-sm text-muted">O convite por e-mail foi substituído. Para liberar a pessoa, crie o acesso com senha acima, com o mesmo e-mail; o convite antigo é trocado automaticamente.</p>
+    <div className="mt-3 space-y-2">{pending.map(i => {
       const manageable = canManageMemberRole(membership.role, null, i.role)
       return <Card key={i.id} className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm">
         <div><strong className="text-ink">{i.email}</strong><div className="mt-1 text-xs text-muted">{ROLE_LABEL[i.role] ?? i.role} · vence em {new Date(i.expires_at).toLocaleDateString('pt-BR')}</div></div>
         {manageable && <div className="flex gap-2">
-          <form action={resendInvitation}><input type="hidden" name="invitation_id" value={i.id} /><button className={btn}>Reenviar</button></form>
           <form action={revokeInvitation}><input type="hidden" name="invitation_id" value={i.id} /><button className={btn}>Cancelar</button></form>
         </div>}
       </Card>
-    })}</div>}
+    })}</div></>}
     {past.length > 0 && <p className="mt-3 text-xs text-muted">Anteriores: {past.map(i => `${i.email} (${INVITE_STATUS_LABEL[i.status] ?? i.status})`).join(' · ')}</p>}
 
     <h2 className="mt-8 text-xl font-semibold text-ink">Últimas alterações</h2>
-    {!events.data?.length ? <Card className="mt-3 p-5"><p className="text-sm text-muted">Nenhuma alteração registrada.</p></Card> : <ul className="mt-3 space-y-1 text-xs text-muted">{events.data.map(e => <li key={e.id}>{new Date(e.occurred_at).toLocaleString('pt-BR')} · {AUDIT_LABEL[e.event_type] ?? 'Alteração de configuração'}{e.target_email ? ` · ${e.target_email}` : ''}</li>)}</ul>}
+    {!events.data?.length ? <Card className="mt-3 p-5"><p className="text-sm text-muted">Nenhuma alteração registrada.</p></Card> : <ul className="mt-3 space-y-1 text-xs text-muted">{events.data.map(e => <li key={e.id}>{new Date(e.occurred_at).toLocaleString('pt-BR')} · {e.event_type === 'invite_created' && (e.details as { with_password?: boolean } | null)?.with_password ? 'Acesso criado com senha' : AUDIT_LABEL[e.event_type] ?? 'Alteração de configuração'}{e.target_email ? ` · ${e.target_email}` : ''}</li>)}</ul>}
   </section>
 }

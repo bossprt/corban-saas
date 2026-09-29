@@ -656,7 +656,7 @@ test('menu Cadastros: every registration reachable by clicking; old Comercial pa
 
 // Seller file (owner decision 25/09/2026): automatic code, required contact, PIX and TED accounts with a payee, contacts;
 // the page is the form, locked until "Editar cadastro"; a removed account leaves the file.
-test('seller file: full registration with payment accounts, edited in the same form', async ({ page }, info) => {
+test('seller file: full registration with payment accounts, edited in the same form', async ({ page, browser }, info) => {
   test.skip(info.project.name === 'mobile', 'one run is enough')
   const base = String(Date.now()).slice(-9)
   const dv = (s: string, w: number) => { const r = s.split('').reduce((a, c, i) => a + Number(c) * (w - i), 0) % 11; return r < 2 ? 0 : 11 - r }
@@ -712,6 +712,24 @@ test('seller file: full registration with payment accounts, edited in the same f
   await saved.getByRole('button', { name: 'Salvar alterações' }).click()
   await expect(page.getByText('Cadastro do vendedor atualizado.')).toBeVisible({ timeout: 30_000 })
   await expect(saved.locator('[data-row="seller-account"]')).toHaveCount(1)
+
+  // Portal access created here with e-mail and password (29/09/2026): the broker enters right away, no e-mail sent.
+  const broker = `corretor.e2e.${Date.now()}@corban-teste.local`
+  const portal = page.locator('form').filter({ has: page.getByRole('button', { name: 'Criar acesso' }) })
+  await portal.getByLabel('E-mail do corretor').fill(broker)
+  await portal.getByLabel('Senha', { exact: true }).fill('Corretor#E2E2026')
+  await portal.getByLabel('Repita a senha').fill('Corretor#E2E2026')
+  await portal.getByLabel('Pedir nova senha no primeiro acesso').uncheck()
+  await portal.getByRole('button', { name: 'Criar acesso' }).click()
+  await expect(page.getByText(/Acesso ao portal criado/)).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByText('Este vendedor já entra no portal do corretor.')).toBeVisible()
+  const brokerContext = await browser.newContext()
+  const b = await brokerContext.newPage()
+  await signIn(b, broker, 'Corretor#E2E2026')
+  await expect(b).toHaveURL(/\/app(\/|$)/, { timeout: 30_000 })
+  await expect(b.getByText('Corban Teste Ltda').first()).toBeVisible({ timeout: 30_000 })
+  await brokerContext.close()
+
   await page.goto('/app/cadastros/vendedores')
   await expect(page.getByRole('link', { name: new RegExp(name) })).toBeVisible()
 })
@@ -1329,36 +1347,76 @@ const landing = async (link: string, base: string) => {
   return `${base}/auth/definir-senha#${location.split('#')[1] ?? ''}`
 }
 
-test('invitation link: create the password, enter the company; the same link twice says it was used', async ({ page, browser, baseURL }, info) => {
-  test.skip(info.project.name === 'mobile' || !mailApi, 'one run is enough; needs the local mail catcher')
-  const invitee = `convite.e2e.${Date.now()}@corban-teste.local`
-  await page.goto('/app/equipe')
-  await page.getByLabel('E-mail').fill(invitee)
-  await page.getByRole('button', { name: 'Convidar' }).click()
-  await expect(page.getByText('Convite criado e e-mail enviado.')).toBeVisible({ timeout: 30_000 })
+// Access created by the admin with e-mail and password (owner decision 29/09/2026): no e-mail involved. The test passwords
+// below exist only in this local run.
+const signIn = async (p: import('@playwright/test').Page, email: string, pass: string) => {
+  await p.goto('/login')
+  await p.locator('input[type="email"]').fill(email)
+  await p.locator('input[type="password"]').fill(pass)
+  await p.locator('button[type="submit"]').click()
+}
 
-  const link = await lastLink(invitee)
-  const first = await landing(link, baseURL!)
-  const guest = await browser.newContext()
-  const p = await guest.newPage()
-  await p.goto(first)
-  await expect(p.getByLabel(/Nova senha/)).toBeVisible({ timeout: 20_000 })
-  await expect(p).toHaveURL(/definir-senha$/) // the tokens are wiped from the address bar
-  await p.getByLabel(/Nova senha/).fill('Convite#E2E2026')
-  await p.getByLabel('Repita a senha').fill('Convite#E2E2026')
+test('team access with password: created by the admin, first entry asks for a new password, admin resets it later', async ({ page, browser }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  test.setTimeout(240_000) // three sign-ins, each page compiled on first visit by the dev server
+  const person = `acesso.e2e.${Date.now()}@corban-teste.local`
+  await page.goto('/app/equipe')
+  const form = page.locator('form').filter({ has: page.getByRole('button', { name: 'Criar acesso' }) })
+  await form.getByLabel('E-mail').fill(person)
+  await form.getByLabel('Perfil').selectOption({ label: 'Vendedor' })
+  await form.getByLabel('Senha', { exact: true }).fill('Inicial#E2E2026')
+  await form.getByLabel('Repita a senha').fill('Inicial#E2E2026')
+  await expect(form.getByLabel('Pedir nova senha no primeiro acesso')).toBeChecked()
+  await form.getByRole('button', { name: 'Criar acesso' }).click()
+  await expect(page.getByText(/Acesso criado/)).toBeVisible({ timeout: 30_000 })
+  await expect(page.locator('main')).toContainText(person)
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-equipe-criar-acesso.png`, fullPage: true })
+
+  // First entry: straight to "Criar senha", nothing else opens before it.
+  const first = await browser.newContext()
+  const p = await first.newPage()
+  await signIn(p, person, 'Inicial#E2E2026')
+  await expect(p).toHaveURL(/\/auth\/definir-senha/, { timeout: 30_000 })
+  await p.goto('/app/clientes')
+  await expect(p).toHaveURL(/\/auth\/definir-senha/, { timeout: 30_000 })
+  await p.getByLabel(/Nova senha/).fill('Propria#E2E2026')
+  await p.getByLabel('Repita a senha').fill('Propria#E2E2026')
   await p.getByRole('button', { name: 'Salvar e entrar' }).click()
   await expect(p).toHaveURL(/\/app(\/|$)/, { timeout: 30_000 })
   await expect(p.getByText('Corban Teste Ltda').first()).toBeVisible({ timeout: 30_000 })
-  if (shots) await p.screenshot({ path: `${shots}/${info.project.name}-convite-entrou.png` })
-  await guest.close()
+  await first.close()
 
-  // The same e-mail link again: one use only, and the page says so.
-  const again = await browser.newContext()
-  const q = await again.newPage()
-  await q.goto(await landing(link, baseURL!))
-  await expect(q.getByText(/Este link já foi usado/)).toBeVisible({ timeout: 20_000 })
-  if (shots) await q.screenshot({ path: `${shots}/${info.project.name}-convite-usado.png` })
-  await again.close()
+  // The admin sets a new password (e.g. the person forgot it) without the first-entry step.
+  const row = page.locator('section.justify-between').filter({ has: page.locator('strong', { hasText: person }) })
+  await page.reload()
+  await row.getByText('Redefinir senha').click()
+  await row.getByLabel('Nova senha', { exact: true }).fill('Nova#E2E20260')
+  await row.getByLabel('Repita a senha').fill('Nova#E2E20260')
+  await row.getByLabel('Pedir nova senha no próximo acesso').uncheck()
+  await row.getByRole('button', { name: 'Salvar senha' }).click()
+  await expect(page.getByText('Senha redefinida. Passe a nova senha para a pessoa.')).toBeVisible({ timeout: 30_000 })
+  const second = await browser.newContext()
+  const q = await second.newPage()
+  await signIn(q, person, 'Nova#E2E20260')
+  await expect(q).toHaveURL(/\/app(\/|$)/, { timeout: 30_000 })
+  await expect(q.getByText('Corban Teste Ltda').first()).toBeVisible({ timeout: 30_000 })
+  await second.close()
+})
+
+test('team access with password: a mismatched confirmation and a member of the company are refused', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  await page.goto('/app/equipe')
+  const form = page.locator('form').filter({ has: page.getByRole('button', { name: 'Criar acesso' }) })
+  await form.getByLabel('E-mail').fill(`outro.e2e.${Date.now()}@corban-teste.local`)
+  await form.getByLabel('Senha', { exact: true }).fill('Inicial#E2E2026')
+  await form.getByLabel('Repita a senha').fill('Diferente#E2E2026')
+  await form.getByRole('button', { name: 'Criar acesso' }).click()
+  await expect(page.getByText(/Senha inválida/)).toBeVisible({ timeout: 30_000 })
+  await form.getByLabel('E-mail').fill(process.env.E2E_SELLER_EMAIL ?? 'vendedor@corban-teste.local')
+  await form.getByLabel('Senha', { exact: true }).fill('Inicial#E2E2026')
+  await form.getByLabel('Repita a senha').fill('Inicial#E2E2026')
+  await form.getByRole('button', { name: 'Criar acesso' }).click()
+  await expect(page.getByText(/já é membro desta empresa/)).toBeVisible({ timeout: 30_000 })
 })
 
 test('forgot password: the link works in another browser', async ({ browser, baseURL }, info) => {

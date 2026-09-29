@@ -30,16 +30,20 @@ export const TEAM_ERROR_MESSAGES={
  branch_not_found:'Filial não encontrada ou inativa.',
  team_leader_not_found:'O líder escolhido não é um membro ativo (e ninguém lidera a si mesmo).',
  system_role_tier_immutable:'O nível de acesso de um papel padrão não pode mudar.',
+ invalid_password:'Senha inválida: use de 10 a 72 caracteres e repita igual no segundo campo.',
+ already_member:'Este e-mail já é membro desta empresa. Para trocar a senha, use Redefinir senha no membro.',
+ email_has_other_access:'Este e-mail já tem acesso a outra empresa no Corban. A pessoa entra com a senha dela; peça para usar "Esqueci minha senha" se precisar.',
+ access_not_created:'O acesso não foi criado agora (o serviço de login recusou). Confira o e-mail e tente de novo.',
  unexpected:'Não foi possível concluir. Nada foi alterado; tente novamente.'
 } as const
 export type TeamErrorCode=keyof typeof TEAM_ERROR_MESSAGES
 export const isTeamErrorCode=(v:unknown):v is TeamErrorCode=>typeof v==='string'&&Object.prototype.hasOwnProperty.call(TEAM_ERROR_MESSAGES,v)
 
 export const TEAM_OK_MESSAGES={
- invited:'Convite criado e e-mail enviado.',
- invited_existing:'Convite criado. Este e-mail já tem conta: a pessoa vê o acesso ao entrar.',
- invited_no_email:'Convite criado, mas o e-mail não pôde ser enviado agora. Use Reenviar.',
- resent:'E-mail reenviado.',
+ access_created:'Acesso criado. Passe o e-mail e a senha para a pessoa entrar.',
+ access_created_change:'Acesso criado. Passe o e-mail e a senha para a pessoa; no primeiro acesso ela escolhe a própria senha.',
+ password_set:'Senha redefinida. Passe a nova senha para a pessoa.',
+ password_set_change:'Senha redefinida. No próximo acesso a pessoa escolhe a própria senha.',
  revoked:'Convite cancelado.',
  role_changed:'Perfil atualizado.',
  status_changed:'Situação do acesso atualizada.',
@@ -67,9 +71,9 @@ export function normalizeEmail(raw:unknown):string|null{
 }
 
 export const AUDIT_LABEL:Record<string,string>={
- invite_created:'Convite criado',invite_revoked:'Convite cancelado',invite_accepted:'Convite aceito',
+ invite_created:'Convite criado',invite_revoked:'Convite cancelado',invite_accepted:'Acesso liberado',
  member_role_changed:'Perfil alterado',member_deactivated:'Acesso desativado',member_reactivated:'Acesso reativado',
- role_created:'Papel criado',api_key_created:'Chave de integração criada',api_key_revoked:'Chave de integração revogada',seller_created:'Vendedor cadastrado',seller_supervision_updated:'Supervisão do vendedor alterada',seller_user_binding_updated:'Acesso do vendedor ao sistema alterado',role_updated:'Papel alterado',member_access_role_changed:'Papel do membro alterado',member_hierarchy_changed:'Filial, equipe ou alcance alterados'
+ role_created:'Papel criado',api_key_created:'Chave de integração criada',api_key_revoked:'Chave de integração revogada',seller_created:'Vendedor cadastrado',seller_supervision_updated:'Supervisão do vendedor alterada',seller_user_binding_updated:'Acesso do vendedor ao sistema alterado',role_updated:'Papel alterado',member_access_role_changed:'Papel do membro alterado',member_hierarchy_changed:'Filial, equipe ou alcance alterados',member_password_set:'Senha redefinida'
 }
 
 const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -77,6 +81,3 @@ export const isUuid=(v:unknown):v is string=>typeof v==='string'&&UUID_RE.test(v
 
 // Supabase Auth reports an already registered address as email_exists (422). That is not a failure for us:
 // the invitation row exists and the person accepts it after logging in.
-export function isExistingUserError(err:{message?:string;code?:string;status?:number}|null|undefined):boolean{
- return !!err&&(err.code==='email_exists'||err.code==='user_already_exists'||/already (been )?registered|already exists/i.test(String(err.message??'')))
-}

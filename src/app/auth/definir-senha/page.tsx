@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
+import { passwordChosen } from './actions'
 import { AuthShell, authButton, authError, authLabel } from '@/components/shell/AuthShell'
 
 const MIN_LENGTH = 10
@@ -51,8 +52,10 @@ export default function SetPasswordPage() {
     if (password !== confirm) return setError('As senhas não conferem.')
     setSaving(true)
     const { error: updateError } = await supabase.auth.updateUser({ password })
-    setSaving(false)
-    if (updateError) return setError('Não foi possível salvar a senha. Peça um novo convite ou tente uma senha mais forte.')
+    if (updateError) { setSaving(false); return setError('Não foi possível salvar a senha. Tente uma senha diferente da atual e mais forte.') }
+    if (!(await passwordChosen())) { setSaving(false); return setError('Senha salva, mas não foi possível liberar a entrada agora. Tente entrar de novo.') }
+    // The first-entry mark lives in the session token: refresh it so the app reads the cleared value.
+    await supabase.auth.refreshSession()
     // A single navigation: the first entry accepts the pending invitation on the server (a concurrent refresh would find it
     // already accepted; /access-pending also sends an active member on to /app).
     router.replace('/app')
