@@ -13,6 +13,9 @@ export default async function AccessPendingPage() {
 
   const joined = await acceptInvitationsFor(user)
   if (joined > 0) redirect('/app')
+  // Accepted by a concurrent request (or reactivated meanwhile): access is already open.
+  const { data: active } = await supabase.from('organization_memberships').select('id').eq('user_id', user.id).eq('status', 'active').limit(1)
+  if (active?.length) redirect('/app')
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-canvas px-4">

@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
 import { canManageMemberRole, canManageTeam } from '@/lib/rbac'
 import { classifyTeamError, isUuid, normalizeEmail, type TeamErrorCode, type TeamOkCode } from '@/lib/team'
-import { sendInvitationEmail } from '@/lib/team.server'
+import { sendInvitationEmail, sendPasswordLink } from '@/lib/team.server'
 
 const back=(q:string):never=>redirect(`/app/equipe?${q}`)
 const fail=(code:TeamErrorCode):never=>back(`erro=${code}`)
@@ -37,6 +37,7 @@ export async function resendInvitation(formData:FormData){
  if(inv.status!=='pending'||new Date(inv.expires_at)<=new Date())return fail('invitation_already_resolved')
  if(!canManageMemberRole(membership.role,null,inv.role))return fail('not_authorized')
  const outcome=await sendInvitationEmail(inv.email)
+ if(outcome==='existing_user')return (await sendPasswordLink(inv.email))?done('resent'):fail('unexpected')
  return outcome==='failed'?fail('unexpected'):done('resent')
 }
 
