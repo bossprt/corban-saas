@@ -1,4 +1,4 @@
--- Contract test for 20260929160000_member_access_with_password_v1: a manager may create or complete a login (and set a
+-- Contract test for 20260929153405_member_access_with_password_v1: a manager may create or complete a login (and set a
 -- member's password) only inside their own company, only for roles they may manage, never for themselves, and never for a
 -- login that reaches another company or the platform. One transaction, rolled back.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/member-access-password-contract.sql
