@@ -1,7 +1,7 @@
--- Contract test for 20260928120000_group_value_rounding_v1: converted group values with a rounding leftover
+-- Contract test for 20260929045747_group_value_rounding_v1: converted group values with a rounding leftover
 -- (3.00000001) become exact (3); real values, other sources and published versions stay untouched.
 -- One transaction, rolled back. The migration file must be reachable at /tmp/group_value_rounding.sql:
---   docker cp supabase/migrations/20260928120000_group_value_rounding_v1.sql <db>:/tmp/group_value_rounding.sql
+--   docker cp supabase/migrations/20260929045747_group_value_rounding_v1.sql <db>:/tmp/group_value_rounding.sql
 --   psql -v ON_ERROR_STOP=1 -f tests/security/group-value-rounding-contract.sql
 
 begin;
