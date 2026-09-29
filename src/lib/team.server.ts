@@ -1,31 +1,47 @@
 import 'server-only'
-import { createClient } from '@supabase/supabase-js'
-import { siteOrigin } from '@/lib/site-origin'
 import { createAdminClient } from '@/lib/supabaseAdmin'
-import { isExistingUserError } from '@/lib/team'
 
-// Server-only identity plumbing for the team module. The service role never leaves the server and is used for exactly three things:
-// (1) asking Supabase Auth to send the invitation e-mail, (2) reading member e-mail addresses for display, (3) the service_role-only
-// accept RPC. Authorization ALWAYS happens before, with the caller's own session (RLS + governed RPCs).
+// Server-only identity plumbing for the team module. The service role never leaves the server and is used for: (1) creating or
+// completing a login with the password the manager typed, and setting a member's password, (2) reading member e-mail addresses
+// for display, (3) the service_role-only accept RPC. Authorization ALWAYS happens before, with the caller's own session (RLS +
+// governed RPCs).
 
-export type InviteEmailOutcome='sent'|'existing_user'|'failed'
-export async function sendInvitationEmail(email:string):Promise<InviteEmailOutcome>{
+// Access created by the admin with a password (owner decision 29/09/2026). Called only after public.prepare_member_access,
+// with the manager's session, allowed it (role, company, and an e-mail that reaches nothing outside this company). The
+// login is created, or completed when it already exists only for this company, confirmed, and the invitation is accepted at
+// once. `mustChange` makes the person choose their own password on the first entry. The password is never logged.
+export type AccessOutcome='created'|'failed'
+export async function createMemberLogin(email:string,password:string,existingUserId:string|null,mustChange:boolean):Promise<AccessOutcome>{
  try{
-  const origin=await siteOrigin()
-  const { error }=await createAdminClient().auth.admin.inviteUserByEmail(email,origin?{redirectTo:`${origin}/auth/definir-senha`}:undefined)
-  if(!error)return 'sent'
-  return isExistingUserError(error)?'existing_user':'failed'
+  const admin=createAdminClient()
+  const app_metadata={must_change_password:mustChange}
+  let userId=existingUserId
+  if(userId){
+   const { error }=await admin.auth.admin.updateUserById(userId,{password,email_confirm:true,app_metadata})
+   if(error)return 'failed'
+  }else{
+   const { data,error }=await admin.auth.admin.createUser({email,password,email_confirm:true,app_metadata})
+   if(error||!data.user)return 'failed'
+   userId=data.user.id
+  }
+  const { data:joined,error }=await admin.rpc('accept_organization_invitations',{p_user_id:userId,p_email:email})
+  if(error||!Array.isArray(joined)||!joined.length)return 'failed'
+  return 'created'
  }catch{return 'failed'}
 }
 
-// Resend to an address that already has an account (e.g. the first invitation link was opened but no password was saved):
-// Supabase does not invite it again, so it gets a "create your password" link instead. Implicit flow, so the link works on
-// any device; it lands on /auth/definir-senha, and the pending invitation is accepted on the first entry.
-export async function sendPasswordLink(email:string):Promise<boolean>{
+// New password for a member, after public.authorize_member_password allowed it for the caller.
+export async function setMemberPassword(userId:string,password:string,mustChange:boolean):Promise<boolean>{
  try{
-  const origin=await siteOrigin()
-  const client=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!.trim(),process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.trim(),{auth:{flowType:'implicit',persistSession:false,autoRefreshToken:false}})
-  const { error }=await client.auth.resetPasswordForEmail(email,origin?{redirectTo:`${origin}/auth/definir-senha`}:undefined)
+  const { error }=await createAdminClient().auth.admin.updateUserById(userId,{password,app_metadata:{must_change_password:mustChange}})
+  return !error
+ }catch{return false}
+}
+
+// The person chose their own password: the first-entry requirement is cleared (identity from Auth, never from the form).
+export async function clearMustChangePassword(userId:string):Promise<boolean>{
+ try{
+  const { error }=await createAdminClient().auth.admin.updateUserById(userId,{app_metadata:{must_change_password:false}})
   return !error
  }catch{return false}
 }

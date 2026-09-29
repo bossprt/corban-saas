@@ -102,7 +102,7 @@ test('public origin: explicit setting first, same-origin fallback only, no calle
   const s = read('src/lib/site-origin.ts')
   assert.match(s, /NEXT_PUBLIC_SITE_URL/)
   assert.match(s, /origin\.host\.toLowerCase\(\) === host/)
-  for (const f of ['src/lib/team.server.ts', 'src/app/login/recuperar/actions.ts']) assert.match(read(f), /\$\{origin\}\/auth\/definir-senha/, f)
+  for (const f of ['src/app/login/recuperar/actions.ts']) assert.match(read(f), /\$\{origin\}\/auth\/definir-senha/, f)
 })
 test('server secrets are read only by server code', () => {
   for (const f of ['src/lib/supabaseAdmin.ts']) assert.match(read(f), /^import 'server-only'/, f)

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { atLeast, canManageMemberRole, canManageTeam, canViewCommission, rolesAssignableBy } from '../../src/lib/rbac'
-import { classifyTeamError, isExistingUserError, isTeamErrorCode, isUuid, normalizeEmail, TEAM_ERROR_MESSAGES } from '../../src/lib/team'
+import { classifyTeamError, isTeamErrorCode, isUuid, normalizeEmail, TEAM_ERROR_MESSAGES } from '../../src/lib/team'
 
 const ROOT = process.cwd()
 const read = (p: string) => readFileSync(join(ROOT, p), 'utf8')
@@ -82,12 +82,6 @@ test('normalizeEmail / isUuid', () => {
   assert.equal(isUuid("'; drop table x;--"), false)
   assert.equal(isUuid(undefined), false)
 })
-test('an already registered address is not an invitation failure', () => {
-  assert.equal(isExistingUserError({ code: 'email_exists' }), true)
-  assert.equal(isExistingUserError({ message: 'A user with this email address has already been registered' }), true)
-  assert.equal(isExistingUserError({ message: 'SMTP down' }), false)
-  assert.equal(isExistingUserError(null), false)
-})
 
 // ---- architecture: where the service role may live, what the team module may trust
 test('service role and admin client stay out of client code and out of team pages', () => {
@@ -103,8 +97,12 @@ test('team actions never take the tenant from the form and always go through gov
   const a = read('src/app/app/equipe/actions.ts')
   assert.doesNotMatch(a, /get\(['"]organization/)
   assert.match(a, /p_org:organization\.id/)
-  for (const rpc of ['create_organization_invitation', 'revoke_organization_invitation', 'assign_member_access_role', 'set_member_status']) assert.match(a, new RegExp(rpc))
+  for (const rpc of ['prepare_member_access', 'authorize_member_password', 'record_member_password_set', 'revoke_organization_invitation', 'assign_member_access_role', 'set_member_status']) assert.match(a, new RegExp(rpc))
   assert.doesNotMatch(a, /\.from\(['"]organization_memberships['"]\)\s*\.(insert|update|delete)/)
+  // The service-role login is created only after the governed check of the caller.
+  assert.ok(a.indexOf("rpc('prepare_member_access'") < a.indexOf('createMemberLogin(email'), 'check before creating the login')
+  assert.ok(a.indexOf("rpc('authorize_member_password'") < a.indexOf('setMemberPassword(userId'), 'check before setting a password')
+  assert.doesNotMatch(a + read('src/lib/team.server.ts'), /console\.|password\)\s*\}/)
 })
 test('acceptance only trusts a confirmed address and never runs for an unconfirmed one', () => {
   const s = read('src/lib/team.server.ts')

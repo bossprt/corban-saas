@@ -9,6 +9,8 @@ export async function requireAppContext() {
   const rawClient = await createClient()
   const { data: { user }, error: userError } = await rawClient.auth.getUser()
   if (userError || !user) redirect('/login')
+  // Access created by a manager with "choose a new password on the first entry": nothing opens until the person does it.
+  if (user.app_metadata?.must_change_password === true) redirect('/auth/definir-senha')
 
   const { data: rows, error: membershipError } = await rawClient
     .from('organization_memberships')

@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
 import { canManageMemberRole, canManageTeam } from '@/lib/rbac'
 import { classifyTeamError, isUuid, normalizeEmail, type TeamErrorCode, type TeamOkCode } from '@/lib/team'
-import { sendInvitationEmail, sendPasswordLink } from '@/lib/team.server'
+import { createMemberLogin, setMemberPassword } from '@/lib/team.server'
 
 const back=(q:string):never=>redirect(`/app/equipe?${q}`)
 const fail=(code:TeamErrorCode):never=>back(`erro=${code}`)
@@ -13,32 +13,43 @@ const done=(code:TeamOkCode):never=>{revalidatePath('/app/equipe');return back(`
 const text=(f:FormData,k:string)=>String(f.get(k)??'')
 
 // The organization is ALWAYS the active one from the server context; a form field can never name a tenant.
-export async function inviteMember(formData:FormData){
+// Access is created by the admin with e-mail and password (owner decision 29/09/2026): no e-mail, no pending sign-up.
+const PASSWORD_MIN=10, PASSWORD_MAX=72
+const passwordOf=(f:FormData):string|null=>{
+ const p=text(f,'password'), c=text(f,'password_confirm')
+ return p.length>=PASSWORD_MIN&&p.length<=PASSWORD_MAX&&p===c?p:null
+}
+
+export async function createMemberAccess(formData:FormData){
  const { supabase, membership, organization }=await requireAppContext()
  const email=normalizeEmail(text(formData,'email'))
  const role=text(formData,'role')
+ const mustChange=formData.get('must_change')==='on'
  if(!canManageTeam(membership.role))return fail('not_authorized')
  if(!email)return fail('invalid_email')
  if(!canManageMemberRole(membership.role,null,role))return fail('role_change_not_permitted')
- const { error }=await supabase.rpc('create_organization_invitation',{p_org:organization.id,p_email:email,p_role:role})
+ const password=passwordOf(formData)
+ if(!password)return fail('invalid_password')
+ const { data,error }=await supabase.rpc('prepare_member_access',{p_org:organization.id,p_email:email,p_role:role})
  if(error)return fail(classifyTeamError(error))
- const outcome=await sendInvitationEmail(email)
- return done(outcome==='sent'?'invited':outcome==='existing_user'?'invited_existing':'invited_no_email')
+ const row=Array.isArray(data)?data[0]:null
+ if(!row)return fail('unexpected')
+ const outcome=await createMemberLogin(email,password,row.existing_user_id??null,mustChange)
+ return outcome==='created'?done(mustChange?'access_created_change':'access_created'):fail('access_not_created')
 }
 
-export async function resendInvitation(formData:FormData){
- const { supabase, membership }=await requireAppContext()
- const id=text(formData,'invitation_id')
+export async function resetMemberPassword(formData:FormData){
+ const { supabase }=await requireAppContext()
+ const id=text(formData,'membership_id')
  if(!isUuid(id))return fail('invalid_input')
- if(!canManageTeam(membership.role))return fail('not_authorized')
- // RLS: only managers of this organization can read the row; a foreign id simply is not found.
- const { data:inv }=await supabase.from('organization_invitations').select('email,role,status,expires_at').eq('id',id).maybeSingle()
- if(!inv)return fail('invitation_not_found')
- if(inv.status!=='pending'||new Date(inv.expires_at)<=new Date())return fail('invitation_already_resolved')
- if(!canManageMemberRole(membership.role,null,inv.role))return fail('not_authorized')
- const outcome=await sendInvitationEmail(inv.email)
- if(outcome==='existing_user')return (await sendPasswordLink(inv.email))?done('resent'):fail('unexpected')
- return outcome==='failed'?fail('unexpected'):done('resent')
+ const password=passwordOf(formData)
+ if(!password)return fail('invalid_password')
+ const mustChange=formData.get('must_change')==='on'
+ const { data:userId,error }=await supabase.rpc('authorize_member_password',{p_membership_id:id})
+ if(error||!isUuid(userId))return fail(classifyTeamError(error))
+ if(!(await setMemberPassword(userId,password,mustChange)))return fail('unexpected')
+ await supabase.rpc('record_member_password_set',{p_membership_id:id,p_must_change:mustChange})
+ return done(mustChange?'password_set_change':'password_set')
 }
 
 export async function revokeInvitation(formData:FormData){

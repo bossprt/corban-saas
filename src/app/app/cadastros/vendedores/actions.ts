@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
 import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedback'
-import { sendInvitationEmail } from '@/lib/team.server'
+import { createMemberLogin } from '@/lib/team.server'
 
 const PATH='/app/cadastros/vendedores'
 const text=(f:FormData,k:string)=>String(f.get(k)??'').trim()
@@ -90,12 +90,23 @@ export async function setSellerActive(f:FormData){
   return error?go(classifyDbFeedback(error),pageOf(f)):go('ok:vendedor_atualizado',pageOf(f))
 }
 
-// Portal access (F7): the database creates an invitation that carries the 'corretor' role and binds the seller on
-// acceptance; the e-mail goes out through Supabase Auth.
-export async function inviteSellerToPortal(f:FormData){
+// Portal access (F7), created by the manager with e-mail and password (owner decision 29/09/2026): the database checks the
+// e-mail and creates the invitation that carries the 'corretor' role and binds the seller; the server creates the login and
+// accepts it at once. No e-mail is sent. The password is never logged.
+export async function createSellerPortalAccess(f:FormData){
   const ctx=await manager(); if(!ctx)return go('erro:sem_permissao',pageOf(f))
   const id=text(f,'id'),email=text(f,'email').toLowerCase()
   if(!uuid(id)||!/^[^@\s]+@[^@\s]+$/.test(email))return go('erro:requisicao_invalida',pageOf(f))
+  const password=text(f,'password')
+  if(password.length<10||password.length>72||password!==text(f,'password_confirm'))return go('erro:portal_senha',pageOf(f))
+  const mustChange=f.get('must_change')==='on'
+  const {data:existing,error:checkError}=await ctx.supabase.rpc('check_login_email',{p_org:ctx.membership.organization_id,p_email:email})
+  if(checkError){
+    const m=checkError.message??''
+    if(/email_has_other_access/.test(m))return go('erro:portal_email_outra_empresa',pageOf(f))
+    if(/already_member/.test(m))return go('erro:portal_acesso_existente',pageOf(f))
+    return go(classifyDbFeedback(checkError),pageOf(f))
+  }
   const {error}=await ctx.supabase.rpc('invite_seller_to_portal',{p_seller:id,p_email:email})
   if(error){
     const m=error.message??''
@@ -103,6 +114,6 @@ export async function inviteSellerToPortal(f:FormData){
     if(/seller_already_has_access/.test(m))return go('erro:portal_acesso_existente',pageOf(f))
     return go(classifyDbFeedback(error),pageOf(f))
   }
-  const outcome=await sendInvitationEmail(email)
-  return go(outcome==='failed'?'erro:portal_convite_email':'ok:portal_convite',pageOf(f))
+  const outcome=await createMemberLogin(email,password,typeof existing==='string'?existing:null,mustChange)
+  return go(outcome==='created'?'ok:portal_acesso':'erro:portal_acesso_falhou',pageOf(f))
 }

@@ -15,6 +15,12 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Acesso criado com senha (29/09/2026)
+- Alterado: em Equipe, "Criar acesso" com e-mail, perfil e senha (com "Mostrar senha"); a pessoa entra na hora, sem e-mail. "Pedir nova senha no primeiro acesso" vem ligado: no primeiro login nada abre antes de ela escolher a própria senha. Cada membro tem "Redefinir senha" (só para quem é só desta empresa; nunca a própria, nunca papel acima do seu).
+- Alterado: na ficha do vendedor, "Acesso ao portal" também cria o acesso do corretor com e-mail e senha.
+- Removido: convite por e-mail e "Reenviar" na tela Equipe (convites pendentes antigos continuam listados, com Cancelar; criar o acesso com o mesmo e-mail troca o convite). "Esqueci minha senha" continua.
+- Banco: migration `member_access_with_password_v1` (ADR-0047). Contrato `tests/security/member-access-password-contract.sql` (19 checagens). Testes de tela: criar acesso, primeiro acesso com troca de senha, redefinir senha, recusas, e acesso do corretor ao portal.
+
 ### Link do convite e do "Esqueci minha senha" (29/09/2026)
 - Corrigido: quem clicava no link do convite via "Este link é inválido ou expirou". O Supabase manda a sessão depois do `#` do link e o cliente do navegador (fluxo PKCE) ignora esse formato; a página "Criar senha" agora lê a sessão do link, valida no Supabase e limpa o endereço. Link já usado mostra "Este link já foi usado" (cada link vale uma vez).
 - Corrigido: depois de criar a senha, uma segunda navegação simultânea podia mostrar "Acesso ainda não liberado" mesmo com o convite aceito; agora é uma navegação só, e a tela de acesso pendente manda para o app quem já está ativo.

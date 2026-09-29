@@ -8,7 +8,8 @@ import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
 import { CATEGORY_LABEL, originText, sellerCode } from '@/lib/sellers'
 import { isUuid } from '@/lib/team'
-import { inviteSellerToPortal, saveSeller, setSellerActive } from '../actions'
+import { createSellerPortalAccess, saveSeller, setSellerActive } from '../actions'
+import { PasswordPair } from '@/components/PasswordPair'
 import { SellerForm, type SellerValues } from '../SellerForm'
 import type { SellerAccount, SellerContact } from '../SellerRows'
 
@@ -78,10 +79,12 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
             <CardHeader title="Acesso ao portal" />
             <div className="px-5 pb-5 pt-3 text-sm">
               {s.user_id ? <p className="text-ink-soft">Este vendedor já entra no portal do corretor.</p> : !s.is_active ? <p className="text-muted">Reative o vendedor para dar acesso.</p> : (
-                <form action={inviteSellerToPortal} className="flex flex-wrap gap-2">
+                <form action={createSellerPortalAccess} className="flex flex-wrap items-end gap-2">
                   <input type="hidden" name="id" value={s.id} />
-                  <input required name="email" type="email" defaultValue={p.email ?? ''} placeholder="E-mail do corretor" aria-label="E-mail do corretor" className="field max-w-xs" />
-                  <SubmitButton className="h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Enviar convite</SubmitButton>
+                  <label className="text-xs text-muted">E-mail do corretor<input required name="email" type="email" defaultValue={p.email ?? ''} className="field mt-1 block w-72" /></label>
+                  <PasswordPair idPrefix="portal" />
+                  <label className="flex h-10 items-center gap-1.5 text-xs text-muted"><input type="checkbox" name="must_change" defaultChecked className="accent-[var(--brand)]" />Pedir nova senha no primeiro acesso</label>
+                  <SubmitButton pendingText="Criando..." className="h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Criar acesso</SubmitButton>
                 </form>
               )}
               <p className="mt-2 text-xs text-muted">Entra com o papel Corretor: vê só as propostas e o extrato dele.</p>
