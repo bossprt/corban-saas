@@ -1,4 +1,4 @@
--- Contract test for 20260929130000_table_version_start_date_v1: publishing a draft with a chosen start date keeps
+-- Contract test for 20260929052528_table_version_start_date_v1: publishing a draft with a chosen start date keeps
 -- every publication rule (role, draft only, chronological order, previous vigência closed at the new start).
 -- One transaction, rolled back.  psql -v ON_ERROR_STOP=1 -f tests/security/table-version-start-date-contract.sql
 
