@@ -10,7 +10,33 @@ create temp table results (check_name text, ok boolean);
 create function pg_temp.err(p_sql text) returns text language plpgsql as $$
 begin execute p_sql; return 'ok'; exception when others then return sqlerrm; end $$;
 
--- Four draft values and one published value, picked from the seed.
+-- Own draft: one line copied from a published line of the seed, with five group values (one group, five commission types).
+select set_config('corban.catalog_rpc', 'on', true), set_config('corban.condition_rpc', 'on', true), set_config('corban.smart_import_rpc', 'on', true),
+       set_config('corban.group_values_conversion', 'on', true);
+create temp table own_draft as
+with src as (
+  select c.* from public.commercial_conditions c
+  join public.product_table_versions v on v.id = c.product_table_version_id where v.status = 'published' limit 1
+), d as (
+  insert into public.product_table_versions (organization_id, product_table_id, version, status)
+  select v.organization_id, v.product_table_id, 95, 'draft' from src join public.product_table_versions v on v.id = src.product_table_version_id
+  returning id, organization_id
+), c as (
+  insert into public.commercial_conditions (organization_id, product_table_version_id, contract_type_id, term, term_min, term_max, amount_min, amount_max, tax_pct)
+  select d.organization_id, d.id, s.contract_type_id, s.term, s.term_min, s.term_max, s.amount_min, s.amount_max, s.tax_pct from d, src s
+  returning id, organization_id
+)
+select * from c;
+insert into public.commercial_condition_group_values (organization_id, condition_id, group_id, component_type_id, value_kind, value, source)
+select o.organization_id, o.id, g.id, t.id, 'percentage', 1, 'manual'
+from own_draft o
+join lateral (select id from public.commission_groups g where g.organization_id = o.organization_id and g.is_active
+              and not exists (select 1 from public.commission_group_rules r where r.group_id = g.id and r.own_production) order by g.name limit 1) g on true
+cross join lateral (select id from public.commission_component_types where is_active order by id limit 5) t;
+select set_config('corban.catalog_rpc', 'off', true), set_config('corban.condition_rpc', 'off', true), set_config('corban.smart_import_rpc', 'off', true),
+       set_config('corban.group_values_conversion', 'off', true);
+
+-- Five draft values and one published value.
 create temp table picked as
 select gv.condition_id, gv.group_id, gv.component_type_id, v.status, row_number() over (partition by v.status order by gv.condition_id, gv.group_id, gv.component_type_id) as n
 from public.commercial_condition_group_values gv

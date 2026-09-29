@@ -115,8 +115,11 @@ export default async function TablePage({ params, searchParams }: { params: Prom
                   <span className="text-xs text-muted">{v.status === 'draft' ? `criada em ${dateBr(v.created_at)}` : `de ${dateBr(v.effective_from ?? v.published_at)}${v.effective_until ? ` até ${dateBr(v.effective_until)}` : ''}`}</span>
                 </Link>
                 {v.status === 'draft' && canEdit && (
-                  <form action={publishVersion}><input type="hidden" name="table_id" value={id} /><input type="hidden" name="version_id" value={v.id} />
-                    <SubmitButton className="h-8 rounded-md bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-strong" pendingText="Publicando...">Publicar</SubmitButton></form>
+                  <form action={publishVersion} className="flex flex-wrap items-end gap-2"><input type="hidden" name="table_id" value={id} /><input type="hidden" name="version_id" value={v.id} />
+                    <label className="text-xs text-muted">Início da vigência
+                      <input type="date" name="effective_from" min="2000-01-01" className="field mt-1 block h-8 py-0 text-xs" aria-describedby={`inicio-${v.id}`} /></label>
+                    <SubmitButton className="h-8 rounded-md bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-strong" pendingText="Publicando...">Publicar</SubmitButton>
+                    <span id={`inicio-${v.id}`} className="basis-full text-xs text-muted">Vazio = começa hoje. A vigência anterior termina nessa data.</span></form>
                 )}
               </li>
             ))}

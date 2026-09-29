@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Data de início da vigência (29/09/2026)
+- Adicionado: na tabela em rascunho, campo "Início da vigência" ao lado de Publicar. Vazio = começa hoje, como antes. A vigência anterior termina nessa data; data anterior a uma vigência já publicada é recusada. Nova função `publish_product_table_version(uuid, date)` (meia-noite de Brasília, até um ano à frente) que grava a data e chama a publicação de sempre na mesma chamada. Contrato `tests/security/table-version-start-date-contract.sql` (14 checagens) e teste de tela.
+- Corrigido (testes): os contratos `group-value-rounding` e `prosesp-tables-publish` criam os próprios dados e passam num banco recém-reconstruído.
+
 ### Tabelas PROSESP publicadas (29/09/2026)
 - Alterado: as 3 tabelas PROSESP do Governo do Acre (Comissionado, Efetivo, Temporário), importadas em 21/09 como rascunho sem data, são publicadas com vigência a partir de 01/01/2026 (meia-noite de Brasília), decisão do dono. Migration `prosesp_tables_publish_v1` segue as regras de `publish_product_table_version` (só rascunho, só com linhas, flag governada) e recusa estado inesperado. Contrato `tests/security/prosesp-tables-publish-contract.sql` (7 checagens).
 

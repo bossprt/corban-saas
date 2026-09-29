@@ -47,9 +47,21 @@ export async function cloneVersion(f: FormData) {
 export async function publishVersion(f: FormData) {
   const id = text(f, 'table_id'), version = text(f, 'version_id')
   if (!isUuid(id) || !isUuid(version)) return go(LIST, 'erro:requisicao_invalida')
+  // Start of the vigência (YYYY-MM-DD from the date field). Empty = starts today, as before.
+  const start = text(f, 'effective_from')
+  if (start && !/^\d{4}-\d{2}-\d{2}$/.test(start)) return go(tablePage(id, version), 'erro:vigencia_data')
   const ctx = await manager(); if (!ctx) return go(tablePage(id, version), 'erro:sem_permissao')
-  const { error } = await ctx.supabase.rpc('publish_product_table_version', { p_version_id: version })
-  if (error) return go(tablePage(id, version), /rate_or_coefficient_required/.test(error.message ?? '') ? 'erro:vigencia_sem_taxa' : classifyDbFeedback(error))
+  const { error } = start
+    ? await ctx.supabase.rpc('publish_product_table_version', { p_version_id: version, p_effective_from: start })
+    : await ctx.supabase.rpc('publish_product_table_version', { p_version_id: version })
+  if (error) {
+    const msg = error.message ?? ''
+    const code: FeedbackCode = /rate_or_coefficient_required/.test(msg) ? 'erro:vigencia_sem_taxa'
+      : /effective_from_out_of_range|invalid input syntax for type date|date\/time field value out of range/.test(msg) ? 'erro:vigencia_data'
+      : /future_published_version_exists/.test(msg) ? 'erro:vigencia_data_anterior'
+      : classifyDbFeedback(error)
+    return go(tablePage(id, version), code)
+  }
   return go(tablePage(id, version), 'ok:vigencia_publicada')
 }
 

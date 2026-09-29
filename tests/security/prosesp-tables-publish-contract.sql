@@ -19,7 +19,7 @@ select v.organization_id as org, t.route_id as route, c.id as cond
 from public.commercial_conditions c
 join public.product_table_versions v on v.id = c.product_table_version_id
 join public.product_tables t on t.id = v.product_table_id
-where v.status = 'draft' limit 1;
+limit 1;
 
 select set_config('corban.catalog_rpc', 'on', true), set_config('corban.condition_rpc', 'on', true), set_config('corban.smart_import_rpc', 'on', true);
 create temp table made as

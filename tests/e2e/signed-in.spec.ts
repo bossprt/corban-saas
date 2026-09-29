@@ -759,11 +759,20 @@ test('commission tables: 2tech file with Repasse mapping, view per group, edit a
   await expect(page.getByText('Comissão da linha salva.')).toBeVisible({ timeout: 30_000 })
   await page.getByRole('tab', { name: 'Ouro' }).click()
   await expect(page.locator('#comissao table').getByRole('cell', { name: '3,25%' })).toBeVisible({ timeout: 30_000 })
+  // Start of the vigência chosen at publication (owner request 29/09/2026).
+  await page.getByLabel('Início da vigência').fill('2026-01-01')
   await page.getByRole('button', { name: 'Publicar' }).click()
   await expect(page.getByText('Vigência publicada.')).toBeVisible({ timeout: 30_000 })
+  await expect(page.locator('#vigencias')).toContainText('de 01/01/2026')
   await page.getByRole('button', { name: /Nova vigência a partir da v1/ }).click()
   await expect(page.getByText(/Rascunho da nova vigência pronto/)).toBeVisible({ timeout: 30_000 })
   await expect(page.locator('#vigencias').getByText('v2', { exact: true })).toBeVisible()
+  // A start before the published v1 would overlap it: refused, the draft stays.
+  await page.getByLabel('Início da vigência').fill('2025-12-01')
+  await page.getByRole('button', { name: 'Publicar' }).click()
+  await expect(page.getByText(/Já existe vigência publicada que começa depois/)).toBeVisible({ timeout: 30_000 })
+  await expect(page.locator('#vigencias').getByText('Rascunho')).toBeVisible()
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-vigencia-data.png`, fullPage: true })
 })
 
 // Part C1 (owner decisions 26/09/2026): tax per table line, IR withheld by the bank, the contract commission with both,
