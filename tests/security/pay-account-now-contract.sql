@@ -1,4 +1,4 @@
--- Contract test for 20260929225821_pay_account_now_v1: one action pays an account (closing statement up to today, or the
+-- Contract test for 20260929225821_pay_account_now_v1 and 20260929235900_pay_now_optional_proof_v1: one action pays an account (closing statement up to today, or the
 -- available balance), records who paid, when and the proof, and moves the money exactly like the old three steps;
 -- only for whoever may approve payouts, never to oneself, never a zero payment. One transaction, rolled back.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/pay-account-now-contract.sql
@@ -55,11 +55,11 @@ reset role;
 
 select pg_temp.act_as((select admin_user from ids));
 set local role authenticated;
-insert into results select 'proof required', pg_temp.pay('closing', 'x') like '%reference_required%';
 insert into results select 'future date refused',
   pg_temp.err(format('select public.pay_account_now(%L::uuid, current_date + 2, %L)', (select id from made where label = 'closing'), 'PIX-TESTE-1')) like '%invalid_paid_on%';
 insert into results select 'closing account paid in one action', pg_temp.pay('closing', 'PIX-TESTE-1') = 'ok';
-insert into results select 'withdrawal account paid in one action', pg_temp.pay('withdrawal', 'PIX-TESTE-2') = 'ok';
+-- Proof optional (20260929235900_pay_now_optional_proof_v1): blank is recorded as not informed.
+insert into results select 'withdrawal account paid without proof', pg_temp.pay('withdrawal', '') = 'ok';
 insert into results select 'nothing to pay refused', pg_temp.pay('empty', 'PIX-TESTE-3') like '%nothing_to_pay%';
 insert into results select 'second payment of the same balance refused', pg_temp.pay('closing', 'PIX-TESTE-4') like '%nothing_to_pay%';
 reset role;
@@ -70,7 +70,7 @@ insert into results select 'closing: statement of R$ 309,83, paid, balance zero'
    from public.payouts where account_id = (select id from made where label = 'closing'))
   and pg_temp.balance('closing') = 0;
 insert into results select 'withdrawal: R$ 150,00 paid, balance zero',
-  (select count(*) = 1 and bool_and(kind = 'withdrawal' and amount = 150.00 and status = 'paid')
+  (select count(*) = 1 and bool_and(kind = 'withdrawal' and amount = 150.00 and status = 'paid' and payment_reference = 'Sem comprovante informado')
    from public.payouts where account_id = (select id from made where label = 'withdrawal'))
   and pg_temp.balance('withdrawal') = 0;
 insert into results select 'statement entries closed by the payment',
@@ -107,7 +107,7 @@ insert into results select 'helper is private', not has_function_privilege('auth
 
 select check_name, ok from results order by ok, check_name;
 do $$ begin
-  if exists (select 1 from results where not ok) or (select count(*) from results) < 16 then raise exception 'pay account now contract failed'; end if;
+  if exists (select 1 from results where not ok) or (select count(*) from results) < 15 then raise exception 'pay account now contract failed'; end if;
 end $$;
 
 rollback;

@@ -145,7 +145,8 @@ export async function payNow(formData: FormData) {
   if (!isUuid(account)) return go('/app/repasse', 'erro:requisicao_invalida')
   const paidOn = String(formData.get('paid_on') ?? '')
   const reference = String(formData.get('reference') ?? '').trim()
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(paidOn) || reference.length < 3) return go(path, 'erro:repasse_referencia')
+  // Proof is optional (owner, 29/09/2026): blank is recorded as "Sem comprovante informado" by the database.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(paidOn) || reference.length > 120) return go(path, 'erro:repasse_referencia')
   const { error } = await supabase.rpc('pay_account_now', { p_account: account, p_paid_on: paidOn, p_reference: reference })
   if (error) return fail(path, error)
   revalidatePath(path); revalidatePath('/app/repasse'); revalidatePath('/app/financeiro/empresa')
