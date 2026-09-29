@@ -37,7 +37,6 @@ const pages = [
   { path: '/app/propostas/nova', name: 'nova-proposta' },
   { path: '/app/cadastros/vendedores', name: 'vendedores' },
   { path: '/app/comercial/importacao-inteligente', name: 'importacao-inteligente' },
-  { path: '/app/operacional', name: 'operacional' },
   { path: '/app/relatorios', name: 'relatorios' },
   { path: '/app/financeiro', name: 'financeiro' },
   { path: '/app/financeiro/conciliacao', name: 'conciliacao' },
@@ -1228,20 +1227,6 @@ test('sales CRM: campaign, spreadsheet, take the next lead, return, simulate, bo
   await expect(seller.getByText('Lead E2E Dois')).toHaveCount(0)
   await seller.goto('/app/crm/campanhas')
   await expect(seller).toHaveURL(/\/app\/crm$/)
-})
-
-test('documents: pick the client by search, a standard type, send a file', async ({ page }, info) => {
-  test.skip(info.project.name === 'mobile', 'one run is enough')
-  await page.goto('/app/documentos')
-  await pickClient(page)
-  await page.locator('select[name="document_type_id"]').selectOption({ label: 'RG (documento de identidade)' })
-  // A tiny valid PNG, different on every run (the vault refuses the same file twice).
-  const png = Buffer.concat([Buffer.from('89504e470d0a1a0a0000000d4948445200000001000000010806000000' + '1f15c489', 'hex'), Buffer.from(`run-${Date.now()}`)])
-  await page.locator('input[name="file"]').setInputFiles({ name: 'rg.png', mimeType: 'image/png', buffer: png })
-  await page.getByRole('button', { name: /Enviar/ }).click()
-  await expect(page.getByText('Documento enviado.')).toBeVisible({ timeout: 20_000 })
-  await expect(page.locator('main')).toContainText('Ana Teste Lopes')
-  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-documentos.png`, fullPage: true })
 })
 
 test('documents per bank: the list of Banco Teste becomes the checklist of a new proposal', async ({ page }, info) => {

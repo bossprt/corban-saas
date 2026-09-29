@@ -108,8 +108,8 @@ insert into public.commercial_condition_components (organization_id, condition_i
 select '00000000-0000-4000-8000-00000000c0b1', '00000000-0000-4000-8000-0000000c0501', t.id, 'percentage', v.pct, 'BRUTO', 'manual'
 from (values ('upfront', 6.0), ('deferred', 14.0)) v(k, pct) join public.commission_component_types t on t.tech_key = v.k
 where not exists (select 1 from public.commercial_condition_components x where x.condition_id = '00000000-0000-4000-8000-0000000c0501' and x.component_type_id = t.id);
-insert into public.commission_groups (id, organization_id, tech_key, name, kind, calculation_basis, is_active, sort_order)
-values ('00000000-0000-4000-8000-0000000c0601', '00000000-0000-4000-8000-00000000c0b1', 'ouro', 'Ouro', 'broker', 'percent_of_received_commission', true, 10)
+insert into public.commission_groups (id, organization_id, tech_key, name, kind, is_active, sort_order)
+values ('00000000-0000-4000-8000-0000000c0601', '00000000-0000-4000-8000-00000000c0b1', 'ouro', 'Ouro', 'broker', true, 10)
 on conflict (id) do nothing;
 -- Group Ouro's values on the line: 3% à vista and 7% diferido on the gross (half of what the company receives).
 select set_config('corban.group_values_rpc', 'on', true);

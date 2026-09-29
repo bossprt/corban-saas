@@ -9,7 +9,7 @@ import { formatCpf, formatPhone } from '@/lib/cpf'
 import { CHANNEL_LABEL, STAGE_TONE, isLeadStage, stageLabel } from '@/lib/crm'
 import { proposalStatusLabel } from '@/lib/operational'
 import { updateCustomer } from '../actions'
-import { uploadCustomerDocument } from '../../documentos/actions'
+import { uploadCustomerDocument } from '../documentActions'
 import { SubmitButton } from '@/components/SubmitButton'
 
 const DOC_STATUS: Record<string, string> = { archived: 'Arquivado', expired: 'Vencido', rejected: 'Recusado' }
@@ -204,7 +204,6 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
             {canUpload && (
               <form action={uploadCustomerDocument} className="grid gap-2 border-t border-line px-5 py-4">
                 <input type="hidden" name="customer_id" value={customer.id} />
-                <input type="hidden" name="back" value={`/app/clientes/${customer.id}`} />
                 <select required name="document_type_id" defaultValue="" aria-label="Tipo de documento" className="field">
                   <option value="" disabled>Tipo de documento</option>
                   {(docTypes ?? []).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
