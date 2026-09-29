@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Tabelas PROSESP publicadas (29/09/2026)
+- Alterado: as 3 tabelas PROSESP do Governo do Acre (Comissionado, Efetivo, Temporário), importadas em 21/09 como rascunho sem data, são publicadas com vigência a partir de 01/01/2026 (meia-noite de Brasília), decisão do dono. Migration `prosesp_tables_publish_v1` segue as regras de `publish_product_table_version` (só rascunho, só com linhas, flag governada) e recusa estado inesperado. Contrato `tests/security/prosesp-tables-publish-contract.sql` (7 checagens).
+
 ### Documento na ficha e no checklist (28/09/2026)
 - Corrigido: a única tela de envio de documento (Documentos) não estava em nenhum menu. Agora o documento é enviado direto na ficha do cliente (quadro Documentos) e em cada item do checklist da proposta ("Enviar arquivo" já liga o arquivo ao item).
 - Alterado: situação dos itens do checklist em português (Falta, Anexado, falta validar, Validado...); a lista de documentos da ficha mostra tipo, versão e nome do arquivo.
