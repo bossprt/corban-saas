@@ -1491,3 +1491,43 @@ test('manual commission receipt on the contract: registered, shown as received, 
   await form.getByRole('button', { name: 'Registrar recebimento' }).click()
   await expect(page.getByText(/já foi registrado para este contrato/)).toBeVisible({ timeout: 30_000 })
 })
+
+// Paying a broker in one action (owner decision 29/09/2026): the balance becomes a paid payout with date and proof.
+test('pay now: a broker balance paid from the account in one action', async ({ page, browser }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  test.setTimeout(240_000)
+  await page.goto('/app/repasse')
+  const holder = 'Corretor Teste'
+  // Opening an account that already exists just leads to it.
+  await page.locator('select[name="payee"]').selectOption({ label: holder })
+  await page.getByRole('button', { name: 'Abrir' }).click()
+  await expect(page.getByRole('heading', { name: holder })).toBeVisible({ timeout: 30_000 })
+  const accountUrl = page.url()
+
+  // A credit on the account (a bonus stands for a reconciled commission), approved by another person as before.
+  await page.getByText('Outros lançamentos: vale, bônus, desconto').click()
+  await page.locator('select[name="kind"]').selectOption('bonus')
+  await page.getByLabel('Valor (R$)').fill('120,00')
+  await page.getByLabel('Descrição').fill('Crédito para o teste de pagamento')
+  await page.getByRole('button', { name: 'Lançar' }).click()
+  const finance = await browser.newContext()
+  const f = await finance.newPage()
+  await signIn(f, 'financeiro@corban-teste.local', process.env.E2E_PASSWORD!)
+  await f.waitForURL(/\/app(\/|$)/, { timeout: 30_000 })
+  await f.goto('/app/repasse')
+  const pending = f.locator('li, div').filter({ hasText: 'Crédito para o teste de pagamento' }).last()
+  await pending.getByRole('button', { name: 'Aprovar' }).click()
+  await expect(f.getByText('Crédito para o teste de pagamento')).toHaveCount(0, { timeout: 30_000 })
+  await finance.close()
+
+  // One action: date, proof, pay.
+  await page.goto(accountUrl)
+  const pay = page.locator('form').filter({ has: page.getByRole('button', { name: /^Pagar R\$/ }) })
+  await expect(pay).toBeVisible({ timeout: 30_000 })
+  await pay.getByLabel('Comprovante').fill(`PIX-E2E-${Date.now()}`)
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-pagar-agora.png` })
+  await pay.getByRole('button', { name: /^Pagar R\$/ }).click()
+  await expect(page.getByText(/Pagamento registrado/)).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByText('Saldo da conta').locator('..')).toContainText('R$ 0,00')
+  await expect(page.locator('form').filter({ has: page.getByRole('button', { name: /^Pagar R\$/ }) })).toHaveCount(0)
+})

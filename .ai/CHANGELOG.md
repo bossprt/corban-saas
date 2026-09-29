@@ -15,6 +15,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Pagar o corretor em um passo (29/09/2026)
+- Adicionado: na conta de repasse de cada pessoa, "Pagar" ao lado do saldo: data, comprovante (ID do PIX) e o botão "Pagar R$ X". O saldo é baixado, o pagamento fica no extrato e entra no financeiro da empresa. Sem fechar período e sem aprovação de outra pessoa (ADR-0048); fica registrado quem pagou, quando e o comprovante. Ninguém paga a própria conta.
+- Alterado: "Lançamento avulso" virou "Outros lançamentos: vale, bônus, desconto", recolhido e com o aviso "não é pagamento" (o dono quase lançou um vale achando que pagava).
+- Banco: migration `pay_account_now_v1`; o cálculo do extrato de uma conta saiu de `close_payout_period` para `private.close_payout_account`, usado pelos dois (mesma regra). Contrato `tests/security/pay-account-now-contract.sql` (16 checagens); contratos antigos de repasse seguem passando. Teste de tela.
+
 ### Registrar recebimento no contrato (29/09/2026)
 - Adicionado: no quadro de comissão do contrato, "Registrar recebimento" (tipo à vista, diferido ou estorno; valor; data em que caiu; parcela opcional do diferido; observação), para quem aprova o financeiro. Para banco sem relatório ou dinheiro visto na conta antes do relatório.
 - Regra: entra pelo mesmo caminho do relatório do banco, como um "Lançamento manual" de uma linha da fonte pagadora do contrato (promotora parceira quando a produção é via promotora, senão o banco): compara com o esperado do cálculo (sem tolerância; diferença vai como divergente para a Conciliação), recusa repetido (mesmo tipo e parcela), estorno acima do recebido fica divergente (como no arquivo), lança no financeiro da empresa e libera o crédito do vendedor como qualquer recebimento. Tudo ou nada.

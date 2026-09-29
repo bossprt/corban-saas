@@ -6,14 +6,15 @@ import { requireAppContext } from '@/lib/appContext'
 import { isUuid } from '@/lib/team'
 import { brlText } from '@/lib/receipts/format'
 import { dateBr, ENTRY_KIND_LABEL, ENTRY_STATUS_LABEL, MODEL_LABEL } from '@/lib/payout/format'
-import { addEntry, decideEntry, requestWithdrawal, setAccountModel } from '../actions'
+import { SubmitButton } from '@/components/SubmitButton'
+import { addEntry, decideEntry, payNow, requestWithdrawal, setAccountModel } from '../actions'
 import { PayoutRows, type PayoutRow } from '../PayoutRows'
 
 type Entry = { id: string; kind: string; amount: string; effective_on: string; description: string | null; status: string; proposal_id: string | null; beneficiary_role: string | null; created_at: string; decision_note: string | null; statement_id: string | null }
 type Summary = { account_id: string; holder_name: string; model: string; balance: string; available: string }
 const ROLE_LABEL: Record<string, string> = { originator: 'vendedor', supervisor: 'supervisor', manager: 'gerente' }
 const label = 'text-[13px] font-medium text-ink-soft'
-const todayIso = () => new Date().toISOString().slice(0, 10)
+const todayIso = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
 
 // One person's current account: every movement, statements and withdrawals, and the forms finance or the person may use.
 export default async function PayoutAccountPage({ params }: { params: Promise<{ id: string }> }) {
@@ -40,6 +41,18 @@ export default async function PayoutAccountPage({ params }: { params: Promise<{ 
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
         <div className="rounded-[14px] border border-line bg-surface px-5 py-4"><div className="text-[13px] text-muted">Saldo da conta</div><div className={`num mt-1 text-2xl font-semibold ${String(account.balance).startsWith('-') ? 'text-[#991B1B]' : 'text-ink'}`}>{brlText(account.balance)}</div></div>
         {account.model === 'account' && <div className="rounded-[14px] border border-line bg-surface px-5 py-4"><div className="text-[13px] text-muted">Disponível para saque hoje</div><div className="num mt-1 text-2xl font-semibold text-ink">{brlText(account.available)}</div></div>}
+        {canApprove && Number(account.balance) > 0 && (
+          <form action={payNow} className="grid gap-2 rounded-[14px] border-2 border-brand/40 bg-surface px-5 py-4 sm:col-span-2">
+            <input type="hidden" name="account_id" value={id} />
+            <div className="text-sm font-semibold text-ink">Pagar {account.holder_name.split(' ')[0]}</div>
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="text-xs text-muted">Pago em<input name="paid_on" type="date" required defaultValue={todayIso()} className="field mt-1 block h-10" /></label>
+              <label className="text-xs text-muted">Comprovante<input name="reference" required minLength={3} maxLength={120} placeholder="ID do PIX ou nº da transferência" className="field mt-1 block h-10 w-64" /></label>
+              <SubmitButton pendingText="Registrando..." className="h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Pagar {brlText(account.balance)}</SubmitButton>
+            </div>
+            <p className="text-xs text-muted">Faça o PIX pelo banco e registre aqui. O saldo é baixado e o valor entra no financeiro da empresa.</p>
+          </form>
+        )}
       </div>
 
       <div className="mb-4 grid gap-4 lg:grid-cols-2">
@@ -56,8 +69,8 @@ export default async function PayoutAccountPage({ params }: { params: Promise<{ 
         )}
         {canCreate && (
           <Card className="p-5">
-            <h2 className="mb-3 text-sm font-semibold text-ink">Lançamento avulso <span className="font-normal text-muted">(aguarda aprovação de outra pessoa)</span></h2>
-            <form action={addEntry} className="grid gap-3 sm:grid-cols-3">
+            <details><summary className="cursor-pointer text-sm font-semibold text-ink">Outros lançamentos: vale, bônus, desconto <span className="font-normal text-muted">(não é pagamento; aguarda aprovação de outra pessoa)</span></summary>
+            <form action={addEntry} className="mt-3 grid gap-3 sm:grid-cols-3">
               <input type="hidden" name="account_id" value={id} />
               <label className={label}>Tipo<select name="kind" className="field mt-1.5"><option value="advance">Vale (débito)</option><option value="bonus">Bônus (crédito)</option><option value="discount">Desconto (débito)</option><option value="adjustment">Ajuste</option></select></label>
               <label className={label}>Valor (R$)<input name="amount" inputMode="decimal" required placeholder="0,00" className="field mt-1.5" /></label>
@@ -67,6 +80,7 @@ export default async function PayoutAccountPage({ params }: { params: Promise<{ 
               <label className={label}>A partir de<input name="effective_on" type="date" defaultValue={todayIso()} className="field mt-1.5" /></label>
               <div className="flex items-end justify-end sm:col-span-2"><button className="h-10 rounded-[10px] border border-line bg-surface px-4 text-sm font-medium hover:bg-surface-muted">Lançar</button></div>
             </form>
+            </details>
           </Card>
         )}
         {can(access, 'repasse.edit') && (
