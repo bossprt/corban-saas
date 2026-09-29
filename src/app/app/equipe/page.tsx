@@ -51,7 +51,7 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
         <label className="text-xs text-muted">E-mail<input name="email" type="email" required maxLength={254} autoComplete="off" className="field mt-1 block w-72" /></label>
         <label className="text-xs text-muted">Perfil<select name="role" defaultValue="agent" className="field mt-1 block">{assignable.map(r => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}</select></label>
         <PasswordPair idPrefix="novo" />
-        <label className="flex h-10 items-center gap-1.5 text-xs text-muted"><input type="checkbox" name="must_change" defaultChecked className="accent-[var(--brand)]" />Pedir nova senha no primeiro acesso</label>
+        <label className="flex h-10 items-center gap-1.5 text-xs text-muted"><input type="checkbox" name="must_change" className="accent-[var(--brand)]" />Pedir nova senha no primeiro acesso</label>
         <SubmitButton pendingText="Criando..." className="inline-flex h-10 items-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Criar acesso</SubmitButton>
         <p className="w-full text-xs text-muted">A pessoa entra já com este e-mail e esta senha, sem esperar e-mail. Passe a senha para ela pessoalmente ou por um canal seu. O acesso vale só para esta empresa.</p>
       </form>
@@ -79,7 +79,7 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
           <details className="w-full basis-full text-xs text-muted"><summary className="cursor-pointer">Redefinir senha</summary>
             <form action={resetMemberPassword} className="mt-2 flex flex-wrap items-end gap-2"><input type="hidden" name="membership_id" value={m.id} />
               <PasswordPair idPrefix={`reset-${m.id}`} label="Nova senha" />
-              <label className="flex h-10 items-center gap-1.5"><input type="checkbox" name="must_change" defaultChecked className="accent-[var(--brand)]" />Pedir nova senha no próximo acesso</label>
+              <label className="flex h-10 items-center gap-1.5"><input type="checkbox" name="must_change" className="accent-[var(--brand)]" />Pedir nova senha no próximo acesso</label>
               <SubmitButton pendingText="Salvando..." className={btn}>Salvar senha</SubmitButton>
             </form>
           </details>

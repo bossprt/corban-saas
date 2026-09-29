@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
 import { canManageMemberRole, canManageTeam } from '@/lib/rbac'
-import { classifyTeamError, isUuid, normalizeEmail, type TeamErrorCode, type TeamOkCode } from '@/lib/team'
+import { classifyTeamError, isUuid, normalizeEmail, PASSWORD_MAX, PASSWORD_MIN, type TeamErrorCode, type TeamOkCode } from '@/lib/team'
 import { createMemberLogin, setMemberPassword } from '@/lib/team.server'
 
 const back=(q:string):never=>redirect(`/app/equipe?${q}`)
@@ -14,7 +14,6 @@ const text=(f:FormData,k:string)=>String(f.get(k)??'')
 
 // The organization is ALWAYS the active one from the server context; a form field can never name a tenant.
 // Access is created by the admin with e-mail and password (owner decision 29/09/2026): no e-mail, no pending sign-up.
-const PASSWORD_MIN=10, PASSWORD_MAX=72
 const passwordOf=(f:FormData):string|null=>{
  const p=text(f,'password'), c=text(f,'password_confirm')
  return p.length>=PASSWORD_MIN&&p.length<=PASSWORD_MAX&&p===c?p:null

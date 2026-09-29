@@ -4,10 +4,10 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { passwordChosen } from './actions'
-import { passwordRefusal } from '@/lib/team'
+import { PASSWORD_MIN, passwordRefusal } from '@/lib/team'
 import { AuthShell, authButton, authError, authLabel } from '@/components/shell/AuthShell'
 
-const MIN_LENGTH = 10
+const MIN_LENGTH = PASSWORD_MIN
 
 // First access after an invitation (or password recovery): the person chooses their own password.
 // The session comes from the e-mail link (hash fragment handled by supabase-js, or the server-verified /auth/confirm redirect).

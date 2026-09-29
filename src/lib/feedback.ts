@@ -281,7 +281,7 @@ export const FEEDBACK = {
   'ok:portal_acesso': 'Acesso ao portal criado. Passe o e-mail e a senha para o corretor entrar.',
   'erro:portal_acesso_falhou': 'O acesso não foi criado agora (o serviço de login recusou). Tente de novo.',
   'erro:portal_senha_fraca': 'O serviço de login recusou a senha. Use letra minúscula, maiúscula, número e símbolo, e evite senhas comuns (por exemplo, Smart#2026casa).',
-  'erro:portal_senha': 'Senha inválida: use de 10 a 72 caracteres e repita igual no segundo campo.',
+  'erro:portal_senha': 'Senha inválida: use de 8 a 72 caracteres e repita igual no segundo campo.',
   'erro:portal_email_outra_empresa': 'Este e-mail já tem acesso a outra empresa no Corban. Use outro e-mail para o corretor.',
   'erro:portal_vendedor': 'Seu acesso não está ligado a um cadastro de vendedor ou corretor. Fale com a empresa.',
   'erro:portal_ja_existe': 'Já existe uma proposta com este banco e ADE.',

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { atLeast, canManageMemberRole, canManageTeam, canViewCommission, rolesAssignableBy } from '../../src/lib/rbac'
-import { classifyTeamError, isTeamErrorCode, passwordRefusal, isUuid, normalizeEmail, TEAM_ERROR_MESSAGES } from '../../src/lib/team'
+import { classifyTeamError, isTeamErrorCode, passwordRefusal, PASSWORD_MAX, PASSWORD_MIN, isUuid, normalizeEmail, TEAM_ERROR_MESSAGES } from '../../src/lib/team'
 
 const ROOT = process.cwd()
 const read = (p: string) => readFileSync(join(ROOT, p), 'utf8')
@@ -141,4 +141,13 @@ test('a password refused by Auth tells why (rules of the project), never a gener
   assert.equal(passwordRefusal({ message: 'Database error' }), null)
   assert.equal(passwordRefusal(null), null)
   for (const code of ['weak_length', 'weak_characters', 'weak_pwned'] as const) assert.ok(TEAM_ERROR_MESSAGES[code])
+})
+test('passwords typed in the app: 8 to 72 characters, the same rule on every screen', () => {
+  assert.equal(PASSWORD_MIN, 8)
+  assert.equal(PASSWORD_MAX, 72)
+  for (const f of ['src/components/PasswordPair.tsx', 'src/app/app/equipe/actions.ts', 'src/app/app/cadastros/vendedores/actions.ts', 'src/app/auth/definir-senha/page.tsx']) {
+    const s = read(f)
+    assert.match(s, /PASSWORD_MIN/, f)
+    assert.doesNotMatch(s, /minLength=\{10\}|length<10|MIN_LENGTH = 10/, f)
+  }
 })
