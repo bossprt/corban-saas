@@ -115,5 +115,6 @@ export async function createSellerPortalAccess(f:FormData){
     return go(classifyDbFeedback(error),pageOf(f))
   }
   const outcome=await createMemberLogin(email,password,typeof existing==='string'?existing:null,mustChange)
-  return go(outcome==='created'?'ok:portal_acesso':'erro:portal_acesso_falhou',pageOf(f))
+  if(outcome==='created')return go('ok:portal_acesso',pageOf(f))
+  return go(outcome==='failed'?'erro:portal_acesso_falhou':'erro:portal_senha_fraca',pageOf(f))
 }

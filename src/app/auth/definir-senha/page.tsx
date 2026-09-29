@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabaseClient'
 import { passwordChosen } from './actions'
+import { passwordRefusal } from '@/lib/team'
 import { AuthShell, authButton, authError, authLabel } from '@/components/shell/AuthShell'
 
 const MIN_LENGTH = 10
@@ -52,7 +53,14 @@ export default function SetPasswordPage() {
     if (password !== confirm) return setError('As senhas não conferem.')
     setSaving(true)
     const { error: updateError } = await supabase.auth.updateUser({ password })
-    if (updateError) { setSaving(false); return setError('Não foi possível salvar a senha. Tente uma senha diferente da atual e mais forte.') }
+    if (updateError) {
+      setSaving(false)
+      const why = passwordRefusal(updateError)
+      return setError(why === 'weak_pwned' ? 'Essa senha aparece em listas de senhas vazadas. Escolha outra, menos comum.'
+        : why === 'weak_characters' ? 'A senha precisa ter letra minúscula, letra maiúscula, número e símbolo (por exemplo, Smart#2026casa).'
+        : why === 'weak_length' ? 'A senha é curta demais. Use uma senha maior.'
+        : 'Não foi possível salvar a senha. Use uma senha diferente da atual.')
+    }
     if (!(await passwordChosen())) { setSaving(false); return setError('Senha salva, mas não foi possível liberar a entrada agora. Tente entrar de novo.') }
     // The first-entry mark lives in the session token: refresh it so the app reads the cleared value.
     await supabase.auth.refreshSession()
