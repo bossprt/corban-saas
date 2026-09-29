@@ -1,4 +1,4 @@
--- Contract test for 20260929140000_drop_group_calculation_basis_v1: the misleading column is gone, its backup is
+-- Contract test for 20260929060655_drop_group_calculation_basis_v1: the misleading column is gone, its backup is
 -- private, and creating a seller group still works. One transaction, rolled back.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/drop-group-calculation-basis-contract.sql
 
