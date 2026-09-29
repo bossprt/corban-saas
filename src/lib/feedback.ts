@@ -242,6 +242,8 @@ export const FEEDBACK = {
   'ok:linha_salva': 'Comissão da linha salva.',
   'erro:tabela_nome': 'Informe o nome da tabela (2 a 160 letras).',
   'erro:vigencia_sem_taxa': 'Há linhas sem taxa nem coeficiente: complete antes de publicar.',
+  'erro:vigencia_data': 'Data de início inválida: use uma data a partir de 2000 e até um ano à frente.',
+  'erro:vigencia_data_anterior': 'Já existe vigência publicada que começa depois dessa data. Escolha uma data posterior.',
   'erro:linha_valor_invalido': 'Confira os valores: número de 0 a 100 (%) ou "R$ 25,00" para valor fixo.',
   'erro:linha_imposto_invalido': 'Imposto inválido: use um percentual de 0 a 100 (vazio = não paga imposto).',
   'erro:linha_sem_base': 'Escolha a base de cálculo (bruto ou líquido): há valores em % nesta linha.',
