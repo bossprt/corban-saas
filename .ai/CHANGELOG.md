@@ -15,6 +15,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Remoção de sobras (29/09/2026)
+- Removido: telas `/app/operacional` (atalhos antigos, sem link), `/app/documentos` (o envio fica na ficha do cliente e no checklist da proposta) e `/app/leads` (só redirecionava para Vendas). A ação de envio de documento foi para `src/app/app/clientes/documentActions.ts` e sempre volta à ficha.
+- Removido: coluna `commission_groups.calculation_basis` ("percentual da comissão recebida"), com a trava que forçava o valor. Desde 26/09 os valores de repasse são pontos da operação e nada lia a coluna. Backup em `backup_c6.commission_groups_calculation_basis` (fora da API), apagado só com aprovação do dono. `save_seller_group` igual, sem a coluna. Contrato `tests/security/drop-group-calculation-basis-contract.sql` (7 checagens).
+- Mantido: Relatórios, aguardando decisão do dono (tirar do menu ou manter até ter relatório de verdade).
+
 ### Data de início da vigência (29/09/2026)
 - Adicionado: na tabela em rascunho, campo "Início da vigência" ao lado de Publicar. Vazio = começa hoje, como antes. A vigência anterior termina nessa data; data anterior a uma vigência já publicada é recusada. Nova função `publish_product_table_version(uuid, date)` (meia-noite de Brasília, até um ano à frente) que grava a data e chama a publicação de sempre na mesma chamada. Contrato `tests/security/table-version-start-date-contract.sql` (14 checagens) e teste de tela.
 - Corrigido (testes): os contratos `group-value-rounding` e `prosesp-tables-publish` criam os próprios dados e passam num banco recém-reconstruído.

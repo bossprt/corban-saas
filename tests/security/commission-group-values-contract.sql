@@ -65,7 +65,7 @@ insert into results select 'values cannot be written directly', pg_temp.refused(
 reset role;
 
 -- Own production has no values.
-insert into public.commission_groups (id, organization_id, name, kind, calculation_basis) values ('00000000-0000-4000-8000-0000000c0699', (select org from ids), 'Própria Contrato', 'other', 'percent_of_received_commission');
+insert into public.commission_groups (id, organization_id, name, kind) values ('00000000-0000-4000-8000-0000000c0699', (select org from ids), 'Própria Contrato', 'other');
 select set_config('corban.group_rule_rpc', 'on', true);
 insert into public.commission_group_rules (organization_id, group_id, version, own_production, supervisor_basis, supervisor_pct, manager_basis, manager_pct)
 values ((select org from ids), '00000000-0000-4000-8000-0000000c0699', 1, true, 'spread', 0, 'spread', 0);
