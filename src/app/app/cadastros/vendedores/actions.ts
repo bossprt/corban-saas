@@ -6,6 +6,7 @@ import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
 import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedback'
 import { createMemberLogin } from '@/lib/team.server'
+import { PASSWORD_MAX, PASSWORD_MIN } from '@/lib/team'
 
 const PATH='/app/cadastros/vendedores'
 const text=(f:FormData,k:string)=>String(f.get(k)??'').trim()
@@ -98,7 +99,7 @@ export async function createSellerPortalAccess(f:FormData){
   const id=text(f,'id'),email=text(f,'email').toLowerCase()
   if(!uuid(id)||!/^[^@\s]+@[^@\s]+$/.test(email))return go('erro:requisicao_invalida',pageOf(f))
   const password=text(f,'password')
-  if(password.length<10||password.length>72||password!==text(f,'password_confirm'))return go('erro:portal_senha',pageOf(f))
+  if(password.length<PASSWORD_MIN||password.length>PASSWORD_MAX||password!==text(f,'password_confirm'))return go('erro:portal_senha',pageOf(f))
   const mustChange=f.get('must_change')==='on'
   const {data:existing,error:checkError}=await ctx.supabase.rpc('check_login_email',{p_org:ctx.membership.organization_id,p_email:email})
   if(checkError){

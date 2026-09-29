@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Senha: mínimo 8 e troca no primeiro acesso opcional (29/09/2026)
+- Alterado: senha digitada no Corban aceita de 8 a 72 caracteres (era 10), decisão do dono; a mesma regra em Equipe, acesso do corretor ao portal e "Criar senha" (`PASSWORD_MIN` em `src/lib/team.ts`). O Supabase pode ter regras próprias; a recusa diz o motivo.
+- Alterado: "Pedir nova senha no primeiro acesso" (e "no próximo acesso", ao redefinir) vem desmarcado; o dono marca quando quiser. O gerente criado em produção ficou preso nesse passo porque a senha escolhida por ele esbarrava nas regras do Supabase.
+
 ### Motivo da senha recusada (29/09/2026)
 - Corrigido: ao criar acesso ou redefinir senha, quando o serviço de login recusava a senha (regras de senha do projeto no Supabase: tamanho, tipos de caractere, senha vazada), a tela dizia só "o serviço de login recusou". Agora diz o motivo e dá exemplo. Vale também para o acesso do corretor ao portal e para a pessoa escolhendo a própria senha no primeiro acesso.
 - Teste de tela com as regras de senha forte ligadas no Supabase local (`E2E_STRONG_PASSWORDS=1`).

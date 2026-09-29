@@ -83,7 +83,7 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
                   <input type="hidden" name="id" value={s.id} />
                   <label className="text-xs text-muted">E-mail do corretor<input required name="email" type="email" defaultValue={p.email ?? ''} className="field mt-1 block w-72" /></label>
                   <PasswordPair idPrefix="portal" />
-                  <label className="flex h-10 items-center gap-1.5 text-xs text-muted"><input type="checkbox" name="must_change" defaultChecked className="accent-[var(--brand)]" />Pedir nova senha no primeiro acesso</label>
+                  <label className="flex h-10 items-center gap-1.5 text-xs text-muted"><input type="checkbox" name="must_change" className="accent-[var(--brand)]" />Pedir nova senha no primeiro acesso</label>
                   <SubmitButton pendingText="Criando..." className="h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Criar acesso</SubmitButton>
                 </form>
               )}
