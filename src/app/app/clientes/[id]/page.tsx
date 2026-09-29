@@ -9,6 +9,10 @@ import { formatCpf, formatPhone } from '@/lib/cpf'
 import { CHANNEL_LABEL, STAGE_TONE, isLeadStage, stageLabel } from '@/lib/crm'
 import { proposalStatusLabel } from '@/lib/operational'
 import { updateCustomer } from '../actions'
+import { uploadCustomerDocument } from '../../documentos/actions'
+import { SubmitButton } from '@/components/SubmitButton'
+
+const DOC_STATUS: Record<string, string> = { archived: 'Arquivado', expired: 'Vencido', rejected: 'Recusado' }
 import { ClientForm, type ClientFormValues } from '../ClientForm'
 import { BankAccounts, PersonalData, Registrations, type BankAccount, type Registration } from './ProfileSections'
 
@@ -24,18 +28,19 @@ const DONE = ['paid', 'rejected', 'cancelled']
 export default async function CustomerDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const { supabase, access } = await requireAppContext()
-  const [{ data: customer }, { data: contacts }, { data: proposals }, { data: leads }, { data: timeline }, { data: address }, { data: documents }, { data: accountRows }, { data: registrationRows }, { data: agreementRows }, { data: legacy }] = await Promise.all([
+  const [{ data: customer }, { data: contacts }, { data: proposals }, { data: leads }, { data: timeline }, { data: address }, { data: documents }, { data: accountRows }, { data: registrationRows }, { data: agreementRows }, { data: legacy }, { data: docTypes }] = await Promise.all([
     supabase.from('clients').select('id,full_name,cpf,phone,email,birth_date,original_source,created_at,updated_at,father_name,mother_name,rg_number,rg_issuer,rg_state,rg_issued_on,gender,marital_status,birthplace_city,birthplace_state,whatsapp').eq('id', id).is('deleted_at', null).maybeSingle(),
     supabase.from('client_contacts').select('id,kind,value,is_primary,source,first_seen_at,last_seen_at').eq('customer_id', id).order('is_primary', { ascending: false }).order('last_seen_at', { ascending: false }),
     supabase.from('proposals_v2').select('id,status,external_proposal_id,requested_amount,released_amount,installment_amount,term,created_at').eq('customer_id', id).order('created_at', { ascending: false }).limit(100),
     supabase.from('leads').select('id,status,channel,campaign,created_at').eq('customer_id', id).order('created_at', { ascending: false }).limit(20),
     supabase.from('customer_timeline_events').select('id,event_type,source,occurred_at').eq('customer_id', id).order('occurred_at', { ascending: false }).limit(20),
     supabase.from('customer_addresses').select('postal_code,street,number,complement,neighborhood,city,state').eq('customer_id', id).eq('is_primary', true).limit(1).maybeSingle(),
-    supabase.from('customer_documents').select('id,status,created_at').eq('customer_id', id).order('created_at', { ascending: false }).limit(20),
+    supabase.from('customer_documents').select('id,status,created_at,original_file_name,version,document_type_id').eq('customer_id', id).order('created_at', { ascending: false }).limit(30),
     supabase.from('customer_bank_accounts').select('id,bank_code,bank_name,branch,account_number,account_digit,account_type,is_primary').eq('customer_id', id).order('is_primary', { ascending: false }).order('created_at'),
     supabase.from('client_registrations').select('id,agreement_id,agency_name,registration_number,status,margin_amount,margin_as_of,portal_login,has_portal_password,notes').eq('customer_id', id).order('status').order('created_at'),
     supabase.from('organization_agreements').select('id,name').eq('is_active', true).order('name'),
     supabase.from('legacy_contracts').select('id,source_system,bank_name,agreement_name,contract_type,ade,contract_number,legacy_ref,contract_on,paid_on,requested_amount,released_amount,installment_amount,term,seller_name,status_text').eq('client_id', id).order('contract_on', { ascending: false, nullsFirst: false }).limit(100),
+    supabase.from('document_types').select('id,name').eq('is_active', true).order('name'),
   ])
   if (!customer) notFound()
   const open = (proposals ?? []).filter(p => !DONE.includes(p.status))
@@ -44,6 +49,8 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
   const profile = customer as unknown as ProfileFields
   const missing = missingProfileFields(profile, { hasBankAccount: accounts.length > 0, hasRegistration: registrations.length > 0 })
   const canEdit = can(access, 'clientes.edit')
+  const canUpload = can(access, 'clientes.edit') || can(access, 'propostas.create')
+  const docTypeName = new Map((docTypes ?? []).map(t => [t.id, t.name]))
 
   return (
     <section>
@@ -183,14 +190,30 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
             </Card>
           )}
 
-          <Card>
+          <Card id="documentos" className="scroll-mt-6">
             <CardHeader title="Documentos" />
             <ul className="px-2 pb-2 pt-2 text-sm">
               {(documents ?? []).length === 0 && <li className="px-3 pb-3 text-muted">Nenhum documento.</li>}
               {(documents ?? []).map(d => (
-                <li key={d.id} className="flex justify-between border-t border-line px-3 py-2.5 first:border-t-0"><span className="text-ink-soft">{d.status}</span><span className="num text-muted">{day(d.created_at)}</span></li>
+                <li key={d.id} className="flex items-baseline justify-between gap-3 border-t border-line px-3 py-2.5 first:border-t-0">
+                  <span className="min-w-0"><span className="block text-ink">{docTypeName.get(d.document_type_id) ?? 'Documento'} <span className="text-xs text-muted">v{d.version}</span></span><span className="block truncate text-xs text-muted">{d.original_file_name}{d.status !== 'active' ? ` · ${DOC_STATUS[d.status] ?? d.status}` : ''}</span></span>
+                  <span className="num shrink-0 text-muted">{day(d.created_at)}</span>
+                </li>
               ))}
             </ul>
+            {canUpload && (
+              <form action={uploadCustomerDocument} className="grid gap-2 border-t border-line px-5 py-4">
+                <input type="hidden" name="customer_id" value={customer.id} />
+                <input type="hidden" name="back" value={`/app/clientes/${customer.id}`} />
+                <select required name="document_type_id" defaultValue="" aria-label="Tipo de documento" className="field">
+                  <option value="" disabled>Tipo de documento</option>
+                  {(docTypes ?? []).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+                <input required type="file" name="file" accept=".pdf,image/jpeg,image/png,image/webp" aria-label="Arquivo do documento" className="text-sm file:mr-2 file:rounded-md file:border file:border-line file:bg-surface file:px-2 file:py-1" />
+                <SubmitButton pendingText="Enviando..." className="inline-flex h-9 items-center justify-center rounded-[10px] bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong">Enviar documento</SubmitButton>
+                <span className="text-xs text-muted">PDF, JPG, PNG ou WebP até 4 MB. Um novo envio do mesmo tipo vira nova versão.</span>
+              </form>
+            )}
           </Card>
         </div>
       </div>
