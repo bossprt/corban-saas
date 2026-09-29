@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Repasse sem sobra de arredondamento (28/09/2026)
+- Corrigido: 8 valores de repasse (PROSESP, Governo do Acre, Efetivo 24 e 36 meses, Corretor e Parceiro) estavam como 3,00000001 em vez de 3. Vieram da conversão de 26/09 (fatia 3/7 guardada com 6 casas: 7 × 42,857143 ÷ 100). A migration `group_value_rounding_v1` arredonda só valores convertidos a menos de 0,000001 de um número com 4 casas; versões publicadas continuam imutáveis (a guarda recusa). Tabelas estavam em rascunho, nada foi calculado com o valor errado. Contrato `tests/security/group-value-rounding-contract.sql` (9 checagens).
+
 ### Esteira no celular (28/09/2026)
 - Alterado: no celular a Esteira mostra um cartão por proposta (cliente, etapa, banco e ADE, valor, vendedor, dias na etapa, alerta), sem a tabela larga que rolava para o lado. No computador nada muda.
 
