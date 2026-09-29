@@ -280,6 +280,8 @@ export const FEEDBACK = {
   'ok:portal_recusada': 'Proposta recusada. O corretor verá o motivo.',
   'ok:portal_acesso': 'Acesso ao portal criado. Passe o e-mail e a senha para o corretor entrar.',
   'erro:portal_acesso_falhou': 'O acesso não foi criado agora (o serviço de login recusou). Tente de novo.',
+  'ok:repasse_pago_agora': 'Pagamento registrado. O saldo foi baixado e o valor entrou no financeiro da empresa.',
+  'erro:repasse_proprio': 'Você não pode registrar pagamento para a sua própria conta.',
   'ok:recebimento_registrado': 'Recebimento registrado. Se o valor não bate com o esperado, ele aparece como divergente na Conciliação.',
   'erro:recebimento_valor': 'Valor inválido. Use o formato 1.234,56.',
   'erro:recebimento_data': 'Data inválida: use a data em que o dinheiro caiu, até hoje.',

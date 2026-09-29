@@ -11,6 +11,8 @@ import { parsePercentInput } from '@/lib/percent-input'
 const go = (path: string, code: FeedbackCode): never => redirect(feedbackUrl(path, code))
 const payoutError = (m: string): FeedbackCode | null =>
   /four_eyes_required/.test(m) ? 'erro:quatro_olhos'
+  : /nothing_to_pay/.test(m) ? 'erro:repasse_nada_a_pagar'
+  : /cannot_pay_yourself/.test(m) ? 'erro:repasse_proprio'
   : /insufficient_balance/.test(m) ? 'erro:saldo_insuficiente'
   : /payout_open/.test(m) ? 'erro:repasse_aberto'
   : /invalid_amount/.test(m) ? 'erro:repasse_valor'
@@ -132,4 +134,20 @@ export async function setAccountModel(formData: FormData) {
   if (error) return fail(path, error)
   revalidatePath(path)
   return go(path, 'ok:modelo_alterado')
+}
+
+// Pay the account in one action (owner decision 29/09/2026, ADR-0048): the database computes the amount exactly as a
+// period closing (or the available balance), records who paid, when and the proof, and moves the money as before.
+export async function payNow(formData: FormData) {
+  const { supabase } = await requireAppContext()
+  const account = String(formData.get('account_id') ?? '')
+  const path = `/app/repasse/${account}`
+  if (!isUuid(account)) return go('/app/repasse', 'erro:requisicao_invalida')
+  const paidOn = String(formData.get('paid_on') ?? '')
+  const reference = String(formData.get('reference') ?? '').trim()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(paidOn) || reference.length < 3) return go(path, 'erro:repasse_referencia')
+  const { error } = await supabase.rpc('pay_account_now', { p_account: account, p_paid_on: paidOn, p_reference: reference })
+  if (error) return fail(path, error)
+  revalidatePath(path); revalidatePath('/app/repasse'); revalidatePath('/app/financeiro/empresa')
+  return go(path, 'ok:repasse_pago_agora')
 }
