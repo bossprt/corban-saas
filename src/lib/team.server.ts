@@ -1,4 +1,5 @@
 import 'server-only'
+import { createClient } from '@supabase/supabase-js'
 import { siteOrigin } from '@/lib/site-origin'
 import { createAdminClient } from '@/lib/supabaseAdmin'
 import { isExistingUserError } from '@/lib/team'
@@ -15,6 +16,18 @@ export async function sendInvitationEmail(email:string):Promise<InviteEmailOutco
   if(!error)return 'sent'
   return isExistingUserError(error)?'existing_user':'failed'
  }catch{return 'failed'}
+}
+
+// Resend to an address that already has an account (e.g. the first invitation link was opened but no password was saved):
+// Supabase does not invite it again, so it gets a "create your password" link instead. Implicit flow, so the link works on
+// any device; it lands on /auth/definir-senha, and the pending invitation is accepted on the first entry.
+export async function sendPasswordLink(email:string):Promise<boolean>{
+ try{
+  const origin=await siteOrigin()
+  const client=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!.trim(),process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!.trim(),{auth:{flowType:'implicit',persistSession:false,autoRefreshToken:false}})
+  const { error }=await client.auth.resetPasswordForEmail(email,origin?{redirectTo:`${origin}/auth/definir-senha`}:undefined)
+  return !error
+ }catch{return false}
 }
 
 // Accepts every pending, unexpired invitation addressed to the VERIFIED e-mail of the signed-in user. The identity comes from

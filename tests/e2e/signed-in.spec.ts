@@ -1306,3 +1306,76 @@ test('phone: Esteira shows one card per proposal, without the wide table', async
   const width = await page.evaluate(() => document.documentElement.scrollWidth)
   expect(width).toBeLessThanOrEqual(await page.evaluate(() => window.innerWidth))
 })
+
+// Invitation e-mail (29/09/2026): Supabase sends the session after the '#' of the link; the page must read it. Needs the local
+// mail catcher (E2E_MAIL_API, e.g. http://127.0.0.1:54424); the link is rebuilt on this server because the local allow-list
+// points elsewhere.
+const mailApi = process.env.E2E_MAIL_API
+// Only a message that arrived after `since` counts (Supabase sends at most one e-mail per address a minute).
+const lastLink = async (to: string, since = 0) => {
+  for (let i = 0; i < 20; i++) {
+    const list = await (await fetch(`${mailApi}/api/v1/search?query=${encodeURIComponent(`to:${to}`)}`)).json()
+    const fresh = (list.messages ?? []).filter((m: { Created: string }) => Date.parse(m.Created) >= since - 2000)
+    if (fresh.length) {
+      const msg = await (await fetch(`${mailApi}/api/v1/message/${fresh[0].ID}`)).json()
+      return (msg.HTML || msg.Text).match(/href="([^"]+)"/)[1].replace(/&amp;/g, '&') as string
+    }
+    await new Promise(r => setTimeout(r, 500))
+  }
+  throw new Error('no e-mail')
+}
+const landing = async (link: string, base: string) => {
+  const location = (await fetch(link, { redirect: 'manual' })).headers.get('location') ?? ''
+  return `${base}/auth/definir-senha#${location.split('#')[1] ?? ''}`
+}
+
+test('invitation link: create the password, enter the company; the same link twice says it was used', async ({ page, browser, baseURL }, info) => {
+  test.skip(info.project.name === 'mobile' || !mailApi, 'one run is enough; needs the local mail catcher')
+  const invitee = `convite.e2e.${Date.now()}@corban-teste.local`
+  await page.goto('/app/equipe')
+  await page.getByLabel('E-mail').fill(invitee)
+  await page.getByRole('button', { name: 'Convidar' }).click()
+  await expect(page.getByText('Convite criado e e-mail enviado.')).toBeVisible({ timeout: 30_000 })
+
+  const link = await lastLink(invitee)
+  const first = await landing(link, baseURL!)
+  const guest = await browser.newContext()
+  const p = await guest.newPage()
+  await p.goto(first)
+  await expect(p.getByLabel(/Nova senha/)).toBeVisible({ timeout: 20_000 })
+  await expect(p).toHaveURL(/definir-senha$/) // the tokens are wiped from the address bar
+  await p.getByLabel(/Nova senha/).fill('Convite#E2E2026')
+  await p.getByLabel('Repita a senha').fill('Convite#E2E2026')
+  await p.getByRole('button', { name: 'Salvar e entrar' }).click()
+  await expect(p).toHaveURL(/\/app(\/|$)/, { timeout: 30_000 })
+  await expect(p.getByText('Corban Teste Ltda').first()).toBeVisible({ timeout: 30_000 })
+  if (shots) await p.screenshot({ path: `${shots}/${info.project.name}-convite-entrou.png` })
+  await guest.close()
+
+  // The same e-mail link again: one use only, and the page says so.
+  const again = await browser.newContext()
+  const q = await again.newPage()
+  await q.goto(await landing(link, baseURL!))
+  await expect(q.getByText(/Este link já foi usado/)).toBeVisible({ timeout: 20_000 })
+  if (shots) await q.screenshot({ path: `${shots}/${info.project.name}-convite-usado.png` })
+  await again.close()
+})
+
+test('forgot password: the link works in another browser', async ({ browser, baseURL }, info) => {
+  test.skip(info.project.name === 'mobile' || !mailApi || !process.env.E2E_SELLER_EMAIL, 'one run is enough; needs the local mail catcher')
+  const email = process.env.E2E_SELLER_EMAIL!
+  const since = Date.now()
+  const asking = await browser.newContext()
+  const a = await asking.newPage()
+  await a.goto('/login/recuperar')
+  await a.getByLabel('E-mail').fill(email)
+  await a.getByRole('button', { name: 'Enviar link' }).click()
+  await expect(a).toHaveURL(/enviado=1/)
+  await asking.close()
+  const link = await lastLink(email, since)
+  const other = await browser.newContext() // opened elsewhere, e.g. on the phone
+  const b = await other.newPage()
+  await b.goto(await landing(link, baseURL!))
+  await expect(b.getByLabel(/Nova senha/)).toBeVisible({ timeout: 20_000 })
+  await other.close()
+})

@@ -15,6 +15,12 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Link do convite e do "Esqueci minha senha" (29/09/2026)
+- Corrigido: quem clicava no link do convite via "Este link é inválido ou expirou". O Supabase manda a sessão depois do `#` do link e o cliente do navegador (fluxo PKCE) ignora esse formato; a página "Criar senha" agora lê a sessão do link, valida no Supabase e limpa o endereço. Link já usado mostra "Este link já foi usado" (cada link vale uma vez).
+- Corrigido: depois de criar a senha, uma segunda navegação simultânea podia mostrar "Acesso ainda não liberado" mesmo com o convite aceito; agora é uma navegação só, e a tela de acesso pendente manda para o app quem já está ativo.
+- Alterado: "Esqueci minha senha" manda link que funciona em qualquer aparelho (pedido no computador, aberto no celular). "Reenviar convite" para quem já validou o e-mail manda o link de criar senha (antes não enviava nada).
+- Testes de tela: convite de ponta a ponta (convidar, e-mail, criar senha, entrar na empresa, link repetido) e "Esqueci minha senha" em outro navegador (precisam de `E2E_MAIL_API`).
+
 ### Remoção de sobras (29/09/2026)
 - Removido: telas `/app/operacional` (atalhos antigos, sem link), `/app/documentos` (o envio fica na ficha do cliente e no checklist da proposta) e `/app/leads` (só redirecionava para Vendas). A ação de envio de documento foi para `src/app/app/clientes/documentActions.ts` e sempre volta à ficha.
 - Removido: coluna `commission_groups.calculation_basis` ("percentual da comissão recebida"), com a trava que forçava o valor. Desde 26/09 os valores de repasse são pontos da operação e nada lia a coluna. Backup em `backup_c6.commission_groups_calculation_basis` (fora da API), apagado só com aprovação do dono. `save_seller_group` igual, sem a coluna. Contrato `tests/security/drop-group-calculation-basis-contract.sql` (7 checagens).
