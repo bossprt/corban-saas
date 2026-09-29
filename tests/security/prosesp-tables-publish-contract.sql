@@ -1,7 +1,7 @@
--- Contract test for 20260929120000_prosesp_tables_publish_v1: the three PROSESP drafts are published with vigência
+-- Contract test for 20260929051253_prosesp_tables_publish_v1: the three PROSESP drafts are published with vigência
 -- from 01/01/2026 (Brasília), and the migration refuses unexpected states instead of guessing.
 -- One transaction, rolled back. The migration file must be reachable at /tmp/prosesp_publish.sql:
---   docker cp supabase/migrations/20260929120000_prosesp_tables_publish_v1.sql <db>:/tmp/prosesp_publish.sql
+--   docker cp supabase/migrations/20260929051253_prosesp_tables_publish_v1.sql <db>:/tmp/prosesp_publish.sql
 --   psql -v ON_ERROR_STOP=1 -f tests/security/prosesp-tables-publish-contract.sql
 
 begin;
