@@ -118,3 +118,36 @@ export async function registerExternalPayout(f: FormData) {
   }
   return back(id, 'ok:repasse_pago_fora', '#comissao')
 }
+
+// $ Commission receipt registered by hand (owner request 29/09/2026): a bank without report, or money seen in the account
+// before the report. The database runs it as a one-line report of the contract's paying source: expected value, duplicate
+// and installment rules, reconciliation and finance entry exactly as for a file. Money is decimal text, never a float.
+export async function registerManualReceipt(f: FormData) {
+  const id = text(f, 'proposal_id')
+  if (!isUuid(id)) return redirect('/app/contratos')
+  const kind = text(f, 'kind'), receivedOn = text(f, 'received_on'), installment = text(f, 'installment')
+  const amount = parseMoneyInput(text(f, 'amount'))
+  if (!['upfront', 'deferred', 'chargeback'].includes(kind)) return back(id, 'erro:requisicao_invalida', '#comissao')
+  if (amount === null || amount === 'invalid') return back(id, 'erro:recebimento_valor', '#comissao')
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(receivedOn)) return back(id, 'erro:recebimento_data', '#comissao')
+  if (installment && (!/^\d{1,4}$/.test(installment) || kind !== 'deferred')) return back(id, 'erro:recebimento_parcela', '#comissao')
+  const { supabase } = await requireAppContext()
+  const { error } = await supabase.rpc('register_manual_receipt', {
+    p_proposal_id: id, p_kind: kind, p_amount: amount, p_received_on: receivedOn,
+    p_installment: installment ? Number(installment) : null, p_note: text(f, 'note').slice(0, 100),
+  })
+  if (error) {
+    const m = error.message ?? ''
+    const code: FeedbackCode = /manual_receipt_duplicate/.test(m) ? 'erro:recebimento_duplicado'
+      : /manual_receipt_no_calc/.test(m) ? 'erro:recebimento_sem_calculo'
+      : /installment/.test(m) ? 'erro:recebimento_parcela'
+      : /invalid_receipt_date/.test(m) ? 'erro:recebimento_data'
+      : /invalid_receipt_amount/.test(m) ? 'erro:recebimento_valor'
+      : /receipt_source_not_found/.test(m) ? 'erro:recebimento_fonte'
+      : /not_authorized/.test(m) ? 'erro:sem_permissao'
+      : classifyDbFeedback(error)
+    return back(id, code, '#comissao')
+  }
+  revalidatePath('/app/financeiro'); revalidatePath('/app/financeiro/conciliacao')
+  return back(id, 'ok:recebimento_registrado', '#comissao')
+}
