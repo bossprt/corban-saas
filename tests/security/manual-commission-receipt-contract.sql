@@ -1,4 +1,4 @@
--- Contract test for 20260929170000_manual_commission_receipt_v1: a receipt registered by hand on the contract goes
+-- Contract test for 20260929220736_manual_commission_receipt_v1: a receipt registered by hand on the contract goes
 -- through the same report, matching and confirmation as a bank file: expected value, zero tolerance (divergent to
 -- Conciliação), duplicates refused, chargeback beyond what was received flagged divergent, company finance posted, finance only.
 -- Uses the local test company and the commission seed (6% upfront on R$ 10.000,00 = R$ 600,00).
