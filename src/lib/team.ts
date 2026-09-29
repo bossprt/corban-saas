@@ -33,6 +33,9 @@ export const TEAM_ERROR_MESSAGES={
  invalid_password:'Senha inválida: use de 10 a 72 caracteres e repita igual no segundo campo.',
  already_member:'Este e-mail já é membro desta empresa. Para trocar a senha, use Redefinir senha no membro.',
  email_has_other_access:'Este e-mail já tem acesso a outra empresa no Corban. A pessoa entra com a senha dela; peça para usar "Esqueci minha senha" se precisar.',
+ weak_length:'O serviço de login recusou a senha: é curta demais para as regras do sistema. Use uma senha maior.',
+ weak_characters:'O serviço de login recusou a senha: ela precisa ter letra minúscula, letra maiúscula, número e símbolo (por exemplo, Smart#2026casa).',
+ weak_pwned:'O serviço de login recusou a senha: ela aparece em listas de senhas vazadas na internet. Escolha outra, menos comum.',
  access_not_created:'O acesso não foi criado agora (o serviço de login recusou). Confira o e-mail e tente de novo.',
  unexpected:'Não foi possível concluir. Nada foi alterado; tente novamente.'
 } as const
@@ -81,3 +84,18 @@ export const isUuid=(v:unknown):v is string=>typeof v==='string'&&UUID_RE.test(v
 
 // Supabase Auth reports an already registered address as email_exists (422). That is not a failure for us:
 // the invitation row exists and the person accepts it after logging in.
+
+// Why Auth refused a password, from its answer (the project's password rules: minimum length, required kinds of
+// characters, or a password found in known leaks). Only the reason goes back to the screen; never the password.
+export type PasswordRefusal='weak_length'|'weak_characters'|'weak_pwned'
+export function passwordRefusal(err:unknown):PasswordRefusal|null{
+ const e=err as {code?:string;message?:string;reasons?:string[];weak_password?:{reasons?:string[]}}|null
+ if(!e)return null
+ const reasons=[...(e.reasons??[]),...(e.weak_password?.reasons??[])]
+ const m=String(e.message??'')
+ if(reasons.includes('pwned')||/known to be weak|pwned|leak/i.test(m))return 'weak_pwned'
+ if(reasons.includes('characters')||/at least one character of each/i.test(m))return 'weak_characters'
+ if(reasons.includes('length')||/at least \d+ characters/i.test(m))return 'weak_length'
+ if(e.code==='weak_password')return 'weak_characters'
+ return null
+}

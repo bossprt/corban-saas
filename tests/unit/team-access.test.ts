@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { atLeast, canManageMemberRole, canManageTeam, canViewCommission, rolesAssignableBy } from '../../src/lib/rbac'
-import { classifyTeamError, isTeamErrorCode, isUuid, normalizeEmail, TEAM_ERROR_MESSAGES } from '../../src/lib/team'
+import { classifyTeamError, isTeamErrorCode, passwordRefusal, isUuid, normalizeEmail, TEAM_ERROR_MESSAGES } from '../../src/lib/team'
 
 const ROOT = process.cwd()
 const read = (p: string) => readFileSync(join(ROOT, p), 'utf8')
@@ -131,4 +131,14 @@ test('role actions go through the governed RPC and never take the tenant from th
   assert.match(a, /p_org: organization\.id/)
   assert.match(a, /rpc\('save_organization_role'/)
   assert.doesNotMatch(a, /\.from\(['"]organization_roles['"]\)\s*\.(insert|update|delete)/)
+})
+test('a password refused by Auth tells why (rules of the project), never a generic failure', () => {
+  assert.equal(passwordRefusal({ code: 'weak_password', reasons: ['characters'] }), 'weak_characters')
+  assert.equal(passwordRefusal({ code: 'weak_password', weak_password: { reasons: ['pwned'] } }), 'weak_pwned')
+  assert.equal(passwordRefusal({ message: 'Password should be at least 12 characters.' }), 'weak_length')
+  assert.equal(passwordRefusal({ message: 'Password should contain at least one character of each: abc, ABC, 123' }), 'weak_characters')
+  assert.equal(passwordRefusal({ message: 'Password is known to be weak and easy to guess, please choose a different one.' }), 'weak_pwned')
+  assert.equal(passwordRefusal({ message: 'Database error' }), null)
+  assert.equal(passwordRefusal(null), null)
+  for (const code of ['weak_length', 'weak_characters', 'weak_pwned'] as const) assert.ok(TEAM_ERROR_MESSAGES[code])
 })

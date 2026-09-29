@@ -1368,7 +1368,7 @@ test('team access with password: created by the admin, first entry asks for a ne
   await form.getByLabel('Repita a senha').fill('Inicial#E2E2026')
   await expect(form.getByLabel('Pedir nova senha no primeiro acesso')).toBeChecked()
   await form.getByRole('button', { name: 'Criar acesso' }).click()
-  await expect(page.getByText(/Acesso criado/)).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByRole('status').filter({ hasText: /Acesso criado/ })).toBeVisible({ timeout: 30_000 })
   await expect(page.locator('main')).toContainText(person)
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-equipe-criar-acesso.png`, fullPage: true })
 
@@ -1436,4 +1436,23 @@ test('forgot password: the link works in another browser', async ({ browser, bas
   await b.goto(await landing(link, baseURL!))
   await expect(b.getByLabel(/Nova senha/)).toBeVisible({ timeout: 20_000 })
   await other.close()
+})
+
+// Production may require strong passwords (Auth settings). Runs only against a local Auth started with
+// password_requirements = "lower_upper_letters_digits_symbols" (E2E_STRONG_PASSWORDS=1): the screen must say why.
+test('team access with password: a password refused by the login rules says why', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile' || !process.env.E2E_STRONG_PASSWORDS, 'needs the strong-password rules in local Auth')
+  await page.goto('/app/equipe')
+  const form = page.locator('form').filter({ has: page.getByRole('button', { name: 'Criar acesso' }) })
+  await form.getByLabel('E-mail').fill(`fraca.e2e.${Date.now()}@corban-teste.local`)
+  await form.getByLabel('Senha', { exact: true }).fill('senhafraca123')
+  await form.getByLabel('Repita a senha').fill('senhafraca123')
+  await form.getByRole('button', { name: 'Criar acesso' }).click()
+  await expect(page.getByText(/precisa ter letra minúscula, letra maiúscula, número e símbolo/)).toBeVisible({ timeout: 30_000 })
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-senha-recusada.png` })
+  await form.getByLabel('E-mail').fill(`forte.e2e.${Date.now()}@corban-teste.local`)
+  await form.getByLabel('Senha', { exact: true }).fill('Smart#2026casa')
+  await form.getByLabel('Repita a senha').fill('Smart#2026casa')
+  await form.getByRole('button', { name: 'Criar acesso' }).click()
+  await expect(page.getByRole('status').filter({ hasText: /Acesso criado/ })).toBeVisible({ timeout: 30_000 })
 })

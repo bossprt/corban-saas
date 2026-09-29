@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Motivo da senha recusada (29/09/2026)
+- Corrigido: ao criar acesso ou redefinir senha, quando o serviço de login recusava a senha (regras de senha do projeto no Supabase: tamanho, tipos de caractere, senha vazada), a tela dizia só "o serviço de login recusou". Agora diz o motivo e dá exemplo. Vale também para o acesso do corretor ao portal e para a pessoa escolhendo a própria senha no primeiro acesso.
+- Teste de tela com as regras de senha forte ligadas no Supabase local (`E2E_STRONG_PASSWORDS=1`).
+
 ### Acesso criado com senha (29/09/2026)
 - Alterado: em Equipe, "Criar acesso" com e-mail, perfil e senha (com "Mostrar senha"); a pessoa entra na hora, sem e-mail. "Pedir nova senha no primeiro acesso" vem ligado: no primeiro login nada abre antes de ela escolher a própria senha. Cada membro tem "Redefinir senha" (só para quem é só desta empresa; nunca a própria, nunca papel acima do seu).
 - Alterado: na ficha do vendedor, "Acesso ao portal" também cria o acesso do corretor com e-mail e senha.

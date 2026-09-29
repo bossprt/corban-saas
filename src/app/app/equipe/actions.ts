@@ -35,7 +35,8 @@ export async function createMemberAccess(formData:FormData){
  const row=Array.isArray(data)?data[0]:null
  if(!row)return fail('unexpected')
  const outcome=await createMemberLogin(email,password,row.existing_user_id??null,mustChange)
- return outcome==='created'?done(mustChange?'access_created_change':'access_created'):fail('access_not_created')
+ if(outcome==='created')return done(mustChange?'access_created_change':'access_created')
+ return fail(outcome==='failed'?'access_not_created':outcome)
 }
 
 export async function resetMemberPassword(formData:FormData){
@@ -47,7 +48,8 @@ export async function resetMemberPassword(formData:FormData){
  const mustChange=formData.get('must_change')==='on'
  const { data:userId,error }=await supabase.rpc('authorize_member_password',{p_membership_id:id})
  if(error||!isUuid(userId))return fail(classifyTeamError(error))
- if(!(await setMemberPassword(userId,password,mustChange)))return fail('unexpected')
+ const set=await setMemberPassword(userId,password,mustChange)
+ if(set!==true)return fail(set==='failed'?'unexpected':set)
  await supabase.rpc('record_member_password_set',{p_membership_id:id,p_must_change:mustChange})
  return done(mustChange?'password_set_change':'password_set')
 }

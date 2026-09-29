@@ -1,5 +1,6 @@
 import 'server-only'
 import { createAdminClient } from '@/lib/supabaseAdmin'
+import { passwordRefusal, type PasswordRefusal } from '@/lib/team'
 
 // Server-only identity plumbing for the team module. The service role never leaves the server and is used for: (1) creating or
 // completing a login with the password the manager typed, and setting a member's password, (2) reading member e-mail addresses
@@ -10,7 +11,7 @@ import { createAdminClient } from '@/lib/supabaseAdmin'
 // with the manager's session, allowed it (role, company, and an e-mail that reaches nothing outside this company). The
 // login is created, or completed when it already exists only for this company, confirmed, and the invitation is accepted at
 // once. `mustChange` makes the person choose their own password on the first entry. The password is never logged.
-export type AccessOutcome='created'|'failed'
+export type AccessOutcome='created'|PasswordRefusal|'failed'
 export async function createMemberLogin(email:string,password:string,existingUserId:string|null,mustChange:boolean):Promise<AccessOutcome>{
  try{
   const admin=createAdminClient()
@@ -18,10 +19,10 @@ export async function createMemberLogin(email:string,password:string,existingUse
   let userId=existingUserId
   if(userId){
    const { error }=await admin.auth.admin.updateUserById(userId,{password,email_confirm:true,app_metadata})
-   if(error)return 'failed'
+   if(error)return passwordRefusal(error)??'failed'
   }else{
    const { data,error }=await admin.auth.admin.createUser({email,password,email_confirm:true,app_metadata})
-   if(error||!data.user)return 'failed'
+   if(error||!data.user)return passwordRefusal(error)??'failed'
    userId=data.user.id
   }
   const { data:joined,error }=await admin.rpc('accept_organization_invitations',{p_user_id:userId,p_email:email})
@@ -31,11 +32,11 @@ export async function createMemberLogin(email:string,password:string,existingUse
 }
 
 // New password for a member, after public.authorize_member_password allowed it for the caller.
-export async function setMemberPassword(userId:string,password:string,mustChange:boolean):Promise<boolean>{
+export async function setMemberPassword(userId:string,password:string,mustChange:boolean):Promise<true|PasswordRefusal|'failed'>{
  try{
   const { error }=await createAdminClient().auth.admin.updateUserById(userId,{password,app_metadata:{must_change_password:mustChange}})
-  return !error
- }catch{return false}
+  return error?passwordRefusal(error)??'failed':true
+ }catch{return 'failed'}
 }
 
 // The person chose their own password: the first-entry requirement is cleared (identity from Auth, never from the form).
