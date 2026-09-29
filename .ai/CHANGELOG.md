@@ -15,6 +15,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Registrar recebimento no contrato (29/09/2026)
+- Adicionado: no quadro de comissão do contrato, "Registrar recebimento" (tipo à vista, diferido ou estorno; valor; data em que caiu; parcela opcional do diferido; observação), para quem aprova o financeiro. Para banco sem relatório ou dinheiro visto na conta antes do relatório.
+- Regra: entra pelo mesmo caminho do relatório do banco, como um "Lançamento manual" de uma linha da fonte pagadora do contrato (promotora parceira quando a produção é via promotora, senão o banco): compara com o esperado do cálculo (sem tolerância; diferença vai como divergente para a Conciliação), recusa repetido (mesmo tipo e parcela), estorno acima do recebido fica divergente (como no arquivo), lança no financeiro da empresa e libera o crédito do vendedor como qualquer recebimento. Tudo ou nada.
+- Banco: migration `manual_commission_receipt_v1` (`register_manual_receipt`, security invoker: cada etapa confere as permissões de quem registra). Contrato `tests/security/manual-commission-receipt-contract.sql` (17 checagens). Teste de tela.
+
 ### Senha: mínimo 8 e troca no primeiro acesso opcional (29/09/2026)
 - Alterado: senha digitada no Corban aceita de 8 a 72 caracteres (era 10), decisão do dono; a mesma regra em Equipe, acesso do corretor ao portal e "Criar senha" (`PASSWORD_MIN` em `src/lib/team.ts`). O Supabase pode ter regras próprias; a recusa diz o motivo.
 - Alterado: "Pedir nova senha no primeiro acesso" (e "no próximo acesso", ao redefinir) vem desmarcado; o dono marca quando quiser. O gerente criado em produção ficou preso nesse passo porque a senha escolhida por ele esbarrava nas regras do Supabase.

@@ -1457,3 +1457,37 @@ test('team access with password: a password refused by the login rules says why'
   await form.getByRole('button', { name: 'Criar acesso' }).click()
   await expect(page.getByRole('status').filter({ hasText: /Acesso criado/ })).toBeVisible({ timeout: 30_000 })
 })
+
+// Commission receipt registered by hand on the contract (29/09/2026): same matching and conciliation as a bank report.
+test('manual commission receipt on the contract: registered, shown as received, a second one refused', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  const ade = `E2E-MAN-${Date.now()}`
+  await page.goto('/app/propostas/nova')
+  await pickClient(page)
+  const table = page.getByLabel('Banco e tabela')
+  const option = await table.locator('option').filter({ hasText: 'Banco Teste · Tabela Teste INSS' }).last().getAttribute('value')
+  await table.selectOption(option!)
+  await page.getByLabel('Valor solicitado (R$)').fill('10.000,00')
+  await page.getByLabel('Prazo (meses)').fill('120')
+  await page.getByLabel('Vendedor').selectOption({ label: 'Vendedor Teste' })
+  await page.getByLabel('Já digitada no banco').check()
+  await page.getByLabel('Número da proposta no banco (ADE)').fill(ade)
+  await page.getByRole('button', { name: 'Registrar proposta' }).click()
+  await expect(page.getByText('Proposta registrada na esteira.')).toBeVisible({ timeout: 20_000 })
+
+  const card = page.locator('#comissao')
+  const form = card.locator('form').filter({ has: page.getByRole('button', { name: 'Registrar recebimento' }) })
+  await card.getByText('Registrar recebimento').first().click()
+  await form.locator('select[name="kind"]').selectOption('upfront')
+  await form.getByLabel('Valor (R$)').fill('600,00')
+  await form.getByLabel('Observação do recebimento').fill('banco sem relatório')
+  await form.getByRole('button', { name: 'Registrar recebimento' }).click()
+  await expect(page.getByText(/Recebimento registrado/)).toBeVisible({ timeout: 30_000 })
+  await expect(card).toContainText('Recebido do banco: à vista R$ 600,00')
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-recebimento-manual.png`, fullPage: true })
+
+  await card.getByText('Registrar recebimento').first().click()
+  await form.getByLabel('Valor (R$)').fill('600,00')
+  await form.getByRole('button', { name: 'Registrar recebimento' }).click()
+  await expect(page.getByText(/já foi registrado para este contrato/)).toBeVisible({ timeout: 30_000 })
+})
