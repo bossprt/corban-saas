@@ -1,4 +1,4 @@
--- Contract test for 20260929180000_pay_account_now_v1: one action pays an account (closing statement up to today, or the
+-- Contract test for 20260929225821_pay_account_now_v1: one action pays an account (closing statement up to today, or the
 -- available balance), records who paid, when and the proof, and moves the money exactly like the old three steps;
 -- only for whoever may approve payouts, never to oneself, never a zero payment. One transaction, rolled back.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/pay-account-now-contract.sql
