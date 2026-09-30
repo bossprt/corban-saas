@@ -1,4 +1,4 @@
--- Contract test for 20260929225821_pay_account_now_v1 and 20260929235900_pay_now_optional_proof_v1: one action pays an account (closing statement up to today, or the
+-- Contract test for 20260929225821_pay_account_now_v1 and 20260930160301_pay_now_optional_proof_v1: one action pays an account (closing statement up to today, or the
 -- available balance), records who paid, when and the proof, and moves the money exactly like the old three steps;
 -- only for whoever may approve payouts, never to oneself, never a zero payment. One transaction, rolled back.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/pay-account-now-contract.sql
@@ -58,7 +58,7 @@ set local role authenticated;
 insert into results select 'future date refused',
   pg_temp.err(format('select public.pay_account_now(%L::uuid, current_date + 2, %L)', (select id from made where label = 'closing'), 'PIX-TESTE-1')) like '%invalid_paid_on%';
 insert into results select 'closing account paid in one action', pg_temp.pay('closing', 'PIX-TESTE-1') = 'ok';
--- Proof optional (20260929235900_pay_now_optional_proof_v1): blank is recorded as not informed.
+-- Proof optional (20260930160301_pay_now_optional_proof_v1): blank is recorded as not informed.
 insert into results select 'withdrawal account paid without proof', pg_temp.pay('withdrawal', '') = 'ok';
 insert into results select 'nothing to pay refused', pg_temp.pay('empty', 'PIX-TESTE-3') like '%nothing_to_pay%';
 insert into results select 'second payment of the same balance refused', pg_temp.pay('closing', 'PIX-TESTE-4') like '%nothing_to_pay%';
