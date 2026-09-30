@@ -15,6 +15,13 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Banco → Tipo de contrato → Tabela (30/09/2026)
+- Alterado: Nova proposta, Editar contrato, Simulação e portal do corretor escolhem Banco, depois Tipo de contrato, depois Tabela; cada lista filtra a seguinte e só aparece a vigência em vigor de cada tabela. O mesmo banco por promotoras diferentes aparece como "Bevicred - Daycoval", "Efetivamais - Daycoval" (ADR-0049).
+- Corrigido: contrato com tabela que tem Novo e Refinanciamento no mesmo prazo não calculava a comissão ("há mais de uma linha da tabela"). O tipo de contrato agora fica no contrato e o cálculo usa a linha do tipo; editar um contrato sem comissão tenta calcular na hora; recálculo mantém a linha usada.
+- Adicionado: em Cadastros > Bancos, "Vendas por promotora" com o IR retido de cada "Promotora - Banco" (em branco = 0%). O IR do banco vale para a produção própria.
+- Removido: `src/lib/proposals/table-options.ts` (lista antiga "Banco e tabela").
+- Banco: migration `contract_type_and_origin_ir_v1`. Contrato `tests/security/contract-type-origin-ir-contract.sql` (17 checagens). Testes de tela atualizados para os três passos.
+
 ### Comprovante opcional no Pagar (29/09/2026)
 - Alterado: no "Pagar" da conta de repasse, o comprovante é opcional (pedido do dono: transcrever o ID do PIX dava trabalho). Em branco, o pagamento fica registrado como "Sem comprovante informado", com data e quem pagou. Migration `pay_now_optional_proof_v1` (só a checagem do comprovante em `pay_account_now`).
 

@@ -12,6 +12,15 @@ const pickClient = async (page: import('@playwright/test').Page, name = 'Ana Tes
   await page.getByRole('option', { name: new RegExp(name) }).first().click()
 }
 
+// Banco -> Tipo de contrato -> Tabela (ADR-0049): the seed bank sells its test table as "Novo (teste)".
+const pickTable = async (page: import('@playwright/test').Page, table: string | RegExp = 'Tabela Teste INSS', bank = 'Banco Teste', type = 'Novo (teste)') => {
+  await page.getByLabel('Banco', { exact: true }).selectOption({ label: bank })
+  await page.getByLabel('Tipo de contrato').selectOption({ label: type })
+  const select = page.getByLabel('Tabela', { exact: true })
+  const option = select.locator('option').filter({ hasText: table }).last()
+  await select.selectOption((await option.getAttribute('value'))!)
+}
+
 test.skip(!email || !password, 'E2E_EMAIL and E2E_PASSWORD are not set')
 // A dev server compiles each route on first visit.
 test.setTimeout(120_000)
@@ -176,7 +185,7 @@ test('direct proposal runs through the pipeline to paid and counts in the goal',
   const ade = `E2E-${Date.now()}`
   await page.goto('/app/propostas/nova')
   await pickClient(page)
-  await page.getByLabel('Banco e tabela').selectOption({ index: 1 })
+  await pickTable(page)
   await page.getByLabel('Valor liberado (R$)').fill('9.500,00')
   await page.getByLabel('Prazo (meses)').fill('84')
   await page.getByLabel('Já digitada no banco').check()
@@ -229,7 +238,7 @@ test('the proposal commission follows the table and the seller group', async ({ 
   // Part C1: the commission comes from the table line and the seller's group (Ouro: 3% of the gross on the à vista).
   await page.goto('/app/propostas/nova')
   await pickClient(page)
-  await page.getByLabel('Banco e tabela').selectOption({ label: 'Banco Teste · Tabela Teste INSS (v2)' })
+  await pickTable(page)
   await page.getByLabel('Valor solicitado (R$)').fill('10.000,00')
   await page.getByLabel('Prazo (meses)').fill('120')
   await page.getByLabel('Vendedor').selectOption({ label: 'Vendedor Teste' })
@@ -268,7 +277,7 @@ test('finance imports a bank report, resolves the lines and confirms the receipt
 
   await page.goto('/app/propostas/nova')
   await pickClient(page)
-  await page.getByLabel('Banco e tabela').selectOption({ label: 'Banco Teste · Tabela Teste INSS (v2)' })
+  await pickTable(page)
   await page.getByLabel('Valor solicitado (R$)').fill('10.000,00')
   await page.getByLabel('Prazo (meses)').fill('120')
   await page.getByLabel('Vendedor').selectOption({ label: 'Vendedor Teste' })
@@ -395,7 +404,7 @@ test.describe('broker portal', () => {
       await broker.getByLabel('Nome completo').fill(name)
       await broker.getByLabel('CPF').fill(cpf)
       await broker.getByLabel('Telefone').fill('(68) 99955-0001')
-      await broker.getByLabel('Banco e tabela').selectOption({ label: 'Banco Teste · Tabela Teste INSS (v2)' })
+      await pickTable(broker)
       await broker.getByLabel('Valor solicitado (R$)').fill('10.000,00')
       await broker.getByLabel('Prazo (meses)').fill('120')
       await broker.getByRole('button', { name: 'Enviar para validação' }).click()
@@ -821,7 +830,7 @@ test('commission C1: line tax, bank IR, contract commission and search, table ex
 
   await page.goto('/app/propostas/nova')
   await pickClient(page)
-  await page.getByLabel('Banco e tabela').selectOption({ label: `Banco Teste · Tabela Teste INSS (${version})` })
+  await pickTable(page, `Tabela Teste INSS (${version})`)
   await page.getByLabel('Valor solicitado (R$)').fill('10.000,00')
   await page.getByLabel('Prazo (meses)').fill('120')
   await page.getByLabel('Vendedor').selectOption({ label: 'Vendedor Teste' })
@@ -891,7 +900,7 @@ test('contract C2: payout change, contract edit with recalculation, note and his
   const ade = `E2E-C2-${Date.now()}`
   await page.goto('/app/propostas/nova')
   await pickClient(page)
-  await page.getByLabel('Banco e tabela').selectOption({ label: 'Banco Teste · Tabela Teste INSS (v2)' })
+  await pickTable(page)
   await page.getByLabel('Valor solicitado (R$)').fill('10.000,00')
   await page.getByLabel('Prazo (meses)').fill('120')
   await page.getByLabel('Vendedor').selectOption({ label: 'Vendedor Teste' })
@@ -940,7 +949,7 @@ test('seller credit C3: paid date, bank reconciliation, physical milestones, out
   const create = async (ade: string) => {
     await page.goto('/app/propostas/nova')
     await pickClient(page)
-    await page.getByLabel('Banco e tabela').selectOption({ label: 'Banco Teste · Tabela Teste INSS (v2)' })
+    await pickTable(page)
     await page.getByLabel('Valor solicitado (R$)').fill('10.000,00')
     await page.getByLabel('Prazo (meses)').fill('120')
     await page.getByLabel('Vendedor').selectOption({ label: 'Vendedor Teste' })
@@ -1154,9 +1163,11 @@ test('simulation: pick the client by search, simulate, turn into a proposal', as
   await page.getByRole('link', { name: 'Simular' }).click()
   await expect(page.getByRole('heading', { name: 'Simulações', exact: true })).toBeVisible()
   await pickClient(page)
-  // Only tables in force, each paired with the contract types of its conditions.
-  await expect(page.locator('select[name="table_choice"] option', { hasText: 'Tabela Teste INSS · v1' })).toHaveCount(0)
-  await page.locator('select[name="table_choice"]').selectOption({ label: 'Tabela Teste INSS · v3 · Novo (teste) · 12–120 meses' })
+  // Banco -> Tipo -> Tabela: only the vigência in force of each table, only for a contract type it has lines for.
+  await page.getByLabel('Banco', { exact: true }).selectOption({ label: 'Banco Teste' })
+  await page.getByLabel('Tipo de contrato').selectOption({ label: 'Novo (teste)' })
+  await expect(page.getByLabel('Tabela', { exact: true }).locator('option').filter({ hasText: 'Tabela Teste INSS' })).toHaveCount(1)
+  await pickTable(page)
   await page.getByLabel('Valor solicitado (R$)').fill('10.000,00')
   await page.getByLabel('Prazo (meses)').fill('84')
   await page.getByRole('button', { name: 'Simular' }).click()
@@ -1263,7 +1274,7 @@ test('documents per bank: the list of Banco Teste becomes the checklist of a new
   // A proposal of that bank prepares its checklist from the list.
   await page.goto('/app/simulacoes')
   await pickClient(page)
-  await page.locator('select[name="table_choice"]').selectOption({ label: 'Tabela Teste INSS · v3 · Novo (teste) · 12–120 meses' })
+  await pickTable(page)
   await page.getByLabel('Valor solicitado (R$)').fill('5.000,00')
   await page.getByLabel('Prazo (meses)').fill('84')
   await page.getByRole('button', { name: 'Simular' }).click()
@@ -1464,9 +1475,7 @@ test('manual commission receipt on the contract: registered, shown as received, 
   const ade = `E2E-MAN-${Date.now()}`
   await page.goto('/app/propostas/nova')
   await pickClient(page)
-  const table = page.getByLabel('Banco e tabela')
-  const option = await table.locator('option').filter({ hasText: 'Banco Teste · Tabela Teste INSS' }).last().getAttribute('value')
-  await table.selectOption(option!)
+  await pickTable(page)
   await page.getByLabel('Valor solicitado (R$)').fill('10.000,00')
   await page.getByLabel('Prazo (meses)').fill('120')
   await page.getByLabel('Vendedor').selectOption({ label: 'Vendedor Teste' })

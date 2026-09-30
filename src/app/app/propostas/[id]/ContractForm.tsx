@@ -5,20 +5,22 @@ import { Lock, Pencil, X } from 'lucide-react'
 import { Card, CardHeader } from '@/components/ui'
 import { SubmitButton } from '@/components/SubmitButton'
 import { updateContract } from './contract-actions'
+import { BankTypeTable } from '@/components/BankTypeTable'
+import type { ProposalCatalog } from '@/lib/proposals/catalog'
 
 type Option = { id: string; label: string }
 export type ContractData = {
   id: string; table_version_id: string | null; seller_id: string | null; requested: string; released: string; installment: string; term: string
   ade: string | null
-  formalization: string; paid_to_client_on: string | null
+  formalization: string; paid_to_client_on: string | null; contract_type_id: string | null
 }
 const lbl = 'text-[13px] font-medium text-ink-soft'
 
 // The contract file is its form (owner decision 26/09/2026, same as the client file): it opens locked and "Editar
 // contrato" unlocks it in place. Saving recalculates the commission; a paid contract asks for the reason. Nothing
 // changes once the seller received the commission (the database refuses it too).
-export function ContractForm({ c, tables, sellers, canEdit, paid, received }: {
-  c: ContractData; tables: Option[]; sellers: Option[]; canEdit: boolean; paid: boolean; received: boolean
+export function ContractForm({ c, catalog, sellers, canEdit, paid, received }: {
+  c: ContractData; catalog: ProposalCatalog; sellers: Option[]; canEdit: boolean; paid: boolean; received: boolean
 }) {
   const [editing, setEditing] = useState(false)
   const [round, setRound] = useState(0)
@@ -34,12 +36,7 @@ export function ContractForm({ c, tables, sellers, canEdit, paid, received }: {
             : <button type="button" onClick={() => { setEditing(false); setRound(r => r + 1) }} className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line bg-surface px-3 text-sm text-ink-soft hover:bg-surface-muted"><X size={15} aria-hidden />Cancelar</button>)
             : undefined} />
         <fieldset key={round} disabled={locked} className="grid gap-3 px-5 pb-5 pt-3 md:grid-cols-4">
-          <label className={`${lbl} md:col-span-2`}>Banco e tabela
-            <select name="table_version_id" defaultValue={c.table_version_id ?? ''} required className="field mt-1.5">
-              {!tables.some(t => t.id === c.table_version_id) && c.table_version_id && <option value={c.table_version_id}>Vigência do contrato</option>}
-              {tables.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-            </select>
-          </label>
+          <div className="grid gap-3 md:col-span-4 md:grid-cols-3"><BankTypeTable catalog={catalog} initialVersion={c.table_version_id} initialType={c.contract_type_id} labelClass={lbl} /></div>
           <label className={`${lbl} md:col-span-2`}>Vendedor
             <select name="seller_id" defaultValue={c.seller_id ?? ''} className="field mt-1.5">
               <option value="">Sem vendedor</option>

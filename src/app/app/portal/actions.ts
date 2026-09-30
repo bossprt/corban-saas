@@ -17,8 +17,8 @@ const text = (f: FormData, k: string) => String(f.get(k) ?? '').trim()
 export async function submitPortalProposal(formData: FormData) {
   const { supabase, organization } = await requireAppContext()
   const back = (code: FeedbackCode): never => redirect(feedbackUrl('/app/portal/nova', code))
-  const table = text(formData, 'table_version_id')
-  if (!isUuid(table)) return back('erro:requisicao_invalida')
+  const table = text(formData, 'table_version_id'), contractType = text(formData, 'contract_type_id')
+  if (!isUuid(table) || !isUuid(contractType)) return back('erro:requisicao_invalida')
   const requested = parseMoneyInput(formData.get('requested_amount'))
   const released = parseMoneyInput(formData.get('released_amount'))
   const installment = parseMoneyInput(formData.get('installment_amount'))
@@ -30,13 +30,14 @@ export async function submitPortalProposal(formData: FormData) {
   const { data, error } = await supabase.rpc('submit_broker_proposal', {
     p_org: organization.id, p_cpf: text(formData, 'cpf'), p_full_name: text(formData, 'full_name'), p_phone: text(formData, 'phone') || null,
     p_email: text(formData, 'email') || null, p_table_version_id: table, p_requested_amount: requested, p_released_amount: released,
-    p_installment_amount: installment, p_term: term, p_ade: text(formData, 'ade') || null,
+    p_installment_amount: installment, p_term: term, p_ade: text(formData, 'ade') || null, p_contract_type_id: contractType,
   })
   if (error) {
     const m = error.message ?? ''
     if (/seller_profile_required/.test(m)) return back('erro:portal_vendedor')
     if (/proposal_already_exists/.test(m)) return back('erro:portal_ja_existe')
     if (/invalid_ade/.test(m)) return back('erro:ade_invalido')
+    if (/contract_type_not_in_table|contract_type_not_found/.test(m)) return back('erro:tipo_fora_da_tabela')
     if (/invalid_amount|amount_required/.test(m)) return back('erro:valor_invalido')
     if (/invalid_term/.test(m)) return back('erro:prazo_invalido')
     return back(classifyDbFeedback(error))
