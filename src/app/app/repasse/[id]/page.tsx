@@ -47,7 +47,7 @@ export default async function PayoutAccountPage({ params }: { params: Promise<{ 
             <div className="text-sm font-semibold text-ink">Pagar {account.holder_name.split(' ')[0]}</div>
             <div className="flex flex-wrap items-end gap-2">
               <label className="text-xs text-muted">Pago em<input name="paid_on" type="date" required defaultValue={todayIso()} className="field mt-1 block h-10" /></label>
-              <label className="text-xs text-muted">Comprovante<input name="reference" required minLength={3} maxLength={120} placeholder="ID do PIX ou nº da transferência" className="field mt-1 block h-10 w-64" /></label>
+              <label className="text-xs text-muted">Comprovante <span className="font-normal">(opcional)</span><input name="reference" maxLength={120} placeholder="ID do PIX, se quiser" className="field mt-1 block h-10 w-64" /></label>
               <SubmitButton pendingText="Registrando..." className="h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Pagar {brlText(account.balance)}</SubmitButton>
             </div>
             <p className="text-xs text-muted">Faça o PIX pelo banco e registre aqui. O saldo é baixado e o valor entra no financeiro da empresa.</p>

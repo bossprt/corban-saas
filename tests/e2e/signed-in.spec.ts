@@ -1533,7 +1533,7 @@ test('pay now: a broker balance paid from the account in one action', async ({ p
   await page.goto(accountUrl)
   const pay = page.locator('form').filter({ has: page.getByRole('button', { name: /^Pagar R\$/ }) })
   await expect(pay).toBeVisible({ timeout: 30_000 })
-  await pay.getByLabel('Comprovante').fill(`PIX-E2E-${Date.now()}`)
+  // Proof is optional: paid with the date only.
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-pagar-agora.png` })
   await pay.getByRole('button', { name: /^Pagar R\$/ }).click()
   await expect(page.getByText(/Pagamento registrado/)).toBeVisible({ timeout: 30_000 })

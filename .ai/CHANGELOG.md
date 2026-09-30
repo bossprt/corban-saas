@@ -22,6 +22,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 - Removido: `src/lib/proposals/table-options.ts` (lista antiga "Banco e tabela").
 - Banco: migration `contract_type_and_origin_ir_v1`. Contrato `tests/security/contract-type-origin-ir-contract.sql` (17 checagens). Testes de tela atualizados para os três passos.
 
+### Comprovante opcional no Pagar (29/09/2026)
+- Alterado: no "Pagar" da conta de repasse, o comprovante é opcional (pedido do dono: transcrever o ID do PIX dava trabalho). Em branco, o pagamento fica registrado como "Sem comprovante informado", com data e quem pagou. Migration `pay_now_optional_proof_v1` (só a checagem do comprovante em `pay_account_now`).
+
 ### Pagar o corretor em um passo (29/09/2026)
 - Adicionado: na conta de repasse de cada pessoa, "Pagar" ao lado do saldo: data, comprovante (ID do PIX) e o botão "Pagar R$ X". O saldo é baixado, o pagamento fica no extrato e entra no financeiro da empresa. Sem fechar período e sem aprovação de outra pessoa (ADR-0048); fica registrado quem pagou, quando e o comprovante. Ninguém paga a própria conta.
 - Alterado: "Lançamento avulso" virou "Outros lançamentos: vale, bônus, desconto", recolhido e com o aviso "não é pagamento" (o dono quase lançou um vale achando que pagava).
