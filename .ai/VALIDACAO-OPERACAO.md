@@ -44,9 +44,7 @@ cliente pelo chat; dizer o número da proposta/ADE.
 | 27/09/2026 | Clientes / Contratos | busca por CPF só no Ctrl+K, CPF mascarado, sem Novo contrato | PR #41 |
 | 27/09/2026 | Nova proposta / Simulações | lista de clientes parava em 300; simulação com tabela vencida | PR #42 |
 | 27/09/2026 | CRM (Vendas) | campanha criada e planilha importada; faltava botão visível e modelo em Excel | PR #43, #44; conferido pelo dono |
-- 30/09/2026 — Checagem em produção (só leitura), depois de Banco → Tipo → Tabela (#64):
-  - Equipe: 2 admins e 1 gerente ativos; nenhum convite pendente. Acesso criado com senha funcionando.
-  - Comissão travada: só o contrato 13952 (PROSESP Temporário, 8 meses, "mais de uma linha"). Resolve em Editar contrato → Tipo de contrato → Salvar.
-  - Contrato 137250: repasse do vendedor pago R$ 309,83 = alteração manual de 26/09 para 8% do valor (regra do grupo daria R$ 331,13). Recebimento do banco R$ 542,20 conciliado.
-  - Contrato 131259 (pago ao cliente em 10/09): repasse pago fora do Corban (R$ 800,00, 2tech); o recebimento do banco (esperado R$ 1.900,00 à vista) não está registrado. Se já caiu, usar "Registrar recebimento" no contrato.
-  - Recebimentos divergentes: nenhum. Repasses em aberto: nenhum.
+| 30/09/2026 | Equipe | 2 admins e 1 gerente ativos, acesso criado com senha | PR #58–#60 |
+| 30/09/2026 | Comissão travada | só o contrato 13952 (PROSESP Temporário, 8 meses: Novo e Refin no mesmo prazo) | PR #64; dono: Editar contrato → Tipo de contrato → Salvar |
+| 30/09/2026 | Repasse do 137250 | R$ 309,83 pago = alteração manual de 26/09 para 8% do valor (regra do grupo daria R$ 331,13); recebimento R$ 542,20 conciliado | sem correção: decisão do dono |
+| 30/09/2026 | Recebimento do 131259 | pago ao cliente em 10/09, repasse pago fora (R$ 800,00); recebimento do banco (esperado R$ 1.900,00) não registrado | dono: "Registrar recebimento" no contrato, se já caiu |
