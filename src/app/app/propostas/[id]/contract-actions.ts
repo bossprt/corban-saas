@@ -26,6 +26,7 @@ const dbCode = (m: string, fallback: FeedbackCode): FeedbackCode =>
     : /invalid_paid_on/.test(m) ? 'erro:pago_data'
     : /condition_not_found/.test(m) ? 'erro:comissao_sem_condicao'
     : /condition_ambiguous/.test(m) ? 'erro:comissao_ambigua'
+    : /contract_type_not_in_table|contract_type_not_found/.test(m) ? 'erro:tipo_fora_da_tabela'
     : /calculation_base_missing/.test(m) ? 'erro:comissao_sem_base'
     : /seller_without_group/.test(m) ? 'erro:comissao_vendedor_sem_grupo'
     : /group_rule_missing/.test(m) ? 'erro:comissao_grupo_sem_regra'
@@ -38,8 +39,8 @@ export async function updateContract(f: FormData) {
   const id = text(f, 'proposal_id')
   if (!isUuid(id)) return redirect('/app/contratos')
   const { supabase } = await requireAppContext()
-  const table = text(f, 'table_version_id'), seller = text(f, 'seller_id')
-  if (!isUuid(table) || (seller && !isUuid(seller))) return back(id, 'erro:requisicao_invalida', '#contrato')
+  const table = text(f, 'table_version_id'), seller = text(f, 'seller_id'), contractType = text(f, 'contract_type_id')
+  if (!isUuid(table) || !isUuid(contractType) || (seller && !isUuid(seller))) return back(id, 'erro:requisicao_invalida', '#contrato')
   const money = (k: string) => parseMoneyInput(f.get(k))
   const requested = money('requested_amount'), released = money('released_amount'), installment = money('installment_amount')
   if (requested === 'invalid' || released === 'invalid' || installment === 'invalid' || (!requested && !released)) return back(id, 'erro:valor_invalido', '#contrato')
@@ -48,7 +49,7 @@ export async function updateContract(f: FormData) {
   const formalization = text(f, 'formalization'), paidOn = text(f, 'paid_to_client_on')
   if (!['digital', 'physical'].includes(formalization) || (paidOn && !/^\d{4}-\d{2}-\d{2}$/.test(paidOn))) return back(id, 'erro:requisicao_invalida', '#contrato')
   const data = {
-    table_version_id: table, seller_id: seller, term: termText, formalization, ...(paidOn ? { paid_to_client_on: paidOn } : {}),
+    table_version_id: table, contract_type_id: contractType, seller_id: seller, term: termText, formalization, ...(paidOn ? { paid_to_client_on: paidOn } : {}),
     requested_amount: requested ?? '', released_amount: released ?? '', installment_amount: installment ?? '',
   }
   const { error } = await supabase.rpc('update_contract', { p_proposal: id, p_data: data, p_reason: text(f, 'reason') || null })

@@ -24,3 +24,17 @@ export async function saveBankIrWithheld(f: FormData) {
   if (error) return go(/invalid_ir_withheld/.test(error.message ?? '') ? 'erro:ir_retido_invalido' : classifyDbFeedback(error))
   return go('ok:ir_retido_salvo')
 }
+
+// IR withheld for sales of a bank through a partner promoter (ADR-0049). A field the owner fills; empty = 0.
+export async function saveOriginIrWithheld(f: FormData) {
+  const { supabase, membership } = await requireAppContext()
+  if (!atLeast(membership.role, 'manager')) return go('erro:sem_permissao')
+  const bank = String(f.get('bank_id') ?? ''), provider = String(f.get('provider_id') ?? '')
+  const raw = String(f.get('ir_withheld_pct') ?? '').replace(/%$/, '').trim()
+  const pct = raw === '' ? '' : normalizePct(raw)
+  if (!isUuid(bank) || !isUuid(provider)) return go('erro:requisicao_invalida')
+  if (pct === null) return go('erro:ir_retido_invalido')
+  const { error } = await supabase.rpc('set_origin_ir_withheld', { p_bank: bank, p_provider: provider, p_pct: pct })
+  if (error) return go(/invalid_ir_withheld/.test(error.message ?? '') ? 'erro:ir_retido_invalido' : classifyDbFeedback(error))
+  return go('ok:ir_origem_salvo')
+}

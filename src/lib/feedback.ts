@@ -142,6 +142,8 @@ export const FEEDBACK = {
   'erro:nome_invalido': 'Informe um nome válido.',
   'erro:valor_invalido': 'Valor inválido. Use o formato 9.500,00 e informe ao menos o valor solicitado ou o liberado.',
   'erro:prazo_invalido': 'Prazo inválido: informe de 1 a 420 meses.',
+  'erro:tipo_fora_da_tabela': 'Esta tabela não tem linha para o tipo de contrato escolhido. Escolha outro tipo ou outra tabela.',
+  'ok:ir_origem_salvo': 'IR retido salvo para esta origem.',
   'erro:ade_obrigatorio': 'Proposta já digitada precisa do número no banco (ADE).',
   'erro:ade_invalido': 'ADE inválido: use letras, números, ponto, barra ou hífen.',
   'erro:nota_obrigatoria': 'Escreva uma observação (onde viu, o que falta).',

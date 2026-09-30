@@ -16,10 +16,11 @@ export async function createDirectProposal(formData: FormData) {
   const text = (k: string) => String(formData.get(k) ?? '').trim()
   const client = text('customer_id')
   const table = text('table_version_id')
+  const contractType = text('contract_type_id')
   const seller = text('seller_id')
   const stage = text('stage') === 'submitted' ? 'submitted' : 'digitization_queue'
   const ade = text('ade')
-  if (!isUuid(client) || !isUuid(table) || (seller && !isUuid(seller))) return back('erro:requisicao_invalida', client)
+  if (!isUuid(client) || !isUuid(table) || !isUuid(contractType) || (seller && !isUuid(seller))) return back('erro:requisicao_invalida', client)
   const requested = parseMoneyInput(formData.get('requested_amount'))
   const released = parseMoneyInput(formData.get('released_amount'))
   const installment = parseMoneyInput(formData.get('installment_amount'))
@@ -33,7 +34,7 @@ export async function createDirectProposal(formData: FormData) {
   const { data, error } = await supabase.rpc('create_direct_proposal', {
     p_org: organization.id, p_customer_id: client, p_table_version_id: table, p_seller_id: seller || null,
     p_requested_amount: requested, p_released_amount: released, p_installment_amount: installment, p_term: term,
-    p_ade: ade || null, p_stage: stage,
+    p_ade: ade || null, p_stage: stage, p_contract_type_id: contractType,
   })
   if (error) {
     const m = error.message ?? ''
@@ -41,6 +42,7 @@ export async function createDirectProposal(formData: FormData) {
     if (/invalid_ade/.test(m)) return back('erro:ade_invalido', client)
     if (/invalid_amount|amount_required/.test(m)) return back('erro:valor_invalido', client)
     if (/invalid_term/.test(m)) return back('erro:prazo_invalido', client)
+    if (/contract_type_not_in_table|contract_type_not_found/.test(m)) return back('erro:tipo_fora_da_tabela', client)
     return back(classifyDbFeedback(error), client)
   }
   const row = (Array.isArray(data) ? data[0] : data) as { proposal_id: string; duplicate: boolean } | null

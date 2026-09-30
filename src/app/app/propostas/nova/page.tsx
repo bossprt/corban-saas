@@ -6,7 +6,8 @@ import { Card, PageHeader } from '@/components/ui'
 import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
 import { formatCpf } from '@/lib/cpf'
-import { loadTableOptions } from '@/lib/proposals/table-options'
+import { loadProposalCatalog } from '@/lib/proposals/catalog'
+import { BankTypeTable } from '@/components/BankTypeTable'
 import { createDirectProposal } from './actions'
 
 const label = 'text-[13px] font-medium text-ink-soft'
@@ -14,17 +15,17 @@ const label = 'text-[13px] font-medium text-ink-soft'
 // New proposal without a simulation: pick the client, the bank table and the values; either it waits for
 // digitization or it was already digitized (then the bank number/ADE is required).
 export default async function NewProposalPage({ searchParams }: { searchParams: Promise<{ cliente?: string }> }) {
-  const { supabase, access } = await requireAppContext()
+  const { supabase, access, organization } = await requireAppContext()
   const sp = await searchParams
   if (!can(access, 'propostas.create')) {
     return <section><PageHeader title="Nova proposta" /><Card className="p-5 text-sm text-ink-soft">Seu papel não pode criar propostas.</Card></section>
   }
 
   const clienteId = /^[0-9a-f-]{36}$/.test(sp.cliente ?? '') ? sp.cliente! : null
-  const [{ data: initialClient }, { data: sellers }, options] = await Promise.all([
+  const [{ data: initialClient }, { data: sellers }, catalog] = await Promise.all([
     clienteId ? supabase.from('clients').select('id,full_name,cpf').eq('id', clienteId).is('deleted_at', null).maybeSingle() : Promise.resolve({ data: null }),
     supabase.from('commercial_sellers').select('id,name').eq('is_active', true).order('name'),
-    loadTableOptions(supabase),
+    loadProposalCatalog(supabase, organization.id),
   ])
 
   return (
@@ -37,12 +38,7 @@ export default async function NewProposalPage({ searchParams }: { searchParams: 
             <ClientPicker name="customer_id" initial={initialClient ? { id: initialClient.id, name: initialClient.full_name, cpf: formatCpf(initialClient.cpf) } : null} />
             <span className="mt-1 block text-xs font-normal text-muted">Cliente novo? Cadastre em <Link href="/app/clientes?novo=1" className="text-brand underline">Clientes</Link> primeiro.</span>
           </div>
-          <label className={`${label} sm:col-span-2`}>Banco e tabela
-            <select name="table_version_id" required defaultValue="" className="field mt-1.5">
-              <option value="" disabled>Escolha a tabela</option>
-              {options.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-            </select>
-          </label>
+          <div className="grid gap-4 sm:col-span-2 sm:grid-cols-3"><BankTypeTable catalog={catalog} labelClass={label} /></div>
           <label className={label}>Valor solicitado (R$)<input name="requested_amount" inputMode="decimal" placeholder="10.000,00" className="field mt-1.5" /></label>
           <label className={label}>Valor liberado (R$)<input name="released_amount" inputMode="decimal" placeholder="9.500,00" className="field mt-1.5" /></label>
           <label className={label}>Parcela (R$)<input name="installment_amount" inputMode="decimal" placeholder="250,00" className="field mt-1.5" /></label>

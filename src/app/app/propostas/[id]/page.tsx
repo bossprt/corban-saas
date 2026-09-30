@@ -8,7 +8,6 @@ import { can } from '@/lib/access'
 import { atLeast } from '@/lib/rbac'
 import { isUuid } from '@/lib/team'
 import { proposalStatusLabel } from '@/lib/operational'
-import { fetchAll } from '@/lib/fetchAll'
 import { decimalBr } from '@/lib/commission/tableValues'
 import { attachDocument, prepareDocuments, sendToDigitization, uploadForRequirement, validateRequirement } from './actions'
 
@@ -16,6 +15,7 @@ const REQUIREMENT_STATUS: Record<string, string> = { missing: 'Falta', attached:
 import { PipelineCard } from './PipelineCard'
 import { CommissionCard } from './CommissionCard'
 import { ContractForm } from './ContractForm'
+import { loadProposalCatalog } from '@/lib/proposals/catalog'
 import { HistoryCard } from './HistoryCard'
 import { PhysicalCard } from './PhysicalCard'
 
@@ -27,14 +27,14 @@ const decimalInput = (v: string | number | null) => (v === null || v === undefin
 export default async function ContractPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   if (!isUuid(id)) notFound()
-  const { supabase, membership, access } = await requireAppContext()
+  const { supabase, membership, access, organization } = await requireAppContext()
 
   const { data: proposal } = await supabase.from('proposals_v2')
-    .select('id,status,customer_id,seller_id,product_table_version_id,requested_amount,released_amount,installment_amount,term,external_proposal_id,customer_snapshot,commercial_snapshot,created_at,formalization,paid_to_client_on,physical_received_at,physical_received_by,physical_sent_at,physical_sent_by,physical_bank_at,physical_bank_by')
+    .select('id,status,customer_id,seller_id,product_table_version_id,contract_type_id,requested_amount,released_amount,installment_amount,term,external_proposal_id,customer_snapshot,commercial_snapshot,created_at,formalization,paid_to_client_on,physical_received_at,physical_received_by,physical_sent_at,physical_sent_by,physical_bank_at,physical_bank_by')
     .eq('id', id).maybeSingle()
   if (!proposal) notFound()
 
-  const [{ data: requirements }, { data: job }, { data: operationalCase }, { data: customerDocuments }, { data: externalIds }, { data: submission }, { data: sellers }, versions, { data: tables }, { data: routes }, { data: banks }] = await Promise.all([
+  const [{ data: requirements }, { data: job }, { data: operationalCase }, { data: customerDocuments }, { data: externalIds }, { data: submission }, { data: sellers }, catalog] = await Promise.all([
     supabase.from('proposal_document_requirements').select('id,document_type_id,label_snapshot,required_snapshot,status,exception_reason').eq('proposal_id', id).order('created_at'),
     supabase.from('digitization_jobs').select('id,status').eq('proposal_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('operational_cases').select('id,canonical_state,external_status_raw').eq('proposal_id', id).maybeSingle(),
@@ -42,10 +42,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
     supabase.from('proposal_external_identities').select('institution_key,external_proposal_number,source,first_seen_at').eq('proposal_id', id).order('first_seen_at'),
     supabase.from('proposal_submissions').select('status,decision_reason').eq('proposal_id', id).maybeSingle(),
     supabase.from('commercial_sellers').select('id,name,code,is_active').order('name'),
-    fetchAll<{ id: string; product_table_id: string; version: number }>((a, b) => supabase.from('product_table_versions').select('id,product_table_id,version').eq('status', 'published').order('id').range(a, b)),
-    supabase.from('product_tables').select('id,name,route_id,status'),
-    supabase.from('organization_product_routes').select('id,org_bank_id'),
-    supabase.from('organization_banks').select('id,name'),
+    loadProposalCatalog(supabase, organization.id, proposal.product_table_version_id),
   ])
 
   const customer = (proposal.customer_snapshot ?? {}) as Record<string, unknown>
@@ -58,21 +55,6 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
   const { data: payout } = finance ? await supabase.rpc('contract_payout', { p_proposal: id }) : { data: [] }
   const received = ((payout ?? []) as { locked: boolean }[]).some(p => p.locked)
 
-  // Current published vigência of each active table, as "Banco · Tabela (vN)".
-  const tableOf = new Map((tables ?? []).map(t => [t.id, t]))
-  const bankOf = new Map((routes ?? []).map(r => [r.id, (banks ?? []).find(b => b.id === r.org_bank_id)?.name ?? '']))
-  const latest = new Map<string, { id: string; version: number }>()
-  for (const v of versions) { const cur = latest.get(v.product_table_id); if (!cur || v.version > cur.version) latest.set(v.product_table_id, v) }
-  const tableOptions = [...latest.entries()].filter(([tid]) => tableOf.get(tid)?.status === 'active').map(([tid, v]) => {
-    const t = tableOf.get(tid)!
-    return { id: v.id, label: `${bankOf.get(t.route_id) ?? ''} · ${t.name} (v${v.version})` }
-  }).sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'))
-  // The contract's own vigência stays selectable (and correctly named) even when a newer one was published.
-  const own = versions.find(v => v.id === proposal.product_table_version_id)
-  if (own && !tableOptions.some(o => o.id === own.id)) {
-    const t = tableOf.get(own.product_table_id)
-    if (t) tableOptions.unshift({ id: own.id, label: `${bankOf.get(t.route_id) ?? ''} · ${t.name} (v${own.version}, do contrato)` })
-  }
   const sellerOptions = (sellers ?? []).filter(s => s.is_active || s.id === proposal.seller_id).map(s => ({ id: s.id, label: `${s.code ? `${String(s.code).padStart(3, '0')} · ` : ''}${s.name}` }))
   const pendingRequired = (requirements ?? []).filter(r => r.required_snapshot && !['validated', 'waived'].includes(r.status))
   const ghost = 'h-9 rounded-[10px] border border-line-strong bg-surface px-3 text-sm text-ink hover:bg-surface-muted'
@@ -101,8 +83,8 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
         id: proposal.id, table_version_id: proposal.product_table_version_id, seller_id: proposal.seller_id,
         requested: decimalInput(proposal.requested_amount), released: decimalInput(proposal.released_amount), installment: decimalInput(proposal.installment_amount),
         term: proposal.term ? String(proposal.term) : '', ade: proposal.external_proposal_id,
-        formalization: proposal.formalization, paid_to_client_on: proposal.paid_to_client_on,
-      }} tables={tableOptions} sellers={sellerOptions} canEdit={canEdit} paid={paid} received={received} />
+        formalization: proposal.formalization, paid_to_client_on: proposal.paid_to_client_on, contract_type_id: proposal.contract_type_id,
+      }} catalog={catalog} sellers={sellerOptions} canEdit={canEdit} paid={paid} received={received} />
       <PipelineCard supabase={supabase} access={access} proposalId={proposal.id} />
       {proposal.formalization === 'physical' && <PhysicalCard proposalId={proposal.id} canEdit={can(access, 'esteira.edit')} p={{
         received_at: proposal.physical_received_at, received_by: proposal.physical_received_by, sent_at: proposal.physical_sent_at,

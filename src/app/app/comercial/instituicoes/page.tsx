@@ -6,7 +6,7 @@ import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
 import { decimalBr } from '@/lib/commission/tableValues'
 import { createBank, renameCatalogItem, setActive } from '../actions'
-import { saveBankIrWithheld } from './actions'
+import { saveBankIrWithheld, saveOriginIrWithheld } from './actions'
 
 const lbl = 'text-[13px] font-medium text-ink-soft'
 const ghost = 'h-9 rounded-[10px] border border-line-strong bg-surface px-3 text-sm text-ink hover:bg-surface-muted'
@@ -17,10 +17,24 @@ export default async function BanksPage() {
   const { supabase, membership } = await requireAppContext()
   if (!atLeast(membership.role, 'supervisor')) return <section><PageHeader title="Bancos" /><Card className="p-5 text-sm text-ink-soft">Sem permissão.</Card></section>
   const canEdit = atLeast(membership.role, 'manager')
-  const [{ data: rows }, { data: situation }] = await Promise.all([
+  const [{ data: rows }, { data: situation }, { data: routes }, { data: providers }] = await Promise.all([
     supabase.from('organization_banks').select('id,name,is_active,ir_withheld_pct').order('name'),
     supabase.rpc('bank_tax_situation', { p_org: membership.organization_id }),
+    supabase.from('organization_product_routes').select('org_bank_id,org_provider_id,ir_withheld_pct').not('org_provider_id', 'is', null),
+    supabase.from('organization_providers').select('id,name'),
   ])
+  // Sales of a bank through a partner promoter ("Bevicred - Daycoval"): one row per pair, with its own IR field.
+  const bankName = new Map((rows ?? []).map(b => [b.id, b.name]))
+  const providerName = new Map((providers ?? []).map(p => [p.id, p.name]))
+  const pairs = new Map<string, { bank: string; provider: string; label: string; ir: string | null }>()
+  for (const r of routes ?? []) {
+    if (!r.org_bank_id || !r.org_provider_id) continue
+    const key = `${r.org_bank_id}:${r.org_provider_id}`
+    const cur = pairs.get(key)
+    const ir = r.ir_withheld_pct === null ? null : String(r.ir_withheld_pct)
+    pairs.set(key, { bank: r.org_bank_id, provider: r.org_provider_id, label: `${providerName.get(r.org_provider_id) ?? 'Promotora'} - ${bankName.get(r.org_bank_id) ?? 'Banco'}`, ir: cur && cur.ir !== ir ? null : ir })
+  }
+  const promoterRows = [...pairs.values()].sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'))
   const tax = new Map(((situation ?? []) as { bank_id: string; taxed_lines: number; untaxed_lines: number }[]).map(s => [s.bank_id, s]))
   const active = (rows ?? []).filter(r => r.is_active).length
 
@@ -49,7 +63,7 @@ export default async function BanksPage() {
         <div className="mt-3 overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-[13px]">
             <thead className="border-y border-line bg-surface-muted text-xs text-muted">
-              <tr><th className="px-5 py-2 font-medium">Banco</th><th className="px-3 py-2 font-medium">Imposto (pelas tabelas)</th><th className="px-3 py-2 font-medium">IR retido na fonte</th>{canEdit && <th className="px-3 py-2" />}</tr>
+              <tr><th className="px-5 py-2 font-medium">Banco</th><th className="px-3 py-2 font-medium">Imposto (pelas tabelas)</th><th className="px-3 py-2 font-medium">IR retido na fonte <span className="font-normal">(produção própria)</span></th>{canEdit && <th className="px-3 py-2" />}</tr>
             </thead>
             <tbody>
               {(rows ?? []).map(b => (
@@ -92,6 +106,33 @@ export default async function BanksPage() {
           </table>
         </div>
       </Card>
+
+      {promoterRows.length > 0 && <Card className="mt-4">
+        <CardHeader title="Vendas por promotora" />
+        <p className="px-5 pt-2 text-xs text-muted">Quando você vende por uma promotora parceira, ela paga a comissão. Preencha o IR só se ela descontar algum; em branco vale 0%.</p>
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full min-w-[520px] text-left text-[13px]">
+            <thead className="border-y border-line bg-surface-muted text-xs text-muted"><tr><th className="px-5 py-2 font-medium">Promotora - Banco</th><th className="px-3 py-2 font-medium">IR retido</th></tr></thead>
+            <tbody>
+              {promoterRows.map(r => (
+                <tr key={`${r.bank}:${r.provider}`} className="border-t border-line">
+                  <td className="px-5 py-3 font-semibold text-ink">{r.label}</td>
+                  <td className="px-3 py-3">
+                    {canEdit ? (
+                      <form action={saveOriginIrWithheld} className="flex items-center gap-2">
+                        <input type="hidden" name="bank_id" value={r.bank} /><input type="hidden" name="provider_id" value={r.provider} />
+                        <input name="ir_withheld_pct" aria-label={`IR retido de ${r.label}`} inputMode="decimal" defaultValue={r.ir !== null && Number(r.ir) ? decimalBr(r.ir) : ''} placeholder="0" className="field w-20" />
+                        <span className="text-muted">%</span>
+                        <SubmitButton className={ghost} pendingText="...">Salvar</SubmitButton>
+                      </form>
+                    ) : <span className="num">{r.ir !== null && Number(r.ir) ? `${decimalBr(r.ir)}%` : '0%'}</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>}
     </section>
   )
 }
