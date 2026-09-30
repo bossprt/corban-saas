@@ -1,4 +1,4 @@
--- Contract test for 20260930120000_contract_type_and_origin_ir_v1: the contract type picks the table line (Novo 6-8 and
+-- Contract test for 20260930170805_contract_type_and_origin_ir_v1: the contract type picks the table line (Novo 6-8 and
 -- Refinanciamento 6-10 months no longer stop a contract of 8 months), the choice travels from the proposal forms, the portal
 -- and the simulation, an edit calculates an uncalculated contract, a recalculation keeps its line, and IR withheld follows
 -- the field of the contract's origin (default: the bank's for own production, 0 through a promoter).
