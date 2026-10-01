@@ -1,4 +1,4 @@
--- Contract test for 20261001190000_free_pipeline_moves_v1: a proposal moves from any stage to any stage (back, reopen),
+-- Contract test for 20261001185140_free_pipeline_moves_v1: a proposal moves from any stage to any stage (back, reopen),
 -- the note is optional, "Paga" takes today when no date is given, every move is in the history, and money is protected:
 -- only an admin or manager takes a contract out of "Paga", never once commission was received. One transaction, rolled back.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/free-pipeline-moves-contract.sql
