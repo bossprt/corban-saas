@@ -6,7 +6,7 @@ import { Card, PageHeader } from '@/components/ui'
 import { requireAppContext } from '@/lib/appContext'
 import { isPortalUser } from '@/lib/portal'
 import { loadProposalCatalog } from '@/lib/proposals/catalog'
-import { BankTypeTable } from '@/components/BankTypeTable'
+import { ContractChoice } from '@/components/ContractChoice'
 import { submitPortalProposal } from '../actions'
 
 const label = 'text-[13px] font-medium text-ink-soft'
@@ -32,7 +32,7 @@ export default async function PortalNewProposalPage() {
           </fieldset>
           <fieldset className="grid gap-4 sm:col-span-2 sm:grid-cols-2">
             <legend className="mb-1 text-sm font-semibold text-ink">Proposta</legend>
-            <div className="grid gap-4 sm:col-span-2 sm:grid-cols-3"><BankTypeTable catalog={catalog} labelClass={label} /></div>
+            <div className="grid gap-4 sm:col-span-2"><ContractChoice catalog={catalog} labelClass={label} /></div>
             <label className={label}>Valor solicitado (R$)<input name="requested_amount" inputMode="decimal" placeholder="10.000,00" className="field mt-1.5" /></label>
             <label className={label}>Valor liberado (R$)<input name="released_amount" inputMode="decimal" placeholder="9.500,00" className="field mt-1.5" /></label>
             <label className={label}>Parcela (R$)<input name="installment_amount" inputMode="decimal" placeholder="250,00" className="field mt-1.5" /></label>

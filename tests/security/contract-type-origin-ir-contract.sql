@@ -135,7 +135,7 @@ insert into results select 'type cannot change outside the edit',
 select set_config('corban.proposal_rpc', 'off', true);
 
 insert into results select 'anon runs none of them',
-  not has_function_privilege('anon', 'public.create_direct_proposal(uuid,uuid,uuid,uuid,numeric,numeric,numeric,integer,text,text,uuid)', 'execute')
+  not has_function_privilege('anon', 'public.create_direct_proposal(uuid,uuid,uuid,uuid,numeric,numeric,numeric,integer,text,text,uuid,jsonb)', 'execute')
   and not has_function_privilege('anon', 'public.set_origin_ir_withheld(uuid,uuid,text)', 'execute')
   and not has_function_privilege('authenticated', 'private.check_contract_type_in_version(uuid,uuid,uuid)', 'execute');
 

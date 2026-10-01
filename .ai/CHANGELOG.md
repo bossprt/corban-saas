@@ -15,6 +15,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Saldo devedor e dados de origem (01/10/2026)
+- Adicionado: em Nova proposta, Editar contrato e portal do corretor, quando o tipo não é Novo: "Saldo devedor (R$)", "Banco de origem" e "Nº do contrato de origem" (opcionais). Só registro: a comissão segue Bruto ou Líquido conforme cada linha da tabela (decisão do dono). Editar esses campos entra no histórico e não recalcula a comissão.
+- Alterado: a mensagem "Contrato atualizado" diz o que recalcula e o que não.
+- Banco: migration `contract_origin_details_v1` (colunas em `proposals_v2`; `create_direct_proposal` e `submit_broker_proposal` ganham `p_details`, com valor padrão, então as chamadas antigas seguem funcionando). Contrato `tests/security/contract-origin-details-contract.sql` (9 checagens). Teste de tela.
+
 ### Banco → Tipo de contrato → Tabela (30/09/2026)
 - Alterado: Nova proposta, Editar contrato, Simulação e portal do corretor escolhem Banco, depois Tipo de contrato, depois Tabela; cada lista filtra a seguinte e só aparece a vigência em vigor de cada tabela. O mesmo banco por promotoras diferentes aparece como "Bevicred - Daycoval", "Efetivamais - Daycoval" (ADR-0049).
 - Corrigido: contrato com tabela que tem Novo e Refinanciamento no mesmo prazo não calculava a comissão ("há mais de uma linha da tabela"). O tipo de contrato agora fica no contrato e o cálculo usa a linha do tipo; editar um contrato sem comissão tenta calcular na hora; recálculo mantém a linha usada.

@@ -30,7 +30,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
   const { supabase, membership, access, organization } = await requireAppContext()
 
   const { data: proposal } = await supabase.from('proposals_v2')
-    .select('id,status,customer_id,seller_id,product_table_version_id,contract_type_id,requested_amount,released_amount,installment_amount,term,external_proposal_id,customer_snapshot,commercial_snapshot,created_at,formalization,paid_to_client_on,physical_received_at,physical_received_by,physical_sent_at,physical_sent_by,physical_bank_at,physical_bank_by')
+    .select('id,status,customer_id,seller_id,product_table_version_id,contract_type_id,outstanding_balance,origin_bank_name,origin_contract_number,requested_amount,released_amount,installment_amount,term,external_proposal_id,customer_snapshot,commercial_snapshot,created_at,formalization,paid_to_client_on,physical_received_at,physical_received_by,physical_sent_at,physical_sent_by,physical_bank_at,physical_bank_by')
     .eq('id', id).maybeSingle()
   if (!proposal) notFound()
 
@@ -84,6 +84,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
         requested: decimalInput(proposal.requested_amount), released: decimalInput(proposal.released_amount), installment: decimalInput(proposal.installment_amount),
         term: proposal.term ? String(proposal.term) : '', ade: proposal.external_proposal_id,
         formalization: proposal.formalization, paid_to_client_on: proposal.paid_to_client_on, contract_type_id: proposal.contract_type_id,
+        outstanding_balance: decimalInput(proposal.outstanding_balance), origin_bank_name: proposal.origin_bank_name ?? '', origin_contract_number: proposal.origin_contract_number ?? '',
       }} catalog={catalog} sellers={sellerOptions} canEdit={canEdit} paid={paid} received={received} />
       <PipelineCard supabase={supabase} access={access} proposalId={proposal.id} />
       {proposal.formalization === 'physical' && <PhysicalCard proposalId={proposal.id} canEdit={can(access, 'esteira.edit')} p={{

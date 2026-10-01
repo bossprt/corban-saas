@@ -7,6 +7,7 @@ import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedba
 import { parseMoneyInput } from '@/lib/money-input'
 import { normalizePct } from '@/lib/commission/groupRule'
 import { isUuid } from '@/lib/team'
+import { originDetails } from '@/lib/proposals/origin'
 
 const text = (f: FormData, k: string) => String(f.get(k) ?? '').trim()
 const back = (id: string, code: FeedbackCode, anchor = ''): never => {
@@ -27,6 +28,7 @@ const dbCode = (m: string, fallback: FeedbackCode): FeedbackCode =>
     : /condition_not_found/.test(m) ? 'erro:comissao_sem_condicao'
     : /condition_ambiguous/.test(m) ? 'erro:comissao_ambigua'
     : /contract_type_not_in_table|contract_type_not_found/.test(m) ? 'erro:tipo_fora_da_tabela'
+    : /invalid_outstanding_balance|invalid_origin/.test(m) ? 'erro:saldo_devedor_invalido'
     : /calculation_base_missing/.test(m) ? 'erro:comissao_sem_base'
     : /seller_without_group/.test(m) ? 'erro:comissao_vendedor_sem_grupo'
     : /group_rule_missing/.test(m) ? 'erro:comissao_grupo_sem_regra'
@@ -48,7 +50,10 @@ export async function updateContract(f: FormData) {
   if (termText && !/^\d{1,3}$/.test(termText)) return back(id, 'erro:prazo_invalido', '#contrato')
   const formalization = text(f, 'formalization'), paidOn = text(f, 'paid_to_client_on')
   if (!['digital', 'physical'].includes(formalization) || (paidOn && !/^\d{4}-\d{2}-\d{2}$/.test(paidOn))) return back(id, 'erro:requisicao_invalida', '#contrato')
+  const origin = originDetails(f)
+  if (!origin.ok) return back(id, 'erro:saldo_devedor_invalido', '#contrato')
   const data = {
+    ...origin.details,
     table_version_id: table, contract_type_id: contractType, seller_id: seller, term: termText, formalization, ...(paidOn ? { paid_to_client_on: paidOn } : {}),
     requested_amount: requested ?? '', released_amount: released ?? '', installment_amount: installment ?? '',
   }

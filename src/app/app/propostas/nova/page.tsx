@@ -7,7 +7,7 @@ import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
 import { formatCpf } from '@/lib/cpf'
 import { loadProposalCatalog } from '@/lib/proposals/catalog'
-import { BankTypeTable } from '@/components/BankTypeTable'
+import { ContractChoice } from '@/components/ContractChoice'
 import { createDirectProposal } from './actions'
 
 const label = 'text-[13px] font-medium text-ink-soft'
@@ -38,7 +38,7 @@ export default async function NewProposalPage({ searchParams }: { searchParams: 
             <ClientPicker name="customer_id" initial={initialClient ? { id: initialClient.id, name: initialClient.full_name, cpf: formatCpf(initialClient.cpf) } : null} />
             <span className="mt-1 block text-xs font-normal text-muted">Cliente novo? Cadastre em <Link href="/app/clientes?novo=1" className="text-brand underline">Clientes</Link> primeiro.</span>
           </div>
-          <div className="grid gap-4 sm:col-span-2 sm:grid-cols-3"><BankTypeTable catalog={catalog} labelClass={label} /></div>
+          <div className="grid gap-4 sm:col-span-2"><ContractChoice catalog={catalog} labelClass={label} /></div>
           <label className={label}>Valor solicitado (R$)<input name="requested_amount" inputMode="decimal" placeholder="10.000,00" className="field mt-1.5" /></label>
           <label className={label}>Valor liberado (R$)<input name="released_amount" inputMode="decimal" placeholder="9.500,00" className="field mt-1.5" /></label>
           <label className={label}>Parcela (R$)<input name="installment_amount" inputMode="decimal" placeholder="250,00" className="field mt-1.5" /></label>

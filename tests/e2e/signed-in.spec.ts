@@ -922,7 +922,7 @@ test('contract C2: payout change, contract edit with recalculation, note and his
   await page.getByRole('button', { name: 'Editar contrato' }).click()
   await page.getByLabel('Valor bruto (R$)').fill('12.000,00')
   await page.getByRole('button', { name: 'Salvar alterações' }).click()
-  await expect(page.getByText('Contrato atualizado. A comissão foi recalculada.')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByText(/^Contrato atualizado./)).toBeVisible({ timeout: 30_000 })
   await expect(page.getByRole('row', { name: /^À vista/ })).toContainText('R$ 240,00')
 
   await page.getByLabel('Nova observação').fill('Cliente pediu retorno amanhã.')
@@ -1539,4 +1539,36 @@ test('pay now: a broker balance paid from the account in one action', async ({ p
   await expect(page.getByText(/Pagamento registrado/)).toBeVisible({ timeout: 30_000 })
   await expect(page.getByText('Saldo da conta').locator('..')).toContainText('R$ 0,00')
   await expect(page.locator('form').filter({ has: page.getByRole('button', { name: /^Pagar R\$/ }) })).toHaveCount(0)
+})
+
+// Saldo devedor and origin of a refinancing or portability (01/10/2026): record only, hidden for the global "Novo" type.
+// The seed's own type "Novo (teste)" is not the global Novo, so the fields show for it here.
+test('contract origin: saldo devedor, banco and contrato de origem recorded on the proposal and edited in the contract', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  const ade = `E2E-ORIG-${Date.now()}`
+  await page.goto('/app/propostas/nova')
+  await pickClient(page)
+  await pickTable(page)
+  await page.getByLabel('Saldo devedor (R$)').fill('8.500,00')
+  await page.getByLabel('Banco de origem').fill('Banco do Brasil')
+  await page.getByLabel('Nº do contrato de origem').fill('BB-123/45')
+  await page.getByLabel('Valor solicitado (R$)').fill('10.000,00')
+  await page.getByLabel('Valor liberado (R$)').fill('1.500,00')
+  await page.getByLabel('Prazo (meses)').fill('120')
+  await page.getByLabel('Vendedor').selectOption({ label: 'Vendedor Teste' })
+  await page.getByLabel('Já digitada no banco').check()
+  await page.getByLabel('Número da proposta no banco (ADE)').fill(ade)
+  await page.getByRole('button', { name: 'Registrar proposta' }).click()
+  await expect(page.getByText('Proposta registrada na esteira.')).toBeVisible({ timeout: 30_000 })
+
+  const form = page.locator('#contrato')
+  await expect(form.getByLabel('Saldo devedor (R$)')).toHaveValue('8.500,00')
+  await expect(form.getByLabel('Banco de origem')).toHaveValue('Banco do Brasil')
+  await expect(form.getByLabel('Nº do contrato de origem')).toHaveValue('BB-123/45')
+  await form.getByRole('button', { name: 'Editar contrato' }).click()
+  await form.getByLabel('Saldo devedor (R$)').fill('8.700,50')
+  await form.getByRole('button', { name: 'Salvar alterações' }).click()
+  await expect(page.getByText(/Contrato atualizado|alterações salvas/i).first()).toBeVisible({ timeout: 30_000 })
+  await expect(page.locator('#contrato').getByLabel('Saldo devedor (R$)')).toHaveValue('8.700,50')
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-saldo-devedor.png`, fullPage: true })
 })
