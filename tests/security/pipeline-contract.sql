@@ -56,21 +56,19 @@ reset role;
 select pg_temp.act_as((select admin_user from ids));
 set local role authenticated;
 insert into made select 'case', id from public.operational_cases where proposal_id = (select id from made where label = 'p1');
-do $$ begin
-  begin
-    perform public.move_operational_case((select id from made where label = 'case'), 'pending_external', 'falta comprovante', null);
-    insert into results values ('pendency requires a due date', false);
-  exception when others then insert into results values ('pendency requires a due date', sqlerrm = 'pendency_due_required'); end;
-end $$;
+-- Esteira simples (01/10/2026): note and due date are optional.
+select public.move_operational_case((select id from made where label = 'case'), 'pending_external', null, null);
+insert into results select 'pendency without note or due date is accepted', canonical_state = 'pending_external' from public.operational_cases where id = (select id from made where label = 'case');
+select public.move_operational_case((select id from made where label = 'case'), 'submitted', null, null);
 select public.move_operational_case((select id from made where label = 'case'), 'pending_external', 'Falta comprovante de residência', now() + interval '2 days');
 insert into results select 'pendency keeps reason and due date', canonical_state = 'pending_external' and pendency_reason like 'Falta%' and pendency_due_at > now() from public.operational_cases where id = (select id from made where label = 'case');
 select public.move_operational_case((select id from made where label = 'case'), 'submitted', null, null);
 insert into results select 'solved pendency returns to analysis', canonical_state = 'submitted' and pendency_reason is null from public.operational_cases where id = (select id from made where label = 'case');
 do $$ begin
   begin
-    perform public.move_operational_case((select id from made where label = 'case'), 'paid', null, null);
-    insert into results values ('manual paid requires a note', false);
-  exception when others then insert into results values ('manual paid requires a note', sqlerrm = 'note_required'); end;
+    perform public.move_operational_case((select id from made where label = 'case'), 'paid', null, null, current_date + 1);
+    insert into results values ('manual paid in the future is refused', false);
+  exception when others then insert into results values ('manual paid in the future is refused', sqlerrm = 'invalid_paid_on'); end;
 end $$;
 select public.move_operational_case((select id from made where label = 'case'), 'paid', 'Pago no portal do Banco Teste', null);
 insert into results select 'case and proposal are paid', (select canonical_state = 'paid' from public.operational_cases where id = (select id from made where label = 'case'))

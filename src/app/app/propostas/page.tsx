@@ -4,6 +4,8 @@ import { Badge, ButtonLink, Card, PageHeader, type Tone } from '@/components/ui'
 import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
 import { formatCpf } from '@/lib/cpf'
+import { PipelineBoard, type BoardCard } from './PipelineBoard'
+import { StageSelect } from './StageMove'
 
 type CaseRow = { id: string; proposal_id: string; current_stage_id: string; canonical_state: string; entered_stage_at: string; due_at: string | null; pendency_due_at: string | null; pendency_reason: string | null }
 type ProposalRow = { id: string; external_proposal_id: string | null; requested_amount: number | null; released_amount: number | null; customer_snapshot: Record<string, unknown> | null; commercial_snapshot: Record<string, unknown> | null; seller_id: string | null; created_by: string | null }
@@ -33,7 +35,12 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
   const cases = (allCases ?? []) as CaseRow[]
   const kanban = sp.visao === 'kanban'
   const stage = kanban ? undefined : (stages ?? []).find(s => s.code === sp.etapa)
-  const shown = stage ? cases.filter(c => c.current_stage_id === stage.id) : cases.filter(c => !CLOSED.includes(c.canonical_state))
+  // Kanban: open proposals, plus the ones closed in the last 7 days (so a card just dropped in Paga stays in sight).
+  const weekAgo = requestTime() - 7 * 86_400_000
+  const shown = stage ? cases.filter(c => c.current_stage_id === stage.id)
+    : cases.filter(c => !CLOSED.includes(c.canonical_state) || (kanban && new Date(c.entered_stage_at).getTime() >= weekAgo))
+  const canMove = can(access, 'esteira.edit')
+  const stageOptions = (stages ?? []).map(s => ({ id: s.id, name: s.name, canonical_state: s.canonical_state }))
 
   const ids = shown.map(c => c.proposal_id)
   const { data: proposalRows } = ids.length
@@ -86,37 +93,21 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
       </div>
 
       {kanban ? (
-        <div className="flex gap-3 overflow-x-auto pb-2" aria-label="Kanban da esteira">
-          {(stages ?? []).filter(st => !CLOSED.includes(st.canonical_state)).map(st => {
-            const column = shown.filter(c => c.current_stage_id === st.id)
-            return (
-              <section key={st.id} aria-label={st.name} className="flex w-72 shrink-0 flex-col rounded-[14px] border border-line bg-surface-muted">
-                <header className="flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-ink">{st.name}<span className="num text-xs font-normal text-muted">{column.length}</span></header>
-                <div className="flex flex-col gap-2 px-2 pb-2">
-                  {column.map(c => {
-                    const p = proposals.get(c.proposal_id)
-                    const cust = (p?.customer_snapshot ?? {}) as Record<string, unknown>
-                    const com = (p?.commercial_snapshot ?? {}) as Record<string, unknown>
-                    const d = days(c.entered_stage_at)
-                    const alert = alertOf(c)
-                    return (
-                      <Link key={c.id} href={`/app/propostas/${c.proposal_id}`} className="rounded-[10px] border border-line bg-surface p-3 text-[13px] hover:border-brand/50">
-                        <span className="block font-medium text-ink">{String(cust.full_name ?? cust.name ?? 'Cliente')}</span>
-                        <span className="mt-0.5 block text-xs text-muted">{[com.bank, p?.external_proposal_id].filter(Boolean).join(' · ') || '—'}</span>
-                        <span className="mt-2 flex items-center justify-between">
-                          <span className="num font-semibold text-ink">{brl(p?.released_amount ?? p?.requested_amount ?? null)}</span>
-                          <span className={`num text-xs ${d >= 4 ? 'font-semibold text-diverged' : 'text-muted'}`}>{d === 0 ? 'hoje' : `${d} d`}</span>
-                        </span>
-                        {alert && <span className="mt-1.5 block text-xs font-medium text-diverged">{alert}</span>}
-                      </Link>
-                    )
-                  })}
-                  {column.length === 0 && <p className="px-1 py-3 text-center text-xs text-muted">Vazio</p>}
-                </div>
-              </section>
-            )
+        <PipelineBoard
+          canEdit={canMove}
+          columns={(stages ?? []).map(st => ({ id: st.id, code: st.code, name: st.name, canonical_state: st.canonical_state, closed: CLOSED.includes(st.canonical_state) }))}
+          cards={shown.map((c): BoardCard => {
+            const p = proposals.get(c.proposal_id)
+            const cust = (p?.customer_snapshot ?? {}) as Record<string, unknown>
+            const com = (p?.commercial_snapshot ?? {}) as Record<string, unknown>
+            return {
+              caseId: c.id, proposalId: c.proposal_id, stageId: c.current_stage_id,
+              name: String(cust.full_name ?? cust.name ?? 'Cliente'),
+              sub: [com.bank, p?.external_proposal_id].filter(Boolean).join(' · ') || '—',
+              amount: brl(p?.released_amount ?? p?.requested_amount ?? null), days: days(c.entered_stage_at), alert: alertOf(c),
+            }
           })}
-        </div>
+        />
       ) : (
       <>
       {/* Phone: one card per proposal (client, stage, value), no sideways scrolling. */}
@@ -171,7 +162,9 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
                     <td className="px-3 py-2 text-ink-soft">{[com.bank, com.table].filter(Boolean).join(' · ') || '—'}</td>
                     <td className="num px-3 py-2 text-right text-ink">{brl(p?.released_amount ?? p?.requested_amount ?? null)}</td>
                     <td className="px-3 py-2 text-ink-soft">{(p?.seller_id && sellerName.get(p.seller_id)) || '—'}</td>
-                    <td className="px-3 py-2"><Badge tone={STATE_TONE[c.canonical_state] ?? 'neutral'}>{stageName.get(c.current_stage_id) ?? c.canonical_state}</Badge></td>
+                    <td className="px-3 py-2">{canMove
+                      ? <StageSelect compact caseId={c.id} proposalId={c.proposal_id} stages={stageOptions} currentStageId={c.current_stage_id} label={`Etapa de ${String(cust.full_name ?? cust.name ?? 'Cliente')}`} />
+                      : <Badge tone={STATE_TONE[c.canonical_state] ?? 'neutral'}>{stageName.get(c.current_stage_id) ?? c.canonical_state}</Badge>}</td>
                     <td className={`num px-3 py-2 text-right ${d >= 4 && !CLOSED.includes(c.canonical_state) ? 'font-semibold text-diverged' : 'text-ink-soft'}`}>{d === 0 ? 'hoje' : `${d} d`}</td>
                     <td className="px-3 py-2 text-xs font-medium text-diverged" title={c.pendency_reason ?? undefined}>{alert}</td>
                   </tr>

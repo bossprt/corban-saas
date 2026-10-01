@@ -15,6 +15,12 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Esteira simples (01/10/2026)
+- Adicionado: Kanban com arrastar e soltar (mouse, teclado e celular) para qualquer coluna, inclusive Paga, Recusada e Cancelada (estas mostram os últimos 7 dias). Soltar em Paga pede só a data (hoje já preenchida).
+- Adicionado: no modo tabela, cada linha tem a lista de etapas e "Salvar".
+- Alterado: a proposta vai de qualquer etapa para qualquer etapa (voltar, reabrir), no contrato, na tabela e no Kanban. Observação e prazo da pendência são opcionais. Todo movimento entra no histórico.
+- Segurança: única trava de dinheiro — contrato Pago com comissão recebida do banco ou repasse ao corretor não sai de Paga; tirar de Paga só administrador ou gerente. Migração `free_pipeline_moves_v1` (RPC `move_case_to_stage`; `move_operational_case` continua como atalho por estado). Contrato SQL: 20 checagens.
+
 ### Saldo devedor e dados de origem (01/10/2026)
 - Adicionado: em Nova proposta, Editar contrato e portal do corretor, quando o tipo não é Novo: "Saldo devedor (R$)", "Banco de origem" e "Nº do contrato de origem" (opcionais). Só registro: a comissão segue Bruto ou Líquido conforme cada linha da tabela (decisão do dono). Editar esses campos entra no histórico e não recalcula a comissão.
 - Alterado: a mensagem "Contrato atualizado" diz o que recalcula e o que não.

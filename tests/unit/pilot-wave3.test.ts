@@ -221,8 +221,8 @@ test('money input is parsed to an exact decimal string without floating point', 
   assert.doesNotMatch(read('src/lib/money-input.ts'), /parseFloat|Number\(|\* ?100/)
 })
 test('pipeline and proposal actions go through governed RPCs only', () => {
-  const a = read('src/app/app/propostas/nova/actions.ts') + read('src/app/app/propostas/[id]/pipeline-actions.ts') + read('src/app/app/metas/actions.ts')
-  for (const rpc of ['create_direct_proposal', 'move_operational_case', 'set_seller_goal', 'set_lead_distribution', 'set_member_receives_leads']) assert.ok(a.includes(`rpc('${rpc}'`), rpc)
+  const a = read('src/app/app/propostas/nova/actions.ts') + read('src/app/app/propostas/stage-actions.ts') + read('src/app/app/metas/actions.ts')
+  for (const rpc of ['create_direct_proposal', 'move_case_to_stage', 'set_seller_goal', 'set_lead_distribution', 'set_member_receives_leads']) assert.ok(a.includes(`rpc('${rpc}'`), rpc)
   assert.doesNotMatch(a, /\.from\('(proposals_v2|operational_cases|seller_goals|leads)'\)\s*\.(insert|update|delete)/)
   assert.doesNotMatch(a, /p_org:\s*formData|get\('organization/)
 })

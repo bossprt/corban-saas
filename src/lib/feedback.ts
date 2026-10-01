@@ -150,6 +150,8 @@ export const FEEDBACK = {
   'erro:nota_obrigatoria': 'Escreva uma observação (onde viu, o que falta).',
   'erro:prazo_pendencia': 'Informe até quando a pendência precisa ser resolvida.',
   'erro:movimento_invalido': 'Esta proposta não pode ir para essa etapa a partir da etapa atual.',
+  'erro:sair_de_paga_gestor': 'Só administrador ou gerente tira um contrato de Paga.',
+  'erro:paga_com_dinheiro': 'Este contrato já tem comissão recebida do banco ou repasse ao corretor, por isso continua em Paga.',
   'erro:lead_ja_assumido': 'Outra pessoa já assumiu este lead.',
   // Sales CRM (V2)
   'ok:retorno_marcado': 'Retorno marcado.',
