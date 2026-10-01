@@ -193,26 +193,52 @@ test('direct proposal runs through the pipeline to paid and counts in the goal',
   await page.getByRole('button', { name: 'Registrar proposta' }).click()
   await expect(page.getByText('Proposta registrada na esteira.')).toBeVisible({ timeout: 20_000 })
 
+  // Any stage, note and due date optional; "Paga" asks only the day (today filled in).
   const due = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10)
-  await page.getByLabel('Mover para').selectOption('pending_external')
-  await page.getByLabel('Observação', { exact: true }).fill('Falta comprovante de residência')
-  await page.getByLabel('Prazo da pendência').fill(due)
-  await page.getByRole('button', { name: 'Salvar etapa' }).click()
+  const dialog = page.getByRole('dialog')
+  await page.getByLabel('Mover para').selectOption({ label: 'Pendência' })
+  await page.getByRole('button', { name: 'Salvar', exact: true }).click()
+  await dialog.getByLabel('Observação (opcional)').fill('Falta comprovante de residência')
+  await dialog.getByLabel('Prazo da pendência (opcional)').fill(due)
+  await dialog.getByRole('button', { name: 'Confirmar' }).click()
   await expect(page.getByText('Pendência:', { exact: false })).toBeVisible()
 
-  await page.getByLabel('Mover para').selectOption('submitted')
-  await page.getByRole('button', { name: 'Salvar etapa' }).click()
+  await page.getByLabel('Mover para').selectOption({ label: 'Aguardando digitação' })
+  await page.getByRole('button', { name: 'Salvar', exact: true }).click()
   await expect(page.getByText('Etapa atualizada.')).toBeVisible()
+  await expect(page.getByText('Pendência:', { exact: false })).toHaveCount(0)
 
-  await page.getByLabel('Mover para').selectOption('paid')
-  await page.getByRole('button', { name: 'Salvar etapa' }).click()
-  await expect(page.getByText('Escreva uma observação')).toBeVisible()
-  await page.getByLabel('Mover para').selectOption('paid')
-  await page.getByLabel('Observação', { exact: true }).fill('Pago no portal do Banco Teste')
-  await page.getByLabel('Pago ao cliente em').fill(new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10))
-  await page.getByRole('button', { name: 'Salvar etapa' }).click()
+  await page.getByLabel('Mover para').selectOption({ label: 'Paga' })
+  await page.getByRole('button', { name: 'Salvar', exact: true }).click()
+  await expect(dialog.getByLabel('Pago ao cliente em')).toHaveValue(new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10))
+  await dialog.getByRole('button', { name: 'Confirmar' }).click()
   await expect(page.getByText('Etapa atualizada.')).toBeVisible()
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-proposta-paga.png`, fullPage: true })
+
+  // Kanban: drag the paid card back to Aprovada (no money moved yet, the admin may). A wide screen shows every column.
+  await page.setViewportSize({ width: 1700, height: 900 })
+  await page.goto('/app/propostas?visao=kanban')
+  const card = page.getByRole('region', { name: 'Paga' }).getByText(ade, { exact: false })
+  const target = page.getByRole('region', { name: 'Aprovada' })
+  await card.scrollIntoViewIfNeeded()
+  const from = (await card.boundingBox())!
+  const to = (await target.boundingBox())!
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(from.x + from.width / 2 + 20, from.y + from.height / 2, { steps: 5 })
+  await page.mouse.move(to.x + to.width / 2, Math.max(to.y + 40, from.y), { steps: 15 })
+  await page.mouse.up()
+  await expect(page.getByText('Etapa atualizada.')).toBeVisible()
+  await expect(target.getByText(ade, { exact: false })).toBeVisible()
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-kanban-arrastar.png`, fullPage: true })
+
+  // Table: the stage list on the row, then "Salvar".
+  await page.goto('/app/propostas?etapa=aprovada')
+  const row = page.getByRole('row').filter({ hasText: ade })
+  await row.getByRole('combobox').selectOption({ label: 'Paga' })
+  await row.getByRole('button', { name: 'Salvar' }).click()
+  await dialog.getByRole('button', { name: 'Confirmar' }).click()
+  await expect(page.getByText('Etapa atualizada.')).toBeVisible()
 
   await page.goto('/app/propostas?etapa=paga')
   await expect(page.getByText(ade).filter({ visible: true }).first()).toBeVisible()
@@ -959,10 +985,10 @@ test('seller credit C3: paid date, bank reconciliation, physical milestones, out
     await expect(page.getByText('Proposta registrada na esteira.')).toBeVisible({ timeout: 30_000 })
   }
   const pay = async () => {
-    await page.getByLabel('Mover para').selectOption('paid')
-    await page.getByLabel('Observação', { exact: true }).fill('Pago ao cliente')
-    await page.getByLabel('Pago ao cliente em').fill(today)
-    await page.getByRole('button', { name: 'Salvar etapa' }).click()
+    await page.getByLabel('Mover para').selectOption({ label: 'Paga' })
+    await page.getByRole('button', { name: 'Salvar', exact: true }).click()
+    await page.getByRole('dialog').getByLabel('Pago ao cliente em').fill(today)
+    await page.getByRole('dialog').getByRole('button', { name: 'Confirmar' }).click()
     await expect(page.getByText('Etapa atualizada.')).toBeVisible({ timeout: 30_000 })
   }
   // The bank's à vista report with this contract (exact 600,00), confirmed by finance.

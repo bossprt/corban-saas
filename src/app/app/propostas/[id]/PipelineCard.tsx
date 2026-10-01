@@ -1,36 +1,18 @@
 import { Badge, Card, CardHeader } from '@/components/ui'
 import { can, type Access } from '@/lib/access'
-import { movePipeline } from './pipeline-actions'
+import { StageSelect } from '../StageMove'
 
 type Supa = Awaited<ReturnType<typeof import('@/lib/appContext').requireAppContext>>['supabase']
 
-// Moves offered from each state. The database is the authority (move_operational_case / transition_operational_case).
-const NEXT: Record<string, string[]> = {
-  digitization_queue: ['digitizing', 'cancelled'],
-  digitizing: ['submitted', 'cancelled'],
-  submitted: ['pending_external', 'approved', 'paid', 'rejected', 'cancelled'],
-  pending_external: ['submitted', 'approved', 'paid', 'rejected', 'cancelled'],
-  approved: ['paid', 'pending_external', 'cancelled'],
-}
-const ACTION_LABEL: Record<string, string> = {
-  digitizing: 'Começar digitação', submitted: 'Digitada / em análise', pending_external: 'Abrir pendência', approved: 'Aprovada',
-  paid: 'Paga', rejected: 'Recusada', cancelled: 'Cancelar',
-}
-
-// Server-rendered per request: the earliest due date a pendency can have.
-const tomorrowIso = () => new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
-const todayIso = () => new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10)
-
+// The contract's stage: any stage can be chosen (the database keeps the one money lock and the history).
 export async function PipelineCard({ supabase, access, proposalId }: { supabase: Supa; access: Access | null; proposalId: string }) {
   const { data: c } = await supabase.from('operational_cases')
     .select('id,canonical_state,current_stage_id,entered_stage_at,due_at,pendency_reason,pendency_due_at')
     .eq('proposal_id', proposalId).maybeSingle()
   if (!c) return null
   // The stage history is in the contract history card.
-  const { data: stage } = await supabase.from('operational_stages').select('name').eq('id', c.current_stage_id).maybeSingle()
-  const moves = NEXT[c.canonical_state] ?? []
-  const editable = can(access, 'esteira.edit') && moves.length > 0
-  const tomorrow = tomorrowIso()
+  const { data: stages } = await supabase.from('operational_stages').select('id,name,canonical_state').eq('is_active', true).order('sort_order')
+  const stage = (stages ?? []).find(s => s.id === c.current_stage_id)
 
   return (
     <Card className="mt-4">
@@ -40,28 +22,11 @@ export async function PipelineCard({ supabase, access, proposalId }: { supabase:
         {c.pendency_reason && (
           <p className="rounded-lg bg-[#FEF3C7] px-3 py-2 text-[#92400E]"><strong>Pendência:</strong> {c.pendency_reason}{c.pendency_due_at ? ` · resolver até ${new Date(c.pendency_due_at).toLocaleDateString('pt-BR')}` : ''}</p>
         )}
-        {editable && (
-          <form action={movePipeline} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto_auto] sm:items-end">
-            <input type="hidden" name="proposal_id" value={proposalId} />
-            <input type="hidden" name="case_id" value={c.id} />
-            <label className="text-[13px] font-medium text-ink-soft">Mover para
-              <select name="to_state" className="field mt-1.5" defaultValue={moves[0]}>
-                {moves.map(m => <option key={m} value={m}>{ACTION_LABEL[m]}</option>)}
-              </select>
-            </label>
-            <label className="text-[13px] font-medium text-ink-soft">Observação
-              <input name="note" maxLength={500} placeholder="Obrigatória para Paga e Pendência" className="field mt-1.5" />
-            </label>
-            <label className="text-[13px] font-medium text-ink-soft">Prazo da pendência
-              <input name="pendency_due" type="date" min={tomorrow} className="field mt-1.5" />
-            </label>
-            <label className="text-[13px] font-medium text-ink-soft">Pago ao cliente em
-              <input name="paid_on" type="date" max={todayIso()} aria-label="Pago ao cliente em" className="field mt-1.5" />
-            </label>
-            <div className="sm:col-span-4 flex justify-end">
-              <button className="h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Salvar etapa</button>
-            </div>
-          </form>
+        {can(access, 'esteira.edit') && (
+          <div className="max-w-md">
+            <p className="mb-1.5 text-[13px] font-medium text-ink-soft">Mover para</p>
+            <StageSelect caseId={c.id} proposalId={proposalId} stages={stages ?? []} currentStageId={c.current_stage_id} label="Mover para" />
+          </div>
         )}
       </div>
     </Card>
