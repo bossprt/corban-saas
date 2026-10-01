@@ -1,4 +1,4 @@
--- Contract test for 20261001120000_contract_origin_details_v1: saldo devedor, banco and nº do contrato de origem are
+-- Contract test for 20261001172732_contract_origin_details_v1: saldo devedor, banco and nº do contrato de origem are
 -- recorded on creation (direct proposal and broker portal) and on edit with history, never recalculate the commission,
 -- and refuse malformed values. The former calls (no details) keep working. One transaction, rolled back.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/contract-origin-details-contract.sql
