@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
 import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedback'
 import { parseMoneyInput } from '@/lib/money-input'
+import { originDetails } from '@/lib/proposals/origin'
 import { isUuid } from '@/lib/team'
 
 const back = (code: FeedbackCode, cliente?: string): never =>
@@ -20,6 +21,8 @@ export async function createDirectProposal(formData: FormData) {
   const seller = text('seller_id')
   const stage = text('stage') === 'submitted' ? 'submitted' : 'digitization_queue'
   const ade = text('ade')
+  const origin = originDetails(formData)
+  if (!origin.ok) return back('erro:saldo_devedor_invalido', client)
   if (!isUuid(client) || !isUuid(table) || !isUuid(contractType) || (seller && !isUuid(seller))) return back('erro:requisicao_invalida', client)
   const requested = parseMoneyInput(formData.get('requested_amount'))
   const released = parseMoneyInput(formData.get('released_amount'))
@@ -34,7 +37,7 @@ export async function createDirectProposal(formData: FormData) {
   const { data, error } = await supabase.rpc('create_direct_proposal', {
     p_org: organization.id, p_customer_id: client, p_table_version_id: table, p_seller_id: seller || null,
     p_requested_amount: requested, p_released_amount: released, p_installment_amount: installment, p_term: term,
-    p_ade: ade || null, p_stage: stage, p_contract_type_id: contractType,
+    p_ade: ade || null, p_stage: stage, p_contract_type_id: contractType, p_details: origin.details,
   })
   if (error) {
     const m = error.message ?? ''
@@ -43,6 +46,7 @@ export async function createDirectProposal(formData: FormData) {
     if (/invalid_amount|amount_required/.test(m)) return back('erro:valor_invalido', client)
     if (/invalid_term/.test(m)) return back('erro:prazo_invalido', client)
     if (/contract_type_not_in_table|contract_type_not_found/.test(m)) return back('erro:tipo_fora_da_tabela', client)
+    if (/invalid_outstanding_balance|invalid_origin/.test(m)) return back('erro:saldo_devedor_invalido', client)
     return back(classifyDbFeedback(error), client)
   }
   const row = (Array.isArray(data) ? data[0] : data) as { proposal_id: string; duplicate: boolean } | null

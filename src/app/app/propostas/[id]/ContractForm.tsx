@@ -5,7 +5,7 @@ import { Lock, Pencil, X } from 'lucide-react'
 import { Card, CardHeader } from '@/components/ui'
 import { SubmitButton } from '@/components/SubmitButton'
 import { updateContract } from './contract-actions'
-import { BankTypeTable } from '@/components/BankTypeTable'
+import { ContractChoice } from '@/components/ContractChoice'
 import type { ProposalCatalog } from '@/lib/proposals/catalog'
 
 type Option = { id: string; label: string }
@@ -13,6 +13,7 @@ export type ContractData = {
   id: string; table_version_id: string | null; seller_id: string | null; requested: string; released: string; installment: string; term: string
   ade: string | null
   formalization: string; paid_to_client_on: string | null; contract_type_id: string | null
+  outstanding_balance: string; origin_bank_name: string; origin_contract_number: string
 }
 const lbl = 'text-[13px] font-medium text-ink-soft'
 
@@ -36,7 +37,8 @@ export function ContractForm({ c, catalog, sellers, canEdit, paid, received }: {
             : <button type="button" onClick={() => { setEditing(false); setRound(r => r + 1) }} className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line bg-surface px-3 text-sm text-ink-soft hover:bg-surface-muted"><X size={15} aria-hidden />Cancelar</button>)
             : undefined} />
         <fieldset key={round} disabled={locked} className="grid gap-3 px-5 pb-5 pt-3 md:grid-cols-4">
-          <div className="grid gap-3 md:col-span-4 md:grid-cols-3"><BankTypeTable catalog={catalog} initialVersion={c.table_version_id} initialType={c.contract_type_id} labelClass={lbl} /></div>
+          <div className="grid gap-3 md:col-span-4"><ContractChoice catalog={catalog} initialVersion={c.table_version_id} initialType={c.contract_type_id} labelClass={lbl} gridClass="grid gap-3 md:grid-cols-3"
+            origin={{ outstanding_balance: c.outstanding_balance, origin_bank_name: c.origin_bank_name, origin_contract_number: c.origin_contract_number }} /></div>
           <label className={`${lbl} md:col-span-2`}>Vendedor
             <select name="seller_id" defaultValue={c.seller_id ?? ''} className="field mt-1.5">
               <option value="">Sem vendedor</option>

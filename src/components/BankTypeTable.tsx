@@ -5,8 +5,10 @@ import type { ProposalCatalog } from '@/lib/proposals/catalog'
 
 // Banco -> Tipo de contrato -> Tabela, each list narrowed by the previous choice (owner request 29/09/2026, ADR-0049).
 // Posts the table version and the contract type under the given field names.
-export function BankTypeTable({ catalog, versionName = 'table_version_id', typeName = 'contract_type_id', initialVersion, initialType, disabled, labelClass = 'text-[13px] font-medium text-ink-soft' }: {
+export function BankTypeTable({ catalog, versionName = 'table_version_id', typeName = 'contract_type_id', initialVersion, initialType, disabled, labelClass = 'text-[13px] font-medium text-ink-soft', onTypeChange }: {
   catalog: ProposalCatalog; versionName?: string; typeName?: string; initialVersion?: string | null; initialType?: string | null; disabled?: boolean; labelClass?: string
+  // Tells the parent which contract type is chosen (e.g. to show the origin fields of a refinancing or a portability).
+  onTypeChange?: (typeId: string) => void
 }) {
   const id = useId()
   const start = catalog.tables.find(t => t.versionId === initialVersion)
@@ -25,10 +27,12 @@ export function BankTypeTable({ catalog, versionName = 'table_version_id', typeN
     const ids = new Set(catalog.tables.filter(t => t.origin === o).flatMap(t => t.types))
     const keepType = ids.has(type) ? type : ids.size === 1 ? [...ids][0] : ''
     setType(keepType)
+    onTypeChange?.(keepType)
     if (!catalog.tables.some(t => t.versionId === version && t.origin === o && (!keepType || t.types.includes(keepType)))) setVersion('')
   }
   const pickType = (t: string) => {
     setType(t)
+    onTypeChange?.(t)
     if (!catalog.tables.some(x => x.versionId === version && x.origin === origin && x.types.includes(t))) setVersion('')
   }
 

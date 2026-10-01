@@ -1,5 +1,6 @@
 'use server'
 
+import { originDetails } from '@/lib/proposals/origin'
 import { createHash, randomUUID } from 'crypto'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
@@ -19,6 +20,8 @@ export async function submitPortalProposal(formData: FormData) {
   const back = (code: FeedbackCode): never => redirect(feedbackUrl('/app/portal/nova', code))
   const table = text(formData, 'table_version_id'), contractType = text(formData, 'contract_type_id')
   if (!isUuid(table) || !isUuid(contractType)) return back('erro:requisicao_invalida')
+  const origin = originDetails(formData)
+  if (!origin.ok) return back('erro:saldo_devedor_invalido')
   const requested = parseMoneyInput(formData.get('requested_amount'))
   const released = parseMoneyInput(formData.get('released_amount'))
   const installment = parseMoneyInput(formData.get('installment_amount'))
@@ -30,7 +33,7 @@ export async function submitPortalProposal(formData: FormData) {
   const { data, error } = await supabase.rpc('submit_broker_proposal', {
     p_org: organization.id, p_cpf: text(formData, 'cpf'), p_full_name: text(formData, 'full_name'), p_phone: text(formData, 'phone') || null,
     p_email: text(formData, 'email') || null, p_table_version_id: table, p_requested_amount: requested, p_released_amount: released,
-    p_installment_amount: installment, p_term: term, p_ade: text(formData, 'ade') || null, p_contract_type_id: contractType,
+    p_installment_amount: installment, p_term: term, p_ade: text(formData, 'ade') || null, p_contract_type_id: contractType, p_details: origin.details,
   })
   if (error) {
     const m = error.message ?? ''
@@ -38,6 +41,7 @@ export async function submitPortalProposal(formData: FormData) {
     if (/proposal_already_exists/.test(m)) return back('erro:portal_ja_existe')
     if (/invalid_ade/.test(m)) return back('erro:ade_invalido')
     if (/contract_type_not_in_table|contract_type_not_found/.test(m)) return back('erro:tipo_fora_da_tabela')
+    if (/invalid_outstanding_balance|invalid_origin/.test(m)) return back('erro:saldo_devedor_invalido')
     if (/invalid_amount|amount_required/.test(m)) return back('erro:valor_invalido')
     if (/invalid_term/.test(m)) return back('erro:prazo_invalido')
     return back(classifyDbFeedback(error))

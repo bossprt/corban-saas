@@ -6,7 +6,7 @@ type Supa = Awaited<ReturnType<typeof requireAppContext>>['supabase']
 // What a proposal form offers, in the order the operator chooses (owner request 29/09/2026, ADR-0049):
 // Banco (the bank, or "Promotora - Banco" when sold through a partner promoter) -> Tipo de contrato -> Tabela.
 export type CatalogOrigin = { key: string; label: string }
-export type CatalogType = { id: string; name: string }
+export type CatalogType = { id: string; name: string; key: string }
 export type CatalogTable = { versionId: string; label: string; origin: string; types: string[] }
 export type ProposalCatalog = { origins: CatalogOrigin[]; types: CatalogType[]; tables: CatalogTable[] }
 
@@ -39,7 +39,7 @@ export async function loadProposalCatalog(supabase: Supa, organizationId: string
   const usedTypes = new Set([...tables.values()].flatMap(t => t.types))
   return {
     origins: [...origins].map(([key, label]) => ({ key, label })).sort((a, b) => a.label.localeCompare(b.label, 'pt-BR')),
-    types: (typeRows ?? []).filter(t => usedTypes.has(t.id)).map(t => ({ id: t.id, name: t.name })),
+    types: (typeRows ?? []).filter(t => usedTypes.has(t.id)).map(t => ({ id: t.id, name: t.name, key: t.tech_key })),
     tables: [...tables.values()].sort((a, b) => a.label.localeCompare(b.label, 'pt-BR')),
   }
 }
