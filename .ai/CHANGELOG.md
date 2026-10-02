@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Tabela PROSESP – Pref. Rio Branco – Efetivo (01/10/2026)
+- Adicionado (dados): tabela publicada com vigência 18/06/2026, digital, uma linha só: Novo, 24 a 36 meses, R$ 300 a R$ 15.000, 7% à vista sobre o líquido. Repasse: Balcão 3,5%, Corretor 4%, Parceiro 4%, Call Center 1,75%, Afiliado 0,7%. Coluna "Mensalidade" da planilha ignorada (decisão do dono). Migração `20261002020947_prosesp_rio_branco_table_v1` (md5 conferido); conferido local: R$ 5.000 líquido = R$ 350,00 de comissão.
+
 ### Esteira simples (01/10/2026)
 - Adicionado: Kanban com arrastar e soltar (mouse, teclado e celular) para qualquer coluna, inclusive Paga, Recusada e Cancelada (estas mostram os últimos 7 dias). Soltar em Paga pede só a data (hoje já preenchida).
 - Adicionado: no modo tabela, cada linha tem a lista de etapas e "Salvar".
