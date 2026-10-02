@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import ExcelJS from 'exceljs'
 
 // Contract import with the NASP layout. Needs a local or test database with the bank NASP and its tables
-// (supabase/migrations/20261002052952_nasp_acre_tables_v1.sql run on a company with NASP + Governo do Acre);
+// (supabase/migrations/20261002122145_nasp_acre_tables_v1.sql run on a company with NASP + Governo do Acre);
 // without them the test is skipped. All people and numbers here are made up.
 const email = process.env.E2E_EMAIL
 const password = process.env.E2E_PASSWORD

@@ -1,7 +1,7 @@
--- Contract test for 20261002052952_nasp_acre_tables_v1: the seven NASP - Governo do Acre tables are published with
+-- Contract test for 20261002122145_nasp_acre_tables_v1: the seven NASP - Governo do Acre tables are published with
 -- vigência from 01/01/2026, the commission and payout by group the owner gave, and running it again changes nothing.
 -- One transaction, rolled back. The migration file must be reachable at /tmp/nasp_acre.sql:
---   docker cp supabase/migrations/20261002052952_nasp_acre_tables_v1.sql <db>:/tmp/nasp_acre.sql
+--   docker cp supabase/migrations/20261002122145_nasp_acre_tables_v1.sql <db>:/tmp/nasp_acre.sql
 --   psql -v ON_ERROR_STOP=1 -f tests/security/nasp-acre-tables-contract.sql
 
 begin;
