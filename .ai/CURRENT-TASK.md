@@ -1,14 +1,30 @@
 # CURRENT TASK — CORBAN SaaS (reset de produto)
 
-**Atualização:** 24/09/2026
-**Branch:** `feature/smart-import-xls-pdf`
+**Atualização:** 01/10/2026
+**Branch:** `main` (todas as entregas abaixo mergeadas e aplicadas em produção, md5 das migrations conferido).
 
-**Branch ativa:** `feature/f1-design-system` (a partir de `feature/f0-saneamento`; PR da F0: bossprt/corban-saas#2).
+## Estado (01/10/2026)
+- Fase atual: **validação na operação real da Smart Promotora**. F11 (planos, cobrança, teste grátis, cadastro sozinho) espera essa validação.
+- Entregas recentes (PR em bossprt/corban-saas):
+  - #52 documento na ficha do cliente e no checklist da proposta; #53 arredondamento 3,00000001; #54/#55 tabelas PROSESP e data de vigência ao publicar.
+  - #56 remoção de sobras (3 telas antigas); #57 links de convite/recuperação; #58–#60 acesso da equipe criado pelo admin com e-mail e senha (mínimo 8, troca na primeira entrada desligada por padrão).
+  - #61 registrar recebimento de comissão no contrato; #62/#63 pagar o corretor em um passo, comprovante opcional.
+  - #64 Banco → Tipo de contrato → Tabela, tipo no contrato, IR por origem (campo do dono, padrão 0); #65 checagem de produção (`VALIDACAO-OPERACAO.md`).
+  - #66 saldo devedor, banco e nº do contrato de origem (só registro, não entra no cálculo).
+  - #67 esteira simples: qualquer etapa para qualquer etapa, Kanban arrastável (dnd-kit), lista de etapa na tabela; única trava: contrato Pago com dinheiro movimentado não sai de Paga; tirar de Paga só admin/gerente.
 
-## Estado
-- Auditoria só leitura concluída (ADR-0027). Mapa v2 aprovado: `.ai/MAPA-OPERACAO.md`.
-- Maquete visual aprovada pelo dono (Design canvas privado: dashboard gestor, vendedor mobile, esteira, conciliação).
-- F0 em andamento (execução noturna aprovada, itens 1–7, sem escrita em produção).
+## Pendente — com o dono (validação)
+- Contrato 131259: registrar o recebimento se a comissão caiu (esperado R$ 1.900,00).
+- Um contrato real do início ao fim: Banco → Tipo → Tabela, esteira até Paga, recebimento, pagamento ao corretor.
+- Documentos por banco (Cadastros) e contas bancárias da empresa (Financeiro).
+- Relatório real de banco (à vista e diferido) para testar a importação.
+
+## Pendente — técnico
+- E2E do CRM de vendas quebrado (também no main; a tela funciona). E2E da simulação depende da ordem. Tarefas separadas.
+- Por volta de 27/10/2026: pedir aprovação para apagar os schemas de backup `backup_c4`, `backup_c5`, `backup_c6`.
+- Código legado: `INTEGRATION_WORKER_SECRET` e `CORBAN_ALLOW_LOCAL_PROVIDERS` em `src/lib/preflight.ts` (rota do worker já removida).
+
+## Histórico (mais antigo abaixo)
 
 ## F0 — feito em 24/09/2026 (noite)
 - Divergência real de migrations: **21** migrations aplicadas em produção sem arquivo em nenhuma branch (não 4).
