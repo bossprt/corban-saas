@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Tabelas NASP – Governo do Acre e importação de contratos por planilha (02/10/2026)
+- Adicionado (dados): 7 tabelas NASP – Gov. Acre, todas ativas, vigência 01/01/2026, digitais, uma linha por tabela para toda a faixa de prazo, sem faixa de valor: Temporário 4–7 e Comissionado 4–7 (6%), Temporário 8–18, Comissionado 8–24, Normal Efetivo/Pensionista 24–84 (Novo), REFIN – NORMAL 24–84 (Refinanciamento) e COMPRA NORMAL 24–84 (Compra de Dívida), todas 10%. Juros 0% onde a lista diz 0% e vazio onde diz "—". Repasse (decisão do dono): 10% → Balcão 5, Call Center 2,5, Afiliado 1, Corretor 4, Parceiro 4; 6% → Balcão 3, Call Center 1,5, Afiliado 0,6, Corretor 2, Parceiro 2. Migração `20261002052952_nasp_acre_tables_v1`; contrato SQL `nasp-acre-tables-contract.sql` (10 checagens).
+- Adicionado: tela Esteira → "Importar planilha" (`/app/propostas/importar`) com o layout NASP. Baixar modelo (colunas, listas de Tipo/Etapa/Tabela e aba com as tabelas do banco em vigor) → Conferir (cada linha contra tabelas, faixa de prazo, equipe e clientes; nada gravado) → Importar (só sem erros). Cliente achado pelo CPF ou criado; mesmo banco + ADE, ou sem ADE o mesmo cliente + tabela + prazo + valor, não duplica. Etapa da planilha aplicada pelo mesmo mover da esteira (Paga exige "Pago ao cliente em"). Coluna faltando não recusa; coluna de valor desconhecida recusa; outras colunas desconhecidas são listadas como ignoradas. Sem vendedor a comissão espera o vendedor no contrato, como no cadastro pela tela.
+
 ### Tabela PROSESP – Pref. Rio Branco – Efetivo (01/10/2026)
 - Adicionado (dados): tabela publicada com vigência 18/06/2026, digital, uma linha só: Novo, 24 a 36 meses, R$ 300 a R$ 15.000, 7% à vista sobre o líquido. Repasse: Balcão 3,5%, Corretor 4%, Parceiro 4%, Call Center 1,75%, Afiliado 0,7%. Coluna "Mensalidade" da planilha ignorada (decisão do dono). Migração `20261002020947_prosesp_rio_branco_table_v1` (md5 conferido); conferido local: R$ 5.000 líquido = R$ 350,00 de comissão.
 
