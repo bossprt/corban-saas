@@ -68,3 +68,14 @@ test('table match: exact, by the end of the bank name, ambiguous, none', () => {
   assert.equal(matchTable('COMPRA NORMAL', tables), 'ambiguous')
   assert.equal(matchTable('Legado', tables), 'none')
 })
+
+test('table match: the Governo do Acre name and the Prefeitura name of the same bank stay apart', () => {
+  const tables = [
+    { name: 'NASP - Gov. Acre - Temporário (4 a 7 meses)' },
+    { name: 'NASP - Pref. Rio Branco - Prefeitura Temporário (4 a 7 meses)' },
+    { name: 'NASP - Gov. Acre - Normal - Efetivo / Pensionista' },
+  ]
+  assert.equal(matchTable('Temporário (4 a 7 meses)', tables), tables[0])
+  assert.equal(matchTable('Prefeitura Temporário (4 a 7 meses)', tables), tables[1])
+  assert.equal(matchTable('Normal - Efetivo / Pensionista', tables), tables[2])
+})
