@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
 import { can } from '@/lib/access'
 import { xlsxRows } from '@/lib/commercial-xlsx'
+import { csvRows } from '@/lib/imports/csv'
+import { enrichClient } from '@/lib/imports/client-enrich'
 import { parseMoneyInput } from '@/lib/money-input'
 import {
   CONTRACT_LAYOUTS, MAX_CONTRACT_LINES, matchTable, normalize, parseContractSheet,
@@ -43,11 +45,17 @@ const STAGE_LABEL: Record<string, string> = {
 // Same as a contract typed on the screen: without a seller the commission waits until one is set in the contract.
 const NO_SELLER = 'Sem vendedor: a comissão é calculada quando você informar o vendedor no contrato'
 
+// What the line brings to the client record, in words.
+const clientParts = (l: ContractLine) => [
+  Object.keys(l.client.profile).length ? 'dados pessoais' : '', l.client.address ? 'endereço' : '',
+  l.client.account ? 'conta bancária' : '', l.client.registration ? 'matrícula' : '',
+].filter(Boolean)
+
 const todayBr = () => new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10)
 
 type Resolved = {
   line: ContractLine
-  versionId?: string; tableName?: string; typeId?: string; sellerId?: string | null; stageId?: string; clientId?: string
+  versionId?: string; tableName?: string; typeId?: string; sellerId?: string | null; stageId?: string; clientId?: string; agreementId?: string | null
   status: PreviewLine['status']; messages: string[]
 }
 
@@ -58,14 +66,17 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
   const layout = CONTRACT_LAYOUTS.find(l => l.key === String(formData.get('layout') ?? ''))
   const file = formData.get('file')
   if (!layout) return { result: { ...empty, error: 'Escolha o layout.' }, resolved: [] }
-  if (!(file instanceof File) || file.size === 0) return { result: { ...empty, error: 'Escolha a planilha (.xlsx).' }, resolved: [] }
-  if (!/\.xlsx$/i.test(file.name)) return { result: { ...empty, error: 'A planilha precisa ser .xlsx (Excel).' }, resolved: [] }
+  if (!(file instanceof File) || file.size === 0) return { result: { ...empty, error: 'Escolha a planilha (.xlsx ou .csv).' }, resolved: [] }
+  const isCsv = /\.csv$/i.test(file.name)
+  if (!isCsv && !/\.xlsx$/i.test(file.name)) return { result: { ...empty, error: 'A planilha precisa ser .xlsx (Excel) ou .csv.' }, resolved: [] }
 
   let rows: string[][]
-  try { rows = await xlsxRows(Buffer.from(await file.arrayBuffer()), MAX_CONTRACT_LINES + 2) }
-  catch { return { result: { ...empty, error: 'Não consegui ler a planilha. Salve como .xlsx e tente de novo.' }, resolved: [] } }
+  try {
+    const bytes = Buffer.from(await file.arrayBuffer())
+    rows = isCsv ? csvRows(bytes, MAX_CONTRACT_LINES + 2) : await xlsxRows(bytes, MAX_CONTRACT_LINES + 2)
+  } catch { return { result: { ...empty, error: 'Não consegui ler a planilha. Salve como .xlsx ou .csv e tente de novo.' }, resolved: [] } }
   const today = todayBr()
-  const sheet = parseContractSheet(rows, today)
+  const sheet = parseContractSheet(rows, today, layout)
   const result: ImportResult = {
     fileIssues: sheet.map.issues.map(i => HEADER_MESSAGE[i.code](i.column)),
     ignored: sheet.map.ignored, tooMany: sheet.tooMany, lines: [],
@@ -94,6 +105,18 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
     tables.set(r.version_id, t)
   }
   const tableList = [...tables.values()]
+  // Agreement of each table (its route), for the client's registration (matrícula).
+  const { data: versionRows } = tableList.length
+    ? await supabase.from('product_table_versions').select('id,product_table_id').in('id', tableList.map(t => t.versionId))
+    : { data: [] }
+  const tableIds = [...new Set(((versionRows ?? []) as { product_table_id: string }[]).map(v => v.product_table_id))]
+  const { data: tableRows } = tableIds.length ? await supabase.from('product_tables').select('id,route_id').in('id', tableIds) : { data: [] }
+  const routeIds = [...new Set(((tableRows ?? []) as { route_id: string }[]).map(t => t.route_id))]
+  const { data: routeRows } = routeIds.length ? await supabase.from('organization_product_routes').select('id,org_agreement_id').in('id', routeIds) : { data: [] }
+  const agreementOfRoute = new Map(((routeRows ?? []) as { id: string; org_agreement_id: string | null }[]).map(r => [r.id, r.org_agreement_id]))
+  const routeOfTable = new Map(((tableRows ?? []) as { id: string; route_id: string }[]).map(t => [t.id, t.route_id]))
+  const agreementOfVersion = new Map(((versionRows ?? []) as { id: string; product_table_id: string }[])
+    .map(v => [v.id, agreementOfRoute.get(routeOfTable.get(v.product_table_id) ?? '') ?? null]))
   // Term ranges of each line of those tables, when this user can read them; otherwise the bank's own check applies.
   const { data: conds } = tableList.length
     ? await supabase.from('commercial_conditions').select('product_table_version_id,contract_type_id,term_min,term_max').in('product_table_version_id', tableList.map(t => t.versionId))
@@ -138,7 +161,7 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
       if (t === 'none') messages.push(`Tabela "${line.table}" não encontrada no ${bank.name}`)
       else if (t === 'ambiguous') messages.push(`Tabela "${line.table}" bate com mais de uma tabela do ${bank.name}`)
       else {
-        r.versionId = t.versionId; r.tableName = t.name
+        r.versionId = t.versionId; r.tableName = t.name; r.agreementId = agreementOfVersion.get(t.versionId) ?? null
         if (line.typeKey) {
           const id = typeByKey.get(line.typeKey)
           if (!id || !t.types.includes(id)) messages.push('Tipo de contrato não existe nessa tabela')
@@ -170,6 +193,9 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
     if ((line.ade && knownAde.has(line.ade)) || (!line.ade && r.clientId && existingKeys.has(sameKey(r.clientId, r.versionId!, line.term, line.released, line.requested)))) {
       r.status = 'exists'; messages.push('Já cadastrado no Corban (não será alterado)')
     } else if (!r.sellerId) messages.push(NO_SELLER)
+    const parts = clientParts(line)
+    if (parts.length) messages.push(`Ficha do cliente: ${parts.join(', ')} (só preenche o que estiver vazio)`)
+    messages.push(...line.warnings)
     return r
   })
   result.lines = resolved.map(({ line: l, tableName, status, messages }) => ({
@@ -207,8 +233,17 @@ export async function importContracts(formData: FormData): Promise<ImportResult>
   const done = { created: 0, existed: 0, failed: 0 }
   for (const [i, r] of resolved.entries()) {
     const out = result.lines[i]
-    if (r.status === 'exists') { done.existed++; continue }
     const l = r.line
+    // A contract already in Corban is not changed; its client record still gets the empty fields filled.
+    const enrich = async (clientId: string) => {
+      const { filled, warnings } = await enrichClient(supabase, organization.id, clientId, l.client, r.agreementId ?? null)
+      return [...(filled.length ? [`Ficha do cliente completada: ${filled.join(', ')}`] : []), ...warnings, ...l.warnings]
+    }
+    if (r.status === 'exists') {
+      done.existed++
+      out.messages = ['Já cadastrado no Corban (contrato não alterado)', ...(r.clientId ? await enrich(r.clientId) : [])]
+      continue
+    }
     const { data: client, error: clientError } = await supabase.rpc('upsert_client', {
       p_org: organization.id, p_cpf: l.cpf, p_full_name: l.name || null, p_phone: l.phone || null, p_email: l.email || null, p_source: 'import',
     })
@@ -226,9 +261,9 @@ export async function importContracts(formData: FormData): Promise<ImportResult>
     })
     const row = (Array.isArray(data) ? data[0] : data) as { proposal_id: string; duplicate: boolean } | null
     if (error || !row) { done.failed++; out.status = 'error'; out.messages = [rpcMessage(error?.message)]; continue }
-    if (row.duplicate) { done.existed++; out.status = 'exists'; out.messages = ['Já cadastrado no Corban (não foi alterado)']; continue }
+    if (row.duplicate) { done.existed++; out.status = 'exists'; out.messages = ['Já cadastrado no Corban (contrato não alterado)', ...(await enrich(clientId))]; continue }
     done.created++
-    const tail = r.sellerId ? [] : [NO_SELLER]
+    const tail = [...(r.sellerId ? [] : [NO_SELLER]), ...(await enrich(clientId))]
     out.messages = ['Cadastrado', ...tail]
     const initial = l.ade ? 'submitted' : 'digitization_queue'
     if (r.stageId && l.stage !== initial) {
