@@ -26,7 +26,35 @@ const COLUMNS: [string, string][] = [
   ['Telefone', ''],
   ['E-mail', ''],
   ['Observação', 'Vai para o histórico quando a etapa muda.'],
+  // Client record (optional): fills only empty fields of the client; a bad value is skipped, never refusing the contract.
+  ['WhatsApp', 'Ficha do cliente. Com DDD.'],
+  ['Data de nascimento', 'Ficha do cliente. dd/mm/aaaa.'],
+  ['Sexo', 'Ficha do cliente.'],
+  ['Estado civil', 'Ficha do cliente.'],
+  ['Naturalidade', 'Ficha do cliente. Cidade - UF.'],
+  ['Nome da mãe', 'Ficha do cliente.'],
+  ['Nome do pai', 'Ficha do cliente.'],
+  ['RG', 'Ficha do cliente.'],
+  ['RG órgão emissor', 'Ficha do cliente.'],
+  ['UF do RG', 'Ficha do cliente.'],
+  ['Data de expedição', 'Ficha do cliente. Data de expedição do RG.'],
+  ['CEP', 'Endereço do cliente (gravado se ele ainda não tiver endereço).'],
+  ['Logradouro', ''],
+  ['Número', ''],
+  ['Complemento', ''],
+  ['Bairro', ''],
+  ['Cidade', ''],
+  ['UF', ''],
+  ['Código do banco', 'Conta do cliente para crédito. Ex.: 001.'],
+  ['Nome do banco', ''],
+  ['Agência', ''],
+  ['Conta', ''],
+  ['Dígito da conta', ''],
+  ['Tipo de conta', ''],
+  ['Matrícula', 'Matrícula do cliente no convênio da tabela.'],
+  ['Secretaria', 'Órgão onde o cliente trabalha.'],
 ]
+const TEXT_COLUMNS = ['CPF *', 'Nº contrato/ADE', 'Contrato de origem', 'WhatsApp', 'Telefone', 'RG', 'CEP', 'Código do banco', 'Agência', 'Conta', 'Dígito da conta', 'Matrícula']
 
 export async function GET(request: Request) {
   const { supabase, access, organization } = await requireAppContext()
@@ -57,19 +85,23 @@ export async function GET(request: Request) {
   ws.getColumn(3).width = 44
   ws.views = [{ state: 'frozen', ySplit: 1 }]
   // Text columns stay text, so Excel keeps the zeros of a CPF or an ADE.
-  for (const c of [1, 8, 14]) ws.getColumn(c).numFmt = '@'
+  COLUMNS.forEach(([h], i) => { if (TEXT_COLUMNS.includes(h)) ws.getColumn(i + 1).numFmt = '@' })
+  const col = (h: string) => COLUMNS.findIndex(([x]) => x === h) + 1
   const list = (col: number, formula: string) => {
     for (let r = 2; r <= 501; r++) ws.getCell(r, col).dataValidation = { type: 'list', allowBlank: true, formulae: [formula] }
   }
-  list(9, '"novo,refin,compra,portabilidade"')
-  list(10, '"fila,digitando,enviada,pendencia,aprovada,paga,recusada,cancelada"')
+  list(col('Tipo'), '"novo,refin,compra,portabilidade"')
+  list(col('Etapa'), '"fila,digitando,enviada,pendencia,aprovada,paga,recusada,cancelada"')
+  list(col('Sexo'), '"masculino,feminino"')
+  list(col('Estado civil'), '"solteiro,casado,união estável,divorciado,separado,viúvo"')
+  list(col('Tipo de conta'), '"corrente,poupança,salário,pagamento"')
 
   const ts = wb.addWorksheet('Tabelas')
   ts.addRow([`Tabelas ${layout.bankName} em vigor`])
   ts.getRow(1).font = { bold: true }
   for (const t of tables) ts.addRow([t])
   ts.getColumn(1).width = 52
-  if (tables.length) list(3, `Tabelas!$A$2:$A$${tables.length + 1}`)
+  if (tables.length) list(col('Tabela *'), `Tabelas!$A$2:$A$${tables.length + 1}`)
 
   const buf = await wb.xlsx.writeBuffer()
   return new Response(buf as ArrayBuffer, {
