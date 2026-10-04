@@ -180,14 +180,21 @@ export function parseContractSheet(rows: string[][], today: string) {
   return { map, lines, tooMany }
 }
 
-// Match the sheet's "Tabela" against the bank's table names: exact name, or a name that ends with it
-// ("NASP - Gov. Acre - Temporário (4 a 7 meses)" for "Temporário (4 a 7 meses)"). Ambiguous matches are refused.
+// Match the sheet's "Tabela" against the bank's table names ("NASP - Gov. Acre - Temporário (4 a 7 meses)" for
+// "Temporário (4 a 7 meses)"). Ambiguous matches are refused.
 export function matchTable<T extends { name: string }>(sheetName: string, tables: T[]): T | 'none' | 'ambiguous' {
   const want = normalize(sheetName)
-  const exact = tables.filter(t => normalize(t.name) === want)
-  if (exact.length === 1) return exact[0]
-  if (exact.length > 1) return 'ambiguous'
-  const tail = tables.filter(t => normalize(t.name).endsWith(` ${want}`) || normalize(t.name).endsWith(`-${want}`))
-  if (tail.length === 1) return tail[0]
-  return tail.length > 1 ? 'ambiguous' : 'none'
+  // Tiers, first hit wins: the full name; the last " - " part of the name ("Temporário (4 a 7 meses)" is the Governo do
+  // Acre table, not "Prefeitura Temporário (4 a 7 meses)"); any name ending with it.
+  const tiers: ((n: string) => boolean)[] = [
+    n => n === want,
+    n => n.split(' - ').at(-1) === want,
+    n => n.endsWith(` ${want}`) || n.endsWith(`-${want}`),
+  ]
+  for (const hit of tiers) {
+    const found = tables.filter(t => hit(normalize(t.name)))
+    if (found.length === 1) return found[0]
+    if (found.length > 1) return 'ambiguous'
+  }
+  return 'none'
 }
