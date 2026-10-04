@@ -16,7 +16,7 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 ## [Unreleased]
 
 ### Tabelas NASP – Prefeitura de Rio Branco (03/10/2026)
-- Adicionado (dados): 4 tabelas NASP – Pref. Rio Branco, ativas, digitais, vigência 01/01/2026, cada uma com linhas Novo e Refinanciamento, juros 0%, sem faixa de valor, comissão à vista sobre o líquido: Prefeitura Temporário 4–7 e Prefeitura Comissionado 4–7 (6%), Prefeitura Temporário 8–18 e Prefeitura Comissionado 8–24 (10%). Repasse igual ao das NASP – Gov. Acre (decisão do dono). Migração `20261004002836_nasp_rio_branco_tables_v1`; contrato SQL `nasp-rio-branco-tables-contract.sql` (11 checagens).
+- Adicionado (dados): 4 tabelas NASP – Pref. Rio Branco, ativas, digitais, vigência 01/01/2026, cada uma com linhas Novo e Refinanciamento, juros 0%, sem faixa de valor, comissão à vista sobre o líquido: Prefeitura Temporário 4–7 e Prefeitura Comissionado 4–7 (6%), Prefeitura Temporário 8–18 e Prefeitura Comissionado 8–24 (10%). Repasse igual ao das NASP – Gov. Acre (decisão do dono). Migração `20261004004850_nasp_rio_branco_tables_v1` aplicada em produção (md5 conferido, 4 tabelas e 8 linhas conferidas); contrato SQL `nasp-rio-branco-tables-contract.sql` (11 checagens).
 - Alterado: na importação de contratos, a coluna Tabela casa primeiro com o nome inteiro, depois com a última parte do nome ("Temporário (4 a 7 meses)" = Gov. Acre; "Prefeitura Temporário (4 a 7 meses)" = Rio Branco), depois com o final do nome.
 
 ### Tabelas NASP – Governo do Acre e importação de contratos por planilha (02/10/2026)

@@ -1,8 +1,8 @@
--- Contract test for 20261004002836_nasp_rio_branco_tables_v1: the four NASP - Prefeitura de Rio Branco tables are
+-- Contract test for 20261004004850_nasp_rio_branco_tables_v1: the four NASP - Prefeitura de Rio Branco tables are
 -- published with vigência from 01/01/2026, one Novo and one Refinanciamento line each, the commission (net amount) and
 -- payout by group of the Governo do Acre tables, and running it again changes nothing.
 -- One transaction, rolled back. The migration file must be reachable at /tmp/nasp_rb.sql:
---   docker cp supabase/migrations/20261004002836_nasp_rio_branco_tables_v1.sql <db>:/tmp/nasp_rb.sql
+--   docker cp supabase/migrations/20261004004850_nasp_rio_branco_tables_v1.sql <db>:/tmp/nasp_rb.sql
 --   psql -v ON_ERROR_STOP=1 -f tests/security/nasp-rio-branco-tables-contract.sql
 
 begin;
