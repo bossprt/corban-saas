@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### NASP – Governo do Acre: Refinanciamento com a comissão do Novo (05/10/2026)
+- **Adicionado:** as 4 tabelas Temporário e Comissionado do NASP Gov. Acre ganham a linha Refinanciamento igual à de Novo (6% ou 10% à vista no líquido, mesmo repasse por grupo), numa vigência v2 a partir de 01/01/2026; a v1 fica no histórico. Efetivo (Normal/REFIN/COMPRA) e Prefeitura de Rio Branco já tinham Refinanciamento e não mudam.
+- Migration `20261005235551_nasp_acre_refin_lines_v1` (aplicada em produção); teste de contrato `tests/security/nasp-acre-refin-contract.sql`.
+
 ### Importação PROSESP: PROPOSTA vira a ADE (05/10/2026)
 - **Alterado:** no layout PROSESP (WorkBank), a coluna PROPOSTA passa a ser a ADE e CONTRATO vai para a observação. O relatório de comissão da PROSESP ("Acerto da Produção") identifica o contrato pela PROPOSTA; com a ADE pelo CONTRATO a conferência não casava sozinha.
 - **Dados:** migration `20261005224329_prosesp_workbank_proposal_numbers_v1` grava a PROPOSTA como segundo número (identidade) dos 10 contratos PROSESP importados em 05/10/2026. Só acrescenta; nada é alterado ou apagado.
