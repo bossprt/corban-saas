@@ -1,4 +1,4 @@
--- Contract test for 20260926161438_contract_changes_v1 (part C2, ADR-0039) and 20261005_payout_override_admin_only_v1:
+-- Contract test for 20260926161438_contract_changes_v1 (part C2, ADR-0039) and 20261005204135_payout_override_admin_only_v1:
 -- payout change per commission type (owner only since 05/10/2026, with reason, never above the receipt), edits with history and recalculation (also after paid, owner or
 -- manager with reason), notes, what the seller sees, and the lock once the seller received the commission.
 -- Local test company: table v2 (6% à vista + 14% diferido on the gross), group Ouro (3% / 7%), seller bound to vendedor@.
