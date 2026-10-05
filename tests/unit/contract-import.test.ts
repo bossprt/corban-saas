@@ -188,17 +188,23 @@ test('PROSESP layout reads the WorkBank report: header under the title row, mone
   assert.ok(parseContractSheet(prosespSheet(prosespRow()), TODAY).map.issues.length > 0)
 })
 
-test('PROSESP lines: cancelled, refin, product not in the list kept as written', () => {
+test('PROSESP lines: cancelled, refin, product not in the list kept as written, CR CLIENTE is paid', () => {
   const prosesp = CONTRACT_LAYOUTS.find(l => l.key === 'prosesp')!
   const { lines } = parseContractSheet(prosespSheet(
     prosespRow({ 'SITUAÇÃO': 'CANCELADA', CONTRATO: '' }),
     prosespRow({ TIPO: 'REFINANCIAMENTO', PRODUTO: 'GOV. AC TEMPORARIO', PRAZO: '8' }),
     prosespRow({ PRODUTO: 'OUTRO PRODUTO' }),
+    prosespRow({ 'SITUAÇÃO': 'CR CLIENTE' }),
+    prosespRow({ 'SITUAÇÃO': 'PENDENTE' }),
   ), TODAY, prosesp)
+  assert.equal(lines[3].stage, 'paid')
+  assert.equal(lines[3].paidOn, '2026-09-22')
+  assert.deepEqual(lines[3].issues, [])
+  assert.equal(lines[4].stage, 'pending_external')
   assert.equal(lines[0].stage, 'cancelled')
   assert.equal(lines[0].ade, '')
   assert.equal(lines[1].typeKey, 'refinanciamento')
   assert.equal(lines[1].table, 'PROSESP - Governo do Acre - Temporário')
   assert.equal(lines[2].table, 'OUTRO PRODUTO')
-  assert.deepEqual(lines.map(l => l.line), [3, 4, 5])
+  assert.deepEqual(lines.map(l => l.line), [3, 4, 5, 6, 7])
 })
