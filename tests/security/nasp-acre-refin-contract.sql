@@ -1,8 +1,8 @@
--- Contract test for 20261006_nasp_acre_refin_lines_v1: the four NASP Governo do Acre Temporário and Comissionado tables
+-- Contract test for 20261005235551_nasp_acre_refin_lines_v1: the four NASP Governo do Acre Temporário and Comissionado tables
 -- get a Refinanciamento line equal to the Novo line (component and payout per group), in a v2 published from
 -- 01/01/2026; v1 stays as superseded history; running it again adds nothing.
 -- Needs the local NASP Acre fixture (bank, agreement, groups and 20261002122145_nasp_acre_tables_v1). Rolled back.
---   docker cp supabase/migrations/20261006_nasp_acre_refin_lines_v1.sql <db>:/tmp/nasp_acre_refin.sql
+--   docker cp supabase/migrations/20261005235551_nasp_acre_refin_lines_v1.sql <db>:/tmp/nasp_acre_refin.sql
 --   psql -v ON_ERROR_STOP=1 -f tests/security/nasp-acre-refin-contract.sql
 
 begin;
