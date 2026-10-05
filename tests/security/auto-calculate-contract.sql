@@ -37,7 +37,8 @@ insert into made select 'fail', d.proposal_id from public.create_direct_proposal
   (select tv from ids), (select seller from ids), 10000, 9500, 250, 150, 'ADE-AUTO-2', 'submitted') d;
 set constraints all immediate;
 insert into results select 'the seller sees their commission right away',
-  exists (select 1 from public.proposal_commission_lines l where l.line_kind = 'originator' and l.component_key = 'upfront' and l.amount = 300.00);
+  exists (select 1 from public.proposals_v2 p, jsonb_array_elements(public.proposal_commission_mine(p.id)->'payable') x
+          where x->>'component_key' = 'upfront' and (x->>'amount')::numeric = 300.00);
 insert into results select 'a failed calculation is in the history with its reason',
   exists (select 1 from public.contract_events e where e.proposal_id = (select id from made where label = 'fail') and e.kind = 'calc_failed' and e.detail->>'code' = 'condition_not_found');
 reset role;

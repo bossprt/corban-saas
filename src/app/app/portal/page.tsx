@@ -3,14 +3,14 @@ import { redirect } from 'next/navigation'
 import { FilePlus2 } from 'lucide-react'
 import { Badge, ButtonLink, Card, CardHeader, PageHeader, type Tone } from '@/components/ui'
 import { requireAppContext } from '@/lib/appContext'
-import { add, fromDecimalString, mul, toDecimalString, type Rational } from '@/lib/commission/money'
+import { add, fromDecimalString, toDecimalString, type Rational } from '@/lib/commission/money'
 import { proposalStatusLabel } from '@/lib/operational'
 import { isPortalUser, SUBMISSION_LABEL } from '@/lib/portal'
 import { brlText } from '@/lib/receipts/format'
 
 type Submission = { proposal_id: string; status: string; decision_reason: string | null; created_at: string }
 type Proposal = { id: string; status: string; customer_snapshot: { full_name?: string } | null; commercial_snapshot: { bank?: string; table?: string } | null; requested_amount: string | null; released_amount: string | null; term: number | null }
-type Mine = { mine?: boolean; lines?: { amount: string; multiplier: number }[] }
+type Mine = { mine?: boolean; payable?: { amount: string }[] }
 type Summary = { balance: string; available: string; model: string }
 const TONE: Record<string, Tone> = { pending: 'pending', validated: 'received', rejected: 'reversed' }
 const ZERO = fromDecimalString('0')
@@ -31,12 +31,12 @@ export default async function PortalHomePage() {
     : { data: [] as Proposal[] }
   const proposals = new Map(((proposalRows ?? []) as Proposal[]).map(p => [p.id, p]))
 
-  // Expected earnings: my own share of the validated proposals (the calculation is frozen on each proposal).
+  // Expected earnings: what I will receive on the validated proposals (the payable amount, after any change by the owner).
   const validated = subs.filter(s => s.status === 'validated').slice(0, 50)
   const shares = await Promise.all(validated.map(async s => {
     const { data } = await supabase.rpc('proposal_commission_mine', { p_proposal: s.proposal_id })
     const mine = data as Mine | null
-    return (mine?.lines ?? []).reduce((acc, l) => add(acc, mul(fromDecimalString(String(l.amount)), fromDecimalString(String(l.multiplier)))), ZERO as Rational)
+    return (mine?.payable ?? []).reduce((acc, x) => add(acc, fromDecimalString(String(x.amount))), ZERO as Rational)
   }))
   const expected = shares.reduce((acc, v) => add(acc, v), ZERO as Rational)
   const account = ((summaryRows ?? []) as Summary[])[0]

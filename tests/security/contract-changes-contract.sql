@@ -1,5 +1,5 @@
--- Contract test for 20260926161438_contract_changes_v1 (part C2, ADR-0039): payout change per commission type (owner
--- or manager, with reason, never above the receipt), edits with history and recalculation (also after paid, owner or
+-- Contract test for 20260926161438_contract_changes_v1 (part C2, ADR-0039) and 20261005_payout_override_admin_only_v1:
+-- payout change per commission type (owner only since 05/10/2026, with reason, never above the receipt), edits with history and recalculation (also after paid, owner or
 -- manager with reason), notes, what the seller sees, and the lock once the seller received the commission.
 -- Local test company: table v2 (6% à vista + 14% diferido on the gross), group Ouro (3% / 7%), seller bound to vendedor@.
 -- One transaction, rolled back.  psql -v ON_ERROR_STOP=1 -f tests/security/contract-changes-contract.sql
@@ -12,6 +12,7 @@ select '00000000-0000-4000-8000-00000000c0b1'::uuid as org,
        '00000000-0000-4000-8000-0000000c0801'::uuid as seller,
        (select id from auth.users where email = 'admin@corban-teste.local') as admin_user,
        (select id from auth.users where email = 'supervisor@corban-teste.local') as sup_user,
+       (select id from auth.users where email = 'financeiro@corban-teste.local') as fin_user,
        (select id from auth.users where email = 'vendedor@corban-teste.local') as v1;
 grant select on ids to authenticated;
 create temp table results (check_name text, ok boolean);
@@ -51,6 +52,25 @@ insert into results select 'by the rule: 300,00 of the 600,00 à vista', pg_temp
 select public.set_payout_override((select id from made where label = 'p'), 'upfront', 'percentage', '2', 'empresa lucra mais');
 insert into results select 'payout change: 2% of 10.000,00 = 200,00, rule 300,00 kept',
   (select payable = 200.00 and rule_amount = 300.00 and overridden and value_kind = 'percentage' and value = 2 from public.contract_payout((select id from made where label = 'p')) where component_key = 'upfront');
+reset role;
+
+-- Only the owner knows a payout was changed (05/10/2026): another finance role sees the payable amount alone, no
+-- rule behind it, no flag, no change record, no history entry, and cannot change it.
+select pg_temp.act_as((select fin_user from ids));
+set local role authenticated;
+insert into results select 'finance (not admin) sees the payable as the amount, no rule and no flag',
+  (select payable = 200.00 and rule_amount = 200.00 and not overridden and value_kind is null and value is null from public.contract_payout((select id from made where label = 'p')) where component_key = 'upfront');
+insert into results select 'finance (not admin) totals hide the change',
+  (select rule_amount = payable and not overridden from public.contract_payout_totals((select org from ids)) where proposal_id = (select id from made where label = 'p'));
+insert into results select 'finance (not admin) reads no payout change nor its history',
+  not exists (select 1 from public.contract_payout_overrides) and not exists (select 1 from public.contract_events where kind like 'payout_override%');
+insert into results select 'finance (not admin) cannot change the payout',
+  pg_temp.err(format('select public.set_payout_override(%L, %L, %L, %L, %L)', (select id from made where label = 'p'), 'upfront', 'percentage', '1', 'tentativa')) = 'not_authorized';
+reset role;
+select pg_temp.act_as((select admin_user from ids));
+set local role authenticated;
+insert into results select 'the owner reads the change and its history',
+  exists (select 1 from public.contract_payout_overrides) and exists (select 1 from public.contract_events where kind = 'payout_override');
 insert into results select 'other types keep the rule', (select payable = rule_amount and not overridden from public.contract_payout((select id from made where label = 'p')) where component_key = 'deferred');
 insert into results select 'payout above the receipt refused',
   pg_temp.err(format('select public.set_payout_override(%L, %L, %L, %L, %L)', (select id from made where label = 'p'), 'upfront', 'fixed_brl', '700', 'mais que recebe')) = 'override_exceeds_received';
@@ -70,6 +90,9 @@ select pg_temp.act_as((select v1 from ids));
 set local role authenticated;
 insert into results select 'the seller sees the payable amount',
   (select (x->>'amount')::numeric from jsonb_array_elements(public.proposal_commission_mine((select id from made where label = 'p'))->'payable') x where x->>'component_key' = 'upfront') = 200.00;
+insert into results select 'the seller never gets the amount by the rule',
+  public.proposal_commission_mine((select id from made where label = 'p'))->'lines' is null
+  and not exists (select 1 from public.proposal_commission_lines);
 insert into results select 'the seller does not see payout changes',
   not exists (select 1 from public.contract_payout_overrides) and not exists (select 1 from public.contract_events where kind like 'payout%');
 insert into results select 'the seller sees the note', exists (select 1 from public.contract_events where kind = 'note' and reason = 'Cliente pediu retorno amanhã.');

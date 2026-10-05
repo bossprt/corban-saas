@@ -33,8 +33,9 @@ type Calc = { id: string; mode?: string; tax_rate_pct?: string; tax_exempt?: boo
 type Mine = { calculated: boolean; calculated_at?: string; mine?: boolean; payable?: { component_key: string; amount: string }[] }
 
 // The contract commission (parts C1/C2). Finance sees, per commission type, what the company receives, tax, IR, the
-// seller by the rule and what is payable (the owner's or a manager's change, with reason), supervisor, manager and the
-// margin. Anyone else sees only what they receive, on their own contracts (ADR-0031).
+// seller's payable, supervisor, manager and the margin. Only the owner (Administrador) changes the seller's payout and
+// sees that it was changed: the amount by the rule, the change and the company's gain (owner request 05/10/2026).
+// Anyone else sees only what they receive, on their own contracts (ADR-0031).
 export async function CommissionCard({ supabase, access, proposalId, closed, canOverride, owner = false }: { supabase: Supa; access: Access | null; proposalId: string; closed: boolean; canOverride: boolean; owner?: boolean }) {
   const finance = can(access, 'financeiro.view')
   let calc: Calc | null = null
@@ -93,7 +94,7 @@ export async function CommissionCard({ supabase, access, proposalId, closed, can
   return (
     <Card id="comissao" className="mt-4">
       <CardHeader
-        title={<span className="flex flex-wrap items-center gap-2">Comissão {calc?.mode && <Badge tone="brand">{MODE_LABEL[calc.mode] ?? calc.mode}</Badge>}{finance && calc?.tax_exempt && <Badge tone="received">Sem imposto</Badge>}{anyOverride && <Badge tone="pending">Repasse alterado</Badge>}</span>}
+        title={<span className="flex flex-wrap items-center gap-2">Comissão {calc?.mode && <Badge tone="brand">{MODE_LABEL[calc.mode] ?? calc.mode}</Badge>}{finance && calc?.tax_exempt && <Badge tone="received">Sem imposto</Badge>}{owner && anyOverride && <Badge tone="pending">Repasse alterado</Badge>}</span>}
         action={canCalc ? (
           <form action={calculateCommission}>
             <input type="hidden" name="proposal_id" value={proposalId} />
@@ -124,7 +125,7 @@ export async function CommissionCard({ supabase, access, proposalId, closed, can
               <table className="w-full min-w-[760px] text-left text-[13px]">
                 <thead className="text-xs text-muted">
                   <tr><th className="py-2 pr-3 font-medium">Tipo</th><th className={th}>Empresa recebe</th><th className={th}>Imposto</th>{showIr && <th className={th}>IR retido</th>}
-                    {showSup && <th className={th}>Supervisor</th>}{showMgr && <th className={th}>Gerente</th>}<th className={th}>Vendedor pela regra</th><th className={th}>Vendedor a pagar</th><th className={th}>Margem</th></tr>
+                    {showSup && <th className={th}>Supervisor</th>}{showMgr && <th className={th}>Gerente</th>}{owner && <th className={th}>Vendedor pela regra</th>}<th className={th}>{owner ? 'Vendedor a pagar' : 'Vendedor'}</th><th className={th}>Margem</th></tr>
                 </thead>
                 <tbody>
                   {rows.map(r => (
@@ -132,7 +133,7 @@ export async function CommissionCard({ supabase, access, proposalId, closed, can
                       <td className="py-2 pr-3 text-ink">{COMPONENT_LABEL[r.p.component_key] ?? r.p.component_key}</td>
                       <td className={td}>{money(r.received)}</td><td className={td}>{money(r.tax)}</td>{showIr && <td className={td}>{money(r.ir)}</td>}
                       {showSup && <td className={td}>{money(r.supervisor)}</td>}{showMgr && <td className={td}>{money(r.manager)}</td>}
-                      <td className={`${td} ${r.p.overridden ? 'text-muted line-through' : ''}`}>{money(r.rule)}</td>
+                      {owner && <td className={`${td} ${r.p.overridden ? 'text-muted line-through' : ''}`}>{money(r.rule)}</td>}
                       <td className={`${td} font-medium text-ink`}>{money(r.payable)}{r.p.overridden && <span className="block text-[11px] font-normal text-muted">{r.p.value_kind === 'fixed_brl' ? 'valor fixo' : `${pctBr(r.p.value)}% da base`}</span>}</td>
                       <td className={`${td} ${toDecimalString(r.margin, 2).startsWith('-') ? 'text-[#B91C1C]' : 'text-ink'}`}>{money(r.margin)}</td>
                     </tr>
@@ -141,12 +142,12 @@ export async function CommissionCard({ supabase, access, proposalId, closed, can
                     <td className="py-2 pr-3 text-ink">Total do contrato</td>
                     <td className={td}>{money(sumRows('received'))}</td><td className={td}>{money(sumRows('tax'))}</td>{showIr && <td className={td}>{money(sumRows('ir'))}</td>}
                     {showSup && <td className={td}>{money(sumRows('supervisor'))}</td>}{showMgr && <td className={td}>{money(sumRows('manager'))}</td>}
-                    <td className={td}>{money(sumRows('rule'))}</td><td className={td}>{money(sumRows('payable'))}</td><td className={td}>{money(sumRows('margin'))}</td>
+                    {owner && <td className={td}>{money(sumRows('rule'))}</td>}<td className={td}>{money(sumRows('payable'))}</td><td className={td}>{money(sumRows('margin'))}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
-            {anyOverride && <p className="mt-2 text-[13px] text-ink-soft">Ganho da empresa com a alteração do repasse: <strong className="text-ink">{money(sumRows('gain'))}</strong></p>}
+            {owner && anyOverride && <p className="mt-2 text-[13px] text-ink-soft">Ganho da empresa com a alteração do repasse: <strong className="text-ink">{money(sumRows('gain'))}</strong></p>}
             {credit && (
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-line px-4 py-3 text-sm">
                 <span className="flex flex-wrap items-center gap-2">Repasse do vendedor:

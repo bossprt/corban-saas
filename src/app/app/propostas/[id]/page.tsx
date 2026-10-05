@@ -90,7 +90,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
       {proposal.formalization === 'physical' && <PhysicalCard proposalId={proposal.id} canEdit={can(access, 'esteira.edit')} p={{
         received_at: proposal.physical_received_at, received_by: proposal.physical_received_by, sent_at: proposal.physical_sent_at,
         sent_by: proposal.physical_sent_by, bank_at: proposal.physical_bank_at, bank_by: proposal.physical_bank_by }} />}
-      <CommissionCard supabase={supabase} access={access} proposalId={proposal.id} closed={closed} canOverride={manager} owner={atLeast(membership.role, 'admin')} />
+      <CommissionCard supabase={supabase} access={access} proposalId={proposal.id} closed={closed} canOverride={atLeast(membership.role, 'admin')} owner={atLeast(membership.role, 'admin')} />
 
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
         <Card>
