@@ -15,6 +15,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Importação de contratos: layout PROSESP (relatório WorkBank) (05/10/2026)
+- **Adicionado:** layout "PROSESP (WorkBank)" na importação de contratos. Lê o relatório "Gestão de Créditos" como vem: aceita a linha de título acima do cabeçalho; PRODUTO cortado em 20 caracteres vira o nome da tabela PROSESP; CONTRATO é a ADE; PROPOSTA vai para a observação; OPERAÇÃO (única data do relatório) vale como "Pago ao cliente em"; REPASSE, COMISSÃO, FÍSICO, BANCO, DIGITADOR e AGENTE são ignorados de propósito (vendedor se informa no contrato).
+- **Alterado:** a etapa "CONCRETIZADO/CONCRETIZADA" passa a ser lida como Pago em qualquer layout; o cabeçalho pode estar em qualquer uma das 5 primeiras linhas.
+- Sem migration. Testes unitários com valores fictícios.
+
 ### Importação de contratos: arquivo da NASP direto (.csv) e ficha do cliente (03/10/2026)
 - Adicionado: a importação aceita .csv (";" ou ",", UTF-8 ou Windows-1252) além de .xlsx. O layout NASP conhece as colunas do relatório "contratos pagos" da NASP: Operação → tipo, Fase (credito_liberado = Paga), Data da liberação → pago ao cliente em, Qtd parcelas, Valor líquido pago / Valor bruto liberado, Agente → vendedor, Saldo por dentro / Quitação externa → saldo devedor; colunas de valor que não usamos (comissão, mensalidade, IOF, valor final) ficam ignoradas de propósito e listadas na tela.
 - Adicionado: a planilha completa a ficha do cliente — dados pessoais (nascimento, sexo, estado civil, naturalidade, mãe, pai, RG, órgão, UF, expedição, WhatsApp), endereço, conta bancária e matrícula (no convênio da tabela). Só preenche o que estiver vazio; endereço só se o cliente não tiver; conta e matrícula só se ainda não existirem. Valor ruim nesses campos vira aviso, nunca recusa o contrato. Contrato já existente não muda, mas a ficha do cliente é completada. O modelo para baixar ganhou essas colunas (opcionais).

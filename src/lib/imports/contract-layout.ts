@@ -21,6 +21,8 @@ export type ContractLayout = {
   key: string; label: string; bankName: string
   // The layout's own column names (after normalize): a field, or 'ignore' for a column it knows and does not use.
   columns?: Record<string, ContractField | 'ignore'>
+  // The bank's own product names (after normalize) for the company's table names, when the export shortens them.
+  tables?: Record<string, string>
 }
 
 // The NASP contract export ("contratos pagos"), as the bank sends it (owner request 03/10/2026).
@@ -43,7 +45,27 @@ const NASP_COLUMNS: Record<string, ContractField | 'ignore'> = {
   'mensalidade e migracao': 'ignore', 'telefone conjuge': 'ignore',
 }
 
-export const CONTRACT_LAYOUTS: ContractLayout[] = [{ key: 'nasp', label: 'NASP', bankName: 'NASP', columns: NASP_COLUMNS }]
+// The PROSESP report from WorkBank ("Gestão de Créditos", owner request 05/10/2026). A title row sits above the header.
+// "Operação" is the operation date: it is the only date in the report, so it stands for "Pago ao cliente em".
+// "Digitador" is a WorkBank login and "Agente" the company itself, not the team's seller: both are left out, and the
+// seller is set in the contract. "Proposta" (WorkBank number) goes to the note; "Contrato" is the ADE.
+const PROSESP_COLUMNS: Record<string, ContractField | 'ignore'> = {
+  banco: 'ignore', operacao: 'paidOn', proposta: 'note', produto: 'table', bruto: 'requested', liquido: 'released',
+  repasse: 'ignore', 'vr. parcela': 'installment', fisico: 'ignore', comissao: 'ignore', digitador: 'ignore', agente: 'ignore',
+}
+// WorkBank cuts the product name at 20 characters ("PREF. RIO BRANCO EFE").
+const PROSESP_TABLES: Record<string, string> = {
+  'gov. ac temporario': 'PROSESP - Governo do Acre - Temporário',
+  'gov. ac efetivo': 'PROSESP - Governo do Acre - Efetivo',
+  'gov. ac comissionado': 'PROSESP - Governo do Acre - Comissionado',
+  'pref. rio branco efe': 'PROSESP - Pref. Rio Branco - Efetivo',
+  'pref. rio branco efetivo': 'PROSESP - Pref. Rio Branco - Efetivo',
+}
+
+export const CONTRACT_LAYOUTS: ContractLayout[] = [
+  { key: 'nasp', label: 'NASP', bankName: 'NASP', columns: NASP_COLUMNS },
+  { key: 'prosesp', label: 'PROSESP (WorkBank)', bankName: 'PROSESP', columns: PROSESP_COLUMNS, tables: PROSESP_TABLES },
+]
 export const MAX_CONTRACT_LINES = 500
 
 // Header aliases, compared after normalize(). When several columns feed one field (Telefone and Celular), the first
@@ -170,7 +192,7 @@ const STAGE_KEYS: Record<string, string> = {
   enviada: 'submitted', 'em analise': 'submitted', 'em analise no banco': 'submitted', digitada: 'submitted', digitado: 'submitted',
   pendencia: 'pending_external', pendente: 'pending_external',
   aprovada: 'approved', aprovado: 'approved',
-  paga: 'paid', pago: 'paid', 'credito liberado': 'paid', liberado: 'paid', 'pago ao cliente': 'paid',
+  paga: 'paid', pago: 'paid', 'credito liberado': 'paid', liberado: 'paid', 'pago ao cliente': 'paid', concretizado: 'paid', concretizada: 'paid',
   recusada: 'rejected', recusado: 'rejected', reprovada: 'rejected', reprovado: 'rejected',
   cancelada: 'cancelled', cancelado: 'cancelled',
 }
@@ -349,13 +371,21 @@ export function parseContractLine(row: string[], columns: Columns, line: number,
   }
 }
 
-// The whole sheet: header on the first non-empty row, blank lines skipped.
+// The whole sheet, blank lines skipped. The header is the first row with a CPF column among the first five (a report
+// title may sit above it); without one, the first row, so its missing columns are reported.
 export function parseContractSheet(rows: string[][], today: string, layout?: ContractLayout) {
-  const [header = [], ...body] = rows
+  const found = rows.slice(0, 5).findIndex(r => mapContractHeader(r, layout).columns.cpf)
+  const at = found < 0 ? 0 : found
+  const header = rows[at] ?? []
+  const body = rows.slice(at + 1)
   const map = mapContractHeader(header, layout)
   if (map.issues.length) return { map, lines: [] as ContractLine[], tooMany: false }
   const tooMany = body.length > MAX_CONTRACT_LINES
-  const lines = body.slice(0, MAX_CONTRACT_LINES).map((r, i) => parseContractLine(r, map.columns, i + 2, today))
+  const lines = body.slice(0, MAX_CONTRACT_LINES).map((r, i) => {
+    const line = parseContractLine(r, map.columns, at + i + 2, today)
+    const table = layout?.tables?.[normalize(line.table)]
+    return table ? { ...line, table } : line
+  })
   return { map, lines, tooMany }
 }
 

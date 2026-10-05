@@ -153,3 +153,52 @@ test('csv: semicolon or comma, quotes, CRLF, Windows-1252', () => {
   assert.deepEqual(csvRows(new TextEncoder().encode('a,b\n1,2\n')), [['a', 'b'], ['1', '2']])
   assert.deepEqual(csvRows(Uint8Array.from([0x4f, 0x70, 0x65, 0x72, 0x61, 0xe7, 0xe3, 0x6f])), [['Operação']])
 })
+
+// The PROSESP report from WorkBank: a title row above the header (column names only; every value below is made up).
+const PROSESP_HEADER = ['BANCO', 'CLIENTE', 'CPF', 'OPERAÇÃO', 'TIPO', 'PROPOSTA', 'CONTRATO', 'PRODUTO', 'PRAZO', 'BRUTO', 'LÍQUIDO',
+  'REPASSE', 'VR. PARCELA', 'SITUAÇÃO', 'FÍSICO', 'COMISSÃO', 'DIGITADOR', 'AGENTE']
+const prosespSheet = (...rows: string[][]) => [PROSESP_HEADER.map(() => 'WorkBank - Gestão de Créditos'), PROSESP_HEADER, ...rows]
+const prosespRow = (over: Record<string, string> = {}) => PROSESP_HEADER.map(h => ({
+  BANCO: 'PROSESP', CLIENTE: 'CLIENTE FICTICIO', CPF: CPF, 'OPERAÇÃO': '22/09/2026', TIPO: 'NOVO', PROPOSTA: '13939', CONTRATO: '14462A',
+  PRODUTO: 'PREF. RIO BRANCO EFE', PRAZO: '36', BRUTO: '1.200,00', 'LÍQUIDO': '1.150,00', REPASSE: '1.200,00', 'VR. PARCELA': '87.19',
+  'SITUAÇÃO': 'CONCRETIZADO', 'FÍSICO': '-', 'COMISSÃO': 'PAGA', DIGITADOR: '123@TESTE', AGENTE: 'EMPRESA TESTE LTDA', ...over,
+} as Record<string, string>)[h] ?? '')
+
+test('PROSESP layout reads the WorkBank report: header under the title row, money columns ignored on purpose', () => {
+  const prosesp = CONTRACT_LAYOUTS.find(l => l.key === 'prosesp')!
+  const { map, lines } = parseContractSheet(prosespSheet(prosespRow()), TODAY, prosesp)
+  assert.deepEqual(map.issues, [])
+  for (const c of ['BANCO', 'REPASSE', 'COMISSÃO', 'FÍSICO', 'DIGITADOR', 'AGENTE']) assert.ok(map.ignored.includes(c), c)
+  const l = lines[0]
+  assert.equal(l.line, 3)
+  assert.deepEqual(l.issues, [])
+  assert.equal(l.table, 'PROSESP - Pref. Rio Branco - Efetivo')
+  assert.equal(l.term, 36)
+  assert.equal(l.requested, '1200.00')
+  assert.equal(l.released, '1150.00')
+  assert.equal(l.installment, '87.19')
+  assert.equal(l.ade, '14462A')
+  assert.equal(l.typeKey, 'novo')
+  assert.equal(l.stage, 'paid')
+  assert.equal(l.paidOn, '2026-09-22')
+  assert.equal(l.seller, '')
+  assert.equal(l.note, '13939')
+  assert.equal(l.client.account, null)
+  // Without the layout the report is refused (REPASSE and COMISSÃO look like money).
+  assert.ok(parseContractSheet(prosespSheet(prosespRow()), TODAY).map.issues.length > 0)
+})
+
+test('PROSESP lines: cancelled, refin, product not in the list kept as written', () => {
+  const prosesp = CONTRACT_LAYOUTS.find(l => l.key === 'prosesp')!
+  const { lines } = parseContractSheet(prosespSheet(
+    prosespRow({ 'SITUAÇÃO': 'CANCELADA', CONTRATO: '' }),
+    prosespRow({ TIPO: 'REFINANCIAMENTO', PRODUTO: 'GOV. AC TEMPORARIO', PRAZO: '8' }),
+    prosespRow({ PRODUTO: 'OUTRO PRODUTO' }),
+  ), TODAY, prosesp)
+  assert.equal(lines[0].stage, 'cancelled')
+  assert.equal(lines[0].ade, '')
+  assert.equal(lines[1].typeKey, 'refinanciamento')
+  assert.equal(lines[1].table, 'PROSESP - Governo do Acre - Temporário')
+  assert.equal(lines[2].table, 'OUTRO PRODUTO')
+  assert.deepEqual(lines.map(l => l.line), [3, 4, 5])
+})
