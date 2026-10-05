@@ -48,9 +48,10 @@ const NASP_COLUMNS: Record<string, ContractField | 'ignore'> = {
 // The PROSESP report from WorkBank ("Gestão de Créditos", owner request 05/10/2026). A title row sits above the header.
 // "Operação" is the operation date: it is the only date in the report, so it stands for "Pago ao cliente em".
 // "Digitador" is a WorkBank login and "Agente" the company itself, not the team's seller: both are left out, and the
-// seller is set in the contract. "Proposta" (WorkBank number) goes to the note; "Contrato" is the ADE.
+// seller is set in the contract. "Proposta" is the ADE: the PROSESP commission report ("Acerto da Produção") names the
+// contract by it (owner request 05/10/2026); "Contrato" goes to the note.
 const PROSESP_COLUMNS: Record<string, ContractField | 'ignore'> = {
-  banco: 'ignore', operacao: 'paidOn', proposta: 'note', produto: 'table', bruto: 'requested', liquido: 'released',
+  banco: 'ignore', operacao: 'paidOn', proposta: 'ade', contrato: 'note', produto: 'table', bruto: 'requested', liquido: 'released',
   repasse: 'ignore', 'vr. parcela': 'installment', fisico: 'ignore', comissao: 'ignore', digitador: 'ignore', agente: 'ignore',
 }
 // WorkBank cuts the product name at 20 characters ("PREF. RIO BRANCO EFE").

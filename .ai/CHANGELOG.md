@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Importação PROSESP: PROPOSTA vira a ADE (05/10/2026)
+- **Alterado:** no layout PROSESP (WorkBank), a coluna PROPOSTA passa a ser a ADE e CONTRATO vai para a observação. O relatório de comissão da PROSESP ("Acerto da Produção") identifica o contrato pela PROPOSTA; com a ADE pelo CONTRATO a conferência não casava sozinha.
+- **Dados:** migration `20261005224329_prosesp_workbank_proposal_numbers_v1` grava a PROPOSTA como segundo número (identidade) dos 10 contratos PROSESP importados em 05/10/2026. Só acrescenta; nada é alterado ou apagado.
+
 ### Importação PROSESP: situação "CR CLIENTE" = Pago (05/10/2026)
 - **Alterado:** na importação de contratos, a situação "CR CLIENTE" do relatório WorkBank passa a ser lida como Pago ao cliente (data = OPERAÇÃO). Sem migration.
 
