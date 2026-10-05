@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Importação PROSESP: situação "CR CLIENTE" = Pago (05/10/2026)
+- **Alterado:** na importação de contratos, a situação "CR CLIENTE" do relatório WorkBank passa a ser lida como Pago ao cliente (data = OPERAÇÃO). Sem migration.
+
 ### Repasse alterado: só o Administrador vê e altera (05/10/2026)
 - **Segurança:** o vendedor e o corretor do portal não enxergam mais o valor "pela regra". `proposal_commission_mine` devolve só o valor a pagar; o vendedor não lê mais as linhas de comissão direto da tabela; a "Comissão prevista" do portal soma o valor a pagar (antes somava a regra e mostrava o valor cheio mesmo com repasse reduzido).
 - **Alterado:** alterar o repasse do vendedor passa a ser só do Administrador (antes Administrador ou Gerente). Etiqueta "Alterado"/"Repasse alterado", coluna "Vendedor pela regra", "Ganho com alterações de repasse", filtro "Só repasse alterado" e o histórico da alteração aparecem só para o Administrador. Outros perfis do financeiro veem o valor a pagar como o valor do vendedor.

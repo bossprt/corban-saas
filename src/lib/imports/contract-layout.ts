@@ -193,6 +193,8 @@ const STAGE_KEYS: Record<string, string> = {
   pendencia: 'pending_external', pendente: 'pending_external',
   aprovada: 'approved', aprovado: 'approved',
   paga: 'paid', pago: 'paid', 'credito liberado': 'paid', liberado: 'paid', 'pago ao cliente': 'paid', concretizado: 'paid', concretizada: 'paid',
+  // WorkBank (PROSESP): "CR CLIENTE" is the credit paid to the client.
+  'cr cliente': 'paid',
   recusada: 'rejected', recusado: 'rejected', reprovada: 'rejected', reprovado: 'rejected',
   cancelada: 'cancelled', cancelado: 'cancelled',
 }
