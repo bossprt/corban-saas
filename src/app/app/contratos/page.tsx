@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { ChevronRight, FilePlus2, Search, X } from 'lucide-react'
 import { Badge, Card, CardHeader, PageHeader, type Tone } from '@/components/ui'
 import { can } from '@/lib/access'
+import { atLeast } from '@/lib/rbac'
 import { requireAppContext } from '@/lib/appContext'
 import { fetchAll } from '@/lib/fetchAll'
 import { add, fromDecimalString, mul, sub, toDecimalString, type Rational } from '@/lib/commission/money'
@@ -34,6 +35,8 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
   const { supabase, access, membership } = await requireAppContext()
   const canCreate = can(access, 'propostas.create')
   const finance = can(access, 'financeiro.view')
+  // Payout changes are the owner's alone: only the Administrador sees that a payout was changed (owner request 05/10/2026).
+  const owner = atLeast(membership.role, 'admin')
   const sp = await searchParams
   const text = one(sp.q).trim()
   const f = {
@@ -136,7 +139,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
           <label className={lbl}>Grupo do vendedor<select name="grupo" defaultValue={f.grupo} className="field mt-1.5"><option value="">Todos</option>{(groups ?? []).map(g => <option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
           {finance && <label className={lbl}>Comissão<select name="comissao" defaultValue={f.comissao} className="field mt-1.5"><option value="">Todas</option><option value="calculada">Calculada</option><option value="pendente">Não calculada</option></select></label>}
           {finance && <label className={lbl}>Repasse ao vendedor<select name="repasse" defaultValue={f.repasse} className="field mt-1.5"><option value="">Todos</option><option value="aguardando">Aguardando (cliente, físico ou banco)</option><option value="creditado">Liberado, a pagar</option><option value="pago">Pago ao vendedor</option></select></label>}
-          {finance && <label className={`${lbl} flex items-center gap-2 self-end pb-2`}><input type="checkbox" name="alterado" value="1" defaultChecked={!!f.alterado} className="accent-[var(--brand)]" />Só repasse alterado</label>}
+          {owner && <label className={`${lbl} flex items-center gap-2 self-end pb-2`}><input type="checkbox" name="alterado" value="1" defaultChecked={!!f.alterado} className="accent-[var(--brand)]" />Só repasse alterado</label>}
           <input type="hidden" name="n" value={size} />
           <div className="flex items-end gap-2 lg:col-span-3">
             <button className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><Search size={15} aria-hidden />Buscar</button>
@@ -151,8 +154,8 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
         )}
       </Card>
 
-      {finance && <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {[['Empresa recebe', sum('received')], ['Vendedores recebem', sum('payable')], ['Margem', sum('margin')], ['Ganho com alterações de repasse', sum('gain')]].map(([k, v]) => (
+      {finance && <div className={`mb-4 grid gap-3 sm:grid-cols-2 ${owner ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
+        {[['Empresa recebe', sum('received')], ['Vendedores recebem', sum('payable')], ['Margem', sum('margin')], ...(owner ? [['Ganho com alterações de repasse', sum('gain')]] : [])].map(([k, v]) => (
           <Card key={String(k)} className="px-5 py-4"><div className="text-xs text-muted">{String(k)} · contratos filtrados</div><div className="num mt-1 text-xl font-semibold text-ink">{money(v as Rational)}</div></Card>
         ))}
       </div>}
@@ -185,7 +188,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
                     <td className="whitespace-nowrap px-3 py-2.5"><Badge tone={STATUS_TONE[c.status] ?? 'neutral'}>{STATUS_LABEL[c.status] ?? c.status}</Badge></td>
                     {finance && (t ? <>
                       <td className="num whitespace-nowrap px-3 py-2.5 text-right">{money(t.get('received'))}</td>
-                      <td className="num whitespace-nowrap px-3 py-2.5 text-right">{money(t.get('payable') ?? t.get('originator'))}{payout.get(c.id)?.overridden && <Badge tone="pending" className="ml-1.5">Alterado</Badge>}
+                      <td className="num whitespace-nowrap px-3 py-2.5 text-right">{money(t.get('payable') ?? t.get('originator'))}{owner && payout.get(c.id)?.overridden && <Badge tone="pending" className="ml-1.5">Alterado</Badge>}
                         <span className="block text-[11px] text-muted">{(() => { const po = payout.get(c.id); return !po ? '' : po.paid_on ? `pago em ${new Date(`${po.paid_on}T12:00:00Z`).toLocaleDateString('pt-BR')}` : po.waiting === 'physical' ? 'aguardando físico' : po.waiting === 'client' ? 'aguardando pagamento ao cliente' : po.waiting === 'bank' ? 'aguardando comissão do banco' : po.waiting === 'divergent' ? 'comissão do banco divergente' : po.waiting === 'calculation' ? 'aguardando cálculo' : 'liberado, a pagar' })()}</span></td>
                       <td className={`num whitespace-nowrap px-3 py-2.5 text-right font-medium ${margin.startsWith('-') ? 'text-[#B91C1C]' : 'text-ink'}`}>{brlText(margin)}</td>
                     </> : <td colSpan={3} className="px-3 py-2.5 text-right"><Badge tone="pending">Comissão não calculada</Badge></td>)}

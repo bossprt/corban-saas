@@ -52,15 +52,15 @@ select pg_temp.act_as((select v1 from ids));
 set local role authenticated;
 insert into results select 'seller cannot read the calculation header of their own proposal',
   not exists (select 1 from public.proposal_commission_calcs where proposal_id = (select id from made where label = 'mine'));
-insert into results select 'seller reads only the originator lines of their own proposal',
-  (select count(*) from public.proposal_commission_lines where calc_id = (select id from made where label = 'calc_mine')) = (select mine_lines from ref)
-  and (select mine_lines from ref) > 0
-  and not exists (select 1 from public.proposal_commission_lines where calc_id = (select id from made where label = 'calc_mine') and line_kind <> 'originator');
+insert into results select 'seller reads no commission line, not even their own (the amounts by the rule)',
+  not exists (select 1 from public.proposal_commission_lines where calc_id = (select id from made where label = 'calc_mine'))
+  and (select mine_lines from ref) > 0;
 insert into results select 'seller reads no line of a proposal that is not theirs',
   not exists (select 1 from public.proposal_commission_lines where calc_id = (select id from made where label = 'calc_other'));
 insert into results select 'proposal_commission_mine gives the seller their own share, exact',
-  (select (r->>'mine')::boolean and (select sum((l->>'amount')::numeric * (l->>'multiplier')::numeric) from jsonb_array_elements(r->'lines') l) = (select mine_total from ref)
-          and not exists (select 1 from jsonb_array_elements(r->'lines') l where l->>'amount' !~ '^-?[0-9]+\.[0-9]{2}$')
+  (select (r->>'mine')::boolean and (select sum((l->>'amount')::numeric) from jsonb_array_elements(r->'payable') l) = (select mine_total from ref)
+          and not exists (select 1 from jsonb_array_elements(r->'payable') l where l->>'amount' !~ '^-?[0-9]+\.[0-9]{2}$')
+          and r->'lines' is null
    from (select public.proposal_commission_mine((select id from made where label = 'mine')) r) x);
 do $$ begin
   begin
