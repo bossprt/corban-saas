@@ -1682,7 +1682,28 @@ test('owner dashboard: period switch, numbers open the contracts behind them', a
   await expect(page).toHaveURL(/periodo=ano/)
   await expect(page.getByText('Comparado com mesmo período do ano passado.', { exact: false })).toBeVisible()
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-dashboard-dono.png`, fullPage: true })
+  await expect(page.getByRole('link', { name: /Produção paga/ })).toHaveAttribute('href', /pago_de=\d{4}-01-01/)
   await page.getByRole('link', { name: /Produção paga/ }).click()
   await expect(page).toHaveURL(/\/app\/contratos\?.*pago_de=/)
   await expect(page.getByText(/Pagos ao cliente de \d{2}\/\d{2}\/\d{4} até/)).toBeVisible()
+})
+
+// The operator's dashboard (06/10/2026): a profile without finance sees the operation of the day, never money of the
+// company; every item opens the contract.
+test('operator dashboard: pipeline, stuck contracts and goals, without company money', async ({ browser }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  const ctx = await browser.newContext()
+  const page = await ctx.newPage()
+  await signIn(page, 'vendedor@corban-teste.local', process.env.E2E_PASSWORD!)
+  await page.waitForURL(/\/app(\/|$)/, { timeout: 30_000 })
+  await page.goto('/app')
+  for (const label of ['Na esteira', 'Pendências no banco', 'Pagos no mês']) await expect(page.getByText(label, { exact: true })).toBeVisible()
+  await expect(page.getByText(/^Parados há \d\+ dias$/)).toBeVisible()
+  await expect(page.getByText(/Precisa de você/)).toBeVisible()
+  await expect(page.getByText('Esteira por etapa')).toBeVisible()
+  await expect(page.getByText('Metas do mês')).toBeVisible()
+  await expect(page.getByText('Comissão prevista')).toHaveCount(0)
+  await expect(page.getByText('Fica na empresa')).toHaveCount(0)
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-dashboard-operador.png`, fullPage: true })
+  await ctx.close()
 })

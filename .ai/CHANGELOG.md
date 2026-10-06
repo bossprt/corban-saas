@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Painel do operador (06/10/2026)
+- **Adicionado:** a Visão geral de quem não vê o financeiro vira o painel do operador (modelo C): Na esteira, Parados há 3+ dias, Pendências no banco (com prazo vencido), Pagos no mês; "Precisa de você" (pendência vencida e contratos parados, mais antigos primeiro); esteira por etapa; metas do mês (o vendedor vê só a própria). Sem comissão nem dinheiro da empresa; o que cada um vê segue o escopo do perfil. Sem migration.
+
 ### Painel do dono (06/10/2026)
 - **Adicionado:** a Visão geral, para quem vê o financeiro, vira o painel do dono (modelos A + D + B + E): período Hoje/7 dias/Mês/Ano comparado com o período equivalente; Produção paga, Comissão prevista, Recebido dos bancos e Fica na empresa; "Precisa da sua atenção" (banco atrasado 30+ dias, divergência, vendedores a pagar, comissão desatualizada, pago sem cálculo, esteira atrasada); produção por dia ou mês; vendedores; cartões por banco (ticket médio, falta receber); esteira agora. Todo número abre os contratos por trás dele. Os outros perfis continuam com a tela atual.
 - **Adicionado:** Contratos ganha os filtros "pagos ao cliente entre" e "aguardando comissão do banco" / "comissão divergente".
