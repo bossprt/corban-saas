@@ -35,7 +35,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
   if (!proposal) notFound()
 
   const [{ data: requirements }, { data: job }, { data: operationalCase }, { data: customerDocuments }, { data: externalIds }, { data: submission }, { data: sellers }, catalog] = await Promise.all([
-    supabase.from('proposal_document_requirements').select('id,document_type_id,label_snapshot,required_snapshot,status,exception_reason').eq('proposal_id', id).order('created_at'),
+    supabase.from('proposal_document_requirements').select('id,document_type_id,label_snapshot,required_snapshot,status,exception_reason,proposal_document_links(customer_document_id,customer_documents(original_file_name))').eq('proposal_id', id).order('created_at'),
     supabase.from('digitization_jobs').select('id,status').eq('proposal_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('operational_cases').select('id,canonical_state,external_status_raw').eq('proposal_id', id).maybeSingle(),
     supabase.from('customer_documents').select('id,document_type_id,original_file_name,version,status').eq('customer_id', proposal.customer_id).eq('status', 'active').order('created_at', { ascending: false }),
@@ -99,10 +99,14 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
               : proposal.status === 'ready_for_digitization' ? <form action={sendToDigitization}><input type="hidden" name="proposal_id" value={proposal.id} /><SubmitButton className={ghost} pendingText="...">Enviar para digitação</SubmitButton></form> : undefined} />
           <div className="grid gap-2 p-5 pt-3">
             {requirements?.map(r => {
-              const compatible = (customerDocuments ?? []).filter(d => d.document_type_id === r.document_type_id)
+              // Files already attached to this item (more than one is fine: two payslips, front and back of the ID).
+              const files = ((r as { proposal_document_links?: { customer_document_id: string; customer_documents: { original_file_name: string } | { original_file_name: string }[] | null }[] }).proposal_document_links ?? [])
+                .map(l => ({ id: l.customer_document_id, name: (Array.isArray(l.customer_documents) ? l.customer_documents[0] : l.customer_documents)?.original_file_name ?? 'arquivo' }))
+              const compatible = (customerDocuments ?? []).filter(d => d.document_type_id === r.document_type_id && !files.some(f => f.id === d.id))
               return (
                 <div key={r.id} className="rounded-[10px] border border-line p-3 text-sm">
                   <div className="flex items-center justify-between gap-3"><span className="text-ink">{r.label_snapshot}{r.required_snapshot ? ' *' : ''}</span><span className={`text-xs ${r.status === 'validated' ? 'font-medium text-[#166534]' : 'text-muted'}`}>{REQUIREMENT_STATUS[r.status] ?? r.status}</span></div>
+                  {files.length > 0 && <ul className="mt-1 text-xs text-ink-soft">{files.map(f => <li key={f.id}>{f.name}</li>)}</ul>}
                   {!['validated', 'waived'].includes(r.status) && compatible.length > 0 && (
                     <form action={attachDocument} className="mt-2 flex gap-2">
                       <input type="hidden" name="proposal_id" value={proposal.id} /><input type="hidden" name="requirement_id" value={r.id} />
@@ -114,7 +118,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
                     <form action={uploadForRequirement} className="mt-2 flex flex-wrap items-center gap-2">
                       <input type="hidden" name="proposal_id" value={proposal.id} /><input type="hidden" name="requirement_id" value={r.id} />
                       <input required type="file" name="file" accept=".pdf,image/jpeg,image/png,image/webp" aria-label={`Arquivo ${r.label_snapshot}`} className="min-w-0 flex-1 text-xs file:mr-2 file:rounded-md file:border file:border-line file:bg-surface file:px-2 file:py-1" />
-                      <SubmitButton className={ghost} pendingText="Enviando...">Enviar arquivo</SubmitButton>
+                      <SubmitButton className={ghost} pendingText="Enviando...">{files.length ? 'Adicionar outro arquivo' : 'Enviar arquivo'}</SubmitButton>
                     </form>
                   )}
                   {r.status === 'attached' && atLeast(membership.role, 'supervisor') && (
