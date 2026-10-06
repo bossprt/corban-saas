@@ -100,5 +100,6 @@ export function passwordRefusal(err:unknown):PasswordRefusal|null{
  return null
 }
 
-// Minimum typed in the app (owner decision 29/09/2026: 8). Supabase Auth may add its own rules; a refusal says why.
-export const PASSWORD_MIN=8, PASSWORD_MAX=72
+// Minimum typed in the app: 12, the minimum production Supabase Auth enforces (06/10/2026; the owner had chosen 8 on
+// 29/09/2026, but Auth refused shorter ones). Auth also refuses known passwords; a refusal says why.
+export const PASSWORD_MIN=12, PASSWORD_MAX=72
