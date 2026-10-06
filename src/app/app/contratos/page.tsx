@@ -72,7 +72,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
   const { data: calcRows } = finance ? await supabase.from('proposal_commission_calcs').select('proposal_id,seller_id,group_id').eq('status', 'active') : { data: [] }
   const calcOf = new Map(((calcRows ?? []) as { proposal_id: string; seller_id: string | null; group_id: string | null }[]).map(r => [r.proposal_id, r]))
   const payout = new Map(((payoutRows ?? []) as { proposal_id: string; rule_amount: string; payable: string; overridden: boolean; waiting: string | null; credited: string; paid_on: string | null }[]).map(r => [r.proposal_id, r]))
-  const repasseOf = (id: string) => { const po = payout.get(id); return !po ? '' : po.paid_on ? 'pago' : po.waiting ? 'aguardando' : 'creditado' }
+  const repasseOf = (id: string) => { const po = payout.get(id); return !po ? '' : po.paid_on ? 'pago' : po.waiting === 'no_payout' ? 'sem_repasse' : po.waiting ? 'aguardando' : 'creditado' }
   const totals = new Map<string, Map<string, Rational>>()
   for (const l of lines) {
     const calc = Array.isArray(l.proposal_commission_calcs) ? l.proposal_commission_calcs[0] : l.proposal_commission_calcs
@@ -118,7 +118,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
     && (!f.comissao || (f.comissao === 'calculada') === totals.has(c.id))
     && (!f.alterado || !!payout.get(c.id)?.overridden)
     && (!f.desatualizado || stale(c))
-    && (!f.repasse || repasseOf(c.id) === f.repasse)
+    && (!f.repasse || repasseOf(c.id) === f.repasse || (f.repasse === 'concluido' && ['pago', 'sem_repasse'].includes(repasseOf(c.id))))
     && (!f.q || String(c.customer_snapshot?.full_name ?? '').toLowerCase().includes(f.q) || String(c.external_proposal_id ?? '').toLowerCase().includes(f.q)))
   const size = pageSize(one(sp.n), 25), pages = Math.max(1, Math.ceil(filtered.length / size))
   const page = Math.min(Math.max(1, Number(one(sp.p)) || 1), pages)
@@ -151,7 +151,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
           <label className={lbl}>Vendedor<select name="vendedor" defaultValue={f.vendedor} className="field mt-1.5"><option value="">Todos</option>{(sellers ?? []).map(s => <option key={s.id} value={s.id}>{s.code ? `${String(s.code).padStart(3, '0')} · ` : ''}{s.name}</option>)}</select></label>
           <label className={lbl}>Grupo do vendedor<select name="grupo" defaultValue={f.grupo} className="field mt-1.5"><option value="">Todos</option>{(groups ?? []).map(g => <option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
           {finance && <label className={lbl}>Comissão<select name="comissao" defaultValue={f.comissao} className="field mt-1.5"><option value="">Todas</option><option value="calculada">Calculada</option><option value="pendente">Não calculada</option></select></label>}
-          {finance && <label className={lbl}>Repasse ao vendedor<select name="repasse" defaultValue={f.repasse} className="field mt-1.5"><option value="">Todos</option><option value="aguardando">Aguardando (cliente, físico ou banco)</option><option value="creditado">Liberado, a pagar</option><option value="pago">Pago ao vendedor</option></select></label>}
+          {finance && <label className={lbl}>Repasse ao vendedor<select name="repasse" defaultValue={f.repasse} className="field mt-1.5"><option value="">Todos</option><option value="aguardando">Aguardando (cliente, físico ou banco)</option><option value="creditado">Liberado, a pagar</option><option value="pago">Pago ao vendedor</option><option value="sem_repasse">Sem repasse (vendedor recebe R$ 0)</option><option value="concluido">Concluído (pago ou sem repasse)</option></select></label>}
           {finance && <label className={`${lbl} flex items-center gap-2 self-end pb-2`}><input type="checkbox" name="desatualizado" value="1" defaultChecked={!!f.desatualizado} className="accent-[var(--brand)]" />Só comissão desatualizada</label>}
           {owner && <label className={`${lbl} flex items-center gap-2 self-end pb-2`}><input type="checkbox" name="alterado" value="1" defaultChecked={!!f.alterado} className="accent-[var(--brand)]" />Só repasse alterado</label>}
           <input type="hidden" name="n" value={size} />
@@ -206,7 +206,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
                     {finance && (t ? <>
                       <td className="num whitespace-nowrap px-3 py-2.5 text-right">{money(t.get('received'))}</td>
                       <td className="num whitespace-nowrap px-3 py-2.5 text-right">{money(t.get('payable') ?? t.get('originator'))}{owner && payout.get(c.id)?.overridden && <Badge tone="pending" className="ml-1.5">Alterado</Badge>}
-                        <span className="block text-[11px] text-muted">{(() => { const po = payout.get(c.id); return !po ? '' : po.paid_on ? `pago em ${new Date(`${po.paid_on}T12:00:00Z`).toLocaleDateString('pt-BR')}` : po.waiting === 'physical' ? 'aguardando físico' : po.waiting === 'client' ? 'aguardando pagamento ao cliente' : po.waiting === 'bank' ? 'aguardando comissão do banco' : po.waiting === 'divergent' ? 'comissão do banco divergente' : po.waiting === 'calculation' ? 'aguardando cálculo' : 'liberado, a pagar' })()}</span></td>
+                        <span className="block text-[11px] text-muted">{(() => { const po = payout.get(c.id); return !po ? '' : po.paid_on ? `pago em ${new Date(`${po.paid_on}T12:00:00Z`).toLocaleDateString('pt-BR')}` : po.waiting === 'physical' ? 'aguardando físico' : po.waiting === 'client' ? 'aguardando pagamento ao cliente' : po.waiting === 'bank' ? 'aguardando comissão do banco' : po.waiting === 'divergent' ? 'comissão do banco divergente' : po.waiting === 'calculation' ? 'aguardando cálculo' : po.waiting === 'no_payout' ? 'concluído · sem repasse' : 'liberado, a pagar' })()}</span></td>
                       <td className={`num whitespace-nowrap px-3 py-2.5 text-right font-medium ${margin.startsWith('-') ? 'text-[#B91C1C]' : 'text-ink'}`}>{brlText(margin)}</td>
                     </> : <td colSpan={3} className="px-3 py-2.5 text-right"><Badge tone="pending">Comissão não calculada</Badge></td>)}
                     <td className="px-3 py-2.5 text-right"><Link href={`/app/propostas/${c.id}`} aria-label={`Abrir contrato de ${c.customer_snapshot?.full_name ?? 'cliente'}`} className="inline-flex size-8 items-center justify-center rounded-md text-muted hover:bg-surface-muted hover:text-ink"><ChevronRight size={16} aria-hidden /></Link></td>

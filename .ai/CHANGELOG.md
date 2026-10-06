@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Contrato sem repasse fica concluído (06/10/2026)
+- **Alterado:** contrato em que o vendedor recebe R$ 0,00 (produção própria, grupo Smart Promotora), já pago ao cliente e com a comissão do banco recebida, aparece como "Concluído · sem repasse" em vez de "liberado, a pagar". Nenhum pagamento de R$ 0,00 é registrado. Filtro "Repasse ao vendedor" ganha "Sem repasse" e "Concluído (pago ou sem repasse)".
+- Migration `no_payout_concluded_v1` (só a função `private.contract_credit_state`, estado novo `no_payout`; nenhum dado muda). Simulado na produção: só os 11 contratos de produção própria mudam.
+
 ### Repasse: pagar vendedores em lote com QR Code PIX (06/10/2026)
 - **Adicionado:** cartão "Pagar vendedores" na tela Repasse (quem pode aprovar pagamentos): lista de quem tem valor a pagar, com o valor exato que o sistema registra, a chave PIX (copiar) ou os dados da TED e o favorecido. QR Code PIX com o valor e PIX copia e cola (BR Code do Banco Central, gerado no Corban, sem integração bancária), navegação Anterior/Próximo e aviso para conferir o nome no banco. Planilha Excel da lista. "Confirmar pagos" registra só os marcados, com data e comprovante opcional, como o Pagar agora.
 - **Segurança/dinheiro:** migration `20261006154254_payout_batch_v1` (aplicada em produção): `private.pay_now_amount` (o valor que o Pagar agora pagaria hoje, sem gravar), `public.payout_pay_list` e `public.pay_account_now_checked` (recusa com `amount_changed` se o valor mudou desde a lista). Nunca a própria conta. Teste de contrato `payout-batch-contract.sql`.

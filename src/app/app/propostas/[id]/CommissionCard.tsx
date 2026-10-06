@@ -157,10 +157,11 @@ export async function CommissionCard({ supabase, access, proposalId, closed, can
                     : credit.waiting === 'bank' ? <Badge tone="pending">Aguardando comissão do banco</Badge>
                     : credit.waiting === 'divergent' ? <Badge tone="pending">Comissão do banco divergente · aguardando financeiro</Badge>
                     : credit.waiting === 'calculation' ? <Badge tone="neutral">Aguardando cálculo</Badge>
+                    : credit.waiting === 'no_payout' ? <Badge tone="received">Concluído · sem repasse (o vendedor recebe R$ 0,00)</Badge>
                     : <Badge tone="brand">Liberado {brlText(String(credit.credited))} · a pagar no fechamento</Badge>}
                   {credit.reference && <span className="text-xs text-muted">({credit.reference})</span>}
                 </span>
-                {owner && !credit.paid_on && credit.waiting !== 'client' && credit.waiting !== 'calculation' && (
+                {owner && !credit.paid_on && credit.waiting !== 'client' && credit.waiting !== 'calculation' && credit.waiting !== 'no_payout' && (
                   <details className="w-full sm:w-auto">
                     <summary className="cursor-pointer text-xs text-muted underline hover:text-ink">Registrar pagamento feito fora do Corban</summary>
                     <form action={registerExternalPayout} className="mt-2 flex flex-wrap items-end gap-2">
