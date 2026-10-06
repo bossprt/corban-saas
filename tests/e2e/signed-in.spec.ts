@@ -444,7 +444,7 @@ test.describe('broker portal', () => {
         await expect(broker.getByText('Documento anexado à proposta.')).toBeVisible({ timeout: 30_000 })
         if (shots) await broker.screenshot({ path: `${shots}/${info.project.name}-portal-proposta.png`, fullPage: true })
       }
-      await broker.getByRole('link', { name: 'Minhas propostas' }).click()
+      await broker.getByRole('link', { name: 'Meu portal' }).click()
     }
 
     // The team (admin) validates one and refuses the other with a reason.
@@ -462,6 +462,13 @@ test.describe('broker portal', () => {
     await broker.goto(new URL('/app/portal', info.project.use.baseURL).toString())
     await expect(broker.getByRole('link', { name: new RegExp(noName) })).toContainText('Motivo: Documento ilegível, envie de novo')
     await expect(broker.getByRole('link', { name: new RegExp(okName) })).not.toContainText('Aguardando validação')
+    // 06/10/2026: the validated one is a contract in "Meus contratos", with the broker's share, and opens.
+    const myContracts = broker.locator('section').filter({ has: broker.getByText(/^Meus contratos/) }).last()
+    await expect(myContracts.getByRole('link', { name: new RegExp(okName) })).toBeVisible()
+    await expect(broker.getByText('Previsto', { exact: true })).toBeVisible()
+    await myContracts.getByRole('link', { name: new RegExp(okName) }).click()
+    await expect(broker.getByRole('heading', { name: okName })).toBeVisible({ timeout: 30_000 })
+    await broker.goto(new URL('/app/portal', info.project.use.baseURL).toString())
     if (shots) await broker.screenshot({ path: `${shots}/${info.project.name}-portal-inicio.png`, fullPage: true })
   })
 })
