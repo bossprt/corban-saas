@@ -120,3 +120,20 @@ export async function createSellerPortalAccess(f:FormData){
   if(outcome==='created')return go('ok:portal_acesso',pageOf(f))
   return go(outcome==='failed'?'erro:portal_acesso_falhou':'erro:portal_senha_fraca',pageOf(f))
 }
+
+// Link the seller record to a team member who already has a login, of any role (owner request 06/10/2026): a manager
+// who also sells stays a manager; empty user_id undoes the link. The database checks company, role and that the person
+// is not linked to another seller.
+export async function linkSellerUser(f:FormData){
+  const ctx=await manager(); if(!ctx)return go('erro:sem_permissao',pageOf(f))
+  const id=text(f,'id'),userId=text(f,'user_id')
+  if(!uuid(id)||(userId&&!uuid(userId)))return go('erro:requisicao_invalida',pageOf(f))
+  const {error}=await ctx.supabase.rpc('set_seller_user',{p_seller_id:id,p_user_id:userId||null})
+  if(error){
+    const m=error.message??''
+    if(/user_already_linked/.test(m))return go('erro:vendedor_usuario_ja_ligado',pageOf(f))
+    if(/active_membership_required/.test(m))return go('erro:vendedor_usuario_invalido',pageOf(f))
+    return go(classifyDbFeedback(error),pageOf(f))
+  }
+  return go(userId?'ok:vendedor_ligado':'ok:vendedor_desligado',pageOf(f))
+}
