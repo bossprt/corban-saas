@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Portal do corretor externo: Meus contratos (06/10/2026)
+- **Adicionado:** o portal vira "Meu portal": Previsto, Liberado, Recebido no mês e Propostas aguardando; "Meus contratos" com todos os contratos em que ele é o vendedor, inclusive os digitados pela empresa (marcados assim), com a situação e a parte dele (aguardando cliente/banco, liberado, recebido); botão Ver meu extrato. O detalhe abre também contratos digitados pela empresa. "Propostas enviadas" mostra só as que aguardam ou foram recusadas.
+- Migration `seller_contracts_v1` (função de leitura `public.seller_contracts`). Teste de contrato `seller-contracts-contract.sql`.
+
 ### Acesso ao portal: senha de 12 e nova tentativa (06/10/2026)
 - **Corrigido:** criar acesso de vendedor falhava na 2ª tentativa com erro genérico: a 1ª (senha recusada pelo login) deixava o convite pendente. Agora, se o convite pendente é do mesmo vendedor, a nova tentativa segue e cria o login; se é de outro acesso, a mensagem explica.
 - **Alterado:** senha digitada no Corban passa a ter no mínimo 12 caracteres (o mínimo que o login de produção exige; antes a tela aceitava 8 e o login recusava). Dica no campo e mensagem de senha fraca com a regra.
