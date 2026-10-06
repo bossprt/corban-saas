@@ -55,7 +55,7 @@ export async function saveSeller(f:FormData){
     name:text(f,'name'),tax_id:text(f,'tax_id'),category:text(f,'seller_category'),group_id:text(f,'commission_group_id'),
     branch_id:text(f,'branch_id'),profile,
     // Part C3: how often the seller is paid and whether they receive the deferred.
-    payment_frequency:text(f,'payment_frequency')||'monthly',receives_deferred:f.get('receives_deferred')==='on',
+    payment_frequency:text(f,'payment_frequency')||'daily',receives_deferred:f.get('receives_deferred')==='on',
     contacts:rows(f,['contact_name','contact_cpf','contact_role','contact_mobile','contact_email'])
       .filter(c=>Object.values(c).some(Boolean))
       .map(c=>({name:c.contact_name,cpf:c.contact_cpf,role:c.contact_role,mobile:c.contact_mobile,email:c.contact_email})),

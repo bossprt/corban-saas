@@ -64,7 +64,7 @@ export default async function PayoutPage() {
           <div className="flex flex-wrap items-end gap-6">
             <form action={closePeriod} className="flex items-end gap-2">
               <label className="text-[13px] font-medium text-ink-soft">Quem recebe
-                <select name="frequency" defaultValue="monthly" aria-label="Frequência do fechamento" className="field mt-1.5"><option value="daily">Diário</option><option value="weekly">Semanal</option><option value="biweekly">Quinzenal</option><option value="monthly">Mensal</option></select>
+                <select name="frequency" defaultValue="daily" aria-label="Frequência do fechamento" className="field mt-1.5"><option value="daily">Diário</option><option value="weekly">Semanal</option><option value="biweekly">Quinzenal</option><option value="monthly">Mensal</option></select>
               </label>
               <label className="text-[13px] font-medium text-ink-soft">Fechar período até<input type="date" name="period_end" defaultValue={todayIso()} max={todayIso()} className="field mt-1.5" /></label>
               <button className="h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Fechar período</button>

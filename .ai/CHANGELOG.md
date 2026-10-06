@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Repasse: Diário como padrão (06/10/2026)
+- **Alterado:** vendedor novo vem com "Recebe o repasse: Diário" (formulário, cadastro sem o campo e padrão da coluna). Na tela Repasse, "Fechar período" já abre em Diário. Migration `20261006135519_seller_daily_payout_default_v1` (aplicada em produção) (só o padrão; nenhum vendedor muda).
+
 ### Vendedores: repasse diário (06/10/2026)
 - **Dados:** todos os vendedores da Smart Promotora passam a "Recebe o repasse: Diário" (pedido do dono). Só esse campo; extratos, créditos e pagamentos não mudam. Novos vendedores continuam com o padrão Mensal. Migration `20261006135024_smart_sellers_daily_payout_v1` (aplicada em produção).
 

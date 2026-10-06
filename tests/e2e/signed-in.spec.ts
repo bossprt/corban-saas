@@ -387,6 +387,7 @@ test.describe('payout', () => {
 
     // The administrator closes the period; finance approves the seller statement; the administrator pays it.
     await page.goto('/app/repasse')
+    await page.getByLabel('Frequência do fechamento').selectOption('monthly')  // the local test seller is monthly
     await page.getByRole('button', { name: 'Fechar período' }).click()
     await expect(page.getByText('Período fechado.')).toBeVisible()
     await finance.goto(accountUrl)
