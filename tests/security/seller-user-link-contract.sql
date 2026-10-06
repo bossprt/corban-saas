@@ -1,4 +1,4 @@
--- Contract test for 20261006_seller_user_link_v1: a seller record links to a team member of any role (here the
+-- Contract test for 20261006202214_seller_user_link_v1: a seller record links to a team member of any role (here the
 -- supervisor), never to two sellers at once, never to someone outside the company; only admin or manager link; the
 -- link can be undone; the linked person becomes the holder of the seller's payout account. Rolled back.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/seller-user-link-contract.sql

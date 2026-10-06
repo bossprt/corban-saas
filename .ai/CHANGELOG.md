@@ -17,7 +17,7 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ### Vendedor ligado a usuário da equipe (06/10/2026)
 - **Adicionado:** na ficha do vendedor, "Acesso ao sistema": ligar o vendedor a um usuário que já existe na equipe, de qualquer papel (gerente, administrador, supervisor, vendedor), ou desfazer a ligação. Quando o e-mail do vendedor é de alguém da equipe, a tela sugere ligar em vez de criar outro login. O papel não muda; a produção do vendedor conta como da pessoa (meta). Uma pessoa, um vendedor.
-- Migration `seller_user_link_v1` (`set_seller_user` aceita qualquer papel ativo e recusa `user_already_linked`). Teste de contrato `seller-user-link-contract.sql`.
+- Migrations `20261006202214_seller_user_link_v1` (aplicada em produção) e `link_manager_sellers_v1` (liga GERDEAN e FRANCISCO JUNIOR) (`set_seller_user` aceita qualquer papel ativo e recusa `user_already_linked`). Teste de contrato `seller-user-link-contract.sql`.
 
 ### Contas a pagar: parcelas no mesmo mês (06/10/2026)
 - **Adicionado:** campo "Intervalo" no lançamento: Todo mês, A cada 15 dias, A cada 7 dias ou A cada X dias; vale para repetir e para parcelar (ex.: 2 vezes a cada 15 dias, 3 vezes a cada 10 dias). "Quantos meses" vira "Quantas vezes". Migration `20261006200923_fin_interval_days_v1`, aplicada em produção (`fin_create_entry` ganha `p_interval_days`, padrão = 1 mês).
