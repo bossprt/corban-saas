@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Vendedores: repasse diário (06/10/2026)
+- **Dados:** todos os vendedores da Smart Promotora passam a "Recebe o repasse: Diário" (pedido do dono). Só esse campo; extratos, créditos e pagamentos não mudam. Novos vendedores continuam com o padrão Mensal. Migration `20261006135024_smart_sellers_daily_payout_v1` (aplicada em produção).
+
 ### NASP – Governo do Acre: Refinanciamento com a comissão do Novo (05/10/2026)
 - **Adicionado:** as 4 tabelas Temporário e Comissionado do NASP Gov. Acre ganham a linha Refinanciamento igual à de Novo (6% ou 10% à vista no líquido, mesmo repasse por grupo), numa vigência v2 a partir de 01/01/2026; a v1 fica no histórico. Efetivo (Normal/REFIN/COMPRA) e Prefeitura de Rio Branco já tinham Refinanciamento e não mudam.
 - Migration `20261005235551_nasp_acre_refin_lines_v1` (aplicada em produção); teste de contrato `tests/security/nasp-acre-refin-contract.sql`.
