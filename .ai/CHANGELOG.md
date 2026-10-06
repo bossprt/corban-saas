@@ -16,7 +16,8 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 ## [Unreleased]
 
 ### Contas a pagar: repetir x parcelar (06/10/2026)
-- **Corrigido:** o campo "Parcelas" dividia o valor; o dono queria repetir (salário). Agora "Como lançar": Uma vez, Repetir todo mês (mesmo valor) ou Parcelar (dividir o valor), com "Quantos meses" e exemplo na tela. Migration `fin_repeat_entries_v1` (`fin_create_entry` ganha `p_repeat`, padrão = parcelar como antes).
+- **Corrigido:** o campo "Parcelas" dividia o valor; o dono queria repetir (salário). Agora "Como lançar": Uma vez, Repetir todo mês (mesmo valor) ou Parcelar (dividir o valor), com "Quantos meses" e exemplo na tela. Migration `20261006192321_fin_repeat_entries_v1`, aplicada em produção (`fin_create_entry` ganha `p_repeat`, padrão = parcelar como antes).
+
 ### Painel do operador (06/10/2026)
 - **Adicionado:** a Visão geral de quem não vê o financeiro vira o painel do operador (modelo C): Na esteira, Parados há 3+ dias, Pendências no banco (com prazo vencido), Pagos no mês; "Precisa de você" (pendência vencida e contratos parados, mais antigos primeiro); esteira por etapa; metas do mês (o vendedor vê só a própria). Sem comissão nem dinheiro da empresa; o que cada um vê segue o escopo do perfil. Sem migration.
 
