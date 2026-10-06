@@ -137,11 +137,13 @@ test('menu: modules are role-aware (F1 journey navigation: 8 entries)', () => {
   for (const href of ['/app', '/app/hoje', '/app/clientes', '/app/propostas', '/app/relatorios']) assert.ok(!(l.split(NL).find(x => x.includes(`'${href}',`)) ?? '').includes('show:'), href)
 })
 test('agent dashboard is scoped to the agent own records', () => {
+  // Since 06/10/2026 the operation dashboard reads contracts through RLS scope (own, team or company) and an agent
+  // sees only their own goal.
   const d = read('src/app/app/page.tsx')
-  assert.match(d, /const mine = membership\.role === 'agent'/)
-  assert.match(d, /Meus leads em aberto/)
-  assert.match(d, /Minhas propostas/)
-  assert.match(d, /eq\('created_by', user\.id\)/)
+  assert.match(d, /onlyUserId=\{membership\.role === 'agent' \? user\.id : undefined\}/)
+  const o = read('src/app/app/OperatorDashboard.tsx')
+  assert.match(o, /!onlyUserId \|\| g\.user_id === onlyUserId/)
+  assert.doesNotMatch(o, /\.rpc\('owner_dashboard'|proposal_commission_lines|commission_receipts/)
 })
 test('the simulation page guides an empty organization and never shows a table UUID', () => {
   const s = read('src/app/app/simulacoes/page.tsx')
