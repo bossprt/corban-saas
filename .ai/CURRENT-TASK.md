@@ -3,21 +3,29 @@
 **Atualização:** 01/10/2026
 **Branch:** `main` (todas as entregas abaixo mergeadas e aplicadas em produção, md5 das migrations conferido).
 
-## Estado (01/10/2026)
+## Estado (06/10/2026)
 - Fase atual: **validação na operação real da Smart Promotora**. F11 (planos, cobrança, teste grátis, cadastro sozinho) espera essa validação.
-- Entregas recentes (PR em bossprt/corban-saas):
-  - #52 documento na ficha do cliente e no checklist da proposta; #53 arredondamento 3,00000001; #54/#55 tabelas PROSESP e data de vigência ao publicar.
-  - #56 remoção de sobras (3 telas antigas); #57 links de convite/recuperação; #58–#60 acesso da equipe criado pelo admin com e-mail e senha (mínimo 8, troca na primeira entrada desligada por padrão).
-  - #61 registrar recebimento de comissão no contrato; #62/#63 pagar o corretor em um passo, comprovante opcional.
-  - #64 Banco → Tipo de contrato → Tabela, tipo no contrato, IR por origem (campo do dono, padrão 0); #65 checagem de produção (`VALIDACAO-OPERACAO.md`).
-  - #66 saldo devedor, banco e nº do contrato de origem (só registro, não entra no cálculo).
-  - #67 esteira simples: qualquer etapa para qualquer etapa, Kanban arrastável (dnd-kit), lista de etapa na tabela; única trava: contrato Pago com dinheiro movimentado não sai de Paga; tirar de Paga só admin/gerente.
+- Entregas de 02 a 06/10/2026 (PR em bossprt/corban-saas):
+  - #70–#77 tabelas NASP (Gov. Acre, Pref. Rio Branco, Refin igual ao Novo); importação de contratos por planilha com layouts NASP e PROSESP (WorkBank), CSV, ficha do cliente; PROPOSTA como ADE na PROSESP.
+  - #74 repasse alterado só para o Administrador; #78/#79 repasse Diário (todos e padrão); #80 cadastro de vendedor não perde dados no erro.
+  - #81 recálculo de comissão em lote; #82 pagar vendedores em lote com QR Code PIX; #83 contrato sem repasse fica concluído; #84 recebimento do 131259.
+  - #85 documentos padrão por banco (opcionais) e mais de um arquivo por documento.
+  - #86/#87/#90/#93 painéis: dono, operador, vendedor (celular) e "Meu painel de vendedor" para gerente/admin que vende.
+  - #88/#91 contas a pagar: repetir x parcelar e intervalo em dias; #89 folha relançada em 4 meses.
+  - #92 vendedor ligado a usuário da equipe de qualquer papel (GERDEAN e FRANCISCO JUNIOR ligados); #94 senha mínima 12 e nova tentativa de acesso ao portal.
+
+## Validado com o dono (06/10/2026)
+- Contrato real do início ao fim no Corban.
+- Contas bancárias da empresa no Financeiro (2 contas).
+- Pagamento de vendedores em lote: 9 vendedores, R$ 1.610,10, pagos por QR Code PIX lido no app do banco (valor e nome corretos).
+- Contrato 131259: recebimento HOPE R$ 1.900,00 (11/09) registrado; contrato concluído.
 
 ## Pendente — com o dono (validação)
-- Contrato 131259: registrar o recebimento se a comissão caiu (esperado R$ 1.900,00).
-- Um contrato real do início ao fim: Banco → Tipo → Tabela, esteira até Paga, recebimento, pagamento ao corretor.
-- Documentos por banco (Cadastros) e contas bancárias da empresa (Financeiro).
-- Relatório real de banco (à vista e diferido) para testar a importação.
+- Relatório real de banco com parte diferida para testar a importação (não há no momento).
+- Contrato 14493 (PROSESP): aguardando a comissão do banco.
+
+## Próximas melhorias combinadas
+- Portal do corretor externo (vendedor de fora da Smart): bloco "Meus contratos" com todos os contratos em que ele é o vendedor, inclusive os digitados pela Smart, com situação e a parte dele (pedido do dono em 06/10/2026, para depois).
 
 ## Pendente — técnico
 - E2E do CRM de vendas quebrado (também no main; a tela funciona). E2E da simulação depende da ordem. Tarefas separadas.
