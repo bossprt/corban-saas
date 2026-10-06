@@ -1617,3 +1617,50 @@ test('contracts: several commissions recalculated at once, each contract reporte
   await expect(bar.getByRole('status')).toContainText(/contrato\(s\) recalculado\(s\)/, { timeout: 60_000 })
   await expect(page.locator('input[form="recalc-form"]:checked')).toHaveCount(0)
 })
+
+// Paying several sellers at once (06/10/2026): the list shows the exact amount and where to pay (PIX QR Code with the
+// amount, or TED), the spreadsheet downloads, and only the ones confirmed are recorded.
+test('pay several sellers: list with PIX QR Code, spreadsheet, confirm the paid ones', async ({ page, browser }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  test.setTimeout(240_000)
+  const holder = 'Corretor Teste'
+  const note = `Crédito lote ${Date.now()}`
+  await page.goto('/app/repasse')
+  await page.locator('select[name="payee"]').selectOption({ label: holder })
+  await page.getByRole('button', { name: 'Abrir' }).click()
+  await expect(page.getByRole('heading', { name: holder })).toBeVisible({ timeout: 30_000 })
+  await page.getByText('Outros lançamentos: vale, bônus, desconto').click()
+  await page.locator('select[name="kind"]').selectOption('bonus')
+  await page.getByLabel('Valor (R$)').fill('87,65')
+  await page.getByLabel('Descrição').fill(note)
+  await page.getByRole('button', { name: 'Lançar' }).click()
+  const finance = await browser.newContext()
+  const f = await finance.newPage()
+  await signIn(f, 'financeiro@corban-teste.local', process.env.E2E_PASSWORD!)
+  await f.waitForURL(/\/app(\/|$)/, { timeout: 30_000 })
+  await f.goto('/app/repasse')
+  await f.locator('li, div').filter({ hasText: note }).last().getByRole('button', { name: 'Aprovar' }).click()
+  await expect(f.getByText(note)).toHaveCount(0, { timeout: 30_000 })
+  await finance.close()
+
+  await page.goto('/app/repasse')
+  const card = page.locator('#pagar')
+  const row = card.getByRole('row').filter({ hasText: holder })
+  await expect(row).toContainText('R$', { timeout: 30_000 })
+  const download = page.waitForEvent('download')
+  await card.getByRole('link', { name: 'Baixar Excel' }).click()
+  expect((await download).suggestedFilename()).toMatch(/^repasse-a-pagar-\d{4}-\d{2}-\d{2}\.xlsx$/)
+  if (await row.getByRole('button', { name: 'QR Code' }).count()) {
+    await row.getByRole('button', { name: 'QR Code' }).click()
+    const dlg = page.getByRole('dialog', { name: 'Pagar com QR Code' })
+    await expect(dlg.locator('svg').first()).toBeVisible()
+    await expect(dlg).toContainText('confira se o nome de quem recebe')
+    if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-repasse-qr.png` })
+    await dlg.getByRole('button', { name: 'Fechar' }).click()
+  }
+  await card.getByRole('button', { name: 'Desmarcar' }).click()
+  await row.getByRole('checkbox').check()
+  await card.getByRole('button', { name: /^Confirmar 1 pago\(s\)/ }).click()
+  await expect(card.getByRole('status')).toContainText('1 pagamento(s) registrado(s)', { timeout: 60_000 })
+  await expect(card.getByRole('row').filter({ hasText: holder })).toHaveCount(0, { timeout: 30_000 })
+})
