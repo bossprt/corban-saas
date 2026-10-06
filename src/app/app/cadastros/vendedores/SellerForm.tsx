@@ -1,9 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState, useTransition } from 'react'
 import { Pencil, X } from 'lucide-react'
 import { AddressFields } from '@/components/AddressFields'
-import { SubmitButton } from '@/components/SubmitButton'
 import { formatPhone } from '@/lib/cpf'
 import { formatTaxId } from '@/lib/sellers'
 import { SellerAccountRows, SellerContactRows, type SellerAccount, type SellerContact } from './SellerRows'
@@ -32,7 +31,7 @@ const address = (v: SellerValues | undefined, p: '' | 'business_') => v && {
 // One form for registering and for the seller file (owner decision 25/09/2026). An existing seller opens locked;
 // "Editar cadastro" unlocks it in place. Only name, CPF/CNPJ, mobile and e-mail are required.
 export function SellerForm({ action, seller, accounts = [], contacts = [], groups, branches, canEdit, canSeeBank }: {
-  action: (f: FormData) => Promise<void>
+  action: (f: FormData) => Promise<{ error: string }>
   seller?: SellerValues
   accounts?: SellerAccount[]; contacts?: SellerContact[]
   groups: { id: string; name: string }[]; branches: { id: string; name: string }[]
@@ -43,8 +42,22 @@ export function SellerForm({ action, seller, accounts = [], contacts = [], group
   const [round, setRound] = useState(0)
   const locked = !editing
   const hasBusiness = !!s?.business_zip || !!s?.business_street
+  // Sent by hand, not through the form's action: a refused save must keep everything that was typed (React resets a
+  // form after its action). Success leaves the page (the server redirects); a refusal shows its message here.
+  const [error, setError] = useState('')
+  const [pending, start] = useTransition()
+  const errorRef = useRef<HTMLParagraphElement>(null)
+  const submit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const data = new FormData(e.currentTarget)
+    setError('')
+    start(async () => {
+      const r = await action(data)
+      if (r?.error) { setError(r.error); requestAnimationFrame(() => errorRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })) }
+    })
+  }
   return (
-    <form action={action} className="grid gap-6">
+    <form onSubmit={submit} className="grid gap-6">
       {s && <input type="hidden" name="seller_id" value={s.id} />}
       {s && canEdit && (
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -96,9 +109,12 @@ export function SellerForm({ action, seller, accounts = [], contacts = [], group
         <SellerContactRows initial={contacts} locked={locked} />
       </fieldset>
       {editing && (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs text-muted">Obrigatórios: nome, CPF/CNPJ, categoria, grupo, celular e e-mail. O resto pode ser completado depois.</p>
-          <SubmitButton className="h-10 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Salvando...">{s ? 'Salvar alterações' : 'Cadastrar vendedor'}</SubmitButton>
+        <div className="grid gap-3">
+          {error && <p ref={errorRef} role="alert" className="rounded-[10px] border border-[#FCA5A5] bg-[#FEF2F2] px-3 py-2 text-sm text-[#991B1B]">Não foi salvo: {error} Seus dados continuam na tela; corrija e clique de novo.</p>}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs text-muted">Obrigatórios: nome, CPF/CNPJ, categoria, grupo, celular e e-mail. O resto pode ser completado depois.</p>
+            <button type="submit" disabled={pending} aria-busy={pending} className="h-10 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-60">{pending ? 'Salvando...' : s ? 'Salvar alterações' : 'Cadastrar vendedor'}</button>
+          </div>
         </div>
       )}
     </form>

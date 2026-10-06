@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Cadastro de vendedor não perde os dados no erro (06/10/2026)
+- **Corrigido:** quando o banco recusava o cadastro (ex.: favorecido sem CPF/CNPJ), a tela recarregava e apagava tudo. Agora o formulário continua com o que foi digitado e mostra a mensagem logo acima do botão.
+- **Alterado:** ao marcar "favorecido", nome e CPF/CNPJ do favorecido e a chave PIX (ou banco, agência e conta, em TED) passam a ser pedidos antes de enviar.
+
 ### Repasse: Diário como padrão (06/10/2026)
 - **Alterado:** vendedor novo vem com "Recebe o repasse: Diário" (formulário, cadastro sem o campo e padrão da coluna). Na tela Repasse, "Fechar período" já abre em Diário. Migration `20261006135519_seller_daily_payout_default_v1` (aplicada em produção) (só o padrão; nenhum vendedor muda).
 

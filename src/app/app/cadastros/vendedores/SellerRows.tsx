@@ -37,6 +37,9 @@ function AccountRow({ a, index, primary, removed, locked, onRemove, canDrop }: {
 }) {
   const [method, setMethod] = useState(a?.transfer_method ?? 'pix')
   const [payee, setPayee] = useState(!!a?.holder_name)
+  // Marking a favorecido means this account is being filled: then its name, CPF/CNPJ and the key (PIX) or the
+  // bank, branch and account (TED) are asked before sending, instead of the database refusing the whole save.
+  const need = payee && !removed
   return (
     <div className={`grid gap-3 rounded-[12px] border border-line p-3 md:grid-cols-4 ${removed ? 'opacity-50' : ''}`} data-row="seller-account">
       <input type="hidden" name="account_id" value={a?.id ?? ''} />
@@ -58,16 +61,16 @@ function AccountRow({ a, index, primary, removed, locked, onRemove, canDrop }: {
         <label className={lbl}>Tipo de chave PIX
           <select name="pix_key_type" defaultValue={a?.pix_key_type ?? 'cpf_cnpj'} className="field mt-1.5">{Object.entries(PIX_TYPE_LABEL).map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select>
         </label>
-        <label className={`${lbl} md:col-span-2`}>Chave PIX<input name="pix_key" defaultValue={a?.pix_key ?? ''} maxLength={77} autoComplete="off" className="field mt-1.5 font-mono" /></label>
+        <label className={`${lbl} md:col-span-2`}>Chave PIX<input name="pix_key" required={need && method === 'pix'} defaultValue={a?.pix_key ?? ''} maxLength={77} autoComplete="off" className="field mt-1.5 font-mono" /></label>
       </div>
       <div className={method === 'ted' ? 'contents' : 'hidden'}>
         <label className={lbl}>Tipo de conta
           <select name="account_type" defaultValue={a?.account_type ?? 'checking'} className="field mt-1.5">{Object.entries(ACCOUNT_TYPE_LABEL).map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select>
         </label>
-        <label className={lbl}>Código do banco<input name="bank_code" defaultValue={a?.bank_code ?? ''} inputMode="numeric" maxLength={3} placeholder="001" className="field mt-1.5 font-mono" /></label>
+        <label className={lbl}>Código do banco<input name="bank_code" required={need && method === 'ted'} defaultValue={a?.bank_code ?? ''} inputMode="numeric" maxLength={3} placeholder="001" className="field mt-1.5 font-mono" /></label>
         <label className={lbl}>Banco<input name="bank_name" defaultValue={a?.bank_name ?? ''} maxLength={120} className="field mt-1.5" /></label>
-        <label className={lbl}>Agência<input name="branch" defaultValue={a?.branch ?? ''} inputMode="numeric" maxLength={8} className="field mt-1.5 font-mono" /></label>
-        <label className={lbl}>Conta<input name="account_number" defaultValue={a?.account_number ?? ''} inputMode="numeric" maxLength={20} className="field mt-1.5 font-mono" /></label>
+        <label className={lbl}>Agência<input name="branch" required={need && method === 'ted'} defaultValue={a?.branch ?? ''} inputMode="numeric" maxLength={8} className="field mt-1.5 font-mono" /></label>
+        <label className={lbl}>Conta<input name="account_number" required={need && method === 'ted'} defaultValue={a?.account_number ?? ''} inputMode="numeric" maxLength={20} className="field mt-1.5 font-mono" /></label>
         <label className={lbl}>Dígito<input name="account_digit" defaultValue={a?.account_digit ?? ''} maxLength={2} className="field mt-1.5 font-mono" /></label>
       </div>
       <label className="flex items-center gap-2 text-sm text-ink md:col-span-4">
@@ -75,8 +78,8 @@ function AccountRow({ a, index, primary, removed, locked, onRemove, canDrop }: {
         O dinheiro vai para outra pessoa ou empresa (favorecido)
       </label>
       <div className={payee ? 'contents' : 'hidden'}>
-        <label className={`${lbl} md:col-span-2`}>Nome do favorecido<input name="holder_name" defaultValue={a?.holder_name ?? ''} maxLength={160} className="field mt-1.5" /></label>
-        <label className={lbl}>CPF/CNPJ do favorecido<input name="holder_document" defaultValue={formatTaxId(a?.holder_document)} inputMode="numeric" className="field mt-1.5 font-mono" /></label>
+        <label className={`${lbl} md:col-span-2`}>Nome do favorecido<input name="holder_name" required={need} defaultValue={a?.holder_name ?? ''} maxLength={160} className="field mt-1.5" /></label>
+        <label className={lbl}>CPF/CNPJ do favorecido<input name="holder_document" required={need} defaultValue={formatTaxId(a?.holder_document)} inputMode="numeric" className="field mt-1.5 font-mono" /></label>
       </div>
       <label className={`${lbl} md:col-span-4`}>Observação <span className="font-normal text-muted">opcional</span><input name="account_note" defaultValue={a?.note ?? ''} maxLength={800} className="field mt-1.5" /></label>
     </div>

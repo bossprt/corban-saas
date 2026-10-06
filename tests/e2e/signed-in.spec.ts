@@ -721,6 +721,11 @@ test('seller file: full registration with payment accounts, edited in the same f
   await ted.getByLabel('Conta', { exact: true }).fill('445566')
   await ted.getByLabel('O dinheiro vai para outra pessoa ou empresa (favorecido)').check()
   await ted.getByLabel('Nome do favorecido').fill('Empresa do Vendedor Ltda')
+  // 06/10/2026: a favorecido without CPF/CNPJ is asked before sending; nothing typed is lost.
+  await form.getByRole('button', { name: 'Cadastrar vendedor' }).click()
+  await expect(ted.getByLabel('CPF/CNPJ do favorecido')).toHaveJSProperty('validity.valueMissing', true)
+  await expect(page).toHaveURL(/\/app\/cadastros\/vendedores\/novo/)
+  await expect(form.getByLabel(/Nome \/ razão social/)).toHaveValue(name)
   await ted.getByLabel('CPF/CNPJ do favorecido').fill('11.222.333/0001-81')
   await ted.getByLabel('Principal').check()
   await form.getByRole('button', { name: 'Adicionar contato' }).click()
@@ -737,13 +742,14 @@ test('seller file: full registration with payment accounts, edited in the same f
   await expect(saved.locator('input[name="whatsapp"]')).toHaveValue('(68) 99955-4433')
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-vendedor-ficha.png`, fullPage: true })
 
-  // Required fields are enforced by the database too: a bad PIX key is refused with a clear message.
+  // Required fields are enforced by the database too: a bad PIX key is refused with a clear message, and the form stays
+  // open with what was typed (06/10/2026), so the fix is made right there.
   await page.getByRole('button', { name: 'Editar cadastro' }).click()
   await saved.locator('[data-row="seller-account"]').nth(1).getByLabel('Chave PIX', { exact: true }).fill('nao-e-email')
   await saved.getByRole('button', { name: 'Salvar alterações' }).click()
-  await expect(page.getByText('Chave PIX inválida')).toBeVisible({ timeout: 30_000 })
+  await expect(saved.getByRole('alert')).toContainText('Chave PIX inválida', { timeout: 30_000 })
+  await expect(saved.locator('[data-row="seller-account"]').nth(1).getByLabel('Chave PIX', { exact: true })).toHaveValue('nao-e-email')
 
-  await page.getByRole('button', { name: 'Editar cadastro' }).click()
   await saved.locator('[data-row="seller-account"]').nth(1).getByRole('button', { name: 'Remover' }).click()
   await saved.getByRole('button', { name: 'Salvar alterações' }).click()
   await expect(page.getByText('Cadastro do vendedor atualizado.')).toBeVisible({ timeout: 30_000 })
