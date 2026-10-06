@@ -1,4 +1,4 @@
--- Contract test for 20261006_payout_batch_v1: the pay list shows, per account, exactly what "Pagar agora" pays today
+-- Contract test for 20261006154254_payout_batch_v1: the pay list shows, per account, exactly what "Pagar agora" pays today
 -- (closing with a positive balance, closing with a negative carry and the debt limit, account model, an open statement);
 -- paying with the shown amount records that amount; a different amount is refused; whoever may not pay sees nothing;
 -- nobody sees or pays their own account. One transaction, rolled back.
