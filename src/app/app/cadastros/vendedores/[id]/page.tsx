@@ -8,7 +8,8 @@ import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
 import { CATEGORY_LABEL, originText, sellerCode } from '@/lib/sellers'
 import { isUuid } from '@/lib/team'
-import { createSellerPortalAccess, saveSeller, setSellerActive } from '../actions'
+import { createSellerPortalAccess, linkSellerUser, saveSeller, setSellerActive } from '../actions'
+import { memberEmails } from '@/lib/team.server'
 import { PasswordPair } from '@/components/PasswordPair'
 import { SellerForm, type SellerValues } from '../SellerForm'
 import type { SellerAccount, SellerContact } from '../SellerRows'
@@ -49,6 +50,22 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
     business_district: p.business_district ?? null, business_city: p.business_city ?? null, business_state: p.business_state ?? null,
   } : undefined
   const groupOptions = (groups ?? []).filter(g => g.is_active || g.id === s?.commission_group_id).map(g => ({ id: g.id, name: g.name }))
+  // Team members with a login (06/10/2026): a seller can be linked to one of them, of any role, instead of a new
+  // portal login. Shown to whoever may link (admin, manager).
+  type Member = { user_id: string; role: string; organization_roles: { name: string; key: string } | { name: string; key: string }[] | null }
+  const [{ data: memberRows }, { data: linkedRows }] = s && canEdit ? await Promise.all([
+    supabase.from('organization_memberships').select('user_id,role,organization_roles(name,key)').eq('status', 'active'),
+    supabase.from('commercial_sellers').select('id,user_id').not('user_id', 'is', null),
+  ]) : [{ data: [] }, { data: [] }]
+  const members = ((memberRows ?? []) as Member[]).map(m => {
+    const r = Array.isArray(m.organization_roles) ? m.organization_roles[0] : m.organization_roles
+    return { id: m.user_id, role: r?.name ?? m.role, portal: r?.key === 'corretor' }
+  })
+  const emailOf = members.length ? await memberEmails(members.map(m => m.id)) : new Map<string, string>()
+  const takenBy = new Map(((linkedRows ?? []) as { id: string; user_id: string }[]).map(r => [r.user_id, r.id]))
+  const linked = s?.user_id ? members.find(m => m.id === s.user_id) : undefined
+  const free = members.filter(m => !m.portal && (!takenBy.has(m.id) || takenBy.get(m.id) === s?.id))
+  const sameEmail = p.email ? free.find(m => (emailOf.get(m.id) ?? '').toLowerCase() === (p.email ?? '').toLowerCase()) : undefined
   const missing = s ? [!p.phone && 'celular', !p.email && 'e-mail', !(accounts.data ?? []).length && canSeeBank && 'dados para pagamento'].filter(Boolean) : []
 
   return (
@@ -61,7 +78,7 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
             <span className="font-mono">Código {sellerCode(s.code)}</span>
             <span>{CATEGORY_LABEL[s.seller_category] ?? s.seller_category}</span>
             <Badge tone={s.is_active ? 'received' : 'neutral'}>{s.is_active ? 'Ativo' : 'Inativo'}</Badge>
-            {s.user_id && <Badge tone="brand">Com acesso ao portal</Badge>}
+            {s.user_id && <Badge tone="brand">{linked && !linked.portal ? `Usuário da equipe · ${linked.role}` : 'Com acesso ao portal'}</Badge>}
             {originText(s.origin, s.imported_at) && <span className="text-xs">{originText(s.origin, s.imported_at)}</span>}
             {missing.length > 0 && <><Badge tone="pending">Cadastro incompleto</Badge><span className="text-xs">Falta: {missing.join(', ')}.</span></>}
           </span>
@@ -76,9 +93,35 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
       {s && canEdit && (
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <Card>
-            <CardHeader title="Acesso ao portal" />
+            <CardHeader title="Acesso ao sistema" />
             <div className="px-5 pb-5 pt-3 text-sm">
-              {s.user_id ? <p className="text-ink-soft">Este vendedor já entra no portal do corretor.</p> : !s.is_active ? <p className="text-muted">Reative o vendedor para dar acesso.</p> : (
+              {s.user_id && linked && !linked.portal ? (
+                <form action={linkSellerUser} className="grid gap-2">
+                  <p className="text-ink-soft">Ligado ao usuário da equipe <strong className="text-ink">{emailOf.get(linked.id) ?? 'usuário'}</strong> ({linked.role}). A produção deste vendedor conta como dele; o papel e o que ele vê não mudam.</p>
+                  <input type="hidden" name="id" value={s.id} /><input type="hidden" name="user_id" value="" />
+                  <SubmitButton pendingText="..." className="h-9 w-fit rounded-[10px] border border-line bg-surface px-3 text-sm text-ink hover:bg-surface-muted">Desfazer ligação</SubmitButton>
+                </form>
+              ) : s.user_id ? <p className="text-ink-soft">Este vendedor já entra no portal do corretor.</p> : !s.is_active ? <p className="text-muted">Reative o vendedor para dar acesso.</p> : (<>
+                {sameEmail && (
+                  <form action={linkSellerUser} className="mb-4 grid gap-2 rounded-[10px] border border-[#FCD34D] bg-[#FFFBEB] p-3">
+                    <p className="text-[#92400E]">O e-mail deste vendedor já é de um usuário da equipe ({sameEmail.role}). Ligue o vendedor a esse usuário em vez de criar outro login.</p>
+                    <input type="hidden" name="id" value={s.id} /><input type="hidden" name="user_id" value={sameEmail.id} />
+                    <SubmitButton pendingText="Ligando..." className="h-9 w-fit rounded-[10px] bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong">Ligar a {emailOf.get(sameEmail.id)}</SubmitButton>
+                  </form>
+                )}
+                {free.length > 0 && (
+                  <form action={linkSellerUser} className="mb-4 flex flex-wrap items-end gap-2">
+                    <input type="hidden" name="id" value={s.id} />
+                    <label className="text-xs text-muted">Ligar a um usuário da equipe
+                      <select name="user_id" required defaultValue="" className="field mt-1 block w-72">
+                        <option value="" disabled>Escolha</option>
+                        {free.map(m => <option key={m.id} value={m.id}>{emailOf.get(m.id) ?? 'usuário'} · {m.role}</option>)}
+                      </select>
+                    </label>
+                    <SubmitButton pendingText="Ligando..." className="h-10 rounded-[10px] border border-line-strong bg-surface px-4 text-sm text-ink hover:bg-surface-muted">Ligar</SubmitButton>
+                  </form>
+                )}
+                <p className="mb-2 text-xs font-medium text-ink-soft">Ou crie um acesso novo ao portal do corretor:</p>
                 <form action={createSellerPortalAccess} className="flex flex-wrap items-end gap-2">
                   <input type="hidden" name="id" value={s.id} />
                   <label className="text-xs text-muted">E-mail do corretor<input required name="email" type="email" defaultValue={p.email ?? ''} className="field mt-1 block w-72" /></label>
@@ -86,7 +129,7 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
                   <label className="flex h-10 items-center gap-1.5 text-xs text-muted"><input type="checkbox" name="must_change" className="accent-[var(--brand)]" />Pedir nova senha no primeiro acesso</label>
                   <SubmitButton pendingText="Criando..." className="h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Criar acesso</SubmitButton>
                 </form>
-              )}
+              </>)}
               <p className="mt-2 text-xs text-muted">Entra com o papel Corretor: vê só as propostas e o extrato dele.</p>
             </div>
           </Card>

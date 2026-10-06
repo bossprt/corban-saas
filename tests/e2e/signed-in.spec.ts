@@ -1755,3 +1755,31 @@ test('seller dashboard: goal, what I will earn and my contracts, on the phone', 
   await expect(page).toHaveURL(/\/app\/repasse/)
   await ctx.close()
 })
+
+// A seller linked to a team member who already has a login, of any role (06/10/2026): the supervisor stays supervisor.
+test('seller linked to an existing team member (supervisor), then unlinked', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  const base = String(Date.now()).slice(-9)
+  const dv = (s: string, w: number) => { const r = s.split('').reduce((a, c, i) => a + Number(c) * (w - i), 0) % 11; return r < 2 ? 0 : 11 - r }
+  const d1 = dv(base, 10), cpf = base + d1 + dv(base + d1, 11)
+  const name = `Vendedor Ligado ${base}`
+  await page.goto('/app/cadastros/vendedores/novo')
+  const form = page.locator('form').filter({ hasText: '1. Dados básicos' })
+  await form.getByLabel(/Nome \/ razão social/).fill(name)
+  await form.locator('input[name="tax_id"]').fill(cpf)
+  await form.locator('select[name="seller_category"]').selectOption('pf')
+  await form.locator('select[name="commission_group_id"]').selectOption({ label: 'Ouro' })
+  await form.locator('input[name="mobile"]').fill('(68) 99911-2233')
+  await form.locator('input[name="email"]').fill(`ligado.${base}@example.com`)
+  await form.getByRole('button', { name: 'Cadastrar vendedor' }).click()
+  await expect(page.getByText('Vendedor cadastrado.')).toBeVisible({ timeout: 30_000 })
+  const access = page.locator('section').filter({ has: page.getByText('Acesso ao sistema', { exact: true }) })
+  const select = access.getByLabel('Ligar a um usuário da equipe')
+  const option = await select.locator('option', { hasText: 'supervisor@corban-teste.local' }).getAttribute('value')
+  await select.selectOption(option!)
+  await access.getByRole('button', { name: 'Ligar', exact: true }).click()
+  await expect(page.getByText('Vendedor ligado ao usuário da equipe. O papel dele não mudou.')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByText(/Usuário da equipe · Supervisor/)).toBeVisible()
+  await access.getByRole('button', { name: 'Desfazer ligação' }).click()
+  await expect(page.getByText('Ligação desfeita. O usuário continua na equipe.')).toBeVisible({ timeout: 30_000 })
+})
