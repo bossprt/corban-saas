@@ -1,4 +1,4 @@
--- Contract test for 20261006_seller_dashboard_v1: a seller sees only their own numbers (their contracts, their payable
+-- Contract test for 20261006200125_seller_dashboard_v1: a seller sees only their own numbers (their contracts, their payable
 -- share, their account); a member without a seller record gets nothing; another company is refused.
 -- One transaction, rolled back.  psql -v ON_ERROR_STOP=1 -f tests/security/seller-dashboard-contract.sql
 
