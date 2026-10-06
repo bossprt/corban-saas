@@ -16,7 +16,7 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 ## [Unreleased]
 
 ### Dados: folha de pagamento relançada (06/10/2026)
-- **Dados:** a "Folha de Pagamento" lançada como 3 parcelas de R$ 477,46 (parcelamento por engano) foi cancelada, com motivo no histórico, e relançada como R$ 1.432,40 por mês em 4 meses (07/10/2026 a 07/01/2027), a pedido do dono. Migration `fix_payroll_entry_v1`.
+- **Dados:** a "Folha de Pagamento" lançada como 3 parcelas de R$ 477,46 (parcelamento por engano) foi cancelada, com motivo no histórico, e relançada como R$ 1.432,40 por mês em 4 meses (07/10/2026 a 07/01/2027), a pedido do dono. Migration `20261006192830_fix_payroll_entry_v1` (aplicada em produção).
 
 ### Contas a pagar: repetir x parcelar (06/10/2026)
 - **Corrigido:** o campo "Parcelas" dividia o valor; o dono queria repetir (salário). Agora "Como lançar": Uma vez, Repetir todo mês (mesmo valor) ou Parcelar (dividir o valor), com "Quantos meses" e exemplo na tela. Migration `20261006192321_fin_repeat_entries_v1`, aplicada em produção (`fin_create_entry` ganha `p_repeat`, padrão = parcelar como antes).
