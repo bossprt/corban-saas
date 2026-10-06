@@ -42,7 +42,9 @@ export async function createEntry(f: FormData) {
     p_org: ctx.organization.id, p_direction: text(f, 'direction') === 'in' ? 'in' : 'out', p_description: text(f, 'description'),
     p_account: uuidOrNull(f, 'account_id'), p_branch: uuidOrNull(f, 'branch_id'), p_counterpart: text(f, 'counterpart'), p_document: text(f, 'document'),
     p_amount: amount, p_due_on: dateOrNull(f, 'due_on'), p_competence_on: dateOrNull(f, 'competence_on'),
-    p_installments: Number.parseInt(text(f, 'installments') || '1', 10) || 1,
+    // "Uma vez" is one entry; "Repetir" the same amount every month; "Parcelar" the amount divided (06/10/2026).
+    p_installments: text(f, 'plan') === 'once' ? 1 : Number.parseInt(text(f, 'installments') || '1', 10) || 1,
+    p_repeat: text(f, 'plan') === 'repeat',
     p_settled_on: settled ? dateOrNull(f, 'due_on') : null, p_bank_account: settled ? uuidOrNull(f, 'bank_account_id') : null,
   })
   return back(safePath(f), error ? finError(error) : 'ok:fin_lancado')

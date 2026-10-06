@@ -1150,10 +1150,22 @@ test('company finance: bank account, payable, OFX reconciliation, cash flow and 
   await page.getByText('+ Novo lançamento').click()
   await page.getByLabel('Descrição').fill(bill)
   await page.getByLabel('Conta do plano').selectOption({ label: '4.4 Energia, água e internet' })
-  await page.getByLabel('Valor total (R$)').fill(value)
+  await page.getByLabel('Valor (R$)').fill(value)
   await page.getByRole('button', { name: 'Registrar' }).click()
   await expect(page.getByText('Lançamento registrado.')).toBeVisible({ timeout: 30_000 })
   await expect(page.getByRole('row').filter({ hasText: bill })).toBeVisible()
+
+  // "Repetir todo mês" keeps the amount every month (06/10/2026); "Parcelar" would divide it.
+  const salary = `Salário E2E ${ts}`
+  await page.getByText('+ Novo lançamento').click()
+  await page.getByLabel('Descrição').fill(salary)
+  await page.getByLabel('Conta do plano').selectOption({ label: '4.4 Energia, água e internet' })
+  await page.getByLabel('Valor (R$)').fill('1.432,40')
+  await page.getByLabel('Como lançar').selectOption('repeat')
+  await page.getByLabel(/Quantos meses/).fill('3')
+  await page.getByRole('button', { name: 'Registrar' }).click()
+  await expect(page.getByText('Lançamento registrado.')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByRole('row').filter({ hasText: `${salary} (1/3)` })).toContainText('1.432,40')
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-financeiro-empresa.png`, fullPage: true })
 
   const day = new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10).replace(/-/g, '')

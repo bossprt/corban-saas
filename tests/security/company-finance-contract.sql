@@ -59,6 +59,12 @@ insert into made select 'rent', public.fin_create_entry((select org from ids), '
 insert into results select 'installments 333,33 + 333,33 + 333,34, one month apart',
   (select string_agg(amount::text, '+' order by installment_no) = '333.33+333.33+333.34' and count(distinct due_on) = 3
    from public.fin_entries where installment_group = (select installment_group from public.fin_entries where id = (select id from made where label = 'rent')));
+-- Repeat (06/10/2026): the same amount every month, N times (a salary), instead of dividing it.
+insert into made select 'salary', public.fin_create_entry((select org from ids), 'out', 'Folha de pagamento', pg_temp.acc('4.3'), null, null, null, 1432.40, current_date + 800, null, 3, null, null, true);  -- far ahead: stays out of this month's cash flow and income statement
+insert into results select 'repeat: 1.432,40 three times, one month apart, (1/3)..(3/3)',
+  (select string_agg(amount::text, '+' order by installment_no) = '1432.40+1432.40+1432.40' and count(distinct due_on) = 3
+          and bool_and(description like 'Folha de pagamento (_/3)')
+   from public.fin_entries where installment_group = (select installment_group from public.fin_entries where id = (select id from made where label = 'salary')));
 insert into results select 'money never as float: 0,1 + 0,2 cents are refused beyond 2 places',
   pg_temp.err(format('select public.fin_create_entry(%L, %L, %L, %L, null, null, null, 10.001, current_date, null, 1, null, null)', (select org from ids), 'out', 'Teste', pg_temp.acc('4.9'))) = 'invalid_amount';
 
@@ -146,11 +152,11 @@ insert into results select 'a seller reads no entry', not exists (select 1 from 
 insert into results select 'a seller cannot turn automatic posting off', pg_temp.err(format('select public.fin_set_auto_post(%L, true)', (select org from ids))) = 'not_authorized';
 reset role;
 insert into results select 'anon has nothing',
-  not has_table_privilege('anon', 'public.fin_entries', 'select') and not has_function_privilege('anon', 'public.fin_create_entry(uuid,text,text,uuid,uuid,text,text,numeric,date,date,integer,date,uuid)', 'execute');
+  not has_table_privilege('anon', 'public.fin_entries', 'select') and not has_function_privilege('anon', 'public.fin_create_entry(uuid,text,text,uuid,uuid,text,text,numeric,date,date,integer,date,uuid,boolean)', 'execute');
 
 select check_name, ok from results order by ok, check_name;
 do $$ begin
-  if exists (select 1 from results where not ok) or (select count(*) from results) < 27 then raise exception 'company finance contract failed'; end if;
+  if exists (select 1 from results where not ok) or (select count(*) from results) < 28 then raise exception 'company finance contract failed'; end if;
 end $$;
 
 rollback;
