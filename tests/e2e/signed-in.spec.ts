@@ -1706,7 +1706,8 @@ test('operator dashboard: pipeline, stuck contracts and goals, without company m
   test.skip(info.project.name === 'mobile', 'one run is enough')
   const ctx = await browser.newContext()
   const page = await ctx.newPage()
-  await signIn(page, 'vendedor@corban-teste.local', process.env.E2E_PASSWORD!)
+  // vendedor2 is an agent without a seller record: the operation view (a bound seller gets their own month).
+  await signIn(page, 'vendedor2@corban-teste.local', process.env.E2E_PASSWORD!)
   await page.waitForURL(/\/app(\/|$)/, { timeout: 30_000 })
   await page.goto('/app')
   for (const label of ['Na esteira', 'Pendências no banco', 'Pagos no mês']) await expect(page.getByText(label, { exact: true })).toBeVisible()
@@ -1717,5 +1718,27 @@ test('operator dashboard: pipeline, stuck contracts and goals, without company m
   await expect(page.getByText('Comissão prevista')).toHaveCount(0)
   await expect(page.getByText('Fica na empresa')).toHaveCount(0)
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-dashboard-operador.png`, fullPage: true })
+  await ctx.close()
+})
+
+// The seller's dashboard (06/10/2026, model F): the seller sees their month on the phone, their share and pendencies,
+// never the company's numbers.
+test('seller dashboard: goal, what I will earn and my contracts, on the phone', async ({ browser }, info) => {
+  test.skip(info.project.name !== 'mobile', 'phone first')
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } })
+  const page = await ctx.newPage()
+  await signIn(page, 'vendedor@corban-teste.local', process.env.E2E_PASSWORD!)
+  await page.waitForURL(/\/app(\/|$)/, { timeout: 30_000 })
+  await page.goto('/app')
+  await expect(page.getByRole('heading', { name: 'Seu mês' })).toBeVisible()
+  await expect(page.getByText('Meta do mês')).toBeVisible()
+  for (const label of ['Previsto', 'Liberado', 'Recebido']) await expect(page.getByText(label, { exact: true })).toBeVisible()
+  await expect(page.getByText('Minhas pendências')).toBeVisible()
+  await expect(page.getByText('Últimos contratos')).toBeVisible()
+  await expect(page.getByText('Fica na empresa')).toHaveCount(0)
+  await expect(page.getByText('Na esteira', { exact: true })).toHaveCount(0)
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-dashboard-vendedor.png`, fullPage: true })
+  await page.getByRole('link', { name: /Ver meu extrato/ }).click()
+  await expect(page).toHaveURL(/\/app\/repasse/)
   await ctx.close()
 })

@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Painel do vendedor (06/10/2026)
+- **Adicionado:** a Visão geral do vendedor (perfil de agente ligado a um cadastro de vendedor) vira o painel dele, pensado para o celular (modelo F): meta do mês em anel, quanto vai ganhar (previsto, liberado para o próximo pagamento, recebido no mês), pendências no banco e últimos contratos com a parte dele. Só os números dele; nada da empresa. Agente sem cadastro de vendedor continua com o painel do operador.
+- Migration `20261006200125_seller_dashboard_v1` (aplicada em produção) (função de leitura `public.seller_dashboard`). Teste de contrato `seller-dashboard-contract.sql`.
+
 ### Dados: folha de pagamento relançada (06/10/2026)
 - **Dados:** a "Folha de Pagamento" lançada como 3 parcelas de R$ 477,46 (parcelamento por engano) foi cancelada, com motivo no histórico, e relançada como R$ 1.432,40 por mês em 4 meses (07/10/2026 a 07/01/2027), a pedido do dono. Migration `20261006192830_fix_payroll_entry_v1` (aplicada em produção).
 
