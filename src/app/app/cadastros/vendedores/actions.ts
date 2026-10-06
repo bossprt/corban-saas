@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
-import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedback'
+import { classifyDbFeedback, FEEDBACK, feedbackUrl, type FeedbackCode } from '@/lib/feedback'
 import { createMemberLogin } from '@/lib/team.server'
 import { PASSWORD_MAX, PASSWORD_MIN } from '@/lib/team'
 
@@ -37,10 +37,11 @@ function rows(f:FormData,names:string[]):Record<string,string>[]{
 }
 
 // Register or change a seller: one database call (save_seller) writes identity, profile, accounts and contacts.
-export async function saveSeller(f:FormData){
+// A refusal comes back as a message and the form keeps what was typed; only success leaves the page.
+export async function saveSeller(f:FormData):Promise<{error:string}>{
   const ctx=await manager()
   const sellerId=text(f,'seller_id')
-  const back=(code:FeedbackCode)=>go(code,sellerId?`${PATH}/${sellerId}`:`${PATH}/novo`)
+  const back=(code:FeedbackCode)=>({error:FEEDBACK[code]})
   if(!ctx)return back('erro:sem_permissao')
   if(sellerId&&!uuid(sellerId))return back('erro:requisicao_invalida')
   const mobile=text(f,'mobile')
