@@ -1757,7 +1757,7 @@ test('seller dashboard: goal, what I will earn and my contracts, on the phone', 
 })
 
 // A seller linked to a team member who already has a login, of any role (06/10/2026): the supervisor stays supervisor.
-test('seller linked to an existing team member (supervisor), then unlinked', async ({ page }, info) => {
+test('seller linked to an existing team member (supervisor), then unlinked', async ({ page, browser }, info) => {
   test.skip(info.project.name === 'mobile', 'one run is enough')
   const base = String(Date.now()).slice(-9)
   const dv = (s: string, w: number) => { const r = s.split('').reduce((a, c, i) => a + Number(c) * (w - i), 0) % 11; return r < 2 ? 0 : 11 - r }
@@ -1780,6 +1780,17 @@ test('seller linked to an existing team member (supervisor), then unlinked', asy
   await access.getByRole('button', { name: 'Ligar', exact: true }).click()
   await expect(page.getByText('Vendedor ligado ao usuário da equipe. O papel dele não mudou.')).toBeVisible({ timeout: 30_000 })
   await expect(page.getByText(/Usuário da equipe · Supervisor/)).toBeVisible()
+
+  // The supervisor now switches to their own seller view on the dashboard.
+  const sup = await browser.newContext()
+  const sp = await sup.newPage()
+  await signIn(sp, 'supervisor@corban-teste.local', process.env.E2E_PASSWORD!)
+  await sp.waitForURL(/\/app(\/|$)/, { timeout: 30_000 })
+  await sp.goto('/app')
+  await sp.getByRole('navigation', { name: 'Painel' }).getByRole('link', { name: 'Meu painel de vendedor' }).click()
+  await expect(sp.getByRole('heading', { name: 'Seu mês' })).toBeVisible({ timeout: 30_000 })
+  await sup.close()
+
   await access.getByRole('button', { name: 'Desfazer ligação' }).click()
   await expect(page.getByText('Ligação desfeita. O usuário continua na equipe.')).toBeVisible({ timeout: 30_000 })
 })
