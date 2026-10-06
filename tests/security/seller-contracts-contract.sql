@@ -1,4 +1,4 @@
--- Contract test for 20261006_seller_contracts_v1: the external broker sees every contract where they are the seller,
+-- Contract test for 20261006223312_seller_contracts_v1: the external broker sees every contract where they are the seller,
 -- also the ones the company typed for them, with their payable share; never another seller's contract; a member
 -- without a seller record gets an empty list; another company is refused. One transaction, rolled back.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/seller-contracts-contract.sql

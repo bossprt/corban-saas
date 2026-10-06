@@ -17,7 +17,7 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ### Portal do corretor externo: Meus contratos (06/10/2026)
 - **Adicionado:** o portal vira "Meu portal": Previsto, Liberado, Recebido no mês e Propostas aguardando; "Meus contratos" com todos os contratos em que ele é o vendedor, inclusive os digitados pela empresa (marcados assim), com a situação e a parte dele (aguardando cliente/banco, liberado, recebido); botão Ver meu extrato. O detalhe abre também contratos digitados pela empresa. "Propostas enviadas" mostra só as que aguardam ou foram recusadas.
-- Migration `seller_contracts_v1` (função de leitura `public.seller_contracts`). Teste de contrato `seller-contracts-contract.sql`.
+- Migration `20261006223312_seller_contracts_v1` (aplicada em produção) (função de leitura `public.seller_contracts`). Teste de contrato `seller-contracts-contract.sql`.
 
 ### Acesso ao portal: senha de 12 e nova tentativa (06/10/2026)
 - **Corrigido:** criar acesso de vendedor falhava na 2ª tentativa com erro genérico: a 1ª (senha recusada pelo login) deixava o convite pendente. Agora, se o convite pendente é do mesmo vendedor, a nova tentativa segue e cria o login; se é de outro acesso, a mensagem explica.
