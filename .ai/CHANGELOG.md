@@ -16,7 +16,7 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 ## [Unreleased]
 
 ### Dados: recebimento da comissão do contrato 131259 (06/10/2026)
-- **Dados:** comissão HOPE do contrato 131259, R$ 1.900,00 à vista, recebida em 11/09/2026 (valor e data informados pelo dono). Registrada pela mesma função do "Registrar recebimento". Migration `receipt_hope_131259_v1`.
+- **Dados:** comissão HOPE do contrato 131259, R$ 1.900,00 à vista, recebida em 11/09/2026 (valor e data informados pelo dono). Registrada pela mesma função do "Registrar recebimento". Migration `20261006163219_receipt_hope_131259_v1` (aplicada em produção).
 
 ### Contrato sem repasse fica concluído (06/10/2026)
 - **Alterado:** contrato em que o vendedor recebe R$ 0,00 (produção própria, grupo Smart Promotora), já pago ao cliente e com a comissão do banco recebida, aparece como "Concluído · sem repasse" em vez de "liberado, a pagar". Nenhum pagamento de R$ 0,00 é registrado. Filtro "Repasse ao vendedor" ganha "Sem repasse" e "Concluído (pago ou sem repasse)".
