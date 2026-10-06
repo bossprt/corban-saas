@@ -15,6 +15,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Repasse: pagar vendedores em lote com QR Code PIX (06/10/2026)
+- **Adicionado:** cartão "Pagar vendedores" na tela Repasse (quem pode aprovar pagamentos): lista de quem tem valor a pagar, com o valor exato que o sistema registra, a chave PIX (copiar) ou os dados da TED e o favorecido. QR Code PIX com o valor e PIX copia e cola (BR Code do Banco Central, gerado no Corban, sem integração bancária), navegação Anterior/Próximo e aviso para conferir o nome no banco. Planilha Excel da lista. "Confirmar pagos" registra só os marcados, com data e comprovante opcional, como o Pagar agora.
+- **Segurança/dinheiro:** migration `20261006154254_payout_batch_v1` (aplicada em produção): `private.pay_now_amount` (o valor que o Pagar agora pagaria hoje, sem gravar), `public.payout_pay_list` e `public.pay_account_now_checked` (recusa com `amount_changed` se o valor mudou desde a lista). Nunca a própria conta. Teste de contrato `payout-batch-contract.sql`.
+- Dependência nova: `qrcode` (MIT).
+
 ### Contratos: recalcular comissões em lote (06/10/2026)
 - **Adicionado:** na tela Contratos, caixa de seleção em cada linha e barra "Recalcular selecionados" (marcar todos da página, marcar desatualizados). Cada contrato é recalculado pela mesma função do botão Recalcular do contrato; os que não podem (vendedor já recebeu, sem vendedor, sem linha na tabela…) aparecem listados com o motivo, e os outros seguem. Até 300 por vez.
 - **Adicionado:** etiqueta "Comissão desatualizada" e filtro "Só comissão desatualizada" (financeiro): o vendedor do contrato ou o grupo dele mudou depois do cálculo.

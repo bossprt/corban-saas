@@ -152,3 +152,39 @@ export async function payNow(formData: FormData) {
   revalidatePath(path); revalidatePath('/app/repasse'); revalidatePath('/app/financeiro/empresa')
   return go(path, 'ok:repasse_pago_agora')
 }
+
+export type PayBatchResult = { error?: string; ok: number; total: string; failed: { account: string; name: string; reason: string }[] }
+const PAY_REASON: [RegExp, string][] = [
+  [/amount_changed/, 'o valor mudou desde que a lista foi aberta: atualize a página e confira antes de confirmar'],
+  [/nothing_to_pay/, 'não há nada a pagar'],
+  [/cannot_pay_yourself/, 'ninguém registra o pagamento da própria conta'],
+  [/not_authorized/, 'sem permissão para pagar'],
+]
+
+// Confirms the payments made in the bank, several accounts at once (owner request 06/10/2026). Each account is paid
+// exactly like "Pagar agora", and only when its amount is still the one on screen (the one paid by PIX or TED).
+export async function payBatch(formData: FormData): Promise<PayBatchResult> {
+  const { supabase } = await requireAppContext()
+  const paidOn = String(formData.get('paid_on') ?? '')
+  const reference = String(formData.get('reference') ?? '').trim()
+  const empty = { ok: 0, total: '0.00', failed: [] }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(paidOn)) return { ...empty, error: 'Informe a data do pagamento.' }
+  if (reference.length > 120) return { ...empty, error: 'Comprovante com no máximo 120 caracteres.' }
+  const chosen = [...new Set(formData.getAll('account').map(String))].filter(isUuid)
+  if (!chosen.length) return { ...empty, error: 'Marque pelo menos um vendedor.' }
+  if (chosen.length > 300) return { ...empty, error: 'Marque no máximo 300 por vez.' }
+  const result: PayBatchResult = { ok: 0, total: '0.00', failed: [] }
+  let cents = BigInt(0)
+  for (const account of chosen) {
+    const expected = String(formData.get(`amount_${account}`) ?? '')
+    const name = String(formData.get(`name_${account}`) ?? 'Conta')
+    if (!/^\d{1,12}\.\d{2}$/.test(expected)) { result.failed.push({ account, name, reason: 'valor inválido' }); continue }
+    const { error } = await supabase.rpc('pay_account_now_checked', { p_account: account, p_paid_on: paidOn, p_reference: reference, p_expected: expected })
+    if (error) { result.failed.push({ account, name, reason: PAY_REASON.find(([re]) => re.test(error.message ?? ''))?.[1] ?? 'não foi possível registrar' }); continue }
+    result.ok++
+    cents += BigInt(expected.replace('.', ''))
+  }
+  result.total = `${cents / BigInt(100)}.${String(cents % BigInt(100)).padStart(2, '0')}`
+  revalidatePath('/app/repasse'); revalidatePath('/app/financeiro/empresa')
+  return result
+}

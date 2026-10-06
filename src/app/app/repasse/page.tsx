@@ -11,6 +11,9 @@ import { add, fromDecimalString, toDecimalString, type Rational } from '@/lib/co
 import { dateBr, ENTRY_KIND_LABEL, MODEL_LABEL } from '@/lib/payout/format'
 import { closePeriod, decideEntry, openAccount } from './actions'
 import { PayoutRows, type PayoutRow } from './PayoutRows'
+import { PayBatch } from './PayBatch'
+import { payBatch } from './actions'
+import { loadPayList } from '@/lib/payout/pay-list'
 
 type Summary = { account_id: string; holder_name: string; holder_kind: string; model: string; balance: string; available: string; pending_entries: number; open_payouts: number }
 type Pending = { id: string; account_id: string; kind: string; amount: string; effective_on: string; description: string | null; entry_group: string | null; created_at: string }
@@ -47,6 +50,9 @@ export default async function PayoutPage() {
     for (const a of accounts ?? []) payTo.set(a.id, bySeller.get(a.seller_id) ?? '')
   }
   const emails = await memberEmails((members ?? []).map(m => m.user_id))
+  // Paying several sellers at once (06/10/2026): who may approve a payment pays in the bank and confirms here.
+  const payLines = canApprove ? await loadPayList(supabase, organization.id) : []
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
   // One row per manual entry group (installments of the same advance are approved together).
   const groups = new Map<string, Pending & { count: number; total: Rational }>()
   for (const e of (pendingRows ?? []) as Pending[]) {
@@ -58,6 +64,14 @@ export default async function PayoutPage() {
   return (
     <section>
       <PageHeader title="Repasse" description="Conta corrente de cada pessoa: comissões conciliadas, estornos, vales, bônus e descontos. Todo pagamento é aprovado por outra pessoa." />
+
+      {canApprove && (
+        <Card className="mb-4" id="pagar">
+          <CardHeader title="Pagar vendedores" />
+          <p className="px-5 pb-3 text-[13px] text-ink-soft">O valor de cada um é exatamente o que o sistema registra ao pagar. Pague no banco (QR Code PIX com o valor, copia e cola ou TED) e depois confirme os pagos.</p>
+          <PayBatch lines={payLines} action={payBatch} today={today} />
+        </Card>
+      )}
 
       {canCreate && (
         <Card className="mb-4 p-5">
