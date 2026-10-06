@@ -11,6 +11,8 @@ import { brlText } from '@/lib/receipts/format'
 import { formatCpf } from '@/lib/cpf'
 import { isUuid } from '@/lib/team'
 import { CpfSearchForm } from '@/components/CpfSearchForm'
+import { recalcContracts } from './actions'
+import { RecalcBar } from './RecalcBar'
 
 type SP = Record<string, string | string[] | undefined>
 const one = (v: string | string[] | undefined) => (typeof v === 'string' ? v : '')
@@ -37,11 +39,13 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
   const finance = can(access, 'financeiro.view')
   // Payout changes are the owner's alone: only the Administrador sees that a payout was changed (owner request 05/10/2026).
   const owner = atLeast(membership.role, 'admin')
+  // Recalculating is for whoever can recalculate a contract on its page (owner request 06/10/2026: several at once).
+  const canRecalc = can(access, 'propostas.edit') || can(access, 'financeiro.edit')
   const sp = await searchParams
   const text = one(sp.q).trim()
   const f = {
     de: one(sp.de), ate: one(sp.ate), banco: one(sp.banco), convenio: one(sp.convenio), vendedor: one(sp.vendedor), grupo: one(sp.grupo),
-    situacao: one(sp.situacao), cliente: isUuid(one(sp.cliente)) ? one(sp.cliente) : '', comissao: one(sp.comissao), alterado: one(sp.alterado), repasse: one(sp.repasse),
+    situacao: one(sp.situacao), cliente: isUuid(one(sp.cliente)) ? one(sp.cliente) : '', comissao: one(sp.comissao), alterado: one(sp.alterado), repasse: one(sp.repasse), desatualizado: one(sp.desatualizado),
     // A CPF typed in the search is looked up by POST (CpfSearchForm) and becomes cliente=<id>; a CPF that still reaches
     // the URL is ignored.
     q: CPF_LIKE.test(text) ? '' : text.toLowerCase(),
@@ -63,6 +67,10 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
     .order('id').range(a, b)) : []
   // What is payable to the seller (the owner's or a manager's change, part C2) per contract.
   const { data: payoutRows } = finance ? await supabase.rpc('contract_payout_totals', { p_org: membership.organization_id }) : { data: [] }
+  // Seller and group each calculation used: when the contract's seller or that seller's group changed since, the
+  // commission is out of date and the row says so (recalculate to apply the current group).
+  const { data: calcRows } = finance ? await supabase.from('proposal_commission_calcs').select('proposal_id,seller_id,group_id').eq('status', 'active') : { data: [] }
+  const calcOf = new Map(((calcRows ?? []) as { proposal_id: string; seller_id: string | null; group_id: string | null }[]).map(r => [r.proposal_id, r]))
   const payout = new Map(((payoutRows ?? []) as { proposal_id: string; rule_amount: string; payable: string; overridden: boolean; waiting: string | null; credited: string; paid_on: string | null }[]).map(r => [r.proposal_id, r]))
   const repasseOf = (id: string) => { const po = payout.get(id); return !po ? '' : po.paid_on ? 'pago' : po.waiting ? 'aguardando' : 'creditado' }
   const totals = new Map<string, Map<string, Rational>>()
@@ -91,6 +99,10 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
   const agreementName = new Map((agreements ?? []).map(a => [a.id, a.name]))
   const sellerOf = new Map((sellers ?? []).map(s => [s.id, s]))
   const groupName = new Map((groups ?? []).map(g => [g.id, g.name]))
+  const stale = (c: Contract) => {
+    const k = calcOf.get(c.id)
+    return !!k && (k.seller_id !== c.seller_id || k.group_id !== (c.seller_id ? sellerOf.get(c.seller_id)?.commission_group_id ?? null : null))
+  }
   const where = (c: Contract) => {
     const v = c.product_table_version_id ? versionOf.get(c.product_table_version_id) : undefined
     const t = v ? tableOf.get(v.product_table_id) : undefined
@@ -105,6 +117,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
     && (!f.situacao || c.status === f.situacao) && (!f.cliente || c.customer_id === f.cliente)
     && (!f.comissao || (f.comissao === 'calculada') === totals.has(c.id))
     && (!f.alterado || !!payout.get(c.id)?.overridden)
+    && (!f.desatualizado || stale(c))
     && (!f.repasse || repasseOf(c.id) === f.repasse)
     && (!f.q || String(c.customer_snapshot?.full_name ?? '').toLowerCase().includes(f.q) || String(c.external_proposal_id ?? '').toLowerCase().includes(f.q)))
   const size = pageSize(one(sp.n), 25), pages = Math.max(1, Math.ceil(filtered.length / size))
@@ -139,6 +152,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
           <label className={lbl}>Grupo do vendedor<select name="grupo" defaultValue={f.grupo} className="field mt-1.5"><option value="">Todos</option>{(groups ?? []).map(g => <option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
           {finance && <label className={lbl}>Comissão<select name="comissao" defaultValue={f.comissao} className="field mt-1.5"><option value="">Todas</option><option value="calculada">Calculada</option><option value="pendente">Não calculada</option></select></label>}
           {finance && <label className={lbl}>Repasse ao vendedor<select name="repasse" defaultValue={f.repasse} className="field mt-1.5"><option value="">Todos</option><option value="aguardando">Aguardando (cliente, físico ou banco)</option><option value="creditado">Liberado, a pagar</option><option value="pago">Pago ao vendedor</option></select></label>}
+          {finance && <label className={`${lbl} flex items-center gap-2 self-end pb-2`}><input type="checkbox" name="desatualizado" value="1" defaultChecked={!!f.desatualizado} className="accent-[var(--brand)]" />Só comissão desatualizada</label>}
           {owner && <label className={`${lbl} flex items-center gap-2 self-end pb-2`}><input type="checkbox" name="alterado" value="1" defaultChecked={!!f.alterado} className="accent-[var(--brand)]" />Só repasse alterado</label>}
           <input type="hidden" name="n" value={size} />
           <div className="flex items-end gap-2 lg:col-span-3">
@@ -162,10 +176,12 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
 
       <Card>
         <CardHeader title={<span className="flex items-center gap-2">Contratos <Badge tone="neutral">{filtered.length}</Badge></span>} />
+        {canRecalc && <div className="mt-3"><RecalcBar action={recalcContracts} /></div>}
         <div className="mt-3 overflow-x-auto">
           <table className="w-full min-w-[940px] text-left text-[13px]">
             <thead className="border-y border-line bg-surface-muted text-xs text-muted">
               <tr>
+                {canRecalc && <th className="w-10 pl-5 pr-1 py-2"><span className="sr-only">Marcar</span></th>}
                 <th className="px-5 py-2 font-medium">Cliente</th><th className="px-3 py-2 font-medium">Vendedor</th><th className="px-3 py-2 font-medium">Banco · tabela</th>
                 <th className="px-3 py-2 text-right font-medium">Valor</th><th className="px-3 py-2 font-medium">Situação</th>
                 {finance && <><th className="px-3 py-2 text-right font-medium">Empresa recebe</th><th className="px-3 py-2 text-right font-medium">Vendedor recebe</th><th className="px-3 py-2 text-right font-medium">Margem</th></>}
@@ -178,11 +194,12 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
                 const margin = t ? toDecimalString(t.get('margin') ?? t.get('company') ?? ZERO, 2) : ''
                 return (
                   <tr key={c.id} className="border-t border-line hover:bg-surface-muted/60">
+                    {canRecalc && <td className="pl-5 pr-1 py-2.5"><input type="checkbox" form="recalc-form" name="ids" value={c.id} data-stale={stale(c) ? '1' : ''} aria-label={`Marcar ${c.customer_snapshot?.full_name ?? 'contrato'} para recalcular`} className="accent-[var(--brand)]" /></td>}
                     <td className="px-5 py-2.5">
                       <span className="block font-medium text-ink">{c.customer_snapshot?.full_name ?? '—'}</span>
                       <span className="text-xs text-muted">{formatCpf(c.customer_snapshot?.cpf)}{c.external_proposal_id ? ` · nº ${c.external_proposal_id}` : ''} · {new Date(c.created_at).toLocaleDateString('pt-BR')}</span>
                     </td>
-                    <td className="px-3 py-2.5"><span className="block text-ink">{s?.name ?? '—'}</span><span className="text-xs text-muted">{s?.commission_group_id ? groupName.get(s.commission_group_id) ?? '' : 'sem grupo'}</span></td>
+                    <td className="px-3 py-2.5"><span className="block text-ink">{s?.name ?? '—'}</span><span className="text-xs text-muted">{s?.commission_group_id ? groupName.get(s.commission_group_id) ?? '' : 'sem grupo'}</span>{stale(c) && <Badge tone="pending" className="ml-1.5">Comissão desatualizada</Badge>}</td>
                     <td className="px-3 py-2.5"><span className="block text-ink">{bankName.get(w.bank) ?? '—'} · {agreementName.get(w.agreement) ?? '—'}</span><span className="text-xs text-muted">{w.table}{c.term ? ` · ${termText(c.term, c.term, c.term)}` : ''}</span></td>
                     <td className="num whitespace-nowrap px-3 py-2.5 text-right">{brlText(String(c.requested_amount ?? c.released_amount ?? '0'))}{c.released_amount && c.released_amount !== c.requested_amount && <span className="block text-xs text-muted">líq. {brlText(String(c.released_amount))}</span>}</td>
                     <td className="whitespace-nowrap px-3 py-2.5"><Badge tone={STATUS_TONE[c.status] ?? 'neutral'}>{STATUS_LABEL[c.status] ?? c.status}</Badge></td>

@@ -1605,3 +1605,15 @@ test('contract origin: saldo devedor, banco and contrato de origem recorded on t
   await expect(page.locator('#contrato').getByLabel('Saldo devedor (R$)')).toHaveValue('8.700,50')
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-saldo-devedor.png`, fullPage: true })
 })
+
+test('contracts: several commissions recalculated at once, each contract reported (06/10/2026)', async ({ page }, info) => {
+  test.skip(info.project.name === 'mobile', 'one run is enough')
+  await page.goto('/app/contratos?n=10')
+  const bar = page.locator('#recalc-form')
+  await expect(bar.getByRole('button', { name: 'Recalcular selecionados' })).toBeDisabled()
+  await bar.getByRole('button', { name: 'Marcar todos desta página' }).click()
+  await expect(bar).toContainText(/\d+ marcado\(s\)/)
+  await bar.getByRole('button', { name: 'Recalcular selecionados' }).click()
+  await expect(bar.getByRole('status')).toContainText(/contrato\(s\) recalculado\(s\)/, { timeout: 60_000 })
+  await expect(page.locator('input[form="recalc-form"]:checked')).toHaveCount(0)
+})

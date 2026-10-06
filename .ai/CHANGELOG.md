@@ -15,6 +15,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Contratos: recalcular comissões em lote (06/10/2026)
+- **Adicionado:** na tela Contratos, caixa de seleção em cada linha e barra "Recalcular selecionados" (marcar todos da página, marcar desatualizados). Cada contrato é recalculado pela mesma função do botão Recalcular do contrato; os que não podem (vendedor já recebeu, sem vendedor, sem linha na tabela…) aparecem listados com o motivo, e os outros seguem. Até 300 por vez.
+- **Adicionado:** etiqueta "Comissão desatualizada" e filtro "Só comissão desatualizada" (financeiro): o vendedor do contrato ou o grupo dele mudou depois do cálculo.
+- Sem migration.
+
 ### Cadastro de vendedor não perde os dados no erro (06/10/2026)
 - **Corrigido:** quando o banco recusava o cadastro (ex.: favorecido sem CPF/CNPJ), a tela recarregava e apagava tudo. Agora o formulário continua com o que foi digitado e mostra a mensagem logo acima do botão.
 - **Alterado:** ao marcar "favorecido", nome e CPF/CNPJ do favorecido e a chave PIX (ou banco, agência e conta, em TED) passam a ser pedidos antes de enviar.
