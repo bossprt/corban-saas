@@ -16,7 +16,7 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 ## [Unreleased]
 
 ### Contas a pagar: parcelas no mesmo mês (06/10/2026)
-- **Adicionado:** campo "Intervalo" no lançamento: Todo mês, A cada 15 dias, A cada 7 dias ou A cada X dias; vale para repetir e para parcelar (ex.: 2 vezes a cada 15 dias, 3 vezes a cada 10 dias). "Quantos meses" vira "Quantas vezes". Migration `fin_interval_days_v1` (`fin_create_entry` ganha `p_interval_days`, padrão = 1 mês).
+- **Adicionado:** campo "Intervalo" no lançamento: Todo mês, A cada 15 dias, A cada 7 dias ou A cada X dias; vale para repetir e para parcelar (ex.: 2 vezes a cada 15 dias, 3 vezes a cada 10 dias). "Quantos meses" vira "Quantas vezes". Migration `20261006200923_fin_interval_days_v1`, aplicada em produção (`fin_create_entry` ganha `p_interval_days`, padrão = 1 mês).
 
 ### Painel do vendedor (06/10/2026)
 - **Adicionado:** a Visão geral do vendedor (perfil de agente ligado a um cadastro de vendedor) vira o painel dele, pensado para o celular (modelo F): meta do mês em anel, quanto vai ganhar (previsto, liberado para o próximo pagamento, recebido no mês), pendências no banco e últimos contratos com a parte dele. Só os números dele; nada da empresa. Agente sem cadastro de vendedor continua com o painel do operador.
