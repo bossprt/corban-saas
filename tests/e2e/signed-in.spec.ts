@@ -1162,10 +1162,23 @@ test('company finance: bank account, payable, OFX reconciliation, cash flow and 
   await page.getByLabel('Conta do plano').selectOption({ label: '4.4 Energia, água e internet' })
   await page.getByLabel('Valor (R$)').fill('1.432,40')
   await page.getByLabel('Como lançar').selectOption('repeat')
-  await page.getByLabel(/Quantos meses/).fill('3')
+  await page.getByLabel(/Quantas vezes/).fill('3')
   await page.getByRole('button', { name: 'Registrar' }).click()
   await expect(page.getByText('Lançamento registrado.')).toBeVisible({ timeout: 30_000 })
   await expect(page.getByRole('row').filter({ hasText: `${salary} (1/3)` })).toContainText('1.432,40')
+
+  // Inside the same month (06/10/2026): split in 2, every 15 days.
+  const supplier = `Fornecedor 15 dias E2E ${ts}`
+  await page.getByText('+ Novo lançamento').click()
+  await page.getByLabel('Descrição').fill(supplier)
+  await page.getByLabel('Conta do plano').selectOption({ label: '4.4 Energia, água e internet' })
+  await page.getByLabel('Valor (R$)').fill('600,00')
+  await page.getByLabel('Como lançar').selectOption('split')
+  await page.getByLabel(/Quantas vezes/).fill('2')
+  await page.getByLabel('Intervalo').selectOption('15')
+  await page.getByRole('button', { name: 'Registrar' }).click()
+  await expect(page.getByText('Lançamento registrado.')).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByRole('row').filter({ hasText: `${supplier} (1/2)` })).toContainText('300,00')
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-financeiro-empresa.png`, fullPage: true })
 
   const day = new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10).replace(/-/g, '')

@@ -88,8 +88,17 @@ export default async function CompanyFinancePage({ searchParams }: { searchParam
                   <option value="split">Parcelar (dividir o valor)</option>
                 </select>
               </label>
-              <label className={label}>Quantos meses <span className="font-normal text-muted">(repetir ou parcelar)</span><input type="number" name="installments" min={1} max={60} defaultValue={1} className="field mt-1.5" /></label>
-              <p className="text-xs text-ink-soft sm:col-span-2">Repetir: o mesmo valor todo mês, por exemplo salário ou aluguel (R$ 1.000 por 3 meses = 3 × R$ 1.000). Parcelar: o valor é dividido (R$ 1.000 em 3 parcelas = 3 × R$ 333,33).</p>
+              <label className={label}>Quantas vezes <span className="font-normal text-muted">(repetir ou parcelar)</span><input type="number" name="installments" min={1} max={60} defaultValue={1} className="field mt-1.5" /></label>
+              <label className={label}>Intervalo
+                <select name="interval" defaultValue="month" className="field mt-1.5">
+                  <option value="month">Todo mês</option>
+                  <option value="15">A cada 15 dias</option>
+                  <option value="7">A cada 7 dias</option>
+                  <option value="days">A cada X dias</option>
+                </select>
+              </label>
+              <label className={label}>X dias <span className="font-normal text-muted">(só em “a cada X dias”)</span><input type="number" name="interval_days" min={1} max={365} placeholder="10" className="field mt-1.5" /></label>
+              <p className="text-xs text-ink-soft sm:col-span-2">Repetir: o mesmo valor em cada data, por exemplo salário ou aluguel (R$ 1.000, 3 vezes = 3 × R$ 1.000). Parcelar: o valor é dividido (R$ 1.000 em 3 vezes = 3 × R$ 333,33). O intervalo define as datas a partir do vencimento: todo mês, a cada 15 dias (2 no mesmo mês), a cada 10 dias (3 no mesmo mês) e assim por diante.</p>
               <label className={label}>Competência <span className="font-normal text-muted">(DRE; vazio = vencimento)</span><input type="date" name="competence_on" className="field mt-1.5" /></label>
               <label className={label}>Documento<input name="document" maxLength={60} className="field mt-1.5" /></label>
               <label className={label}>Conta bancária <span className="font-normal text-muted">(se já pago)</span><select name="bank_account_id" className="field mt-1.5"><option value="">—</option>{(banks ?? []).map(b => <option key={b.id} value={b.id}>{b.label}</option>)}</select></label>
