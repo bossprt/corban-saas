@@ -1,4 +1,4 @@
--- Contract test for 20261006_owner_dashboard_v1: the owner's dashboard is finance only, for the caller's company, and
+-- Contract test for 20261006184724_owner_dashboard_v1: the owner's dashboard is finance only, for the caller's company, and
 -- its numbers are the sums of the contracts behind them (production, expected commission, sellers, received, per bank
 -- and per day add up). Read only; one transaction, rolled back.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/owner-dashboard-contract.sql
