@@ -5,6 +5,8 @@ import { redirect } from 'next/navigation'
 import { requireAppContext } from '@/lib/appContext'
 import { actionItems } from '@/lib/action-center'
 import { isPortalUser } from '@/lib/portal'
+import { can } from '@/lib/access'
+import { OwnerDashboard, PERIODS, type PeriodKey } from './OwnerDashboard'
 
 type Counted = { count: number | null; error: unknown }
 // A failed or unavailable query is shown as "indisponível", never as a misleading zero.
@@ -12,9 +14,15 @@ const num = (r: Counted) => (r.error ? 'indisponível' : String(r.count ?? 0))
 // Timestamps are computed per request on the server; kept out of the component body to stay a pure render.
 const isoAgo = (ms: number) => new Date(Date.now() - ms).toISOString()
 
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ periodo?: string | string[] }> }) {
   const { supabase, organization, membership, user, access, modules } = await requireAppContext()
   if (isPortalUser(access?.roleKey, modules)) redirect('/app/portal')
+  // Finance (owner, manager, finance) gets the money dashboard (06/10/2026); the other roles keep this view until theirs.
+  if (can(access, 'financeiro.view')) {
+    const raw = (await searchParams).periodo
+    const period = (typeof raw === 'string' && raw in PERIODS ? raw : 'mes') as PeriodKey
+    return <OwnerDashboard supabase={supabase} organizationId={membership.organization_id} organizationName={organization?.name} period={period} />
+  }
   // An operator sees THEIR own leads and proposals first; supervision roles see the whole organization.
   const mine = membership.role === 'agent'
   const own = <T,>(q: T): T => (mine ? (q as unknown as { eq: (c: string, v: string) => T }).eq('created_by', user.id) : q)
