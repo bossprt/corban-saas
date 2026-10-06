@@ -1670,3 +1670,19 @@ test('pay several sellers: list with PIX QR Code, spreadsheet, confirm the paid 
   await expect(card.getByRole('status')).toContainText('1 pagamento(s) registrado(s)', { timeout: 60_000 })
   await expect(card.getByRole('row').filter({ hasText: holder })).toHaveCount(0, { timeout: 30_000 })
 })
+
+// The owner's dashboard (06/10/2026): money numbers of the period with the comparison, what needs attention, and every
+// number opens the contracts behind it.
+test('owner dashboard: period switch, numbers open the contracts behind them', async ({ page }, info) => {
+  await page.goto('/app')
+  await expect(page.getByRole('heading', { name: 'Visão geral' })).toBeVisible()
+  for (const label of ['Produção paga', 'Comissão prevista', 'Recebido dos bancos', 'Fica na empresa']) await expect(page.getByText(label, { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('Precisa da sua atenção')).toBeVisible()
+  await page.getByRole('navigation', { name: 'Período' }).getByRole('link', { name: 'Ano' }).click()
+  await expect(page).toHaveURL(/periodo=ano/)
+  await expect(page.getByText('Comparado com mesmo período do ano passado.', { exact: false })).toBeVisible()
+  if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-dashboard-dono.png`, fullPage: true })
+  await page.getByRole('link', { name: /Produção paga/ }).click()
+  await expect(page).toHaveURL(/\/app\/contratos\?.*pago_de=/)
+  await expect(page.getByText(/Pagos ao cliente de \d{2}\/\d{2}\/\d{4} até/)).toBeVisible()
+})

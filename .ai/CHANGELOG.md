@@ -15,6 +15,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Painel do dono (06/10/2026)
+- **Adicionado:** a Visão geral, para quem vê o financeiro, vira o painel do dono (modelos A + D + B + E): período Hoje/7 dias/Mês/Ano comparado com o período equivalente; Produção paga, Comissão prevista, Recebido dos bancos e Fica na empresa; "Precisa da sua atenção" (banco atrasado 30+ dias, divergência, vendedores a pagar, comissão desatualizada, pago sem cálculo, esteira atrasada); produção por dia ou mês; vendedores; cartões por banco (ticket médio, falta receber); esteira agora. Todo número abre os contratos por trás dele. Os outros perfis continuam com a tela atual.
+- **Adicionado:** Contratos ganha os filtros "pagos ao cliente entre" e "aguardando comissão do banco" / "comissão divergente".
+- Migration `owner_dashboard_v1` (função de leitura `public.owner_dashboard`, só financeiro). Teste de contrato `owner-dashboard-contract.sql` (somas batem com os contratos).
+
 ### Documentos padrão e mais de um arquivo por documento (06/10/2026)
 - **Adicionado:** tipos "RG ou CNH" e "Extrato de consignação". Lista padrão publicada em todos os bancos/convênios da Smart Promotora sem lista: Contracheque, RG ou CNH, Comprovante de endereço, Extrato bancário, Selfie, Extrato de consignação, Outros, **todos opcionais** (cada dono marca obrigatório por banco em Cadastros > Documentos por banco). Migration `20261006180841_standard_documents_v1` (aplicada em produção).
 - **Alterado:** no contrato, cada documento mostra os arquivos já anexados e o botão "Adicionar outro arquivo".
