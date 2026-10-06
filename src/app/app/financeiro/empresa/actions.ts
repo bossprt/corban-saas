@@ -33,6 +33,13 @@ async function editor() {
   return can(ctx.access, 'financeiro.edit') ? ctx : null
 }
 
+const intervalDays = (f: FormData): number | null => {
+  const v = text(f, 'interval')
+  if (v === '15' || v === '7') return Number(v)
+  if (v === 'days') { const n = Number.parseInt(text(f, 'interval_days'), 10); return Number.isInteger(n) && n >= 1 && n <= 365 ? n : -1 }
+  return null
+}
+
 export async function createEntry(f: FormData) {
   const ctx = await editor(); if (!ctx) return back(safePath(f), 'erro:sem_permissao')
   const amount = parseMoneyInput(f.get('amount'))
@@ -45,6 +52,8 @@ export async function createEntry(f: FormData) {
     // "Uma vez" is one entry; "Repetir" the same amount every month; "Parcelar" the amount divided (06/10/2026).
     p_installments: text(f, 'plan') === 'once' ? 1 : Number.parseInt(text(f, 'installments') || '1', 10) || 1,
     p_repeat: text(f, 'plan') === 'repeat',
+    // Days between installments (06/10/2026): empty = one month apart.
+    p_interval_days: intervalDays(f),
     p_settled_on: settled ? dateOrNull(f, 'due_on') : null, p_bank_account: settled ? uuidOrNull(f, 'bank_account_id') : null,
   })
   return back(safePath(f), error ? finError(error) : 'ok:fin_lancado')
