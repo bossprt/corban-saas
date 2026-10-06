@@ -110,7 +110,12 @@ export async function createSellerPortalAccess(f:FormData){
     return go(classifyDbFeedback(checkError),pageOf(f))
   }
   const {error}=await ctx.supabase.rpc('invite_seller_to_portal',{p_seller:id,p_email:email})
-  if(error){
+  // A previous try that stopped at the password left the invitation pending (06/10/2026): when it is this seller's,
+  // go on and create the login, which accepts it; otherwise say the e-mail is waiting for another access.
+  if(error&&/invitation_already_pending/.test(error.message??'')){
+    const {data:pending}=await ctx.supabase.from('organization_invitations').select('seller_id').eq('status','pending').ilike('email',email).limit(1).maybeSingle()
+    if(pending?.seller_id!==id)return go('erro:portal_convite_pendente',pageOf(f))
+  }else if(error){
     const m=error.message??''
     if(/portal_role_missing/.test(m))return go('erro:portal_papel',pageOf(f))
     if(/seller_already_has_access/.test(m))return go('erro:portal_acesso_existente',pageOf(f))

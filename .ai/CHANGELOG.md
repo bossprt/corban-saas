@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Acesso ao portal: senha de 12 e nova tentativa (06/10/2026)
+- **Corrigido:** criar acesso de vendedor falhava na 2ª tentativa com erro genérico: a 1ª (senha recusada pelo login) deixava o convite pendente. Agora, se o convite pendente é do mesmo vendedor, a nova tentativa segue e cria o login; se é de outro acesso, a mensagem explica.
+- **Alterado:** senha digitada no Corban passa a ter no mínimo 12 caracteres (o mínimo que o login de produção exige; antes a tela aceitava 8 e o login recusava). Dica no campo e mensagem de senha fraca com a regra.
+
 ### Meu painel de vendedor (06/10/2026)
 - **Adicionado:** quem está ligado a um vendedor e não é só vendedor (gerente, administrador, supervisor, operador) ganha no topo da Visão geral o seletor "Visão geral | Meu painel de vendedor", que abre o painel do vendedor com os números só dele. Sem migration.
 

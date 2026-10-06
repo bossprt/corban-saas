@@ -142,8 +142,8 @@ test('a password refused by Auth tells why (rules of the project), never a gener
   assert.equal(passwordRefusal(null), null)
   for (const code of ['weak_length', 'weak_characters', 'weak_pwned'] as const) assert.ok(TEAM_ERROR_MESSAGES[code])
 })
-test('passwords typed in the app: 8 to 72 characters, the same rule on every screen', () => {
-  assert.equal(PASSWORD_MIN, 8)
+test('passwords typed in the app: 12 to 72 characters (the minimum production Auth enforces), the same rule on every screen', () => {
+  assert.equal(PASSWORD_MIN, 12)
   assert.equal(PASSWORD_MAX, 72)
   for (const f of ['src/components/PasswordPair.tsx', 'src/app/app/equipe/actions.ts', 'src/app/app/cadastros/vendedores/actions.ts', 'src/app/auth/definir-senha/page.tsx']) {
     const s = read(f)

@@ -11,7 +11,7 @@ export function PasswordPair({ idPrefix, label = 'Senha' }: { idPrefix: string; 
   return (
     <>
       <label className="text-xs text-muted" htmlFor={`${idPrefix}-password`}>{label}
-        <input id={`${idPrefix}-password`} name="password" type={type} required minLength={PASSWORD_MIN} maxLength={PASSWORD_MAX} autoComplete="new-password" className="field mt-1 block w-52" />
+        <input id={`${idPrefix}-password`} name="password" type={type} required minLength={PASSWORD_MIN} maxLength={PASSWORD_MAX} autoComplete="new-password" placeholder={`mín. ${PASSWORD_MIN} caracteres`} title={`Mínimo ${PASSWORD_MIN} caracteres, com maiúscula, minúscula, número e símbolo; evite senhas comuns`} className="field mt-1 block w-52" />
       </label>
       <label className="text-xs text-muted" htmlFor={`${idPrefix}-confirm`}>Repita a senha
         <input id={`${idPrefix}-confirm`} name="password_confirm" type={type} required minLength={PASSWORD_MIN} maxLength={PASSWORD_MAX} autoComplete="new-password" className="field mt-1 block w-52" />
