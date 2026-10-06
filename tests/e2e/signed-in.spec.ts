@@ -1326,6 +1326,12 @@ test('documents per bank: the list of Banco Teste becomes the checklist of a new
   await page.getByLabel('Arquivo RG (documento de identidade)').setInputFiles({ name: 'rg.png', mimeType: 'image/png', buffer: png })
   await page.getByRole('button', { name: 'Enviar arquivo' }).first().click()
   await expect(page.getByText('Anexado, falta validar').first()).toBeVisible({ timeout: 20_000 })
+  // More than one file per document (06/10/2026): the back of the ID goes to the same item.
+  const back = Buffer.concat([Buffer.from('89504e470d0a1a0a0000000d4948445200000001000000010806000000' + '1f15c489', 'hex'), Buffer.from(`rg-verso-${Date.now()}`)])
+  await page.getByLabel('Arquivo RG (documento de identidade)').setInputFiles({ name: 'rg-verso.png', mimeType: 'image/png', buffer: back })
+  await page.getByRole('button', { name: 'Adicionar outro arquivo' }).first().click()
+  await expect(page.locator('main')).toContainText('rg-verso.png', { timeout: 20_000 })
+  await expect(page.locator('main li').filter({ hasText: /^rg\.png$/ })).toHaveCount(1)
 })
 
 test('client file: send a document right on the client page', async ({ page }, info) => {

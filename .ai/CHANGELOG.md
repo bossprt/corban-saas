@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Documentos padrão e mais de um arquivo por documento (06/10/2026)
+- **Adicionado:** tipos "RG ou CNH" e "Extrato de consignação". Lista padrão publicada em todos os bancos/convênios da Smart Promotora sem lista: Contracheque, RG ou CNH, Comprovante de endereço, Extrato bancário, Selfie, Extrato de consignação, Outros, **todos opcionais** (cada dono marca obrigatório por banco em Cadastros > Documentos por banco). Migration `20261006180841_standard_documents_v1` (aplicada em produção).
+- **Alterado:** no contrato, cada documento mostra os arquivos já anexados e o botão "Adicionar outro arquivo".
+
 ### Dados: recebimento da comissão do contrato 131259 (06/10/2026)
 - **Dados:** comissão HOPE do contrato 131259, R$ 1.900,00 à vista, recebida em 11/09/2026 (valor e data informados pelo dono). Registrada pela mesma função do "Registrar recebimento". Migration `20261006163219_receipt_hope_131259_v1` (aplicada em produção).
 
