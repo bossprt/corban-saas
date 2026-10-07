@@ -29,6 +29,7 @@ export async function POST(req:Request){
   const payload=parsed.rows.map(r=>({
     bank_name:r.bank_name,agreement_name:r.agreement_name,table_name:r.table_name,external_table_code:r.external_table_code,
     contract_type_id:r.contract_type_id,contract_type_name:r.contract_type_name,term:r.term,
+    ...(r.amount_min===undefined?{}:{amount_min:r.amount_min,amount_max:r.amount_max}),
     coefficient:r.coefficient,rate:r.rate,effective_from:r.effective_from,effective_until:r.effective_until,
     factor_mode:r.factor_mode,factor_value:r.factor_value,factor_date:r.factor_date,components:r.components,group_values:r.group_values,...(r.tax_pct===undefined?{}:{tax_pct:r.tax_pct}),
     ...(r.production_origin===undefined?{}:{production_origin:r.production_origin,provider_id:r.provider_id}),

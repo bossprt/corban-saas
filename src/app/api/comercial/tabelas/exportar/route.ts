@@ -9,7 +9,7 @@ import { readTableFilters, searchTables } from '@/lib/commission/tableSearch'
 
 export const dynamic = 'force-dynamic'
 
-type Line = { id: string; product_table_version_id: string; contract_type_id: string; term: number; term_min: number | null; term_max: number | null; amount_min: string | null; coefficient: string | null; rate: string | null; tax_pct: string }
+type Line = { id: string; product_table_version_id: string; contract_type_id: string; term: number; term_min: number | null; term_max: number | null; amount_min: string | null; amount_max: string | null; coefficient: string | null; rate: string | null; tax_pct: string }
 type Comp = { condition_id: string; component_type_id: string; value_kind: string; received_value: string; calculation_base: string | null }
 type GroupValue = { condition_id: string; group_id: string; component_type_id: string; value_kind: string; value: string }
 const CHUNK = 60
@@ -17,8 +17,8 @@ const CHUNK = 60
 // "Exportar planilha" of the tables search (owner decision 26/09/2026): the current vigência of every table the
 // filters show (one bank, or all), in the import layout, so the owner changes tax or values in Excel and imports it
 // back (a new draft vigência per table). "Promotora parceira" keeps each table on its own origin when imported again;
-// coefficient goes in "Coeficiente" (not "Fator"), so importing never creates daily factors. Tables that cannot go
-// through the import unchanged (no published vigência, amount ranges) are listed on a second sheet.
+// coefficient goes in "Coeficiente" (not "Fator"), so importing never creates daily factors; amount ranges go in
+// "Valor Inicial" / "Valor Final". Tables without a published vigência are listed on a second sheet.
 export async function GET(req: NextRequest) {
   const { supabase, membership, organization } = await requireAppContext()
   if (!atLeast(membership.role, 'supervisor') || !canViewCommission(membership.role)) return new Response('Sem permissão', { status: 403 })
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
   for (let i = 0; i < versionIds.length; i += CHUNK) {
     const ids = versionIds.slice(i, i + CHUNK)
     const [l, c, g] = await Promise.all([
-      fetchAll<Line>((a, b) => supabase.from('commercial_conditions').select('id,product_table_version_id,contract_type_id,term,term_min,term_max,amount_min,coefficient,rate,tax_pct')
+      fetchAll<Line>((a, b) => supabase.from('commercial_conditions').select('id,product_table_version_id,contract_type_id,term,term_min,term_max,amount_min,amount_max,coefficient,rate,tax_pct')
         .in('product_table_version_id', ids).order('term_min').order('term').order('id').range(a, b)),
       fetchAll<Comp>((a, b) => supabase.from('commercial_condition_components')
         .select('condition_id,component_type_id,value_kind,received_value,calculation_base,commercial_conditions!inner(product_table_version_id)').in('commercial_conditions.product_table_version_id', ids).order('id').range(a, b)),
@@ -70,7 +70,6 @@ export async function GET(req: NextRequest) {
   for (const x of withVersion) {
     const v = x.current!
     const tLines = linesOf.get(v.id) ?? []
-    if (tLines.some(l => l.amount_min !== null)) { skipped.push([bankN.get(x.r.org_bank_id) ?? '', x.t.name, 'Tem faixas de valor da operação (a importação ainda não lê faixas)']); continue }
     const code = String((v.metadata as { external_table_code?: string } | null)?.external_table_code ?? (x.t.code?.startsWith('t-') ? '' : x.t.code ?? ''))
     for (const l of tLines) {
       ws.addRow([
@@ -78,6 +77,7 @@ export async function GET(req: NextRequest) {
         // Vigência left empty: imported back, the new vigência starts when it is published (never retroactive).
         '', '', typeN.get(l.contract_type_id) ?? '',
         l.term_min ?? l.term, l.term_max ?? l.term,
+        l.amount_min === null ? '' : decimalBr(l.amount_min), l.amount_max === null ? '' : decimalBr(l.amount_max),
         x.r.org_provider_id ? provN.get(x.r.org_provider_id) ?? '' : '',
         x.t.formalization === 'physical' ? 'Físico' : 'Digital',
         l.coefficient === null ? '' : decimalBr(l.coefficient), l.rate === null ? '' : decimalBr(l.rate),

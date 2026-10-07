@@ -30,6 +30,9 @@ export type SmartImportRow={
  contract_type_id:string
  contract_type_name:string
  term:number
+ // Amount range of the line ("Valor Inicial" / "Valor Final"); both or neither. Matched on the amount of the line's base.
+ amount_min?:string
+ amount_max?:string
  coefficient:string|null
  rate:string|null
  effective_from:string|null
@@ -78,6 +81,8 @@ const baseAliases={
  term:['prazo'],
  termMin:['prazo_inicial','prazo_minimo','prazo_min'],
  termMax:['prazo_final','prazo_maximo','prazo_max'],
+ amountMin:['valor_inicial','valor_minimo','valor_min'],
+ amountMax:['valor_final','valor_maximo','valor_max'],
  coefficient:['coeficiente'],
  rate:['taxa','taxa_a_m','taxa_am','taxa_mensal'],
  factor:['fator'],
@@ -123,6 +128,12 @@ const parseDate=(raw:string):string|null=>{
  return null
 }
 const decimal=(raw:string,maxInt=6,scale=8)=>parseDecimal(raw,{maxInt,scale})
+// R$ amount of a range: "R$ 1.000,00", "1000,5" or the number Excel gives (1000.5); up to 999.999.999,99.
+const amountDecimal=(raw:string):string|null=>{
+ const t=raw.replace(/^R\$\s*/i,'').replace(/\s/g,'')
+ const plain=t.includes(',')?t.replace(/\./g,'').replace(',','.'):t
+ return parseDecimal(plain,{maxInt:9,scale:2})
+}
 // a factor of 0 means "no factor informed" (HOPE exports DIÁRIO with Fator 0): it is not an error and not a factor; a malformed or negative one is still refused
 const factorDecimal=(raw:string,maxInt=6,scale=12):string|null|'zero'=>{
  const d=decimal(raw,maxInt,scale)
@@ -211,6 +222,7 @@ export function mapSmartCommercialRows(
   bank:firstIndex(head,baseAliases.bank),agreement:firstIndex(head,baseAliases.agreement),table:firstIndex(head,baseAliases.table),
   externalCode:firstIndex(head,baseAliases.externalCode),validFrom:firstIndex(head,baseAliases.validFrom),validUntil:firstIndex(head,baseAliases.validUntil),
   contract:firstIndex(head,baseAliases.contract),term:firstIndex(head,baseAliases.term),termMin:firstIndex(head,baseAliases.termMin),termMax:firstIndex(head,baseAliases.termMax),
+  amountMin:firstIndex(head,baseAliases.amountMin),amountMax:firstIndex(head,baseAliases.amountMax),
   coefficient:firstIndex(head,baseAliases.coefficient),rate:firstIndex(head,baseAliases.rate),factor:firstIndex(head,baseAliases.factor),
   factorMode:firstIndex(head,baseAliases.factorMode),factorDate:firstIndex(head,baseAliases.factorDate),
   tax:firstIndex(head,baseAliases.tax),base:firstIndex(head,baseAliases.base),provider:firstIndex(head,baseAliases.provider),
@@ -218,7 +230,6 @@ export function mapSmartCommercialRows(
  }
  for(const [k,v] of Object.entries({bank:col.bank,agreement:col.agreement,table:col.table,contract:col.contract}))if(v===undefined)issues.push({line:1,code:`missing_${k}`})
  if(col.term===undefined&&col.termMin===undefined)issues.push({line:1,code:'missing_term'})
- if(col.coefficient===undefined&&col.rate===undefined&&col.factor===undefined)issues.push({line:1,code:'missing_rate_coefficient_or_factor'})
 
  const componentCols:{value:number;unit?:number;component:SmartImportComponent;header:string}[]=[]
  const groupCols:{value:number;group:SmartImportGroup;component:SmartImportComponent;header:string}[]=[]
@@ -285,7 +296,11 @@ export function mapSmartCommercialRows(
   if((col.coefficient!==undefined&&cell(r,col.coefficient)!==''&&coefficient===null)||(col.rate!==undefined&&cell(r,col.rate)!==''&&rate===null)||(col.factor!==undefined&&cell(r,col.factor)!==''&&factorRaw===null)){
    issues.push({line,code:'invalid_number'});return
   }
-  if(coefficient===null&&rate===null&&factor===null){issues.push({line,code:'rate_coefficient_or_factor_required'});return}
+  // A commission line may come without rate, coefficient or factor (bank commission exports have none).
+  const aMinRaw=col.amountMin===undefined?'':cell(r,col.amountMin),aMaxRaw=col.amountMax===undefined?'':cell(r,col.amountMax)
+  const aMin=aMinRaw===''?null:amountDecimal(aMinRaw),aMax=aMaxRaw===''?null:amountDecimal(aMaxRaw)
+  if((aMinRaw!==''&&aMin===null)||(aMaxRaw!==''&&aMax===null)){issues.push({line,code:'invalid_amount_range'});return}
+  if((aMin===null)!==(aMax===null)||(aMin!==null&&aMax!==null&&Number(aMax)<Number(aMin))){issues.push({line,code:'invalid_amount_range'});return}
   const from=col.validFrom===undefined?null:parseDate(cell(r,col.validFrom))
   const untilRaw=col.validUntil===undefined?'':cell(r,col.validUntil),openEnd=OPEN_END.test(untilRaw)
   const until=col.validUntil===undefined||openEnd?null:parseDate(untilRaw)
@@ -353,6 +368,7 @@ export function mapSmartCommercialRows(
   for(let term=min;term<=max;term++)rows.push({
    bank_name:bank,agreement_name:agreement,table_name:table,external_table_code:cell(r,col.externalCode)||null,
    contract_type_id:type.id,contract_type_name:type.name,term,
+   ...(aMin===null||aMax===null?{}:{amount_min:aMin,amount_max:aMax}),
    coefficient:coefficient??factor,rate,effective_from:from,effective_until:until,
    factor_mode:fMode,factor_value:factor,factor_date:fDate,
    components:comps,group_values:groupValues,

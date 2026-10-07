@@ -59,3 +59,26 @@ test('zero deferred is ignored and does not trigger question',()=>{
  assert.equal(r.summary.hasDeferred,false)
  assert.equal(r.issues.length,0)
 })
+
+test('Valor Inicial / Valor Final become the amount range of the line (BR or Excel numbers); no rate needed',()=>{
+ const H=['Banco','Convênio','Tabela','Tipo de Contrato','Prazo Inicial','Prazo Final','Valor Inicial','Valor Final','Base de Cálculo','À Vista (Empresa)','À Vista (Corretor)']
+ const r=mapSmartCommercialRows([H,
+  ['FINTECH CORBAN','FGTS','BFFUNDO','Novo','1','2','40','150','Líquido','45','29,25'],
+  ['FINTECH CORBAN','FGTS','BFFUNDO','Novo','1','2','150,01','R$ 250,00','Líquido','35','22,75'],
+  ['FINTECH CORBAN','FGTS','BFFUNDO','Novo','1','2','1.000,50','49999.99','Líquido','18,5','12,025'],
+ ],ctx)
+ assert.deepEqual(r.issues,[])
+ assert.equal(r.rows.length,6)
+ assert.deepEqual(r.rows.filter(x=>x.term===1).map(x=>[x.amount_min,x.amount_max]),[['40','150'],['150.01','250.00'],['1000.50','49999.99']])
+ assert.equal(r.rows[0].rate,null)
+})
+
+test('an amount range needs both ends, the end not below the start, and valid numbers',()=>{
+ const H=['Banco','Convênio','Tabela','Tipo de Contrato','Prazo','Valor Inicial','Valor Final','Base de Cálculo','À Vista (Empresa)']
+ for(const [a,b] of [['40',''],['','150'],['200','150'],['abc','150'],['1.000.000.000,00','2.000.000.000,00']]){
+  const r=mapSmartCommercialRows([H,['B','C','T','Novo','12',a,b,'Bruto','5']],ctx)
+  assert.equal(r.issues[0]?.code,'invalid_amount_range',`${a} / ${b}`)
+ }
+ const none=mapSmartCommercialRows([H,['B','C','T','Novo','12','','','Bruto','5']],ctx)
+ assert.deepEqual(none.issues,[]); assert.equal(none.rows[0].amount_min,undefined)
+})
