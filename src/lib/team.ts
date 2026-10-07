@@ -30,7 +30,7 @@ export const TEAM_ERROR_MESSAGES={
  branch_not_found:'Filial não encontrada ou inativa.',
  team_leader_not_found:'O líder escolhido não é um membro ativo (e ninguém lidera a si mesmo).',
  system_role_tier_immutable:'O nível de acesso de um papel padrão não pode mudar.',
- invalid_password:'Senha inválida: use de 8 a 72 caracteres e repita igual no segundo campo.',
+ invalid_password:'Senha inválida: use no mínimo 12 caracteres (até 72) e repita igual no segundo campo.',
  already_member:'Este e-mail já é membro desta empresa. Para trocar a senha, use Redefinir senha no membro.',
  email_has_other_access:'Este e-mail já tem acesso a outra empresa no Corban. A pessoa entra com a senha dela; peça para usar "Esqueci minha senha" se precisar.',
  weak_length:'O serviço de login recusou a senha: é curta demais para as regras do sistema. Use uma senha maior.',
