@@ -1,7 +1,7 @@
--- Contract test for 20261007_fintech_corban_tables_v1: in a company with the bank FINTECH CORBAN and the agreements
+-- Contract test for 20261007170241_fintech_corban_tables_v1: in a company with the bank FINTECH CORBAN and the agreements
 -- FGTS, INSS and CLT Privado, the migration publishes 35 tables and 61 lines with the export's ranges, base and payout;
 -- a second run does nothing; a contract on BFFUNDO takes the line of its amount. One transaction, rolled back.
---   psql -v ON_ERROR_STOP=1 -v mig=supabase/migrations/20261007_fintech_corban_tables_v1.sql -f tests/security/fintech-corban-tables-contract.sql
+--   psql -v ON_ERROR_STOP=1 -v mig=supabase/migrations/20261007170241_fintech_corban_tables_v1.sql -f tests/security/fintech-corban-tables-contract.sql
 
 begin;
 
