@@ -5,7 +5,7 @@ import { decimalBr } from './tableValues'
 // Every header is one the smart import reads (src/lib/imports/smart-commercial.ts).
 export const SHEET_LINE_COLUMNS = [
   'Banco', 'Convênio', 'Tabela', 'Código no Banco',
-  'Vigência Inicial', 'Vigência Final', 'Tipo de Contrato', 'Prazo Inicial', 'Prazo Final',
+  'Vigência Inicial', 'Vigência Final', 'Tipo de Contrato', 'Prazo Inicial', 'Prazo Final', 'Valor Inicial', 'Valor Final',
 ] as const
 export const SHEET_TAIL_COLUMNS = ['Base de Cálculo', 'Imposto (%)'] as const
 

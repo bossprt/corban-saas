@@ -44,6 +44,7 @@ export async function GET(){
     ['Empresa',organization.name],
     ['Colunas','Dados da linha, depois o bloco (Empresa) com o que o banco paga e um bloco para cada grupo de vendedores com o que ele recebe.'],
     ['Valores','Número = % da operação (ex.: 2,5). "R$ 25,00" = valor fixo por contrato. Vazio = não vale para aquele grupo na linha.'],
+    ['Valor Inicial / Valor Final','Faixa de valor da linha em R$ (ex.: 40,00 e 150,00). Vazio nos dois = qualquer valor. Linha com base Líquido compara com o valor liberado ao cliente; Bruto, com o valor do contrato.'],
     ['Base de Cálculo','Bruto (valor do contrato) ou Líquido (valor liberado): sobre qual valor os % da linha são calculados.'],
     ['Imposto (%)','Imposto que a empresa paga sobre o que recebe nesta linha (média do Simples, ex.: 6). Vazio ou 0 = não paga imposto. O vendedor nunca paga imposto.'],
     ['Tipo de Contrato','Use exatamente um dos nomes habilitados abaixo.'],

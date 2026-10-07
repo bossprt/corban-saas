@@ -138,7 +138,9 @@ test('HOPE exports DIÁRIO with Fator 0: that is "no factor informed", not a fac
   const r = map([['Banco', 'Convênio', 'Produto', 'Tipo de Contrato', 'Prazo', 'TAXA a.m.', 'Tipo Fator', 'Fator', 'Data Início Vigência', 'Data Final Vigência'], ['HOPE', 'Gov. AC', 'T', 'Novo', '120', '2.7', 'DIÁRIO', '0', '03/07/2026', 'Não definida']])
   assert.deepEqual(r.issues, []); assert.equal(r.rows[0].factor_value, null); assert.equal(r.rows[0].factor_mode, null); assert.equal(r.rows[0].rate, '2.7')
   assert.equal(r.rows[0].effective_from, '2026-07-03T00:00:00Z'); assert.equal(r.rows[0].effective_until, null)
-  assert.equal(map([['Banco', 'Convênio', 'Produto', 'Tipo de Contrato', 'Prazo', 'Fator', 'Tipo Fator'], ['H', 'G', 'T', 'Novo', '12', '0', 'DIÁRIO']]).issues[0].code, 'rate_coefficient_or_factor_required')
+  // Without rate the line is still a commission line (07/10/2026: bank commission exports have no rate).
+  const noRate = map([['Banco', 'Convênio', 'Produto', 'Tipo de Contrato', 'Prazo', 'Fator', 'Tipo Fator'], ['H', 'G', 'T', 'Novo', '12', '0', 'DIÁRIO']])
+  assert.deepEqual(noRate.issues, []); assert.equal(noRate.rows[0].rate, null); assert.equal(noRate.rows[0].coefficient, null); assert.equal(noRate.rows[0].factor_value, null)
 })
 const CH = ['Banco', 'Convênio', 'Produto', 'Tipo de Contrato', 'Prazo', 'Taxa a.m']
 test('Diferido = 0 raises no question; Diferido > 0 is detected; Plástico without unit is refused; Plástico in R$ and commission in % are understood', () => {

@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Faixa de valor nas tabelas (07/10/2026)
+- Alterado: a faixa de valor de uma linha de tabela compara com o valor liberado quando a comissão é sobre o líquido, e com o valor do contrato quando é sobre o bruto (ADR-0051). Os 13 contratos da PROSESP com faixa continuam na mesma linha.
+- Adicionado: a importação de tabelas lê "Valor Inicial" e "Valor Final"; o modelo e a exportação têm as duas colunas, e tabelas com faixa passam a ser exportadas. Linha sem taxa ou coeficiente é aceita. Migration `table_amount_ranges_v1`, contrato `tests/security/table-amount-ranges-contract.sql` (9/9).
+
 ### FINTECH CORBAN: 35 tabelas (07/10/2026)
 - Adicionado: 35 tabelas do FINTECH CORBAN na Smart, produção própria, sem IR e sem imposto, a partir da exportação do banco: FGTS (BFFUNDO, FLEX, FIXO e J17 - FIXO), CLT Privado (C e C-Seguro) e INSS (Novo, Port + Refin, Portabilidade Pura e Entrada). 61 linhas com faixa de prazo e de valor; base bruta onde o banco diz "Valor Bruto", líquida no resto; repasse Corretor 65%, Parceiro 80%, Balcão 50%, Call Center 25%, Afiliado 10% do que o banco paga. Migration `20261007170241_fintech_corban_tables_v1` (aplicada em produção 07/10/2026, md5 conferido), contrato `tests/security/fintech-corban-tables-contract.sql` (14/14).
 - Próximo passo combinado: a importação de tabelas passar a ler Valor Inicial / Valor Final e a faixa da linha líquida comparar com o valor liberado.
