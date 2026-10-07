@@ -1,4 +1,4 @@
--- Contract test for 20261007_table_amount_ranges_v1: the import keeps the amount bands of one table apart (found by
+-- Contract test for 20261007194442_table_amount_ranges_v1: the import keeps the amount bands of one table apart (found by
 -- term and amount range, re-import updates in place), takes lines without rate and refuses a half range; the
 -- commission engine matches a net line's band on the released amount and a gross line's band on the contract's
 -- amount. One transaction, rolled back.
