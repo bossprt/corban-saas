@@ -300,7 +300,7 @@ export const FEEDBACK = {
   'erro:recebimento_sem_calculo': 'O contrato ainda não tem comissão calculada. Calcule a comissão antes de registrar o recebimento.',
   'erro:recebimento_fonte': 'Não foi possível saber de quem vem a comissão deste contrato (banco ou promotora). Confira a tabela do contrato.',
   'erro:portal_senha_fraca': 'O serviço de login recusou a senha. Use no mínimo 12 caracteres, com letra minúscula, maiúscula, número e símbolo, e evite senhas comuns (por exemplo, Smart#2026casa).',
-  'erro:portal_senha': 'Senha inválida: use de 8 a 72 caracteres e repita igual no segundo campo.',
+  'erro:portal_senha': 'Senha inválida: use no mínimo 12 caracteres (até 72) e repita igual no segundo campo.',
   'erro:portal_email_outra_empresa': 'Este e-mail já tem acesso a outra empresa no Corban. Use outro e-mail para o corretor.',
   'erro:portal_vendedor': 'Seu acesso não está ligado a um cadastro de vendedor ou corretor. Fale com a empresa.',
   'erro:portal_ja_existe': 'Já existe uma proposta com este banco e ADE.',

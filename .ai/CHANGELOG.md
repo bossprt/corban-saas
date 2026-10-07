@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Mensagem de senha recusada: mínimo 12 (07/10/2026)
+- Corrigido: a mensagem de senha inválida (Equipe e acesso ao portal) dizia "8 a 72 caracteres"; o mínimo é 12 desde #94. Agora diz "no mínimo 12 caracteres (até 72)".
+- Dado corrigido em produção, com aprovação do dono: o e-mail de login de uma corretora externa estava digitado errado; trocado no Auth (usuário e identidade), mesma conta, vínculo e histórico. Feito direto no banco, não em migration, porque o e-mail é dado pessoal e não vai para o repositório.
+
 ### Portal do corretor externo: Meus contratos (06/10/2026)
 - **Adicionado:** o portal vira "Meu portal": Previsto, Liberado, Recebido no mês e Propostas aguardando; "Meus contratos" com todos os contratos em que ele é o vendedor, inclusive os digitados pela empresa (marcados assim), com a situação e a parte dele (aguardando cliente/banco, liberado, recebido); botão Ver meu extrato. O detalhe abre também contratos digitados pela empresa. "Propostas enviadas" mostra só as que aguardam ou foram recusadas.
 - Migration `20261006223312_seller_contracts_v1` (aplicada em produção) (função de leitura `public.seller_contracts`). Teste de contrato `seller-contracts-contract.sql`.
