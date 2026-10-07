@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Bevicred: testar conexão (07/10/2026)
+- Adicionado: Configuração > Bevicred, só para o administrador da Smart. O botão "Testar conexão Bevicred" pede o token à Bevicred com o código de parceiro e a chave guardados como segredo na Vercel e mostra só se conectou ou o erro; o token é descartado e nada é lido nem gravado (ADR-0050).
+
 ### Mensagem de senha recusada: mínimo 12 (07/10/2026)
 - Corrigido: a mensagem de senha inválida (Equipe e acesso ao portal) dizia "8 a 72 caracteres"; o mínimo é 12 desde #94. Agora diz "no mínimo 12 caracteres (até 72)".
 - Dado corrigido em produção, com aprovação do dono: o e-mail de login de uma corretora externa estava digitado errado; trocado no Auth (usuário e identidade), mesma conta, vínculo e histórico. Feito direto no banco, não em migration, porque o e-mail é dado pessoal e não vai para o repositório.
