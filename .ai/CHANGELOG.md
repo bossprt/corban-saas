@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### FINTECH CORBAN: 35 tabelas (07/10/2026)
+- Adicionado: 35 tabelas do FINTECH CORBAN na Smart, produção própria, sem IR e sem imposto, a partir da exportação do banco: FGTS (BFFUNDO, FLEX, FIXO e J17 - FIXO), CLT Privado (C e C-Seguro) e INSS (Novo, Port + Refin, Portabilidade Pura e Entrada). 61 linhas com faixa de prazo e de valor; base bruta onde o banco diz "Valor Bruto", líquida no resto; repasse Corretor 65%, Parceiro 80%, Balcão 50%, Call Center 25%, Afiliado 10% do que o banco paga. Migration `fintech_corban_tables_v1`, contrato `tests/security/fintech-corban-tables-contract.sql` (14/14).
+- Próximo passo combinado: a importação de tabelas passar a ler Valor Inicial / Valor Final e a faixa da linha líquida comparar com o valor liberado.
+
 ### Bevicred: testar conexão (07/10/2026)
 - Adicionado: Configuração > Bevicred, só para o administrador da Smart. O botão "Testar conexão Bevicred" pede o token à Bevicred com o código de parceiro e a chave guardados como segredo na Vercel e mostra só se conectou ou o erro; o token é descartado e nada é lido nem gravado (ADR-0050).
 
