@@ -6,7 +6,7 @@ import { SubmitButton } from '@/components/SubmitButton'
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast, canViewCommission } from '@/lib/rbac'
 import { isUuid } from '@/lib/team'
-import { decimalBr, PAGE_SIZES, pageSize, rangeText, termText, valueText, VERSION_STATUS } from '@/lib/commission/tableValues'
+import { decimalBr, PAGE_SIZES, pageSize, termText, valueText, VERSION_STATUS } from '@/lib/commission/tableValues'
 import { fetchAll } from '@/lib/fetchAll'
 import { cloneVersion, publishVersion, renameTable, setTableFormalization } from '../actions'
 import { NewSearchLink } from '../NewSearchLink'
@@ -56,7 +56,7 @@ export default async function TablePage({ params, searchParams }: { params: Prom
 
   type Line = { id: string; contract_type_id: string; term: number; term_min: number | null; term_max: number | null; amount_min: string | null; amount_max: string | null; coefficient: string | null; rate: string | null; tax_pct: string }
   const conditions = selected ? await fetchAll<Line>((a, b) => supabase.from('commercial_conditions').select('id,contract_type_id,term,term_min,term_max,amount_min,amount_max,coefficient,rate,tax_pct')
-    .eq('product_table_version_id', selected.id).order('term_min').order('term').order('id').range(a, b)) : []
+    .eq('product_table_version_id', selected.id).order('term_min').order('term').order('amount_min', { nullsFirst: true }).order('id').range(a, b)) : []
   // Values are read by vigência (joined through the line), page by page: a big table has thousands of them.
   const [comp, gv] = selected ? await Promise.all([
     fetchAll<{ condition_id: string; component_type_id: string; value_kind: string; received_value: string; calculation_base: string | null }>((a, b) => supabase.from('commercial_condition_components')
@@ -164,7 +164,7 @@ export default async function TablePage({ params, searchParams }: { params: Prom
           <table className="w-full min-w-[760px] text-left text-[13px]">
             <thead className="border-y border-line bg-surface-muted text-xs text-muted">
               <tr>
-                <th className="px-4 py-2 font-medium">Tipo</th><th className="px-3 py-2 font-medium">Prazo</th><th className="px-3 py-2 font-medium">Valor da operação</th>
+                <th className="px-4 py-2 font-medium">Tipo</th><th className="px-3 py-2 font-medium">Prazo</th><th className="px-3 py-2 font-medium">Valor Inicial</th><th className="px-3 py-2 font-medium">Valor Final</th>
                 <th className="px-3 py-2 text-right font-medium">Taxa / coef.</th><th className="px-3 py-2 font-medium">Base</th><th className="px-3 py-2 text-right font-medium">Imposto</th>
                 {view === 'resumo'
                   ? [{ id: 'empresa', name: 'Empresa' }, ...payGroups].map(p => <th key={p.id} className="px-3 py-2 text-right font-medium">{p.name}</th>)
@@ -177,7 +177,8 @@ export default async function TablePage({ params, searchParams }: { params: Prom
                 <tr key={c.id} className="border-t border-line hover:bg-surface-muted/60">
                   <td className="px-4 py-2">{typeName.get(c.contract_type_id) ?? '—'}</td>
                   <td className="num px-3 py-2">{termText(c.term_min, c.term_max, c.term)}</td>
-                  <td className="num px-3 py-2 text-ink-soft">{rangeText(c.amount_min, c.amount_max)}</td>
+                  <td className="num px-3 py-2 text-ink-soft">{c.amount_min === null ? '—' : `R$ ${decimalBr(c.amount_min, true)}`}</td>
+                  <td className="num px-3 py-2 text-ink-soft">{c.amount_max === null ? '—' : `R$ ${decimalBr(c.amount_max, true)}`}</td>
                   <td className="num px-3 py-2 text-right">{c.rate ?? c.coefficient ?? '—'}</td>
                   <td className="px-3 py-2 text-xs text-muted">{baseOf.get(c.id) ?? '—'}</td>
                   <td className="num px-3 py-2 text-right">{Number(c.tax_pct) ? `${decimalBr(c.tax_pct)}%` : <span className="text-muted">Não paga</span>}</td>
