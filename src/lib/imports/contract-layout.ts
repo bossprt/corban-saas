@@ -63,9 +63,64 @@ const PROSESP_TABLES: Record<string, string> = {
   'pref. rio branco efetivo': 'PROSESP - Pref. Rio Branco - Efetivo',
 }
 
+// The FINTECH CORBAN production report ("Relatório", owner request 07/10/2026). "Id" is the bank's contract number (the
+// ADE); "IdTableComissao" is the bank's main table id ("Id Tabela Principal", kept when the tables were registered), so
+// the table is found by it and not by the short "Tabela" text ("NORMAL- TX 1,85" fits several tables). "DataFinalização"
+// is the date the contract was finished: with the status FINALIZADA / PAGA it is "Pago ao cliente em". The bank's
+// team columns (gerente, supervisor, consultor) and its control columns are left out; the seller is set in the contract.
+const FINTECH_COLUMNS: Record<string, ContractField | 'ignore'> = {
+  id: 'ade', idtablecomissao: 'table', tabela: 'ignore', data: 'ignore', datafinalizacao: 'paidOn', substatus: 'ignore',
+  cpfcliente: 'cpf', nomecliente: 'name', datanascimento: 'birthDate', celularcliente: 'phone',
+  idfintech: 'ignore', nomefintech: 'ignore', idcorban: 'ignore', nomecorban: 'ignore', nomegerente: 'ignore',
+  nomesupervisor: 'ignore', nomeconsultor: 'ignore', loginconsultor: 'ignore', cpfconsultor: 'ignore',
+  'prazo total': 'ignore', 'prazo quitado': 'ignore', valorliquido: 'released', valoroperacao: 'requested',
+  valorparcela: 'installment', tipoproduto: 'ignore', valortotal: 'ignore', entranteinss: 'ignore', token: 'ignore',
+  descbanco: 'ignore', dataquitacao: 'ignore', uf: 'ignore', ufdigitador: 'ignore', statusanuencia: 'ignore',
+  prazolimiteanuencia: 'ignore',
+}
+// Main table id of the bank -> the company's FINTECH CORBAN table (20261007170241_fintech_corban_tables_v1).
+const FINTECH_TABLES: Record<string, string> = {
+  '632': 'SAQUE - FGTS - BFFUNDO - TX 1,80 - NORMAL',
+  '945': 'PORTABILIDADE ENTRADA',
+  '948': 'FIXO 10',
+  '949': 'FIXO 15',
+  '961': 'FIXO 30',
+  '963': 'FIXO 25',
+  '976': 'FLEX FGTS',
+  '991': 'NOVO - INSS - FP - NORMAL- TX 1,85',
+  '994': 'PORT + REFIN - 1,85',
+  '996': 'FIXO 20',
+  '1005': 'PORT + REFIN - 1,80',
+  '1011': 'PORT + REFIN - 1,75',
+  '1015': 'PRIVADO - C',
+  '1019': 'PRIVADO - C-SEGURO',
+  '1021': 'PORT + REFIN ESPECIAL 2',
+  '1023': 'PORT + REFIN ESPECIAL 3',
+  '1066': 'NOVO - INSS - FP - NORMAL- TX 1,85 - CARÊNCIA 90',
+  '1067': 'NOVO - INSS - FP - NORMAL- TX 1,85 - INVALIDEZ',
+  '1068': 'NOVO - INSS - FP - NORMAL- TX 1,85 - INVALIDEZ CARÊNCIA 90',
+  '1070': 'J17 - FIXO 10',
+  '1071': 'J17 - FIXO 15',
+  '1072': 'J17 - FIXO 20',
+  '1073': 'J17 - FIXO 25',
+  '1074': 'J17 - FIXO 30',
+  '1089': 'INSS NOVO 20 MIL - CARENCIA',
+  '1090': 'INSS NOVO 20 MIL',
+  '1091': 'PORTABILIDADE PURA - 1,66',
+  '1092': 'PORTABILIDADE PURA - 1,68',
+  '1093': 'PORTABILIDADE PURA - 1,70',
+  '1094': 'PORTABILIDADE PURA - 1,72',
+  '1095': 'PORTABILIDADE PURA - 1,75',
+  '1096': 'PORTABILIDADE PURA - 1,78',
+  '1097': 'PORTABILIDADE PURA - 1,80',
+  '1098': 'PORTABILIDADE PURA - 1,83',
+  '1099': 'PORTABILIDADE PURA - 1,85',
+}
+
 export const CONTRACT_LAYOUTS: ContractLayout[] = [
   { key: 'nasp', label: 'NASP', bankName: 'NASP', columns: NASP_COLUMNS },
   { key: 'prosesp', label: 'PROSESP (WorkBank)', bankName: 'PROSESP', columns: PROSESP_COLUMNS, tables: PROSESP_TABLES },
+  { key: 'fintech', label: 'FINTECH CORBAN', bankName: 'FINTECH CORBAN', columns: FINTECH_COLUMNS, tables: FINTECH_TABLES },
 ]
 export const MAX_CONTRACT_LINES = 500
 
@@ -196,6 +251,8 @@ const STAGE_KEYS: Record<string, string> = {
   paga: 'paid', pago: 'paid', 'credito liberado': 'paid', liberado: 'paid', 'pago ao cliente': 'paid', concretizado: 'paid', concretizada: 'paid',
   // WorkBank (PROSESP): "CR CLIENTE" is the credit paid to the client.
   'cr cliente': 'paid',
+  // FINTECH CORBAN: "FINALIZADA / PAGA" is the contract paid to the client.
+  'finalizada / paga': 'paid', 'finalizada/paga': 'paid',
   recusada: 'rejected', recusado: 'rejected', reprovada: 'rejected', reprovado: 'rejected',
   cancelada: 'cancelled', cancelado: 'cancelled',
 }

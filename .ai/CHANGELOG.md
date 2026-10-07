@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Layout de importação FINTECH CORBAN (07/10/2026)
+- Adicionado: layout "FINTECH CORBAN" em Importar contratos, para o relatório de produção do banco. Id = nº do contrato no banco; a tabela vem do IdTableComissao (Id Tabela Principal guardado nas tabelas do FINTECH); ValorLiquido / ValorOperacao / ValorParcela, Prazo, cliente (CPF, nome, nascimento, celular); "FINALIZADA / PAGA" = pago ao cliente na DataFinalização. Status desconhecido não é adivinhado. Colunas da equipe do banco e de controle ficam de fora; o vendedor é informado no contrato. Sem mudança no banco de dados.
+
 ### Faixa de valor nas tabelas (07/10/2026)
 - Alterado: a faixa de valor de uma linha de tabela compara com o valor liberado quando a comissão é sobre o líquido, e com o valor do contrato quando é sobre o bruto (ADR-0051). Os 13 contratos da PROSESP com faixa continuam na mesma linha.
 - Adicionado: a importação de tabelas lê "Valor Inicial" e "Valor Final"; o modelo e a exportação têm as duas colunas, e tabelas com faixa passam a ser exportadas. Linha sem taxa ou coeficiente é aceita. Migration `20261007194442_table_amount_ranges_v1` (aplicada em produção 07/10/2026, md5 conferido), contrato `tests/security/table-amount-ranges-contract.sql` (9/9).
