@@ -4,6 +4,7 @@ import { Badge, Card, CardHeader, PageHeader } from '@/components/ui'
 import { requireAppContext } from '@/lib/appContext'
 import { canManageTeam } from '@/lib/rbac'
 import { setupItems } from '@/lib/catalog'
+import { BEVICRED_ORGANIZATION_ID } from '@/lib/bevicred'
 
 // Deterministic setup status for the organization admin. Every line comes from real rows; nothing is assumed. The Auth/SMTP setup is shown
 // as what it is: done outside the system, in the Supabase dashboard.
@@ -34,6 +35,8 @@ export default async function ConfigurationPage() {
     ['Base antiga', '/app/configuracao/base-antiga', 'Clientes e contratos do sistema anterior, só para consulta.'],
     ['API', '/app/configuracao/api', 'Chaves para outros sistemas (ex.: DeskcommCRM) enviarem leads.'],
     ['Papéis e permissões', '/app/configuracao/papeis', 'O que cada papel pode fazer em cada módulo e quais dados enxerga.'],
+    ...(membership.role === 'admin' && organization.id === BEVICRED_ORGANIZATION_ID
+      ? [['Bevicred', '/app/configuracao/bevicred', 'Testar a conexão com o webservice da Bevicred.'] as [string, string, string]] : []),
   ]
   return <section>
     <PageHeader title="Configuração" description={`${organization.name}: o que já está configurado e o que falta antes de o operador trabalhar.`} />
