@@ -27,7 +27,8 @@ const DROPPABLE = new Set<LeadStage>(MANUAL_STAGES.filter(s => s !== 'lost'))
 
 const when = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
 
-export function Board({ columns, showOwner }: { columns: BoardColumn[]; showOwner: boolean }) {
+// boardQuery: the board's filters, kept in the address when a card opens the lead in the side panel.
+export function Board({ columns, showOwner, boardQuery = '' }: { columns: BoardColumn[]; showOwner: boolean; boardQuery?: string }) {
   const router = useRouter()
   const [dragging, setDragging] = useState<BoardCard | null>(null)
   const [over, setOver] = useState<LeadStage | null>(null)
@@ -77,7 +78,7 @@ export function Board({ columns, showOwner }: { columns: BoardColumn[]; showOwne
                     onDragEnd={() => { setDragging(null); setOver(null) }}
                     className={`min-w-0 overflow-hidden rounded-[10px] border border-line bg-surface shadow-sm transition-opacity ${dragging?.id === c.id ? 'opacity-50' : ''}`}
                   >
-                    <Link href={`/app/crm/leads/${c.id}`} title={c.name} className="block min-w-0 px-3 py-2.5 hover:bg-surface-muted/60">
+                    <Link href={`/app/crm?${boardQuery ? `${boardQuery}&` : ''}lead=${c.id}`} scroll={false} title={c.name} className="block min-w-0 px-3 py-2.5 hover:bg-surface-muted/60">
                       <span className="line-clamp-2 break-words text-sm font-medium leading-snug text-ink">{c.name}</span>
                       {c.campaign && <span className="block truncate text-xs text-muted">{c.campaign}</span>}
                       <span className="mt-1.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs">

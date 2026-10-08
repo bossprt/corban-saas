@@ -123,7 +123,7 @@ test('proposal statuses have labels and a next step; paid is evidence-only', () 
   assert.match(proposalStatusLabel('paid').label, /evidência/)
 })
 test('unknown money is "Não calculado", never R$ 0,00', () => {
-  assert.match(read('src/app/app/simulacoes/page.tsx'), /installment_amount === null \? 'Não calculada'/)
+  assert.match(read('src/app/app/simulacoes/SavedSimulations.tsx'), /installment_amount === null \? 'Não calculada'/)
   // The contract file (part C2) shows amounts in its form: an unknown amount is an empty field, never "0,00".
   assert.match(read('src/app/app/propostas/[id]/page.tsx'), /v === null \|\| v === undefined \? ''/)
 })
@@ -146,12 +146,12 @@ test('agent dashboard is scoped to the agent own records', () => {
   assert.doesNotMatch(o, /\.rpc\('owner_dashboard'|proposal_commission_lines|commission_receipts/)
 })
 test('the simulation page guides an empty organization and never shows a table UUID', () => {
-  const s = read('src/app/app/simulacoes/page.tsx')
+  const s = read('src/app/app/simulacoes/SimulatorPanel.tsx')
   assert.match(s, /Nenhuma tabela publicada/)
   assert.doesNotMatch(s, /product_table_id\.slice/)
 })
 test('submit buttons disable themselves while pending on the main forms', () => {
-  for (const f of ['src/app/app/crm/page.tsx', 'src/app/app/clientes/ClientForm.tsx', 'src/app/app/simulacoes/page.tsx', 'src/app/app/clientes/[id]/page.tsx']) assert.match(read(f), /<SubmitButton/, f)
+  for (const f of ['src/app/app/crm/page.tsx', 'src/app/app/clientes/ClientForm.tsx', 'src/app/app/simulacoes/SimulatorPanel.tsx', 'src/app/app/simulacoes/SavedSimulations.tsx', 'src/app/app/crm/LeadDetail.tsx', 'src/app/app/clientes/[id]/page.tsx']) assert.match(read(f), /<SubmitButton/, f)
   assert.match(read('src/components/SubmitButton.tsx'), /useFormStatus/)
 })
 

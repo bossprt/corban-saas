@@ -1,5 +1,6 @@
 'use server'
 
+import { crmBack } from '@/lib/safe-back'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
@@ -9,6 +10,8 @@ import { parseMoneyInput } from '@/lib/money-input'
 import { isUuid } from '@/lib/team'
 
 const go = (code: FeedbackCode, path = '/app/simulacoes'): never => redirect(feedbackUrl(path, code))
+// From the lead panel in Vendas the form carries "back": success and refusals return there.
+const goFrom = (f: FormData) => (code: FeedbackCode, path?: string): never => go(code, crmBack(f.get('back')) ?? path)
 
 // Amount typed as "10.000,00" becomes the exact decimal string "10000.00" (never a JavaScript number).
 function money(value: FormDataEntryValue | null): string | null {
@@ -74,6 +77,7 @@ async function createSimulationForCondition(formData: FormData) {
 }
 
 export async function createProposalFromSimulation(formData: FormData) {
+  const go = goFrom(formData)
   const { supabase } = await requireAppContext()
   const simulationId = String(formData.get('simulation_id') ?? '')
   if (!simulationId) return go('erro:requisicao_invalida')
@@ -84,13 +88,14 @@ export async function createProposalFromSimulation(formData: FormData) {
     if (/simulation_not_found_or_forbidden|published_table_version_not_available|customer_not_available/.test(error.message ?? '')) return go('erro:simulacao_indisponivel')
     return go(classifyDbFeedback(error))
   }
-  revalidatePath('/app/simulacoes'); revalidatePath('/app/propostas'); revalidatePath('/app')
+  revalidatePath('/app/simulacoes'); revalidatePath('/app/propostas'); revalidatePath('/app'); revalidatePath('/app/crm')
   return go('ok:proposta_criada', '/app/propostas')
 }
 
 // The offer chosen on the simulator (08/10/2026): the database recalculates it from the factor in force and saves it as
 // a simulation of the client; nothing but ids and the typed amounts comes from the browser.
 export async function saveOffer(formData: FormData) {
+  const go = goFrom(formData)
   const { supabase } = await requireAppContext()
   const ids = ['customer_id', 'table_version_id', 'condition_id', 'agreement_id', 'contract_type_id'].map(k => String(formData.get(k) ?? ''))
   const mode = String(formData.get('mode') ?? '')

@@ -17,9 +17,9 @@ export type AddressValues = { zip: string; street: string; number: string; compl
 
 // One form for registering and for editing a client (owner decision): the same five blocks, prefilled when editing.
 // On the client page the form opens locked (the page itself is the client file); "Editar cadastro" unlocks it in place.
-export function ClientForm({ mode, action, client, address, accounts = [], registrations = [], agreements, canEdit, canReveal = false }: {
+export function ClientForm({ mode, action, client, address, accounts = [], registrations = [], agreements, canEdit, canReveal = false, back }: {
   mode: 'create' | 'edit'; action: (f: FormData) => Promise<void>; client?: ClientFormValues; address?: AddressValues
-  accounts?: AccountRow[]; registrations?: RegistrationRow[]; agreements: { id: string; name: string }[]; canEdit: boolean; canReveal?: boolean
+  accounts?: AccountRow[]; registrations?: RegistrationRow[]; agreements: { id: string; name: string }[]; canEdit: boolean; canReveal?: boolean; back?: string
 }) {
   const c = client
   const [editing, setEditing] = useState(mode === 'create')
@@ -28,6 +28,7 @@ export function ClientForm({ mode, action, client, address, accounts = [], regis
   return (
     <form action={action} className="grid gap-5">
       {c && <input type="hidden" name="client_id" value={c.id} />}
+      {back && <input type="hidden" name="back" value={back} />}
       {mode === 'edit' && (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-muted">{locked ? 'Para alterar, clique em Editar cadastro.' : 'Editando: altere o que precisar e clique em Salvar alterações.'}</p>

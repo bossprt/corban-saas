@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Vendas: lead no painel lateral (08/10/2026)
+- Adicionado (pedido do dono): no quadro de Vendas, o card abre o lead num painel à direita, sem sair do quadro (filtros mantidos; fechar volta ao quadro). Abas: Resumo (dados, próximo contato, etapa, histórico, vendedor), Simular (o simulador dentro do painel, com o cliente do lead), Ficha do cliente (cadastro para alterar e salvar ali) e Propostas (as simulações gravadas do cliente = propostas negociadas, com "Venda fechada: enviar para a esteira", que cria a proposta preenchida pela simulação; o lead passa para Proposta como antes). Lead sem cliente: a aba pede o CPF e cadastra ou liga o cliente. Todas as ações do painel voltam para ele (retorno só para telas de Vendas). "Pegar próximo lead" e "Cadastrar lead" abrem o painel. Botão "Simular" no topo de Vendas e "Simulador" no menu de Vendas. A página do lead continua, com as mesmas abas. Sem mudança no banco de dados.
+
 ### Simulador: escolher a tabela (08/10/2026)
 - Adicionado (pedido do dono): campo "Tabela" ao lado de convênio e operação. Padrão "Todas as tabelas"; a lista segue o convênio e a operação escolhidos e mostra só tabelas com fator (perfil de fator ou coeficiente). A mesma tabela do banco vendida por várias promotoras é uma opção só (mesmo código, mesmo fator); o resultado mostra uma linha por promotora. Cliente deixa de ser obrigatório para simular (só para gravar). Sem mudança no banco de dados.
 

@@ -1,5 +1,6 @@
 'use server'
 
+import { crmBack } from '@/lib/safe-back'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
@@ -13,10 +14,9 @@ const text = (f: FormData, k: string) => String(f.get(k) ?? '').trim()
 const leadPath = (id: string) => `/app/crm/leads/${id}`
 const go = (path: string, code: FeedbackCode): never => redirect(feedbackUrl(path, code))
 // A safe "back to" path: only the CRM screens (never an external URL).
-const back = (f: FormData, fallback: string) => {
-  const v = text(f, 'back')
-  return /^\/app\/crm(\/[\w-]+)*(\?[\w=&%-]*)?$/.test(v) ? v : fallback
-}
+const back = (f: FormData, fallback: string) => crmBack(text(f, 'back')) ?? fallback
+// The lead opens in the side panel over the Vendas board (owner, 08/10/2026).
+const panelPath = (id: string) => `/app/crm?lead=${id}`
 
 function crmError(error: { message?: string; code?: string }): FeedbackCode {
   const m = error.message ?? ''
@@ -55,7 +55,7 @@ export async function createSalesLead(formData: FormData) {
   })
   if (error) return go('/app/crm', crmError(error))
   refresh()
-  return go(leadPath(String(data)), 'ok:lead_registrado')
+  return go(panelPath(String(data)), 'ok:lead_registrado')
 }
 
 export async function setLeadStage(formData: FormData) {
@@ -92,16 +92,16 @@ export async function setNextContact(formData: FormData) {
   if (!UUID.test(id)) return go('/app/crm', 'erro:requisicao_invalida')
   const raw = text(formData, 'next_contact_at')
   const at = raw ? localDateTimeToIso(raw) : null
-  if (raw && !at) return go(leadPath(id), 'erro:data_invalida')
+  if (raw && !at) return go(back(formData, leadPath(id)), 'erro:data_invalida')
   const { error } = await supabase.rpc('set_lead_next_contact', { p_lead_id: id, p_at: at })
-  if (error) return go(leadPath(id), crmError(error))
+  if (error) return go(back(formData, leadPath(id)), crmError(error))
   const note = text(formData, 'note')
   if (note) {
     const { error: e } = await supabase.rpc('add_lead_note', { p_lead_id: id, p_text: note.slice(0, 1000) })
-    if (e) return go(leadPath(id), crmError(e))
+    if (e) return go(back(formData, leadPath(id)), crmError(e))
   }
   refresh(leadPath(id))
-  return go(leadPath(id), at ? 'ok:retorno_marcado' : 'ok:lead_atualizado')
+  return go(back(formData, leadPath(id)), at ? 'ok:retorno_marcado' : 'ok:lead_atualizado')
 }
 
 export async function addLeadNote(formData: FormData) {
@@ -109,11 +109,11 @@ export async function addLeadNote(formData: FormData) {
   const id = text(formData, 'lead_id')
   const note = text(formData, 'note')
   if (!UUID.test(id)) return go('/app/crm', 'erro:requisicao_invalida')
-  if (!note || note.length > 1000) return go(leadPath(id), 'erro:anotacao_invalida')
+  if (!note || note.length > 1000) return go(back(formData, leadPath(id)), 'erro:anotacao_invalida')
   const { error } = await supabase.rpc('add_lead_note', { p_lead_id: id, p_text: note })
-  if (error) return go(leadPath(id), crmError(error))
+  if (error) return go(back(formData, leadPath(id)), crmError(error))
   refresh(leadPath(id))
-  return go(leadPath(id), 'ok:anotacao_salva')
+  return go(back(formData, leadPath(id)), 'ok:anotacao_salva')
 }
 
 // "Simular": the lead becomes (or is recognized as) a client by CPF and the simulation opens with that client chosen.
@@ -122,10 +122,13 @@ export async function startLeadSale(formData: FormData) {
   const id = text(formData, 'lead_id')
   const cpf = text(formData, 'cpf').replace(/\D/g, '')
   if (!UUID.test(id)) return go('/app/crm', 'erro:requisicao_invalida')
-  if (cpf && !isValidCpf(cpf)) return go(leadPath(id), 'erro:cpf_invalido')
+  if (cpf && !isValidCpf(cpf)) return go(back(formData, leadPath(id)), 'erro:cpf_invalido')
   const { data, error } = await supabase.rpc('start_lead_sale', { p_lead_id: id, p_cpf: cpf || null })
-  if (error) return go(leadPath(id), crmError(error))
+  if (error) return go(back(formData, leadPath(id)), crmError(error))
   refresh(leadPath(id), '/app/clientes')
+  // From the lead panel: back to it (on the Simular tab); from elsewhere: the simulator with the client chosen.
+  const to = crmBack(text(formData, 'back'))
+  if (to) redirect(to)
   redirect(`/app/simulacoes?cliente=${String(data)}`)
 }
 
@@ -137,7 +140,7 @@ export async function takeNextLead(formData: FormData) {
   if (error) return go('/app/crm', crmError(error))
   if (!data) return go('/app/crm', 'erro:fila_vazia')
   refresh()
-  return go(leadPath(String(data)), 'ok:lead_assumido')
+  return go(panelPath(String(data)), 'ok:lead_assumido')
 }
 
 export async function claimLead(formData: FormData) {
@@ -145,9 +148,9 @@ export async function claimLead(formData: FormData) {
   const id = text(formData, 'lead_id')
   if (!UUID.test(id)) return go('/app/crm', 'erro:requisicao_invalida')
   const { error } = await supabase.rpc('claim_lead', { p_lead: id })
-  if (error) return go(leadPath(id), crmError(error))
+  if (error) return go(back(formData, leadPath(id)), crmError(error))
   refresh(leadPath(id))
-  return go(leadPath(id), 'ok:lead_assumido')
+  return go(back(formData, leadPath(id)), 'ok:lead_assumido')
 }
 
 // Supervisor: one lead to a seller (lead page), or the N oldest waiting leads of a campaign (campaign page).
