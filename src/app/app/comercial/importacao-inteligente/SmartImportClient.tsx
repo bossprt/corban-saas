@@ -1,4 +1,5 @@
 'use client'
+import { FileDrop } from '@/components/FileDrop'
 import { useMemo, useState } from 'react'
 import { Upload } from 'lucide-react'
 import { Badge, Card, CardHeader } from '@/components/ui'
@@ -76,7 +77,7 @@ export function SmartImportClient({providers}:{providers:Provider[]}){
    <div className="px-5 pb-5 pt-2">
     <p className="text-[13px] text-ink-soft">CSV, XLSX ou XLS. No modelo do Corban ou no da 2tech (Empresa + Repasse 1…5).</p>
     <div className="mt-3 flex flex-wrap items-center gap-2">
-     <input type="file" accept=".csv,.xlsx,.xls,.pdf,text/csv" aria-label="Planilha" onChange={e=>{setFile(e.target.files?.[0]??null);setPreview(null);setSlots({});setBase('');setMessage('')}} className="block flex-1 text-sm" />
+     <div className="min-w-64 flex-1"><FileDrop accept=".csv,.xlsx,.xls,.pdf,text/csv" ariaLabel="Planilha" hint="CSV, XLSX ou XLS" onChange={fs=>{setFile(fs[0]??null);setPreview(null);setSlots({});setBase('');setMessage('')}} /></div>
      <button disabled={!file||busy} onClick={()=>{setSlots({});setBase('');void runPreview('{}','')}} className={primary}><Upload size={15} className="mr-1.5 inline" aria-hidden />{busy?'Lendo...':'Ler planilha'}</button>
     </div>
    </div>

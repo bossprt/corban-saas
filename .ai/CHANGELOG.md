@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Campo de arquivo visível em todas as telas (08/10/2026)
+- Corrigido (pedido do dono): o mesmo campo de arquivo (botão "Escolher arquivo", "ou arraste aqui" e o nome do arquivo escolhido) em documentos do cliente e da proposta, portal do corretor, extrato bancário, importar recebimentos, importar contratos, importação inteligente e base antiga. Versão compacta (`FileDrop compact`) onde o espaço é pequeno. Sem mudança no banco de dados.
+
 ### Campo de arquivo visível em Fatores (08/10/2026)
 - Corrigido (pedido do dono): o campo de anexar planilha em Fatores era só um texto pequeno e passava despercebido. Agora é uma caixa com botão "Escolher arquivos do computador", "ou arraste aqui" e o nome dos arquivos escolhidos (componente `FileDrop`). "Agendado" mostra só quantos dias e até quando. Sem mudança no banco de dados.
 

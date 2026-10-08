@@ -1,3 +1,4 @@
+import { FileDrop } from '@/components/FileDrop'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, FilePlus2 } from 'lucide-react'
@@ -208,7 +209,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
                   <option value="" disabled>Tipo de documento</option>
                   {(docTypes ?? []).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
-                <input required type="file" name="file" accept=".pdf,image/jpeg,image/png,image/webp" aria-label="Arquivo do documento" className="text-sm file:mr-2 file:rounded-md file:border file:border-line file:bg-surface file:px-2 file:py-1" />
+                <FileDrop compact required name="file" accept=".pdf,image/jpeg,image/png,image/webp" ariaLabel="Arquivo do documento" hint="ou arraste o documento aqui" />
                 <SubmitButton pendingText="Enviando..." className="inline-flex h-9 items-center justify-center rounded-[10px] bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong">Enviar documento</SubmitButton>
                 <span className="text-xs text-muted">PDF, JPG, PNG ou WebP até 4 MB. Um novo envio do mesmo tipo vira nova versão.</span>
               </form>

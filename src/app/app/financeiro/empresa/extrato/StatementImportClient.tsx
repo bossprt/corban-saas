@@ -1,4 +1,5 @@
 'use client'
+import { FileDrop } from '@/components/FileDrop'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -40,7 +41,7 @@ export function StatementImportClient({ banks }: { banks: { id: string; label: s
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       <label className={label}>Conta<select value={bank} onChange={e => setBank(e.target.value)} aria-label="Conta bancária do extrato" className="field mt-1.5">{banks.map(b => <option key={b.id} value={b.id}>{b.label}</option>)}</select></label>
-      <label className={label}>Extrato (arquivo OFX)<input type="file" accept=".ofx,.OFX" onChange={e => setFile(e.target.files?.[0] ?? null)} className="field mt-1.5" /></label>
+      <div className={label}>Extrato (arquivo OFX)<div className="mt-1.5"><FileDrop compact accept=".ofx,.OFX" ariaLabel="Extrato OFX" onChange={fs => setFile(fs[0] ?? null)} /></div></div>
       <div className="flex items-end justify-end"><button type="button" onClick={send} disabled={busy || !file} className="h-10 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50">{busy ? 'Importando...' : 'Importar extrato'}</button></div>
       {msg && <p role="status" className="text-sm text-[#15803D] sm:col-span-3">{msg}</p>}
       {error && <div role="alert" className="rounded-[10px] border border-[#F5C2C0] bg-[#FDE2E1] px-4 py-3 text-sm text-[#991B1B] sm:col-span-3">{error}</div>}
