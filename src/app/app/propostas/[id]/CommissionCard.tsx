@@ -1,5 +1,7 @@
 import { Badge, Card, CardHeader } from '@/components/ui'
 import { SubmitButton } from '@/components/SubmitButton'
+import { BankAccountSelect } from '@/components/BankAccountSelect'
+import { bankAccountChoice } from '@/lib/finBankAccounts'
 import { can, type Access } from '@/lib/access'
 import { add, fromDecimalString, mul, sub, toDecimalString, type Rational } from '@/lib/commission/money'
 import { decimalBr } from '@/lib/commission/tableValues'
@@ -42,6 +44,7 @@ export async function CommissionCard({ supabase, access, proposalId, closed, can
   let lines: Line[] = []
   let payouts: Payout[] = []
   let mine: Mine | null = null
+  const receiptBanks = can(access, 'financeiro.approve') ? await bankAccountChoice(supabase, 'commission_receipt') : { banks: [], suggested: '' }
   if (finance) {
     const { data } = await supabase.from('proposal_commission_calcs').select('id,mode,tax_rate_pct,tax_exempt,ir_withheld_pct,pay_deferred,installments,calculated_at')
       .eq('proposal_id', proposalId).eq('status', 'active').maybeSingle()
@@ -215,6 +218,7 @@ export async function CommissionCard({ supabase, access, proposalId, closed, can
                   <label className={lbl}>Valor (R$)<input name="amount" required inputMode="decimal" placeholder="600,00" className="field mt-1.5" /></label>
                   <label className={lbl}>Data em que caiu<input name="received_on" type="date" required defaultValue={new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())} className="field mt-1.5" /></label>
                   <label className={lbl}>Parcela (só diferido)<input name="installment" inputMode="numeric" placeholder="próxima" className="field mt-1.5" /></label>
+                  <BankAccountSelect banks={receiptBanks.banks} suggested={receiptBanks.suggested} label="Conta que recebeu" labelClass={lbl} />
                   <label className={`${lbl} sm:col-span-2`}>Observação do recebimento<input name="note" maxLength={100} placeholder="Ex.: caiu na conta, banco sem relatório" className="field mt-1.5" /></label>
                   <div className="sm:col-span-2 lg:col-span-3 flex flex-wrap items-center gap-3">
                     <SubmitButton pendingText="Registrando..." className="h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Registrar recebimento</SubmitButton>

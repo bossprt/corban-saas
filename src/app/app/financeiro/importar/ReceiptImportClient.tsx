@@ -17,7 +17,8 @@ const thisMonth = () => new Date().toISOString().slice(0, 7)
 
 // Two steps on the same file: read the columns (in the browser, nothing stored), then import with the chosen columns.
 // Only the chosen columns travel to the server, so a report of any size stays under the request limit.
-export function ReceiptImportClient({ sources }: { sources: Source[] }) {
+export function ReceiptImportClient({ sources, bankAccounts, suggestedBank }: { sources: Source[]; bankAccounts: { id: string; label: string }[]; suggestedBank: string }) {
+  const [bank, setBank] = useState(suggestedBank)
   const [file, setFile] = useState<File | null>(null)
   const [source, setSource] = useState('')
   const [kind, setKind] = useState('upfront')
@@ -56,7 +57,7 @@ export function ReceiptImportClient({ sources }: { sources: Source[] }) {
       const chosen = [...new Set(FIELDS.map(f => cols[f.key]).filter(Boolean))]
       const idx = chosen.map(h => sheet.headers.indexOf(h))
       const r = await importReceiptFile({
-        source, kind, month, declaredTotal: declared, fileName: file.name, sha: sheet.sha,
+        source, kind, month, declaredTotal: declared, fileName: file.name, sha: sheet.sha, bankAccount: bank,
         mapping: { ade: cols.ade ?? '', amount: cols.amount ?? '', installment: cols.installment || undefined, paid_on: cols.paid_on || undefined, bank: cols.bank || undefined },
         headerRow: sheet.headerRow, headers: chosen, body: sheet.body.map(row => idx.map(i => String(row[i] ?? ''))),
       })
@@ -84,6 +85,12 @@ export function ReceiptImportClient({ sources }: { sources: Source[] }) {
         <label className={label}>Mês de referência<input type="month" value={month} onChange={e => setMonth(e.target.value)} className="field mt-1.5" /></label>
         <label className={label}>Total do relatório <span className="font-normal text-muted">opcional; se informado, tem de bater com a soma das linhas</span>
           <input inputMode="decimal" value={declared} onChange={e => setDeclared(e.target.value)} placeholder="1.234,56" className="field mt-1.5" />
+        </label>
+        <label className={label}>Conta que recebeu <span className="font-normal text-muted">conta da empresa onde o dinheiro entrou</span>
+          <select value={bank} onChange={e => setBank(e.target.value)} className="field mt-1.5">
+            <option value="">Não informar agora</option>
+            {bankAccounts.map(b => <option key={b.id} value={b.id}>{b.label}</option>)}
+          </select>
         </label>
         <label className={`${label} sm:col-span-2`}>Arquivo (XLSX, XLS ou CSV)
           <input type="file" accept=".xlsx,.xls,.csv,.txt" onChange={e => { setFile(e.target.files?.[0] ?? null); setInspect(null) }} className="field mt-1.5" />

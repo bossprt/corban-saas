@@ -7,6 +7,8 @@ import { isUuid } from '@/lib/team'
 import { brlText } from '@/lib/receipts/format'
 import { dateBr, ENTRY_KIND_LABEL, ENTRY_STATUS_LABEL, MODEL_LABEL } from '@/lib/payout/format'
 import { SubmitButton } from '@/components/SubmitButton'
+import { BankAccountSelect } from '@/components/BankAccountSelect'
+import { bankAccountChoice } from '@/lib/finBankAccounts'
 import { addEntry, decideEntry, payNow, requestWithdrawal, setAccountModel } from '../actions'
 import { PayoutRows, type PayoutRow } from '../PayoutRows'
 
@@ -32,6 +34,7 @@ export default async function PayoutAccountPage({ params }: { params: Promise<{ 
   const finance = can(access, 'repasse.view')
   const canCreate = can(access, 'repasse.create') || can(access, 'repasse.edit')
   const canApprove = can(access, 'repasse.approve')
+  const payBanks = canApprove ? await bankAccountChoice(supabase, 'payout') : { banks: [], suggested: '' }
   const back = `/app/repasse/${id}`
 
   return (
@@ -48,6 +51,7 @@ export default async function PayoutAccountPage({ params }: { params: Promise<{ 
             <div className="flex flex-wrap items-end gap-2">
               <label className="text-xs text-muted">Pago em<input name="paid_on" type="date" required defaultValue={todayIso()} className="field mt-1 block h-10" /></label>
               <label className="text-xs text-muted">Comprovante <span className="font-normal">(opcional)</span><input name="reference" maxLength={120} placeholder="ID do PIX, se quiser" className="field mt-1 block h-10 w-64" /></label>
+              <BankAccountSelect banks={payBanks.banks} suggested={payBanks.suggested} label="Conta que pagou" labelClass="text-xs text-muted" selectClass="field mt-1 block h-10" />
               <SubmitButton pendingText="Registrando..." className="h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Pagar {brlText(account.balance)}</SubmitButton>
             </div>
             <p className="text-xs text-muted">Faça o PIX pelo banco e registre aqui. O saldo é baixado e o valor entra no financeiro da empresa.</p>

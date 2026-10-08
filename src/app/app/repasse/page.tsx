@@ -12,6 +12,7 @@ import { dateBr, ENTRY_KIND_LABEL, MODEL_LABEL } from '@/lib/payout/format'
 import { closePeriod, decideEntry, openAccount } from './actions'
 import { PayoutRows, type PayoutRow } from './PayoutRows'
 import { PayBatch } from './PayBatch'
+import { bankAccountChoice } from '@/lib/finBankAccounts'
 import { payBatch } from './actions'
 import { loadPayList } from '@/lib/payout/pay-list'
 
@@ -52,6 +53,7 @@ export default async function PayoutPage() {
   const emails = await memberEmails((members ?? []).map(m => m.user_id))
   // Paying several sellers at once (06/10/2026): who may approve a payment pays in the bank and confirms here.
   const payLines = canApprove ? await loadPayList(supabase, organization.id) : []
+  const payBanks = canApprove ? await bankAccountChoice(supabase, 'payout') : { banks: [], suggested: '' }
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
   // One row per manual entry group (installments of the same advance are approved together).
   const groups = new Map<string, Pending & { count: number; total: Rational }>()
@@ -69,7 +71,7 @@ export default async function PayoutPage() {
         <Card className="mb-4" id="pagar">
           <CardHeader title="Pagar vendedores" />
           <p className="px-5 pb-3 text-[13px] text-ink-soft">O valor de cada um é exatamente o que o sistema registra ao pagar. Pague no banco (QR Code PIX com o valor, copia e cola ou TED) e depois confirme os pagos.</p>
-          <PayBatch lines={payLines} action={payBatch} today={today} />
+          <PayBatch lines={payLines} action={payBatch} today={today} banks={payBanks.banks} suggestedBank={payBanks.suggested} />
         </Card>
       )}
 

@@ -10,6 +10,8 @@ import type { PayLine } from '@/lib/payout/pay-list'
 import { PIX_TYPE_LABEL, formatTaxId } from '@/lib/sellers'
 import { brlText } from '@/lib/receipts/format'
 import type { PayBatchResult } from './actions'
+import { BankAccountSelect } from '@/components/BankAccountSelect'
+import type { BankOption } from '@/lib/finBankAccounts'
 
 // Cents as BigInt: money is never added as a float.
 const cents = (amount: string) => BigInt(amount.replace('.', ''))
@@ -32,7 +34,7 @@ function CopyButton({ text, label }: { text: string; label: string }) {
 // Pay several sellers (owner request 06/10/2026): the list with the exact amounts and where to pay (PIX QR Code with the
 // amount, copia e cola, or the TED data); the owner pays in the bank and then confirms the ones paid. Nothing is
 // recorded until "Confirmar"; an amount that changed meanwhile is refused, so the record always matches the bank.
-export function PayBatch({ lines, action, today }: { lines: PayLine[]; action: (f: FormData) => Promise<PayBatchResult>; today: string }) {
+export function PayBatch({ lines, action, today, banks = [], suggestedBank = '' }: { lines: PayLine[]; action: (f: FormData) => Promise<PayBatchResult>; today: string; banks?: BankOption[]; suggestedBank?: string }) {
   const router = useRouter()
   const [checked, setChecked] = useState<Set<string>>(() => new Set(lines.filter(l => l.method).map(l => l.account)))
   const [qr, setQr] = useState<number | null>(null)
@@ -119,6 +121,7 @@ export function PayBatch({ lines, action, today }: { lines: PayLine[]; action: (
           <span className="flex flex-wrap items-end gap-3">
             <label className="text-[13px] font-medium text-ink-soft">Pago em<input type="date" name="paid_on" required defaultValue={today} max={today} className="field mt-1.5" /></label>
             <label className="text-[13px] font-medium text-ink-soft">Comprovante <span className="font-normal text-muted">opcional</span><input name="reference" maxLength={120} placeholder="PIX 06/10" className="field mt-1.5 w-48" /></label>
+            <BankAccountSelect banks={banks} suggested={suggestedBank} label="Conta que pagou" />
           </span>
           <button type="submit" disabled={pending || !chosen.length} aria-busy={pending} className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50">
             <Check size={16} aria-hidden />{pending ? 'Registrando...' : `Confirmar ${chosen.length} pago(s) · ${brlText(totalChosen)}`}

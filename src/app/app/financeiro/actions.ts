@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
 import { can } from '@/lib/access'
 import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedback'
+import { bankAccountOf } from '@/lib/finBankAccounts'
 import { isUuid } from '@/lib/team'
 import { parseMoneyInput } from '@/lib/money-input'
 import { buildReceiptRows, RECEIPT_ISSUE_LABEL, type ReceiptKind, type ReceiptMapping } from '@/lib/receipts/parse'
@@ -38,7 +39,7 @@ export async function inspectReceiptFile(input: { source: string; kind: string; 
 
 export type ImportResult = { ok: false; error: string; issues?: { row: number; message: string }[] }
 export type ReceiptImportInput = {
-  source: string; kind: string; month: string; declaredTotal: string; fileName: string; sha: string
+  source: string; kind: string; month: string; declaredTotal: string; fileName: string; sha: string; bankAccount?: string
   mapping: ReceiptMapping; headerRow: number; headers: string[]; body: string[][]
 }
 
@@ -81,6 +82,9 @@ export async function importReceiptFile(input: ReceiptImportInput): Promise<Impo
     if (/receipt_file_already_imported/.test(error.message ?? '')) return { ok: false, error: 'Este arquivo já foi importado.' }
     return { ok: false, error: 'Não foi possível importar o relatório.' }
   }
+  // The account that received the money: its receipts are posted there (07/10/2026).
+  const bank = bankAccountOf(input.bankAccount)
+  if (bank) await supabase.rpc('set_receipt_report_bank_account', { p_report: reportId, p_bank_account: bank })
   revalidatePath('/app/financeiro')
   redirect(feedbackUrl(`/app/financeiro/relatorios/${reportId}`, 'ok:relatorio_importado'))
 }
