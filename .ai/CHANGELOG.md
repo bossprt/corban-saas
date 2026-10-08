@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Movimentações por conta bancária (07/10/2026)
+- Adicionado: Financeiro > Contas bancárias > "Ver movimentações": o que entrou e saiu da conta no período, com saldo dia a dia, totais e "Baixar Excel", para conferir com o extrato do banco (o saldo segue o mesmo cálculo do saldo da conta). Filtro "Conta bancária" em Contas a pagar e receber. Só leitura; sem mudança no banco de dados.
+
 ### Conta bancária nos recebimentos de comissão e nos repasses (07/10/2026)
 - Adicionado: "Conta que recebeu" ao importar relatório de comissão e ao registrar recebimento à mão; "Conta que pagou" em Pagar vendedores (lote) e Pagar agora. Opcional; vem marcada a última conta usada. O lançamento do financeiro passa a dizer a conta, com histórico (de / para); valores e datas não mudam.
 - Corrigido em produção (decisão do dono): os recebimentos de comissão e os repasses já lançados da Smart, sem conta, foram para a conta C6, com histórico. Migration `20261008001318_fin_bank_account_receipts_payouts_v1` (aplicada em produção 07/10/2026, md5 conferido; 33 recebimentos e 11 repasses na C6), contrato `tests/security/fin-bank-account-contract.sql` (11/11).
