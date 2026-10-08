@@ -87,3 +87,31 @@ export async function createProposalFromSimulation(formData: FormData) {
   revalidatePath('/app/simulacoes'); revalidatePath('/app/propostas'); revalidatePath('/app')
   return go('ok:proposta_criada', '/app/propostas')
 }
+
+// The offer chosen on the simulator (08/10/2026): the database recalculates it from the factor in force and saves it as
+// a simulation of the client; nothing but ids and the typed amounts comes from the browser.
+export async function saveOffer(formData: FormData) {
+  const { supabase } = await requireAppContext()
+  const ids = ['customer_id', 'table_version_id', 'condition_id', 'agreement_id', 'contract_type_id'].map(k => String(formData.get(k) ?? ''))
+  const mode = String(formData.get('mode') ?? '')
+  const value = money(formData.get('value'))
+  const term = integer(formData.get('term'))
+  const outstandingRaw = String(formData.get('outstanding') ?? '')
+  const outstanding = outstandingRaw ? parseMoneyInput(outstandingRaw) : null
+  if (!ids.every(isUuid) || !['amount', 'installment'].includes(mode)) return go('erro:requisicao_invalida')
+  if (value === null || outstanding === 'invalid') return go('erro:sim_invalid_amount')
+  if (!term) return go('erro:sim_invalid_term')
+  const [customer, version, condition, agreement, type] = ids
+  const { error } = await supabase.rpc('save_simulation_offer', {
+    p_customer: customer, p_table_version: version, p_condition: condition, p_agreement: agreement, p_contract_type: type,
+    p_term: term, p_mode: mode, p_value: value, p_outstanding: outstanding,
+  })
+  if (error) {
+    const m = error.message ?? ''
+    if (/offer_not_available|published_table_version_not_available/.test(m)) return go('erro:sim_oferta_indisponivel')
+    if (/outstanding_above_amount/.test(m)) return go('erro:sim_saldo_maior')
+    return go(classifyDbFeedback(error))
+  }
+  revalidatePath('/app/simulacoes'); revalidatePath('/app')
+  return go('ok:simulacao_registrada')
+}
