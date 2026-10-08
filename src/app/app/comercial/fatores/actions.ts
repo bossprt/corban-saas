@@ -6,7 +6,7 @@ import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
 import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedback'
 import { xlsxRows } from '@/lib/commercial-xlsx'
-import { parseDelimited } from '@/lib/commercial'
+import { parseDecimal, parseDelimited } from '@/lib/commercial'
 
 const PATH='/app/comercial/fatores'
 const text=(f:FormData,k:string)=>String(f.get(k)??'').trim()
@@ -14,6 +14,8 @@ const go=(code:FeedbackCode):never=>{revalidatePath(PATH);return redirect(feedba
 const manager=async()=>{const ctx=await requireAppContext();return atLeast(ctx.membership.role,'manager')?ctx:null}
 const uuid=(v:string)=>/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v)
 const number=(v:string)=>{let x=v.trim().replace(/\s/g,'').replace('%','');if(x.includes(',')&&!x.includes('.'))x=x.replace(',','.');else if(x.includes(',')&&x.includes('.'))x=x.replace(/\./g,'').replace(',','.');const n=Number(x);return Number.isFinite(n)?n:null}
+// The factor travels as an exact decimal string ("0.022543"), never a float: up to 10 decimal places (08/10/2026).
+const factorOf=(v:string):string|null=>{let x=String(v??'').trim().replace(/\s/g,'');if(x.includes(',')&&!x.includes('.'))x=x.replace(',','.');else if(x.includes(',')&&x.includes('.'))x=x.replace(/\./g,'').replace(',','.');const d=parseDecimal(x,{maxInt:3,scale:10});return d&&!/^0+(\.0+)?$/.test(d)?d:null}
 const norm=(v:string)=>v.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'')
 const aliases={
  min:['prazoinicial','prazomin','prazominimo','de','inicio'],
@@ -32,7 +34,7 @@ export async function createFactorProfile(f:FormData){
  return error?go(classifyDbFeedback(error)):go('ok:fator_perfil_cadastrado')
 }
 
-async function createBatch(ctx:NonNullable<Awaited<ReturnType<typeof manager>>>,profile:string,effective:string,rows:{term_min:number;term_max:number;factor_value:number}[],source:'manual'|'file',note:string|null){
+async function createBatch(ctx:NonNullable<Awaited<ReturnType<typeof manager>>>,profile:string,effective:string,rows:{term_min:number;term_max:number;factor_value:string}[],source:'manual'|'file',note:string|null){
  const rev=await ctx.supabase.from('commercial_factor_batches').select('revision').eq('profile_id',profile).eq('effective_date',effective).order('revision',{ascending:false}).limit(1).maybeSingle()
  const ins=await ctx.supabase.from('commercial_factor_batches').insert({
   organization_id:ctx.membership.organization_id,profile_id:profile,effective_date:effective,revision:(rev.data?.revision??0)+1,status:'draft',source_kind:source,source_note:note
@@ -47,8 +49,8 @@ async function createBatch(ctx:NonNullable<Awaited<ReturnType<typeof manager>>>,
 
 export async function createManualFactor(f:FormData){
  const ctx=await manager();if(!ctx)return go('erro:sem_permissao')
- const profile=text(f,'profile_id'),effective=text(f,'effective_date'),min=number(text(f,'term_min')),max=number(text(f,'term_max')),factor=number(text(f,'factor_value'))
- if(!uuid(profile)||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(effective)||!Number.isInteger(min)||!Number.isInteger(max)||min!<1||max!<min!||factor===null||factor<=0)return go('erro:fator_invalido')
+ const profile=text(f,'profile_id'),effective=text(f,'effective_date'),min=number(text(f,'term_min')),max=number(text(f,'term_max')),factor=factorOf(text(f,'factor_value'))
+ if(!uuid(profile)||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(effective)||!Number.isInteger(min)||!Number.isInteger(max)||min!<1||max!<min!||factor===null)return go('erro:fator_invalido')
  const error=await createBatch(ctx,profile,effective,[{term_min:min!,term_max:max!,factor_value:factor}], 'manual',null)
  return error?go(classifyDbFeedback(error)):go('ok:fator_publicado')
 }
@@ -63,13 +65,22 @@ export async function importFactorFile(f:FormData){
  if(rows.length<2)return go('erro:fator_arquivo')
  const headers=rows[0],iMin=col(headers,aliases.min),iMax=col(headers,aliases.max),iFactor=col(headers,aliases.factor)
  if(iMin<0||iFactor<0)return go('erro:fator_colunas')
- const parsed:{term_min:number;term_max:number;factor_value:number}[]=[]
+ const parsed:{term_min:number;term_max:number;factor_value:string}[]=[]
  for(const r of rows.slice(1)){
-  const min=number(r[iMin]??''), max=iMax>=0?number(r[iMax]??''):min, factor=number(r[iFactor]??'')
-  if(!Number.isInteger(min)||!Number.isInteger(max)||min!<1||max!<min!||factor===null||factor<=0)return go('erro:fator_colunas')
+  const min=number(r[iMin]??''), max=iMax>=0?number(r[iMax]??''):min, factor=factorOf(r[iFactor]??'')
+  if(!Number.isInteger(min)||!Number.isInteger(max)||min!<1||max!<min!||factor===null)return go('erro:fator_colunas')
   parsed.push({term_min:min!,term_max:max!,factor_value:factor})
  }
  if(!parsed.length||parsed.length>500)return go('erro:fator_arquivo')
  const error=await createBatch(ctx,profile,effective,parsed,'file',file.name.slice(0,180))
  return error?go(classifyDbFeedback(error)):go('ok:fatores_importados')
+}
+
+// A profile out of use stops being offered by the simulator; its history stays (08/10/2026).
+export async function toggleFactorProfile(f:FormData){
+ const ctx=await manager();if(!ctx)return go('erro:sem_permissao')
+ const profile=text(f,'profile_id'),active=text(f,'active')==='true'
+ if(!uuid(profile))return go('erro:fator_invalido')
+ const {error}=await ctx.supabase.from('commercial_factor_profiles').update({is_active:active}).eq('id',profile)
+ return error?go(classifyDbFeedback(error)):go(active?'ok:fator_perfil_ativado':'ok:fator_perfil_desativado')
 }

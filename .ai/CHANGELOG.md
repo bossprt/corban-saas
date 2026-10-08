@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Simulador por fator e tela de Fatores (08/10/2026)
+- Adicionado: o simulador começa pelo convênio e pela operação, simula por valor ou por parcela (parcela = valor × fator; valor = parcela ÷ fator, cortado no centavo), compara todas as tabelas do convênio e mostra só as que têm fator valendo (fator diário da data, fator fixo publicado ou coeficiente da linha da tabela), a melhor primeiro. Refin e portabilidade recebem o saldo devedor e mostram o troco. "Usar esta" grava a simulação do cliente (o servidor recalcula; nada da tela é confiado) e ela vira proposta como antes. Migration `20261008_simulator_offers_v1` (ainda não aplicada em produção), contrato `tests/security/simulator-offers-contract.sql` (11/11).
+- Adicionado: na tela de Fatores, "Valendo hoje" por perfil, alerta de perfil diário sem fator para hoje, datas agendadas, histórico de publicações, ativar e desativar perfil (desativado o simulador não usa; o histórico fica) e data de hoje já preenchida. O fator é lido como decimal exato (até 10 casas), nunca como número de ponto flutuante.
+
 ### Vendas: encerrar e excluir campanha (08/10/2026)
 - Adicionado: na campanha (admin/gerente), "Encerrar campanha" (leads em aberto vão para Perdido com o motivo "Campanha encerrada", com histórico; proposta e venda ficam) e "Excluir campanha" (só se nenhum lead virou proposta ou venda; digita o nome para confirmar; apaga campanha, leads, histórico e importações; clientes ficam). Os dois ficam no histórico da equipe. Migration `20261008044621_crm_campaign_delete_close_v1` (aplicada em produção 08/10/2026, md5 conferido), contrato `tests/security/crm-campaign-delete-close-contract.sql` (11/11).
 
