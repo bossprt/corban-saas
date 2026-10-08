@@ -9,6 +9,7 @@ import { formatCpf } from '@/lib/cpf'
 import { parseMoneyInput } from '@/lib/money-input'
 import { brlText } from '@/lib/receipts/format'
 import { createProposalFromSimulation, saveOffer } from './actions'
+import { SimulatorFilters, type TableOption } from './SimulatorFilters'
 
 const SIM_STATUS: Record<string, [string, Tone]> = {
   draft: ['Rascunho', 'neutral'], calculated: ['Calculada', 'pending'], selected: ['Virou proposta', 'received'], expired: ['Expirada', 'neutral'], cancelled: ['Cancelada', 'reversed'],
@@ -26,7 +27,7 @@ type Offer = {
   factor: number | string; factor_source: string; factor_date: string | null; term: number
   amount: number | string; installment: number | string; outstanding: number | string | null; change: number | string | null
 }
-type Sp = { cliente?: string; convenio?: string; tipo?: string; modo?: string; valor?: string; prazo?: string; saldo?: string }
+type Sp = { cliente?: string; convenio?: string; tipo?: string; tabela?: string; modo?: string; valor?: string; prazo?: string; saldo?: string }
 
 // Simulator (08/10/2026): agreement first, then the contract type, by amount OR by installment, with the term; every
 // table of the agreement that has a factor is compared, best first. installment = amount x factor; amount =
@@ -36,7 +37,17 @@ export default async function SimulationsPage({ searchParams }: { searchParams: 
   const { supabase, organization } = await requireAppContext()
   const sp = await searchParams
   const clienteId = UUID.test(sp.cliente ?? '') ? sp.cliente! : null
-  const [initialClient, agreementsResult, typesResult, settingsResult, simulationsResult, proposalsResult, tablesResult, versionsResult] = await Promise.all([
+  // Table lines (contract types per published version), read in pages: a company can have more than one page of lines.
+  const conditionPages = async () => {
+    const out: { product_table_version_id: string; contract_type_id: string; coefficient: number | string | null }[] = []
+    for (let from = 0; from < 20000; from += 1000) {
+      const { data } = await supabase.from('commercial_conditions').select('product_table_version_id,contract_type_id,coefficient').order('id').range(from, from + 999)
+      out.push(...((data ?? []) as typeof out))
+      if (!data || data.length < 1000) break
+    }
+    return out
+  }
+  const [initialClient, agreementsResult, typesResult, settingsResult, simulationsResult, proposalsResult, tablesResult, versionsResult, conditions, profilesResult] = await Promise.all([
     clienteId ? supabase.from('clients').select('id,full_name,cpf').eq('id', clienteId).is('deleted_at', null).maybeSingle() : Promise.resolve({ data: null }),
     supabase.from('organization_agreements').select('id,name').eq('is_active', true).order('name'),
     supabase.from('contract_types').select('id,name,tech_key,is_active,organization_id').order('sort_order').order('name'),
@@ -45,8 +56,10 @@ export default async function SimulationsPage({ searchParams }: { searchParams: 
       .select('id,customer_id,product_table_version_id,status,requested_amount,released_amount,installment_amount,term,created_at,clients(full_name)')
       .order('created_at', { ascending: false }).limit(50),
     supabase.from('proposals_v2').select('id,simulation_id').not('simulation_id', 'is', null),
-    supabase.from('product_tables').select('id,name,code'),
-    supabase.from('product_table_versions').select('id,version,product_table_id').eq('status', 'published').limit(1000),
+    supabase.from('product_tables').select('id,name,code,status,bank_table_code,organization_product_routes(org_bank_id,org_agreement_id,status,organization_banks(name))'),
+    supabase.from('product_table_versions').select('id,version,product_table_id').eq('status', 'published').limit(5000),
+    conditionPages(),
+    supabase.from('commercial_factor_profiles').select('org_bank_id,org_agreement_id,product_table_id,bank_table_code').eq('is_active', true),
   ])
   const agreements = (agreementsResult.data ?? []) as { id: string; name: string }[]
   const types = effectiveContractTypes(
@@ -64,6 +77,42 @@ export default async function SimulationsPage({ searchParams }: { searchParams: 
   const balanceRaw = parseMoneyInput(sp.saldo ?? '')
   const balance = type && WITH_BALANCE.has(type.tech_key) && balanceRaw && balanceRaw !== 'invalid' ? balanceRaw : null
   const ready = !!agreement && !!type && !!value && value !== 'invalid' && !!term
+  // Table choice: one option per bank table (same bank code = same table at every promoter), else per system table.
+  type TableRow = { id: string; name: string | null; code: string; status: string; bank_table_code: string | null; organization_product_routes: Route | Route[] | null }
+  type Route = { org_bank_id: string; org_agreement_id: string; status: string; organization_banks: { name: string } | { name: string }[] | null }
+  const profiles = (profilesResult.data ?? []) as { org_bank_id: string; org_agreement_id: string | null; product_table_id: string | null; bank_table_code: string | null }[]
+  const withCoefficient = new Set<string>()
+  const tableKey = new Map<string, string>()
+  const optionByKey = new Map<string, TableOption>()
+  const versionTable = new Map((versionsResult.data ?? []).map(v => [v.id, v.product_table_id]))
+  const typesByTable = new Map<string, Set<string>>()
+  for (const c of conditions) {
+    const t = versionTable.get(c.product_table_version_id)
+    if (t) typesByTable.set(t, (typesByTable.get(t) ?? new Set()).add(c.contract_type_id))
+    if (t && c.coefficient !== null && Number(c.coefficient) > 0) withCoefficient.add(t)
+  }
+  for (const t of (tablesResult.data ?? []) as TableRow[]) {
+    const route = Array.isArray(t.organization_product_routes) ? t.organization_product_routes[0] : t.organization_product_routes
+    if (!route || t.status !== 'active' || route.status !== 'active' || !typesByTable.has(t.id)) continue
+    // Only tables that can have a factor: a factor profile that covers them or a coefficient on their lines.
+    const covered = withCoefficient.has(t.id) || profiles.some(p => p.org_bank_id === route.org_bank_id && (!p.org_agreement_id || p.org_agreement_id === route.org_agreement_id)
+      && (!p.product_table_id || p.product_table_id === t.id) && (!p.bank_table_code || p.bank_table_code === t.bank_table_code))
+    if (!covered) continue
+    const bankName = (Array.isArray(route.organization_banks) ? route.organization_banks[0] : route.organization_banks)?.name ?? ''
+    const key = t.bank_table_code ? `c:${route.org_bank_id}:${t.bank_table_code}` : `t:${t.id}`
+    tableKey.set(t.id, key)
+    const name = t.name || t.code
+    const prev = optionByKey.get(key)
+    const plain = t.bank_table_code && !name.startsWith(t.bank_table_code) ? `${t.bank_table_code} · ${name}` : name
+    const label = bankName && !plain.toLowerCase().startsWith(bankName.toLowerCase()) ? `${bankName} · ${plain}` : plain
+    if (!prev) optionByKey.set(key, { key, label, agreementId: route.org_agreement_id, typeIds: [...typesByTable.get(t.id)!] })
+    else {
+      prev.typeIds = [...new Set([...prev.typeIds, ...typesByTable.get(t.id)!])]
+      if (label.length < prev.label.length) prev.label = label
+    }
+  }
+  const tableOptions = [...optionByKey.values()].sort((a, b) => a.label.localeCompare(b.label, 'pt-BR', { numeric: true }))
+  const tableChoice = optionByKey.has(sp.tabela ?? '') ? sp.tabela! : ''
   let offers: Offer[] = []
   let searchError: string | null = null
   // Banks do not work on weekends: daily factors exist only for business days (owner, 08/10/2026).
@@ -74,7 +123,7 @@ export default async function SimulationsPage({ searchParams }: { searchParams: 
       p_org: organization.id, p_agreement: agreement.id, p_contract_type: type.id, p_term: term, p_mode: mode, p_value: value, p_outstanding: balance,
     })
     if (error) searchError = 'Não foi possível simular agora. Confira os valores e tente de novo.'
-    else offers = (data ?? []) as Offer[]
+    else offers = ((data ?? []) as Offer[]).filter(o => !tableChoice || tableKey.get(versionTable.get(o.table_version_id) ?? '') === tableChoice)
   }
 
   const tableNames = new Map((tablesResult.data ?? []).map(t => [t.id, t.name || t.code]))
@@ -91,20 +140,10 @@ export default async function SimulationsPage({ searchParams }: { searchParams: 
       <Card className="mb-4 p-5">
         <form method="get" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
           <div className={`${label} sm:col-span-2 lg:col-span-3`}>Cliente <span className="font-normal text-muted">(para gravar a simulação)</span>
-            <ClientPicker name="cliente" initial={initialClient.data ? { id: initialClient.data.id, name: initialClient.data.full_name, cpf: formatCpf(initialClient.data.cpf) } : null} />
+            <ClientPicker optional name="cliente" initial={initialClient.data ? { id: initialClient.data.id, name: initialClient.data.full_name, cpf: formatCpf(initialClient.data.cpf) } : null} />
           </div>
-          <label className={`${label} lg:col-span-2`}>Convênio
-            <select name="convenio" required defaultValue={agreement?.id ?? ''} className="field mt-1.5">
-              <option value="" disabled>Escolha</option>
-              {agreements.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </select>
-          </label>
-          <label className={label}>Operação
-            <select name="tipo" required defaultValue={type?.id ?? ''} className="field mt-1.5">
-              <option value="" disabled>Escolha</option>
-              {types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
-          </label>
+          <SimulatorFilters agreements={agreements} types={types.map(t => ({ id: t.id, name: t.name }))} tables={tableOptions}
+            initial={{ agreement: agreement?.id ?? '', type: type?.id ?? '', table: tableChoice }} />
           <fieldset className={`${label} lg:col-span-2`}>Simular por
             <div className="mt-1.5 flex h-10 items-center gap-4">
               <label className="flex items-center gap-1.5 text-sm text-ink"><input type="radio" name="modo" value="amount" defaultChecked={mode === 'amount'} className="accent-[var(--brand)]" />Valor</label>
@@ -123,7 +162,7 @@ export default async function SimulationsPage({ searchParams }: { searchParams: 
 
       {ready && (
         <Card className="mb-6 overflow-hidden">
-          <CardHeader title={<span className="flex items-center gap-2">Tabelas para {agreement!.name} · {type!.name} · {term}x <Badge tone="neutral">{offers.length}</Badge></span>} />
+          <CardHeader title={<span className="flex items-center gap-2">{tableChoice ? optionByKey.get(tableChoice)!.label : `Tabelas para ${agreement!.name}`} · {type!.name} · {term}x <Badge tone="neutral">{offers.length}</Badge></span>} />
           {searchError ? <p role="alert" className="px-5 pb-5 pt-2 text-sm text-[#991B1B]">{searchError}</p> : !offers.length ? (
             <p className="px-5 pb-5 pt-2 text-sm text-muted">{bankHoliday ? 'Hoje é sábado ou domingo: banco sem expediente, sem fator do dia. Simule em dia útil. ' : ''}Nenhuma tabela deste convênio tem fator para {term}x {mode === 'amount' ? 'neste valor' : 'nesta parcela'} hoje{bankHoliday ? '' : ' (em feriado bancário também não há fator)'}. Os fatores ficam em Cadastros &gt; Fatores.</p>
           ) : (

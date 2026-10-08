@@ -9,7 +9,8 @@ type Hit = { id: string; name: string; cpf: string | null }
 
 // Client field of the forms: type a name or CPF, pick one. The search runs by POST (server action), so a CPF never
 // goes in a URL; the form receives only the client's id in a hidden input. Works for any number of clients.
-export function ClientPicker({ name, initial, label = 'Cliente' }: { name: string; initial?: Hit | null; label?: string }) {
+// optional: the form may be sent without a client (e.g. the simulator: the client is needed only to save).
+export function ClientPicker({ name, initial, label = 'Cliente', optional = false }: { name: string; initial?: Hit | null; label?: string; optional?: boolean }) {
   const [chosen, setChosen] = useState<Hit | null>(initial ?? null)
   const [q, setQ] = useState('')
   const [hits, setHits] = useState<Hit[]>([])
@@ -40,7 +41,7 @@ export function ClientPicker({ name, initial, label = 'Cliente' }: { name: strin
   return (
     <div className="relative mt-1.5">
       {/* Keeps the form from submitting without a client: the browser flags this required, empty field. */}
-      <input tabIndex={-1} aria-hidden required value="" onChange={() => {}} name={`${name}__required`} className="pointer-events-none absolute inset-0 opacity-0" />
+      {!optional && <input tabIndex={-1} aria-hidden required value="" onChange={() => {}} name={`${name}__required`} className="pointer-events-none absolute inset-0 opacity-0" />}
       <label className="flex h-10 items-center gap-2 rounded-[10px] border border-line bg-surface px-3 focus-within:border-brand">
         <Search size={15} className="text-muted" aria-hidden />
         <input value={q} onChange={e => { setQ(e.target.value); setSearched(false) }} placeholder="Nome ou CPF do cliente" aria-label={label} autoComplete="off" className="h-full flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-muted" />
