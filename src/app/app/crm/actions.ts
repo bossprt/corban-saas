@@ -30,6 +30,8 @@ function crmError(error: { message?: string; code?: string }): FeedbackCode {
   if (/campaign_not_active/.test(m)) return 'erro:campanha_encerrada'
   if (/invalid_lead_owner|invalid_campaign_member/.test(m)) return 'erro:vendedor_invalido'
   if (/lead_already_taken/.test(m)) return 'erro:lead_ja_assumido'
+  if (/campaign_name_mismatch/.test(m)) return 'erro:campanha_nome_confirmacao'
+  if (/campaign_has_sales/.test(m)) return 'erro:campanha_com_vendas'
   return classifyDbFeedback(error)
 }
 
@@ -223,4 +225,27 @@ export async function findLeadByCpf(raw: string): Promise<string | null> {
   if (cpf.length !== 11) return null
   const { data } = await supabase.from('leads').select('id').eq('cpf', cpf).order('created_at', { ascending: false }).limit(1).maybeSingle()
   return data?.id ?? null
+}
+
+// Test campaign or wrong import (08/10/2026): the campaign, its leads and their history go away; never when a lead became
+// a proposal or a sale; clients stay. The name is typed to confirm.
+export async function deleteCampaign(formData: FormData) {
+  const { supabase, organization } = await requireAppContext()
+  const id = text(formData, 'campaign_id')
+  if (!UUID.test(id)) return go('/app/crm/campanhas', 'erro:requisicao_invalida')
+  const { error } = await supabase.rpc('delete_sales_campaign', { p_org: organization.id, p_campaign: id, p_confirm_name: text(formData, 'confirm_name') })
+  if (error) return go(`/app/crm/campanhas/${id}`, crmError(error))
+  refresh('/app/crm', '/app/crm/campanhas')
+  return go('/app/crm/campanhas', 'ok:campanha_excluida')
+}
+
+// Campaign over (08/10/2026): closed, and its open leads go to Lost with the reason "Campanha encerrada".
+export async function closeCampaign(formData: FormData) {
+  const { supabase, organization } = await requireAppContext()
+  const id = text(formData, 'campaign_id')
+  if (!UUID.test(id)) return go('/app/crm/campanhas', 'erro:requisicao_invalida')
+  const { error } = await supabase.rpc('close_sales_campaign', { p_org: organization.id, p_campaign: id })
+  if (error) return go(`/app/crm/campanhas/${id}`, crmError(error))
+  refresh('/app/crm', '/app/crm/campanhas', `/app/crm/campanhas/${id}`)
+  return go(`/app/crm/campanhas/${id}`, 'ok:campanha_encerrada')
 }

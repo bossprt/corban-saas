@@ -7,7 +7,7 @@ import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
 import { isDistribution, STAGE_LABEL, LEAD_STAGES } from '@/lib/crm'
 import { leadOwners } from '@/lib/crm.server'
-import { assignLeads, saveCampaign } from '../../actions'
+import { assignLeads, closeCampaign, deleteCampaign, saveCampaign } from '../../actions'
 import { CampaignFields } from '../CampaignFields'
 import { TemplateDownload } from '../TemplateDownload'
 import { CampaignImport } from './CampaignImport'
@@ -140,6 +140,25 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
           <CampaignFields lockedAtStart people={people}
             values={{ id: c.id, name: c.name, description: c.description, distribution: c.distribution, starts_on: c.starts_on, ends_on: c.ends_on, status: c.status === 'closed' ? 'closed' : 'active', members: (members ?? []).map(m => m.user_id) }} />
         </form>
+      </Card>
+
+      <Card className="mt-4 p-5">
+        <h2 className="text-base font-semibold text-ink">Encerrar ou excluir</h2>
+        <div className="mt-3 grid gap-4 md:grid-cols-2">
+          <form action={closeCampaign} className="grid content-start gap-2 rounded-[12px] border border-line p-4">
+            <input type="hidden" name="campaign_id" value={c.id} />
+            <p className="text-sm font-medium text-ink">Encerrar campanha</p>
+            <p className="text-xs text-muted">Para campanha que acabou. Os leads em aberto (novo, contatado, negociando) vão para Perdido com o motivo &quot;Campanha encerrada&quot; e saem do quadro. Leads em proposta ou vendidos continuam. O histórico fica.</p>
+            <div><SubmitButton pendingText="Encerrando..." className="h-9 rounded-[10px] border border-line-strong bg-surface px-3 text-sm text-ink hover:bg-surface-muted">Encerrar campanha</SubmitButton></div>
+          </form>
+          <form action={deleteCampaign} className="grid content-start gap-2 rounded-[12px] border border-[#F3C4C4] p-4">
+            <input type="hidden" name="campaign_id" value={c.id} />
+            <p className="text-sm font-medium text-[#991B1B]">Excluir campanha</p>
+            <p className="text-xs text-muted">Para campanha de teste ou planilha errada. Apaga a campanha, os {total} lead(s) e o histórico deles. Os clientes do cadastro não são apagados. Não funciona se algum lead virou proposta ou venda.</p>
+            <label className={label}>Digite o nome da campanha para confirmar<input name="confirm_name" required autoComplete="off" placeholder={c.name} className="field mt-1.5" /></label>
+            <div><SubmitButton pendingText="Excluindo..." className="h-9 rounded-[10px] bg-[#B91C1C] px-3 text-sm font-semibold text-white hover:bg-[#991B1B]">Excluir campanha</SubmitButton></div>
+          </form>
+        </div>
       </Card>
     </section>
   )
