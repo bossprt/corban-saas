@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Repasse de 11/09 na conta C6 (07/10/2026)
+- Corrigido em produção (decisão do dono): o repasse de R$ 800,00 do contrato 131259, pago em 11/09/2026 fora do Corban e lançado no financeiro em 07/10, saiu da conta C6. Só a conta do lançamento, com histórico; saldo da C6 inalterado (anterior ao saldo inicial). Migration `20261008005436_fabiola_payout_c6_v1` (md5 conferido).
+
 ### Movimentações por conta bancária (07/10/2026)
 - Adicionado: Financeiro > Contas bancárias > "Ver movimentações": o que entrou e saiu da conta no período, com saldo dia a dia, totais e "Baixar Excel", para conferir com o extrato do banco (o saldo segue o mesmo cálculo do saldo da conta). Filtro "Conta bancária" em Contas a pagar e receber. Só leitura; sem mudança no banco de dados.
 
