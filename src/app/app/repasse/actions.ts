@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
 import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedback'
+import { assignBankAccount, bankAccountOf } from '@/lib/finBankAccounts'
 import { isUuid } from '@/lib/team'
 import { parseMoneyInput } from '@/lib/money-input'
 import { parsePercentInput } from '@/lib/percent-input'
@@ -114,12 +115,13 @@ export async function decidePayout(formData: FormData) {
 }
 
 export async function markPaid(formData: FormData) {
-  const { supabase } = await requireAppContext()
+  const { supabase, organization } = await requireAppContext()
   const path = back(formData)
   const payout = String(formData.get('payout_id') ?? '')
   if (!isUuid(payout)) return go(path, 'erro:requisicao_invalida')
   const { error } = await supabase.rpc('mark_payout_paid', { p_payout: payout, p_paid_on: String(formData.get('paid_on') ?? '') || null, p_reference: String(formData.get('reference') ?? '') })
   if (error) return fail(path, error)
+  await assignBankAccount(supabase, organization.id, 'payout', [payout], bankAccountOf(formData))
   revalidatePath(path)
   return go(path, 'ok:repasse_pago')
 }
@@ -139,7 +141,7 @@ export async function setAccountModel(formData: FormData) {
 // Pay the account in one action (owner decision 29/09/2026, ADR-0048): the database computes the amount exactly as a
 // period closing (or the available balance), records who paid, when and the proof, and moves the money as before.
 export async function payNow(formData: FormData) {
-  const { supabase } = await requireAppContext()
+  const { supabase, organization } = await requireAppContext()
   const account = String(formData.get('account_id') ?? '')
   const path = `/app/repasse/${account}`
   if (!isUuid(account)) return go('/app/repasse', 'erro:requisicao_invalida')
@@ -147,8 +149,10 @@ export async function payNow(formData: FormData) {
   const reference = String(formData.get('reference') ?? '').trim()
   // Proof is optional (owner, 29/09/2026): blank is recorded as "Sem comprovante informado" by the database.
   if (!/^\d{4}-\d{2}-\d{2}$/.test(paidOn) || reference.length > 120) return go(path, 'erro:repasse_referencia')
-  const { error } = await supabase.rpc('pay_account_now', { p_account: account, p_paid_on: paidOn, p_reference: reference })
+  const { data: payout, error } = await supabase.rpc('pay_account_now', { p_account: account, p_paid_on: paidOn, p_reference: reference })
   if (error) return fail(path, error)
+  // The company account the money left from (07/10/2026).
+  await assignBankAccount(supabase, organization.id, 'payout', isUuid(String(payout ?? '')) ? [String(payout)] : [], bankAccountOf(formData))
   revalidatePath(path); revalidatePath('/app/repasse'); revalidatePath('/app/financeiro/empresa')
   return go(path, 'ok:repasse_pago_agora')
 }
@@ -164,7 +168,7 @@ const PAY_REASON: [RegExp, string][] = [
 // Confirms the payments made in the bank, several accounts at once (owner request 06/10/2026). Each account is paid
 // exactly like "Pagar agora", and only when its amount is still the one on screen (the one paid by PIX or TED).
 export async function payBatch(formData: FormData): Promise<PayBatchResult> {
-  const { supabase } = await requireAppContext()
+  const { supabase, organization } = await requireAppContext()
   const paidOn = String(formData.get('paid_on') ?? '')
   const reference = String(formData.get('reference') ?? '').trim()
   const empty = { ok: 0, total: '0.00', failed: [] }
@@ -175,16 +179,21 @@ export async function payBatch(formData: FormData): Promise<PayBatchResult> {
   if (chosen.length > 300) return { ...empty, error: 'Marque no máximo 300 por vez.' }
   const result: PayBatchResult = { ok: 0, total: '0.00', failed: [] }
   let cents = BigInt(0)
+  const paid: string[] = []
   for (const account of chosen) {
     const expected = String(formData.get(`amount_${account}`) ?? '')
     const name = String(formData.get(`name_${account}`) ?? 'Conta')
     if (!/^\d{1,12}\.\d{2}$/.test(expected)) { result.failed.push({ account, name, reason: 'valor inválido' }); continue }
-    const { error } = await supabase.rpc('pay_account_now_checked', { p_account: account, p_paid_on: paidOn, p_reference: reference, p_expected: expected })
+    const { data: payout, error } = await supabase.rpc('pay_account_now_checked', { p_account: account, p_paid_on: paidOn, p_reference: reference, p_expected: expected })
+    if (!error && isUuid(String(payout ?? ''))) paid.push(String(payout))
     if (error) { result.failed.push({ account, name, reason: PAY_REASON.find(([re]) => re.test(error.message ?? ''))?.[1] ?? 'não foi possível registrar' }); continue }
     result.ok++
     cents += BigInt(expected.replace('.', ''))
   }
   result.total = `${cents / BigInt(100)}.${String(cents % BigInt(100)).padStart(2, '0')}`
+  // The company account the money left from (07/10/2026).
+  if (!(await assignBankAccount(supabase, organization.id, 'payout', paid, bankAccountOf(formData))))
+    result.error = 'Pagamentos registrados, mas a conta bancária não foi gravada: informe-a em Financeiro.'
   revalidatePath('/app/repasse'); revalidatePath('/app/financeiro/empresa')
   return result
 }

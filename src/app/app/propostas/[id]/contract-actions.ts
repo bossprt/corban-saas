@@ -6,6 +6,7 @@ import { requireAppContext } from '@/lib/appContext'
 import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedback'
 import { parseMoneyInput } from '@/lib/money-input'
 import { normalizePct } from '@/lib/commission/groupRule'
+import { assignBankAccount, bankAccountOf } from '@/lib/finBankAccounts'
 import { isUuid } from '@/lib/team'
 import { originDetails } from '@/lib/proposals/origin'
 
@@ -137,8 +138,8 @@ export async function registerManualReceipt(f: FormData) {
   if (amount === null || amount === 'invalid') return back(id, 'erro:recebimento_valor', '#comissao')
   if (!/^\d{4}-\d{2}-\d{2}$/.test(receivedOn)) return back(id, 'erro:recebimento_data', '#comissao')
   if (installment && (!/^\d{1,4}$/.test(installment) || kind !== 'deferred')) return back(id, 'erro:recebimento_parcela', '#comissao')
-  const { supabase } = await requireAppContext()
-  const { error } = await supabase.rpc('register_manual_receipt', {
+  const { supabase, organization } = await requireAppContext()
+  const { data: receipt, error } = await supabase.rpc('register_manual_receipt', {
     p_proposal_id: id, p_kind: kind, p_amount: amount, p_received_on: receivedOn,
     p_installment: installment ? Number(installment) : null, p_note: text(f, 'note').slice(0, 100),
   })
@@ -154,6 +155,8 @@ export async function registerManualReceipt(f: FormData) {
       : classifyDbFeedback(error)
     return back(id, code, '#comissao')
   }
+  // The company account the money came into (07/10/2026).
+  await assignBankAccount(supabase, organization.id, 'commission_receipt', isUuid(String(receipt ?? '')) ? [String(receipt)] : [], bankAccountOf(f))
   revalidatePath('/app/financeiro'); revalidatePath('/app/financeiro/conciliacao')
   return back(id, 'ok:recebimento_registrado', '#comissao')
 }
