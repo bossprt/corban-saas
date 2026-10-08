@@ -1,4 +1,4 @@
--- Contract test for 20261008_simulator_offers_v1: the agreement's tables are compared; only tables with a factor appear
+-- Contract test for 20261008060304_simulator_offers_v1: the agreement's tables are compared; only tables with a factor appear
 -- (daily factor of the date, fixed factor, or the table line's coefficient); installment = amount x factor and amount =
 -- installment / factor (cut down to the cent); refin change = amount - balance; the chosen offer is recalculated and
 -- saved as a simulation that becomes a proposal; another company is refused. One transaction, rolled back.
