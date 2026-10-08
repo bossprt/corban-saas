@@ -1,4 +1,4 @@
--- Contract test for 20261008_cancel_proposal_before_queue_v1: a proposal created from a simulation and not yet in the
+-- Contract test for 20261008200952_cancel_proposal_before_queue_v1: a proposal created from a simulation and not yet in the
 -- typing queue can be cancelled by an admin with a reason; the reason is kept as a contract note; the lead goes back to
 -- Negotiating; a seller who did not create it is refused; a reason is required; a cancelled proposal cannot be
 -- cancelled again; another company is refused. One transaction, rolled back.
