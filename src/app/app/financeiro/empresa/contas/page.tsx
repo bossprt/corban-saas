@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { Badge, Card, CardHeader, PageHeader } from '@/components/ui'
 import { SubmitButton } from '@/components/SubmitButton'
 import { can } from '@/lib/access'
@@ -47,6 +48,7 @@ export default async function BankAccountsPage() {
               <Card key={b.id}>
                 <CardHeader title={<span className="flex flex-wrap items-center gap-2">{b.label} <span className="text-sm font-normal text-muted">{b.bank_name}{b.agency ? ` · ag. ${b.agency}` : ''}{b.account_number ? ` · c/c ${b.account_number}` : ''}</span>{!b.is_active && <Badge tone="neutral">Desativada</Badge>}</span>}
                   action={<span className="text-right"><span className="num block text-lg font-semibold text-ink">{brl(x?.balance ?? b.opening_balance)}</span><span className="text-xs text-muted">saldo inicial {brl(b.opening_balance)} em {dayLabel(b.opening_on)}{x?.pending_lines ? ` · ${x.pending_lines} linha(s) do extrato a conciliar` : ''}</span></span>} />
+                <div className="px-5 pb-3"><Link href={`/app/financeiro/empresa/contas/${b.id}`} className="text-sm font-medium text-brand hover:underline">Ver movimentações</Link></div>
                 {edit && <details className="px-5 pb-5"><summary className="cursor-pointer text-sm text-muted underline">Editar</summary><div className="mt-3">{form(b)}</div></details>}
               </Card>
             )

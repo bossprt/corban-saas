@@ -13,7 +13,7 @@ const label = 'text-[13px] font-medium text-ink-soft'
 const today = () => new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10)
 
 // F6.5: payables and receivables of the company, with the branch as cost center.
-export default async function CompanyFinancePage({ searchParams }: { searchParams: Promise<{ ver?: string; de?: string; ate?: string; filial?: string }> }) {
+export default async function CompanyFinancePage({ searchParams }: { searchParams: Promise<{ ver?: string; de?: string; ate?: string; filial?: string; conta?: string }> }) {
   const { supabase, organization, access } = await requireAppContext()
   if (!can(access, 'financeiro.view')) return <section><PageHeader title="Financeiro da empresa" /><Card className="p-5 text-sm text-ink-soft">Seu perfil não vê o financeiro.</Card></section>
   await supabase.rpc('fin_setup', { p_org: organization.id })
@@ -31,6 +31,8 @@ export default async function CompanyFinancePage({ searchParams }: { searchParam
   if (from) q = q.gte(view === 'baixados' ? 'settled_on' : 'due_on', from)
   if (to) q = q.lte(view === 'baixados' ? 'settled_on' : 'due_on', to)
   if (sp.filial) q = q.eq('branch_id', sp.filial)
+  // Company bank account (07/10/2026): only entries paid or received in it.
+  if (sp.conta && /^[0-9a-f-]{36}$/i.test(sp.conta)) q = q.eq('bank_account_id', sp.conta)
   const [{ data: rows }, { data: accounts }, { data: branches }, { data: banks }, { data: balances }, { data: open }] = await Promise.all([
     q,
     supabase.from('fin_chart_accounts').select('id,code,name,kind,is_group,is_active').order('code'),
@@ -116,6 +118,7 @@ export default async function CompanyFinancePage({ searchParams }: { searchParam
             <input type="date" name="de" defaultValue={from ?? ''} aria-label="De" className="field h-9 w-auto py-1" />
             <input type="date" name="ate" defaultValue={to ?? ''} aria-label="Até" className="field h-9 w-auto py-1" />
             <select name="filial" defaultValue={sp.filial ?? ''} aria-label="Filial" className="field h-9 w-auto py-1"><option value="">Todas as filiais</option>{(branches ?? []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select>
+            <select name="conta" defaultValue={sp.conta ?? ''} aria-label="Conta bancária" className="field h-9 w-auto py-1"><option value="">Todas as contas</option>{(banks ?? []).map(b => <option key={b.id} value={b.id}>{b.label}</option>)}</select>
             <button className="inline-flex h-9 items-center rounded-[10px] bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong">Filtrar</button>
           </form>} />
         {!(rows ?? []).length ? <p className="px-5 pb-5 text-sm text-muted">Nada por aqui.</p> : (
