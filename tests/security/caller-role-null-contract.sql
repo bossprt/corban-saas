@@ -1,4 +1,4 @@
--- Contract test for 20261008_caller_role_null_check_v1: an administrator of another company cannot change company A's
+-- Contract test for 20261008024337_caller_role_null_check_v1: an administrator of another company cannot change company A's
 -- lead distribution, a member's "receives leads", a seller's goal, a pipeline stage or the payout settings (all refused
 -- with not_authorized, nothing changes); company A's own administrator still can. One transaction, rolled back.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/caller-role-null-contract.sql
