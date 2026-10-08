@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Aceite dos termos de uso na tela (08/10/2026)
+- Adicionado: o administrador da plataforma publica cada versão dos termos (texto aprovado pelo advogado) em /platform; enquanto nenhuma versão estiver publicada nada muda. Publicada uma versão, a empresa que não a aceitou vai para /termos em qualquer tela: o administrador lê e aceita em nome da empresa; os demais usuários aguardam. O aceite guarda empresa, versão, usuário, data e hora, IP, navegador e o SHA-256 do texto, e não pode ser alterado nem apagado; versão nova pede novo aceite. A plataforma mostra quais empresas aceitaram. Migration `terms_acceptance_v1`, contrato `tests/security/terms-acceptance-contract.sql` (15/15).
+
 ### Plataforma: nova empresa com administrador (07/10/2026)
 - Adicionado: em /platform (administrador da plataforma), "Nova empresa": nome, CNPJ, nome, e-mail e senha do primeiro administrador (senha digitada na tela, pedir nova no primeiro acesso). O login é criado confirmado e `bootstrap_organization_admin` cria a empresa com papéis, módulos e etapas padrão e a auditoria; se falhar, o login é removido. CNPJ repetido e e-mail que já tem login são recusados; nome parecido pede confirmação. O administrador cria a equipe e os vendedores da empresa dele. Sem mudança no banco de dados.
 ### Revisão de segurança entre empresas (07/10/2026)

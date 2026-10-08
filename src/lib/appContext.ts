@@ -5,7 +5,8 @@ import { createAdminClient } from '@/lib/supabaseAdmin'
 import { ACTIVE_ORG_COOKIE,resolveActiveMembership,scopeToOrganization,type MembershipRow } from '@/lib/tenant'
 import { isScope, type Access, type Tier } from '@/lib/access'
 
-export async function requireAppContext() {
+// `allowPendingTerms`: only the terms page itself, which must open while the company has not accepted them yet.
+export async function requireAppContext(opts?: { allowPendingTerms?: boolean }) {
   const rawClient = await createClient()
   const { data: { user }, error: userError } = await rawClient.auth.getUser()
   if (userError || !user) redirect('/login')
@@ -44,6 +45,13 @@ export async function requireAppContext() {
     .single()
 
   if (organizationError || !organization) redirect('/access-pending')
+
+  // Terms of use (08/10/2026): while the company has not accepted the version in force, every screen goes to the terms
+  // page. A failure to check never blocks (the database refuses nothing on its own because of the terms).
+  if (!opts?.allowPendingTerms) {
+    const { data: pending } = await rawClient.rpc('terms_pending', { p_org: organization.id })
+    if (pending === true) redirect('/termos')
+  }
 
   const supabase = scopeToOrganization(rawClient, organization.id)
   // Role, scope and permissions of the caller in this company. A failure leaves `access` null, which denies every permission.

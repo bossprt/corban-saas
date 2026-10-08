@@ -105,3 +105,24 @@ export async function createCompanyWithAdmin(f: FormData) {
   // No e-mail or name of the person in the address bar (personal data never goes in a URL).
   go('ok', `${name} criada. O administrador entra com o e-mail e a senha informados${mustChange ? ' e escolhe uma nova senha no primeiro acesso' : ''}.`)
 }
+
+// Publishes a version of the terms of use (08/10/2026): the text approved by the lawyer, pasted here. From then on
+// every company must accept it before using the system. A published text is never changed: a correction is a new
+// version. The SHA-256 of the text is stored so each acceptance proves which text was accepted.
+export async function publishTermsVersion(f: FormData) {
+  const g = await gate()
+  const version = clean(f.get('version'))
+  const title = clean(f.get('title'))
+  const body = String(f.get('body') ?? '').replace(/\r\n/g, '\n').trim()
+  if (version.length < 1 || version.length > 40) go('erro', 'Informe a versão dos termos (até 40 caracteres).')
+  if (title.length < 3 || title.length > 200) go('erro', 'Informe o título dos termos.')
+  if (body.length < 20 || body.length > 200000) go('erro', 'Cole o texto completo dos termos.')
+  if (f.get('confirm') !== 'on') go('erro', 'Confirme que o texto foi aprovado e que todas as empresas terão de aceitá-lo.')
+  const { createHash } = await import('node:crypto')
+  const sha = createHash('sha256').update(body, 'utf8').digest('hex')
+  const admin = createAdminClient()
+  const { data, error } = await admin.from('terms_versions').insert({ version, title, body, body_sha256: sha, published_by: g.userId }).select('id').single()
+  if (error || !data) go('erro', /duplicate|unique/i.test(error?.message ?? '') ? 'Já existe uma versão com esse nome.' : 'Não foi possível publicar os termos.')
+  await admin.from('platform_admin_audit_events').insert({ actor_user_id: g.userId, action: 'terms_version.publish', metadata: { version, terms_version_id: data!.id, body_sha256: sha } })
+  go('ok', `Termos versão ${version} publicados. Cada empresa aceita no próximo acesso do administrador.`)
+}
