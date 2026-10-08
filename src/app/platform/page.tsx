@@ -3,7 +3,7 @@ import { Building2, Files, LogOut } from 'lucide-react'
 import { requirePlatformAdmin } from '@/lib/platform.server'
 import { createAdminClient } from '@/lib/supabaseAdmin'
 import { signOut } from '@/app/app/actions'
-import { addDocumentType, createCompanyWithAdmin, setOrganizationModule } from './actions'
+import { addDocumentType, createCompanyWithAdmin, publishTermsVersion, setOrganizationModule } from './actions'
 import { PasswordPair } from '@/components/PasswordPair'
 import { SubmitButton } from '@/components/SubmitButton'
 import { PLAN_MODULE_LABEL, PLAN_MODULES } from '@/lib/access'
@@ -15,11 +15,16 @@ export default async function PlatformPage({searchParams}:{searchParams:Promise<
   const gate=await requirePlatformAdmin()
   if(!gate.ok) redirect('/login')
   const admin=createAdminClient()
-  const [docs,orgs,orgModules]=await Promise.all([
+  const [docs,orgs,orgModules,terms]=await Promise.all([
     admin.from('document_types').select('id,code,name,is_active').order('name'),
     admin.from('organizations').select('id,name,document,is_active').order('name'),
-    admin.from('organization_modules').select('organization_id,module_key,enabled')
+    admin.from('organization_modules').select('organization_id,module_key,enabled'),
+    admin.from('terms_versions').select('id,version,published_at').order('published_at',{ascending:false}).limit(1).maybeSingle(),
   ])
+  // Terms of use (08/10/2026): the version in force and which companies accepted it.
+  const currentTerms=terms.data as {id:string;version:string;published_at:string}|null
+  const { data: acceptances }=currentTerms?await admin.from('organization_terms_acceptances').select('organization_id,accepted_at').eq('terms_version_id',currentTerms.id):{data:[]}
+  const acceptedBy=new Map(((acceptances??[]) as {organization_id:string;accepted_at:string}[]).map(a=>[a.organization_id,a.accepted_at]))
   const sp=await searchParams
 
   return <main className="min-h-screen bg-canvas p-4 md:p-8">
@@ -48,6 +53,26 @@ export default async function PlatformPage({searchParams}:{searchParams:Promise<
             <div className="mt-4 flex flex-wrap gap-2">{docs.data?.map(x=><span key={x.id} className="rounded-full border border-line px-3 py-1 text-xs text-ink-soft">{x.name}</span>)}</div>
           </Card>
         </div>
+      </section>
+
+      <section className="mt-8">
+        <h2 className="text-xl font-semibold text-ink">Termos de uso</h2>
+        <p className="mt-1 text-sm text-muted">{currentTerms ? `Em vigor: versão ${currentTerms.version}, publicada em ${new Date(currentTerms.published_at).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}.` : 'Nenhuma versão publicada: ninguém precisa aceitar termos ainda.'}</p>
+        {currentTerms && <Card className="mt-3 overflow-hidden"><table className="w-full text-left text-sm"><thead className="bg-surface-muted text-xs font-semibold text-muted"><tr><th className="p-3">Empresa</th><th className="p-3">Aceite da versão em vigor</th></tr></thead><tbody>{orgs.data?.map(o => { const a = acceptedBy.get(o.id); return <tr key={o.id} className="border-t border-line"><td className="p-3 text-ink">{o.name}</td><td className="p-3 text-ink-soft">{a ? `Aceito em ${new Date(a).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}` : 'Aguardando o administrador'}</td></tr> })}</tbody></table></Card>}
+        <Card className="mt-3 p-5">
+          <details>
+            <summary className="cursor-pointer text-sm font-semibold text-ink">Publicar nova versão</summary>
+            <form action={publishTermsVersion} className="mt-3 grid gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="text-xs text-muted">Versão<input name="version" required maxLength={40} placeholder="2026-10" className="field mt-1 block" /></label>
+                <label className="text-xs text-muted">Título<input name="title" required maxLength={200} defaultValue="Termos de Uso e Política de Privacidade do Corban" className="field mt-1 block" /></label>
+              </div>
+              <label className="text-xs text-muted">Texto completo (o aprovado pelo advogado)<textarea name="body" required rows={12} className="field mt-1 block w-full font-mono text-xs" /></label>
+              <label className="flex items-start gap-1.5 text-xs text-muted"><input type="checkbox" name="confirm" className="mt-0.5 accent-[var(--brand)]" />O texto foi aprovado. Ao publicar, todas as empresas terão de aceitar esta versão no próximo acesso do administrador, e o texto não poderá ser alterado (uma correção é uma nova versão).</label>
+              <div><SubmitButton pendingText="Publicando..." className={button}>Publicar termos</SubmitButton></div>
+            </form>
+          </details>
+        </Card>
       </section>
 
       <section className="mt-8">
