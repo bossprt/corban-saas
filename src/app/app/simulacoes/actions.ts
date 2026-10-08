@@ -81,15 +81,26 @@ export async function createProposalFromSimulation(formData: FormData) {
   const { supabase } = await requireAppContext()
   const simulationId = String(formData.get('simulation_id') ?? '')
   if (!simulationId) return go('erro:requisicao_invalida')
-  const { error } = await supabase.rpc('create_proposal_from_simulation', { p_simulation_id: simulationId })
+  const { data: proposalId, error } = await supabase.rpc('create_proposal_from_simulation', { p_simulation_id: simulationId })
   if (error) {
     // The RPC locks the simulation and flips it to "selected" atomically: a double submit reaches one of these two refusals.
     if (error.code === '23505' || /simulation_not_available_for_proposal/.test(error.message ?? '')) return go('erro:proposta_duplicada')
     if (/simulation_not_found_or_forbidden|published_table_version_not_available|customer_not_available/.test(error.message ?? '')) return go('erro:simulacao_indisponivel')
     return go(classifyDbFeedback(error))
   }
+  // Sale closed (owner, 08/10/2026): the proposal goes straight on to the bank's document checklist and, when no
+  // required document is missing, into the typing queue (Esteira). Otherwise it waits in "Antes da fila".
+  let code: FeedbackCode = 'ok:proposta_sem_checklist'
+  const { error: prepError } = await supabase.rpc('prepare_proposal_documents', { p_proposal_id: String(proposalId) })
+  if (!prepError) {
+    const { data: row } = await supabase.from('proposals_v2').select('status').eq('id', String(proposalId)).maybeSingle()
+    if (row?.status === 'ready_for_digitization') {
+      const { error: sendError } = await supabase.rpc('send_proposal_to_digitization', { p_proposal_id: String(proposalId) })
+      code = sendError ? 'ok:proposta_antes_da_fila' : 'ok:proposta_na_fila'
+    } else code = 'ok:proposta_documentos_pendentes'
+  }
   revalidatePath('/app/simulacoes'); revalidatePath('/app/propostas'); revalidatePath('/app'); revalidatePath('/app/crm')
-  return go('ok:proposta_criada', '/app/propostas')
+  return go(code, '/app/propostas')
 }
 
 // The offer chosen on the simulator (08/10/2026): the database recalculates it from the factor in force and saves it as

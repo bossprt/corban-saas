@@ -10,8 +10,12 @@ import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedba
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const idOf = (formData: FormData) => { const id = String(formData.get('proposal_id') ?? ''); return UUID.test(id) ? id : null }
 const back = (id: string | null, code: FeedbackCode): never => redirect(feedbackUrl(id ? `/app/propostas/${id}` : '/app/propostas', code))
+// From the Esteira's "Antes da fila" block the form carries back=/app/propostas: it returns there.
+const backFrom = (f: FormData) => (id: string | null, code: FeedbackCode): never =>
+  f.get('back') === '/app/propostas' ? redirect(feedbackUrl('/app/propostas', code)) : back(id, code)
 
 export async function prepareDocuments(formData: FormData) {
+  const back = backFrom(formData)
   const id = idOf(formData)
   if (!id) return back(null, 'erro:requisicao_invalida')
   const { supabase } = await requireAppContext()
@@ -22,6 +26,7 @@ export async function prepareDocuments(formData: FormData) {
 }
 
 export async function sendToDigitization(formData: FormData) {
+  const back = backFrom(formData)
   const id = idOf(formData)
   if (!id) return back(null, 'erro:requisicao_invalida')
   const { supabase } = await requireAppContext()
@@ -88,4 +93,22 @@ export async function validateRequirement(formData: FormData) {
   if (error) return back(id, 'erro:requisito')
   revalidatePath(`/app/propostas/${id}`)
   return back(id, 'ok:requisito_validado')
+}
+
+// A proposal that has not entered the typing queue (not on the Esteira board yet) is cancelled with a reason; the
+// proposal stays in the history as cancelled and the lead goes back to Negotiating.
+export async function cancelBeforeQueue(formData: FormData) {
+  const back = backFrom(formData)
+  const id = idOf(formData)
+  if (!id) return back(null, 'erro:requisicao_invalida')
+  const reason = String(formData.get('reason') ?? '').trim()
+  if (reason.length < 3 || reason.length > 300) return back(id, 'erro:motivo_cancelamento')
+  const { supabase } = await requireAppContext()
+  const { error } = await supabase.rpc('cancel_proposal_before_queue', { p_proposal: id, p_reason: reason })
+  if (error) {
+    const m = error.message ?? ''
+    return back(id, /proposal_already_in_queue/.test(m) ? 'erro:proposta_ja_na_fila' : /not_authorized/.test(m) ? 'erro:sem_permissao' : /cancel_reason_required/.test(m) ? 'erro:motivo_cancelamento' : classifyDbFeedback(error))
+  }
+  revalidatePath(`/app/propostas/${id}`); revalidatePath('/app/propostas'); revalidatePath('/app/crm'); revalidatePath('/app')
+  return back(id, 'ok:proposta_cancelada')
 }

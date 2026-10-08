@@ -12,7 +12,7 @@ const money = (v: number | string | null | undefined) => (v === null || v === un
 
 // Saved simulations (the negotiated offers). customerId: only that client's (the lead panel); back: where the
 // "send to the typing queue" returns. Sending creates the proposal from the simulation (the lead follows it).
-export async function SavedSimulations({ customerId, back, title = 'Simulações gravadas', sendLabel = 'Criar proposta' }: {
+export async function SavedSimulations({ customerId, back, title = 'Simulações gravadas', sendLabel = 'Enviar para a esteira' }: {
   customerId?: string; back?: string; title?: string; sendLabel?: string
 }) {
   const { supabase } = await requireAppContext()

@@ -6,6 +6,7 @@ import { requireAppContext } from '@/lib/appContext'
 import { formatCpf } from '@/lib/cpf'
 import { PipelineBoard, type BoardCard } from './PipelineBoard'
 import { StageSelect } from './StageMove'
+import { PreQueue } from './PreQueue'
 
 type CaseRow = { id: string; proposal_id: string; current_stage_id: string; canonical_state: string; entered_stage_at: string; due_at: string | null; pendency_due_at: string | null; pendency_reason: string | null }
 type ProposalRow = { id: string; external_proposal_id: string | null; requested_amount: number | null; released_amount: number | null; customer_snapshot: Record<string, unknown> | null; commercial_snapshot: Record<string, unknown> | null; seller_id: string | null; created_by: string | null }
@@ -75,6 +76,8 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
           {can(access, 'propostas.create') && <ButtonLink href="/app/propostas/nova"><FilePlus2 size={16} aria-hidden />Nova proposta</ButtonLink>}
         </>}
       />
+
+      <PreQueue />
 
       <nav aria-label="Etapas" className="mb-4 flex gap-1 overflow-x-auto border-b border-line">
         <Link href="/app/propostas" aria-current={!stage ? 'page' : undefined} className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2.5 text-sm ${!stage ? 'border-brand font-semibold text-ink' : 'border-transparent text-ink-soft hover:text-ink'}`}>

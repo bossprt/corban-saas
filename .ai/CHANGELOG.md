@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Venda fechada vai até a fila; Esteira mostra "Antes da fila" (08/10/2026)
+- Corrigido (dono testou e a proposta não aparecia na Esteira): "Venda fechada: enviar para a esteira" (painel de Vendas) e "Enviar para a esteira" (Simulações) criam a proposta, preparam o checklist de documentos do banco e, sem documento obrigatório faltando, já mandam para a Fila de digitação. Faltando documento ou sem lista de documentos do banco, a mensagem diz o que falta.
+- Adicionado: na Esteira, bloco "Antes da fila" com as propostas em rascunho, documentos pendentes ou prontas para digitação, com o próximo passo (preparar documentos, anexar, enviar) e "Cancelar" com motivo. Cancelar não apaga: a proposta fica cancelada no histórico, o motivo vira anotação do contrato e o lead volta para Negociando. Migration `20261008200952_cancel_proposal_before_queue_v1` (aplicada em produção 08/10/2026, md5 conferido), contrato `tests/security/cancel-proposal-before-queue-contract.sql` (8/8).
+
 ### Vendas: lead no painel lateral (08/10/2026)
 - Adicionado (pedido do dono): no quadro de Vendas, o card abre o lead num painel à direita, sem sair do quadro (filtros mantidos; fechar volta ao quadro). Abas: Resumo (dados, próximo contato, etapa, histórico, vendedor), Simular (o simulador dentro do painel, com o cliente do lead), Ficha do cliente (cadastro para alterar e salvar ali) e Propostas (as simulações gravadas do cliente = propostas negociadas, com "Venda fechada: enviar para a esteira", que cria a proposta preenchida pela simulação; o lead passa para Proposta como antes). Lead sem cliente: a aba pede o CPF e cadastra ou liga o cliente. Todas as ações do painel voltam para ele (retorno só para telas de Vendas). "Pegar próximo lead" e "Cadastrar lead" abrem o painel. Botão "Simular" no topo de Vendas e "Simulador" no menu de Vendas. A página do lead continua, com as mesmas abas. Sem mudança no banco de dados.
 
