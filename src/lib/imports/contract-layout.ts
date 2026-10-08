@@ -117,10 +117,37 @@ const FINTECH_TABLES: Record<string, string> = {
   '1099': 'PORTABILIDADE PURA - 1,85',
 }
 
+// The Hope contract report ("BuscaContrato", owner request 08/10/2026). "NumeroContrato" is the ADE; "Tabela" carries
+// the bank's full table name, the same as the company's Hope tables. "StatusBancoCliente" is the bank's status for the
+// client ("PAGO AO CLIENTE") and "DataStatusBancoCliente" its date: "Pago ao cliente em". "Banco" is the bank itself, not
+// the client's account, and "NomeCorretor" is the company itself: both are left out, and the seller is set in the
+// contract. The commission, bonus and deferred columns are the promoter system's own numbers: the company's commission
+// comes from its tables, so they are ignored. "TelefoneCliente" comes masked ("Dados não disponíveis").
+const HOPE_COLUMNS: Record<string, ContractField | 'ignore'> = {
+  contratoid: 'ignore', numeroproposta: 'ignore', numerocontrato: 'ade', usuariodigitacaobanco: 'ignore', datacontrato: 'ignore',
+  datainclusao: 'ignore', nomecliente: 'name', cpfcliente: 'cpf', bcvid: 'ignore', banco: 'ignore', convenio: 'agreement',
+  tabela: 'table', tipocontrato: 'type', prazo: 'term', valorbruto: 'requested', valorliquido: 'released', valorparcela: 'installment',
+  valorbase: 'ignore', valorbasebonus: 'ignore', margemempresa: 'ignore', spreadempresa: 'ignore',
+  comissaoempresavistaperc: 'ignore', comissaoempresavistavalor: 'ignore', bonusempresaperc: 'ignore', bonusempresavalor: 'ignore',
+  bonusrecebido: 'ignore', diferidoempresaperc: 'ignore', diferidoempresavalor: 'ignore', comissaorepassepercentual: 'ignore',
+  comissaorepassevalor: 'ignore', bonusrepasseperc: 'ignore', bonusrepassevalor: 'ignore', diferidorepasseperc: 'ignore',
+  diferidorepassevalor: 'ignore', basecalculocomissao: 'ignore', basecalculobonus: 'ignore', filial: 'ignore', codigocorretor: 'ignore',
+  nomecorretor: 'ignore', statusbloqueiocorretor: 'ignore', situacaovendedor: 'ignore', fisicoempresa: 'ignore', datafisico: 'ignore',
+  horafisico: 'ignore', usuariofisicoempresa: 'ignore', fisicobanco: 'ignore', datafisicobanco: 'ignore', horafisicobanco: 'ignore',
+  usuariofisicobanco: 'ignore', statusbancocliente: 'stage', datastatusbancocliente: 'paidOn', statusempresavendedor: 'ignore',
+  datastatusempresavendedor: 'ignore', statuspendencia: 'ignore', colecaotags: 'ignore', statusproposta: 'ignore',
+  statusfisicounico: 'ignore', clientepossuianexo: 'ignore', qtdanexocliente: 'ignore', nomegrupovendedor: 'ignore',
+  telefonecliente: 'ignore', descricaocomissionamento: 'ignore', vigenciaid: 'ignore', correspondenteid: 'ignore',
+  nomecorrespondente: 'ignore', inclusao: 'ignore', operador: 'ignore',
+  ...Object.fromEntries([1, 2, 3, 4].flatMap(n => [`percbonusempresa${n}`, `valorbonusempresa${n}`, `percbonusrepasse${n}`, `valorbonusrepasse${n}`].map(k => [k, 'ignore' as const]))),
+  ...Object.fromEntries([1, 2, 3, 4, 5].flatMap(n => [`empresavalorfixo${n}`, `repassevalorfixo${n}`].map(k => [k, 'ignore' as const]))),
+}
+
 export const CONTRACT_LAYOUTS: ContractLayout[] = [
   { key: 'nasp', label: 'NASP', bankName: 'NASP', columns: NASP_COLUMNS },
   { key: 'prosesp', label: 'PROSESP (WorkBank)', bankName: 'PROSESP', columns: PROSESP_COLUMNS, tables: PROSESP_TABLES },
   { key: 'fintech', label: 'FINTECH CORBAN', bankName: 'FINTECH CORBAN', columns: FINTECH_COLUMNS, tables: FINTECH_TABLES },
+  { key: 'hope', label: 'Hope', bankName: 'Hope', columns: HOPE_COLUMNS },
 ]
 export const MAX_CONTRACT_LINES = 500
 
@@ -240,6 +267,8 @@ const TYPE_KEYS: Record<string, string> = {
   compra: 'compra_de_divida', 'compra de divida': 'compra_de_divida', 'compra normal': 'compra_de_divida', 'compra divida': 'compra_de_divida',
   portabilidade: 'portabilidade', port: 'portabilidade',
   'refin/portabilidade': 'refin_portabilidade', 'refin portabilidade': 'refin_portabilidade', 'refin de portabilidade': 'refin_portabilidade',
+  // Hope sells refin and portability together as "COMBO" tables.
+  combo: 'refin_portabilidade', 'refin + portabilidade': 'refin_portabilidade', 'portabilidade + refin': 'refin_portabilidade', 'refin + port': 'refin_portabilidade',
 }
 // Stages by code, name or common spelling ("credito_liberado" reads as "credito liberado"); the value is the canonical state.
 const STAGE_KEYS: Record<string, string> = {
@@ -401,7 +430,9 @@ export function parseContractLine(row: string[], columns: Columns, line: number,
   else term = Number(termText)
   const released = money('released')
   const requested = money('requested')
-  const installment = money('installment')
+  // A zero installment is "not informed" (the Hope report sends 0), never a R$ 0,00 installment.
+  const installmentRaw = money('installment')
+  const installment = installmentRaw === '0.00' ? null : installmentRaw
   // Saldo devedor: the first non-zero of its columns ("Saldo por dentro" for a refin, "Quitação externa" for a purchase).
   let outstanding: string | null = null
   for (const i of columns.outstanding ?? []) {

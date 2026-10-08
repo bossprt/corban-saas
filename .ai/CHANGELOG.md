@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Layout de importação de contratos Hope (08/10/2026)
+- Adicionado (pedido do dono): em Esteira > Importar planilha, layout "Hope" para o relatório "BuscaContrato". NumeroContrato = ADE; Tabela = nome da tabela Hope; TipoContrato ("Contrato Novo", "COMBO" = Refin/Portabilidade); StatusBancoCliente "PAGO AO CLIENTE" = pago, com a data de DataStatusBancoCliente. Colunas de comissão, bônus e diferido do sistema da promotora, a empresa (NomeCorretor), o banco e o telefone mascarado são ignorados; o vendedor é escolhido no contrato. Parcela 0 vira "não informada" (vale para todos os layouts). Status diferentes de "PAGO AO CLIENTE" são recusados até serem mapeados. Sem mudança no banco de dados.
+
 ### Venda fechada vai até a fila; Esteira mostra "Antes da fila" (08/10/2026)
 - Corrigido (dono testou e a proposta não aparecia na Esteira): "Venda fechada: enviar para a esteira" (painel de Vendas) e "Enviar para a esteira" (Simulações) criam a proposta, preparam o checklist de documentos do banco e, sem documento obrigatório faltando, já mandam para a Fila de digitação. Faltando documento ou sem lista de documentos do banco, a mensagem diz o que falta.
 - Adicionado: na Esteira, bloco "Antes da fila" com as propostas em rascunho, documentos pendentes ou prontas para digitação, com o próximo passo (preparar documentos, anexar, enviar) e "Cancelar" com motivo. Cancelar não apaga: a proposta fica cancelada no histórico, o motivo vira anotação do contrato e o lead volta para Negociando. Migration `20261008200952_cancel_proposal_before_queue_v1` (aplicada em produção 08/10/2026, md5 conferido), contrato `tests/security/cancel-proposal-before-queue-contract.sql` (8/8).
