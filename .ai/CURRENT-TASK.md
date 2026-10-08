@@ -1,6 +1,6 @@
 # CURRENT TASK — CORBAN SaaS (reset de produto)
 
-**Atualização:** 08/10/2026
+**Atualização:** 08/10/2026 (simulador por fator)
 **Branch:** `main` (todas as entregas abaixo mergeadas e aplicadas em produção, md5 das migrations conferido).
 
 ## Estado (08/10/2026)
@@ -29,6 +29,7 @@
   - #109 aceite dos termos de uso na tela: a plataforma publica cada versão (texto do advogado, imutável, SHA-256); sem versão publicada nada muda; publicada, a empresa que não aceitou vai para /termos (admin aceita em nome da empresa, demais usuários aguardam); aceite com usuário, data/hora, IP, navegador e hash, imutável; versão nova pede novo aceite. Em produção: nenhuma versão publicada ainda.
   - Rascunho dos Termos de Uso e Política de Privacidade (documento Claude Docs "Corban — Termos de Uso e Política de Privacidade (rascunho)", privado do dono): 10 seções + lista para o advogado. Fornecedor por enquanto SMART PROMOTORA LTDA; depois a empresa de projetos MicroSaaS (troca = nova versão dos termos).
   - #111 Vendas: "Encerrar campanha" (leads em aberto → Perdido "Campanha encerrada", com histórico) e "Excluir campanha" (só sem proposta/venda, nome digitado; clientes ficam), no histórico da equipe. Campanha "teste" (13 leads) excluída pelo dono em 08/10/2026 01:59; clientes intactos (1.165). Resta 1 lead manual em Negociando criado às 02:00 (provável teste do dono).
+  - #113 simulador por fator (ADR-0053): convênio e operação primeiro, simula por valor ou por parcela (parcela = valor × fator; valor = parcela ÷ fator, cortado no centavo), compara todas as tabelas do convênio com fator valendo (diário da data, fixo publicado ou coeficiente da linha), melhor primeiro; refin/portabilidade com saldo devedor e troco; "Usar esta" grava a simulação recalculada no servidor. Tela de Fatores: "Valendo hoje", alerta de diário sem fator, agendados, histórico, ativar/desativar. Migration `20261008060304_simulator_offers_v1` (md5 conferido). Em produção: 0 fatores cadastrados; o simulador não mostra tabelas até o dono cadastrar.
 
 ## Validado com o dono
 - 06/10: contrato real do início ao fim; 2 contas bancárias no Financeiro; pagamento em lote de 9 vendedores (R$ 1.610,10) por QR Code PIX; contrato 131259 concluído.
@@ -37,6 +38,9 @@
 
 ## Pendente — com o dono (validação)
 - Implantação da MAIS VALOR (o dono auxilia; só usuários dela configuram): primeiro acesso e troca de senha; grupos de comissão; bancos, convênios, promotoras; tabelas (importação, layout do banco dela se precisar); equipe; vendedores; contas bancárias e repasse; layout de importação de contratos do banco dela. Login de outra empresa não entra nela: para ajudar por dentro, o dono usa outro e-mail. Termos: rascunho pronto; falta o advogado aprovar, preencher CNPJ, endereço, DPO, prazos e foro, e o dono publicar a versão em /platform (depois o dono aceita pela Smart e a administradora da MAIS VALOR pela empresa dela).
+- Cadastrar fatores em produção (Cadastros > Fatores) e conferir o simulador com uma simulação real.
+- Próxima fase do CRM (pedido do dono 08/10): em Vendas, botões abrem janela/painel sem sair da tela (simular, ficha do cliente, propostas); propostas negociadas gravadas no lead; "Enviar para a esteira de digitação" só quando concretizada, já preenchida pela simulação.
+- Consulta de dados do cliente por CPF em fornecedores (Promosys, Vanguard e outros): decisão do dono de seguir, com o alerta de LGPD registrado; só com a documentação da API do fornecedor, credencial por empresa e registro de cada consulta (quem, CPF, quando, fornecedor).
 - Ajustes conhecidos pelo dono (prioridade depois do tenant): parte operacional de contrato, CRM, painéis, tela de digitação de contratos, modelos de importação de contratos.
 - Antes de cada empresa nova: rodar `tests/security/tenant-isolation-sweep.sql`.
 - Capacidade (resposta ao dono 07/10): hoje 3 a 5 pilotos acompanhados; para 20–30, backup com recuperação pontual, compute maior, termo de uso e roteiro de configuração; mais que isso é a fase F11.
