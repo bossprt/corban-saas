@@ -41,6 +41,7 @@ function fakeClient(){
    delete:()=>{calls.push(`${table}.delete`);return b},
    insert:()=>{calls.push(`${table}.insert`);return b},
    eq:(c:string,v:unknown)=>{calls.push(`${table}.eq(${c},${v})`);return b},
+   or:(f:string)=>{calls.push(`${table}.or(${f})`);return b},
    order:()=>{calls.push(`${table}.order`);return b}
   }
   return b
@@ -60,11 +61,19 @@ test('scoped client filters select/update/delete on tenant tables to the active 
 test('global catalog tables are not filtered; insert and rpc pass through untouched',()=>{
  const f=fakeClient()
  const s=scopeToOrganization(f.client,A)
- ;(s.from('contract_types') as unknown as {select:(c:string)=>unknown}).select('*')
  ;(s.from('organizations') as unknown as {select:(c:string)=>unknown}).select('id')
  ;(s.from('clients') as unknown as {insert:(v:object)=>unknown}).insert({organization_id:A})
  assert.equal((s as unknown as {rpc:(n:string)=>string}).rpc('x'),'rpc-result')
- assert.deepEqual(f.calls,['contract_types.select(*)','organizations.select(id)','clients.insert','rpc(x)'])
+ assert.deepEqual(f.calls,['organizations.select(id)','clients.insert','rpc(x)'])
+})
+
+test('contract types: the shared ones and those of the active company, never those of another company (07/10/2026)',()=>{
+ const f=fakeClient()
+ const s=scopeToOrganization(f.client,A)
+ ;(s.from('contract_types') as unknown as {select:(c:string)=>unknown}).select('*')
+ ;(s.from('contract_types') as unknown as {update:(v:object)=>unknown}).update({name:'x'})
+ ;(s.from('contract_types') as unknown as {insert:(v:object)=>unknown}).insert({organization_id:A})
+ assert.deepEqual(f.calls,['contract_types.select(*)',`contract_types.or(organization_id.is.null,organization_id.eq.${A})`,'contract_types.update',`contract_types.eq(organization_id,${A})`,'contract_types.insert'])
 })
 
 test('the free-table list matches the live schema (tables WITHOUT organization_id)',()=>{
