@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Campo de arquivo visível em Fatores (08/10/2026)
+- Corrigido (pedido do dono): o campo de anexar planilha em Fatores era só um texto pequeno e passava despercebido. Agora é uma caixa com botão "Escolher arquivos do computador", "ou arraste aqui" e o nome dos arquivos escolhidos (componente `FileDrop`). "Agendado" mostra só quantos dias e até quando. Sem mudança no banco de dados.
+
 ### Importar Fator Price do banco (08/10/2026)
 - Adicionado: em Cadastros > Fatores, "Importar Fator Price do banco": escolhe banco e convênio, envia uma ou mais planilhas (uma aba por tabela, uma linha por dia útil), confere na tela (código, dias, prazos, fator de hoje e as tabelas do sistema que recebem, por promotora; tabelas que ficam sem fator) e importa. O fator fica no código da tabela no banco e vale para todas as promotoras que vendem a tabela (regra do dono). Um perfil diário por código e um fator publicado por dia; importar de novo não muda nada; fator diferente para o mesmo dia vira nova revisão. Sábado, domingo e feriado não têm fator: o simulador avisa e não mostra a tabela. Tabelas ganham o campo "código da tabela no banco", preenchido para as tabelas Daycoval (código day-bev-NNNNNN ou nome começando pelo número). Migration `20261008141157_factor_price_import_v1` (aplicada em produção 08/10/2026, md5 conferido; 79 tabelas Daycoval com código), contrato `tests/security/factor-price-import-contract.sql` (10/10).
 
