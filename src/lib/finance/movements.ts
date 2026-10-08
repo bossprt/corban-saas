@@ -1,5 +1,5 @@
-import { add, fromDecimalString, sub, toDecimalString, type Rational } from '@/lib/commission/money'
-import { fetchAll } from '@/lib/fetchAll'
+import { add, fromDecimalString, sub, toDecimalString, type Rational } from '../commission/money'
+import { fetchAll } from '../fetchAll'
 
 type Supa = Awaited<ReturnType<typeof import('@/lib/appContext').requireAppContext>>['supabase']
 
