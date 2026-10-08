@@ -1,3 +1,4 @@
+import { FileDrop } from '@/components/FileDrop'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
@@ -117,7 +118,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
                   {!['validated', 'waived'].includes(r.status) && (
                     <form action={uploadForRequirement} className="mt-2 flex flex-wrap items-center gap-2">
                       <input type="hidden" name="proposal_id" value={proposal.id} /><input type="hidden" name="requirement_id" value={r.id} />
-                      <input required type="file" name="file" accept=".pdf,image/jpeg,image/png,image/webp" aria-label={`Arquivo ${r.label_snapshot}`} className="min-w-0 flex-1 text-xs file:mr-2 file:rounded-md file:border file:border-line file:bg-surface file:px-2 file:py-1" />
+                      <FileDrop compact required name="file" accept=".pdf,image/jpeg,image/png,image/webp" ariaLabel={`Arquivo ${r.label_snapshot}`} />
                       <SubmitButton className={ghost} pendingText="Enviando...">{files.length ? 'Adicionar outro arquivo' : 'Enviar arquivo'}</SubmitButton>
                     </form>
                   )}

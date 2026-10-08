@@ -1,4 +1,5 @@
 'use client'
+import { FileDrop } from '@/components/FileDrop'
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
@@ -39,9 +40,9 @@ export function ContractImportClient({ layouts }: { layouts: { key: string; labe
             {layouts.map(l => <option key={l.key} value={l.key}>{l.label}</option>)}
           </select>
         </label>
-        <label className="block min-w-64 flex-1 text-[13px] font-medium text-ink-soft">Planilha (.xlsx ou .csv)
-          <input type="file" accept=".xlsx,.csv" onChange={e => { setFile(e.target.files?.[0] ?? null); setResult(null) }} className="field mt-1.5 py-1.5" />
-        </label>
+        <div className="block min-w-64 flex-1 text-[13px] font-medium text-ink-soft">Planilha (.xlsx ou .csv)
+          <div className="mt-1.5"><FileDrop compact accept=".xlsx,.csv" ariaLabel="Planilha de contratos" onChange={fs => { setFile(fs[0] ?? null); setResult(null) }} /></div>
+        </div>
         <a href={`/api/propostas/importar/modelo?layout=${layout}`} className="inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-line px-4 font-medium text-ink-soft hover:bg-surface-muted">
           <Download size={16} aria-hidden />Baixar modelo
         </a>

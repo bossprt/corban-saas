@@ -1,4 +1,5 @@
 'use client'
+import { FileDrop } from '@/components/FileDrop'
 
 import { useState } from 'react'
 import { readLegacyFileInBrowser, type LegacySheet } from '@/lib/legacy/browser-read'
@@ -92,9 +93,9 @@ export function ReceiptImportClient({ sources, bankAccounts, suggestedBank }: { 
             {bankAccounts.map(b => <option key={b.id} value={b.id}>{b.label}</option>)}
           </select>
         </label>
-        <label className={`${label} sm:col-span-2`}>Arquivo (XLSX, XLS ou CSV)
-          <input type="file" accept=".xlsx,.xls,.csv,.txt" onChange={e => { setFile(e.target.files?.[0] ?? null); setInspect(null) }} className="field mt-1.5" />
-        </label>
+        <div className={`${label} sm:col-span-2`}>Arquivo (XLSX, XLS ou CSV)
+          <div className="mt-1.5"><FileDrop compact accept=".xlsx,.xls,.csv,.txt" ariaLabel="Arquivo do relatório" onChange={fs => { setFile(fs[0] ?? null); setInspect(null) }} /></div>
+        </div>
       </div>
       <div className="flex justify-end">
         <button type="button" onClick={readColumns} disabled={busy || !file || !source} className="h-10 rounded-[10px] border border-line bg-surface px-4 text-sm font-medium hover:bg-surface-muted disabled:opacity-50">Ler colunas do arquivo</button>
