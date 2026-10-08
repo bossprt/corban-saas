@@ -1,4 +1,4 @@
--- Contract test for 20261008_terms_acceptance_v1: with no version published nothing is pending; once one is, the
+-- Contract test for 20261008035818_terms_acceptance_v1: with no version published nothing is pending; once one is, the
 -- company is pending until its administrator accepts; a seller or another company's administrator cannot accept; the
 -- acceptance keeps who, when, IP, browser and the text's SHA-256; it cannot be changed or deleted; an older version
 -- cannot be accepted; a new version makes the company pending again. One transaction, rolled back.
