@@ -1,6 +1,6 @@
 # CURRENT TASK — CORBAN SaaS (reset de produto)
 
-**Atualização:** 08/10/2026 (simulador por fator)
+**Atualização:** 08/10/2026 (Fator Price Daycoval e simulador por tabela)
 **Branch:** `main` (todas as entregas abaixo mergeadas e aplicadas em produção, md5 das migrations conferido).
 
 ## Estado (08/10/2026)
@@ -30,6 +30,9 @@
   - Rascunho dos Termos de Uso e Política de Privacidade (documento Claude Docs "Corban — Termos de Uso e Política de Privacidade (rascunho)", privado do dono): 10 seções + lista para o advogado. Fornecedor por enquanto SMART PROMOTORA LTDA; depois a empresa de projetos MicroSaaS (troca = nova versão dos termos).
   - #111 Vendas: "Encerrar campanha" (leads em aberto → Perdido "Campanha encerrada", com histórico) e "Excluir campanha" (só sem proposta/venda, nome digitado; clientes ficam), no histórico da equipe. Campanha "teste" (13 leads) excluída pelo dono em 08/10/2026 01:59; clientes intactos (1.165). Resta 1 lead manual em Negociando criado às 02:00 (provável teste do dono).
   - #113 simulador por fator (ADR-0053): convênio e operação primeiro, simula por valor ou por parcela (parcela = valor × fator; valor = parcela ÷ fator, cortado no centavo), compara todas as tabelas do convênio com fator valendo (diário da data, fixo publicado ou coeficiente da linha), melhor primeiro; refin/portabilidade com saldo devedor e troco; "Usar esta" grava a simulação recalculada no servidor. Tela de Fatores: "Valendo hoje", alerta de diário sem fator, agendados, histórico, ativar/desativar. Migration `20261008060304_simulator_offers_v1` (md5 conferido). Em produção: 0 fatores cadastrados; o simulador não mostra tabelas até o dono cadastrar.
+  - #115 importar Fator Price do banco (ADR-0054): fator pelo código da tabela no banco, vale para todas as promotoras (Bevicred, Efetivamais...); conferência na tela antes; um fator publicado por dia útil; sábado, domingo e feriado sem fator. Migration `20261008141157_factor_price_import_v1` (md5 conferido); 79 de 83 tabelas Daycoval com código (sem: 4 AUTORREGULAÇÃO). Dono importou 4 planilhas Daycoval Gov. Acre em 08/10: 33 tabelas, 660 dias (08/10 a 06/11/2026), 2.500 fatores, conferidos 100% contra as planilhas. Sem fator: Portabilidade 784961–784969 e 794324 (indisponíveis, decisão do dono) e AUTORREGULAÇÃO.
+  - #116/#117 campo de arquivo visível (botão, arrastar, nome) em Fatores e nas outras 8 telas de envio (`FileDrop`).
+  - #118 simulador: campo "Tabela" (padrão Todas; segue convênio e operação; só tabelas com fator; mesma tabela do banco = uma opção); simular sem cliente (cliente só para gravar).
 
 ## Validado com o dono
 - 06/10: contrato real do início ao fim; 2 contas bancárias no Financeiro; pagamento em lote de 9 vendedores (R$ 1.610,10) por QR Code PIX; contrato 131259 concluído.
@@ -38,7 +41,7 @@
 
 ## Pendente — com o dono (validação)
 - Implantação da MAIS VALOR (o dono auxilia; só usuários dela configuram): primeiro acesso e troca de senha; grupos de comissão; bancos, convênios, promotoras; tabelas (importação, layout do banco dela se precisar); equipe; vendedores; contas bancárias e repasse; layout de importação de contratos do banco dela. Login de outra empresa não entra nela: para ajudar por dentro, o dono usa outro e-mail. Termos: rascunho pronto; falta o advogado aprovar, preencher CNPJ, endereço, DPO, prazos e foro, e o dono publicar a versão em /platform (depois o dono aceita pela Smart e a administradora da MAIS VALOR pela empresa dela).
-- Cadastrar fatores em produção (Cadastros > Fatores) e conferir o simulador com uma simulação real.
+- Fatores Daycoval Gov. Acre valem até 06/11/2026: importar a próxima Fator Price do banco antes disso. Outros bancos/convênios: sem fator ainda (simulador não mostra).
 - Próxima fase do CRM (pedido do dono 08/10): em Vendas, botões abrem janela/painel sem sair da tela (simular, ficha do cliente, propostas); propostas negociadas gravadas no lead; "Enviar para a esteira de digitação" só quando concretizada, já preenchida pela simulação.
 - Consulta de dados do cliente por CPF em fornecedores (Promosys, Vanguard e outros): decisão do dono de seguir, com o alerta de LGPD registrado; só com a documentação da API do fornecedor, credencial por empresa e registro de cada consulta (quem, CPF, quando, fornecedor).
 - Ajustes conhecidos pelo dono (prioridade depois do tenant): parte operacional de contrato, CRM, painéis, tela de digitação de contratos, modelos de importação de contratos.
