@@ -28,6 +28,7 @@
   - 08/10/2026 00:21: empresa **MAIS VALOR** criada pelo dono (7 papéis, 15 módulos, 8 etapas, admin sem outra empresa). Admin criado sem "pedir nova senha no primeiro acesso": orientar a trocar pelo "Esqueci minha senha".
   - #109 aceite dos termos de uso na tela: a plataforma publica cada versão (texto do advogado, imutável, SHA-256); sem versão publicada nada muda; publicada, a empresa que não aceitou vai para /termos (admin aceita em nome da empresa, demais usuários aguardam); aceite com usuário, data/hora, IP, navegador e hash, imutável; versão nova pede novo aceite. Em produção: nenhuma versão publicada ainda.
   - Rascunho dos Termos de Uso e Política de Privacidade (documento Claude Docs "Corban — Termos de Uso e Política de Privacidade (rascunho)", privado do dono): 10 seções + lista para o advogado. Fornecedor por enquanto SMART PROMOTORA LTDA; depois a empresa de projetos MicroSaaS (troca = nova versão dos termos).
+  - #111 Vendas: "Encerrar campanha" (leads em aberto → Perdido "Campanha encerrada", com histórico) e "Excluir campanha" (só sem proposta/venda, nome digitado; clientes ficam), no histórico da equipe. Campanha "teste" (13 leads) excluída pelo dono em 08/10/2026 01:59; clientes intactos (1.165). Resta 1 lead manual em Negociando criado às 02:00 (provável teste do dono).
 
 ## Validado com o dono
 - 06/10: contrato real do início ao fim; 2 contas bancárias no Financeiro; pagamento em lote de 9 vendedores (R$ 1.610,10) por QR Code PIX; contrato 131259 concluído.
