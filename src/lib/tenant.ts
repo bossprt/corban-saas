@@ -25,7 +25,10 @@ export function resolveActiveMembership(memberships:MembershipRow[],cookieValue:
 // Tables without an organization_id column (global catalogs / tenants themselves). Every other table is tenant-scoped.
 export const TENANT_FREE_TABLES=new Set(['commission_component_types','contract_types','document_types','national_agreement_templates','organizations','platform_administrators'])
 
-type Chainable={eq:(column:string,value:unknown)=>unknown}
+type Chainable={eq:(column:string,value:unknown)=>unknown;or:(filter:string)=>unknown}
+// Catalogs with shared rows (organization_id null) and rows of one company: a company sees the shared ones and its own,
+// never another company's, even when the user belongs to both (07/10/2026).
+export const SHARED_CATALOG_TABLES=new Set(['contract_types'])
 
 // Wraps a Supabase client so that select/update/delete on tenant-scoped tables are ALWAYS filtered to the active
 // organization. RLS still allows every organization the user belongs to; without this a multi-org user would see a mix.
@@ -34,6 +37,15 @@ export function scopeToOrganization<T extends object>(client:T,organizationId:st
  const c=client as unknown as {from:(table:string)=>Record<string,unknown>}
  const scopedFrom=(table:string)=>{
   const builder=c.from(table)
+  if(SHARED_CATALOG_TABLES.has(table))return new Proxy(builder,{
+   get(target,prop,receiver){
+    const value=Reflect.get(target,prop,receiver)
+    if(typeof value!=='function')return value
+    if(prop==='select')return (...args:unknown[])=>((value as (...a:unknown[])=>Chainable).apply(target,args)).or(`organization_id.is.null,organization_id.eq.${organizationId}`)
+    if(prop==='update'||prop==='delete')return (...args:unknown[])=>((value as (...a:unknown[])=>Chainable).apply(target,args)).eq('organization_id',organizationId)
+    return value.bind(target)
+   }
+  })
   if(TENANT_FREE_TABLES.has(table))return builder
   return new Proxy(builder,{
    get(target,prop,receiver){
