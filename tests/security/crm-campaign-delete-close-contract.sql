@@ -1,4 +1,4 @@
--- Contract test for 20261008_crm_campaign_delete_close_v1: a seller cannot delete or close a campaign; delete needs the
+-- Contract test for 20261008044621_crm_campaign_delete_close_v1: a seller cannot delete or close a campaign; delete needs the
 -- campaign's name typed; a campaign with a lead that became a proposal cannot be deleted; a test campaign is deleted
 -- with its leads, history and imports while clients stay; closing sends open leads to Lost with the reason and a
 -- history event and keeps leads in proposal; both are in the team history; another company is refused.
