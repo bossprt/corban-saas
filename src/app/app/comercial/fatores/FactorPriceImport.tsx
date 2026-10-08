@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { Badge, Card } from '@/components/ui'
+import { FileDrop } from '@/components/FileDrop'
 import { importFactorPrice, previewFactorPrice, type FactorPricePreview } from './price-actions'
 
 const primary = 'h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50'
@@ -37,8 +38,8 @@ export function FactorPriceImport({ banks, agreements }: { banks: { id: string; 
     <form onSubmit={check} className="mt-3 grid gap-2 md:grid-cols-3">
       <select required name="bank" defaultValue="" className="field"><option value="" disabled>Banco</option>{banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select>
       <select required name="agreement" defaultValue="" className="field"><option value="" disabled>Convênio</option>{agreements.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select>
-      <input required type="file" name="files" multiple accept=".xlsx" className="block w-full text-xs" onChange={() => { setPreview(null); setForm(null) }} />
-      <div className="md:col-span-3"><button disabled={busy} className={ghost}>{busy && !preview ? 'Lendo...' : 'Conferir'}</button></div>
+      <div className="md:col-span-3"><FileDrop name="files" accept=".xlsx" multiple required hint="Fator Price do banco, .xlsx; pode mandar várias juntas" onChange={() => { setPreview(null); setForm(null) }} /></div>
+      <div className="md:col-span-3"><button disabled={busy} className={primary}>{busy && !preview ? 'Lendo...' : 'Conferir planilhas'}</button></div>
     </form>
     {message && <p className={`mt-3 text-sm ${message.ok ? 'text-brand-strong' : 'text-red-700'}`}>{message.text}</p>}
     {preview && <div className="mt-4 space-y-3">
