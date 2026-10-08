@@ -1,4 +1,5 @@
 'use server'
+import { crmBack } from '@/lib/safe-back'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
@@ -193,8 +194,10 @@ export async function updateCustomer(formData: FormData) {
   const { supabase, organization } = await requireAppContext()
   const id = val(formData, 'client_id')
   if (!isId(id)) return go('erro:requisicao_invalida')
-  const back = (code: FeedbackCode): never => redirect(feedbackUrl(`/app/clientes/${id}`, code))
-  const done = (code: FeedbackCode): never => redirect(feedbackUrl(`/app/clientes/${id}`, code))
+  // From the lead panel in Vendas the form carries "back": it returns there instead of the client page.
+  const to = crmBack(formData.get('back')) ?? `/app/clientes/${id}`
+  const back = (code: FeedbackCode): never => redirect(feedbackUrl(to, code))
+  const done = (code: FeedbackCode): never => redirect(feedbackUrl(to, code))
   const zip = val(formData, 'zip')
   if (zip && !normalizeCep(zip)) return back('erro:cep_invalido')
 
@@ -220,5 +223,6 @@ export async function updateCustomer(formData: FormData) {
   const refused = await saveRows(supabase, id, false, formData)
   revalidatePath(`/app/clientes/${id}`)
   revalidatePath('/app/clientes')
+  revalidatePath('/app/crm')
   return refused ? back('erro:ficha_linhas_recusadas') : done('ok:cadastro_atualizado')
 }

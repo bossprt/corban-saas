@@ -1,5 +1,8 @@
+import { Suspense } from 'react'
+import Link from 'next/link'
+import { FlashBanner } from '@/components/FlashBanner'
 import { redirect } from 'next/navigation'
-import { Megaphone, Search, UserPlus } from 'lucide-react'
+import { Calculator, Megaphone, Search, UserPlus } from 'lucide-react'
 import { ButtonLink, Card, PageHeader } from '@/components/ui'
 import { SubmitButton } from '@/components/SubmitButton'
 import { can } from '@/lib/access'
@@ -11,6 +14,8 @@ import { memberEmails } from '@/lib/team.server'
 import { Board, type BoardCard, type BoardColumn } from './Board'
 import { BoardSearch } from './BoardSearch'
 import { createSalesLead, takeNextLead } from './actions'
+import { LeadDetail, leadTab, type LeadTab } from './LeadDetail'
+import type { SimulatorSp } from '@/app/app/simulacoes/SimulatorPanel'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const PER_COLUMN = 60
@@ -21,7 +26,7 @@ const CLOSED_WINDOW_MS = 30 * 24 * 3600 * 1000
 function closedSince() { return new Date(Date.now() - CLOSED_WINDOW_MS).toISOString() }
 function nowMs() { return Date.now() }
 
-type Sp = { campanha?: string; vendedor?: string; q?: string }
+type Sp = SimulatorSp & { campanha?: string; vendedor?: string; q?: string; lead?: string; aba?: string }
 
 // Vendas: the team's board. Each seller sees their own leads (RLS); supervisors see their scope and filter by seller.
 export default async function SalesBoardPage({ searchParams }: { searchParams: Promise<Sp> }) {
@@ -75,6 +80,16 @@ export default async function SalesBoardPage({ searchParams }: { searchParams: P
   const openCount = rows.filter(r => (OPEN_STAGES as readonly string[]).includes(r.status)).length
   const overdue = rows.filter(r => r.next_contact_at && new Date(r.next_contact_at).getTime() < now && (OPEN_STAGES as readonly string[]).includes(r.status)).length
   const won = byStage.get('won')!.length
+  // The board's own filters: kept when a lead opens in the side panel and when it closes.
+  const boardQuery = new URLSearchParams(Object.entries({ campanha: sp.campanha, vendedor: sp.vendedor, q: sp.q }).filter(([, v]) => v) as [string, string][])
+  const boardHref = (extra: Record<string, string> = {}) => {
+    const q = new URLSearchParams(boardQuery)
+    for (const [k, v] of Object.entries(extra)) q.set(k, v)
+    const t = q.toString()
+    return `/app/crm${t ? `?${t}` : ''}`
+  }
+  const openLead = UUID.test(sp.lead ?? '') ? sp.lead! : null
+  const tab = leadTab(sp.aba)
   const waiting = typeof queue === 'number' ? queue : 0
   const activeCampaigns = (campaigns ?? []).filter(c => c.status === 'active')
 
@@ -85,6 +100,7 @@ export default async function SalesBoardPage({ searchParams }: { searchParams: P
         description="Leads das campanhas e da integração, por etapa. Arraste o cartão para mudar a etapa; Proposta e Ganho seguem a proposta do cliente."
         actions={
           <>
+            <ButtonLink href="/app/simulacoes" variant="secondary"><Calculator size={16} aria-hidden />Simular</ButtonLink>
             {supervisor && <ButtonLink href="/app/crm/campanhas" variant="secondary"><Megaphone size={16} aria-hidden />Campanhas</ButtonLink>}
             <form action={takeNextLead}>
               {campaign && <input type="hidden" name="campaign_id" value={campaign} />}
@@ -127,7 +143,19 @@ export default async function SalesBoardPage({ searchParams }: { searchParams: P
         <button className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><Search size={15} aria-hidden />Filtrar</button>
       </BoardSearch>
 
-      <Board columns={columns} showOwner={supervisor} />
+      <Board columns={columns} showOwner={supervisor} boardQuery={boardQuery.toString()} />
+
+      {openLead && (
+        <div className="fixed inset-0 z-40 flex justify-end">
+          <Link href={boardHref()} aria-label="Fechar o lead" className="absolute inset-0 bg-ink/30" scroll={false} />
+          <aside aria-label="Lead" className="relative h-full w-full max-w-[960px] overflow-y-auto bg-canvas px-4 py-5 shadow-2xl sm:px-6">
+            <Suspense fallback={null}><FlashBanner /></Suspense>
+            <LeadDetail id={openLead} tab={tab} sp={sp}
+              href={(t: LeadTab) => boardHref(t === 'resumo' ? { lead: openLead } : { lead: openLead, aba: t })}
+              keep={{ ...Object.fromEntries(boardQuery), lead: openLead }} close={boardHref()} />
+          </aside>
+        </div>
+      )}
 
       {can(access, 'leads.create') && (
         <details className="mt-6 rounded-[12px] border border-line bg-surface">

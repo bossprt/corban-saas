@@ -34,6 +34,12 @@ const NAV: (NavItem & { show?: (role: string) => boolean; module?: string; perm?
 ]
 
 // Finance: the commission received from the banks and the company finance (F6.5).
+// Vendas: the board and the simulator (owner, 08/10/2026: the simulator was hard to find under Esteira).
+const SALES_PAGES = [
+  { href: '/app/crm', label: 'Quadro de vendas' },
+  { href: '/app/simulacoes', label: 'Simulador' },
+]
+
 const FINANCE_PAGES = [
   { href: '/app/financeiro', label: 'Comissão recebida' },
   { href: '/app/financeiro/empresa', label: 'Contas a pagar e receber' },
@@ -54,6 +60,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     key, href, label, sections,
     ...(key === 'comercial' ? { children: REGISTRATIONS.filter(r => !r.teamOnly || canManageTeam(membership.role)).map(r => ({ href: r.href, label: r.label })) } : {}),
     ...(key === 'financeiro' ? { children: FINANCE_PAGES } : {}),
+    ...(key === 'vendas' ? { children: SALES_PAGES } : {}),
   }))
   const initial = (organization.name ?? 'C').trim().charAt(0).toUpperCase()
 

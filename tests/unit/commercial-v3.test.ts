@@ -97,7 +97,7 @@ test('simulation on a condition: governed RPC, amount as decimal string, conditi
   const a = read('src/app/app/simulacoes/actions.ts')
   assert.ok(/rpc\('create_simulation_for_condition'/.test(a) && /money\(formData\.get\('requested_amount'\)\)/.test(a) && /parseMoneyInput/.test(a) && !/Number\(/.test(a))
   assert.ok(isFeedbackCode('erro:sim_condition_not_found'))
-  const p = read('src/app/app/simulacoes/page.tsx')
+  const p = ['page', 'SimulatorPanel', 'SavedSimulations'].map(f => read(`src/app/app/simulacoes/${f}.tsx`)).join(' ')
   assert.ok(!/commission|comiss/i.test(code(p).replace(/use_in_commission/g, ''))) // the contract-type flag is not commission data
   assert.ok(!/commercial_condition_(commissions|shares)/.test(p)) // the operator screen never reads commission or shares
 })
