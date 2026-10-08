@@ -1,6 +1,6 @@
 # CURRENT TASK — CORBAN SaaS (reset de produto)
 
-**Atualização:** 08/10/2026 (painel lateral de Vendas)
+**Atualização:** 08/10/2026 (venda até a fila, layout Hope)
 **Branch:** `main` (todas as entregas abaixo mergeadas e aplicadas em produção, md5 das migrations conferido).
 
 ## Estado (08/10/2026)
@@ -34,6 +34,8 @@
   - #116/#117 campo de arquivo visível (botão, arrastar, nome) em Fatores e nas outras 8 telas de envio (`FileDrop`).
   - #118 simulador: campo "Tabela" (padrão Todas; segue convênio e operação; só tabelas com fator; mesma tabela do banco = uma opção); simular sem cliente (cliente só para gravar).
   - #120 Vendas: lead no painel lateral sobre o quadro (abas Resumo, Simular, Ficha do cliente, Propostas); "Venda fechada: enviar para a esteira" cria a proposta preenchida pela simulação e o lead vai para Proposta; lead sem cliente pede CPF; ações voltam ao painel (só caminhos de Vendas); "Simulador" no menu de Vendas e botão "Simular" no topo. Sem mudança no banco.
+  - #122 "Venda fechada" cria a proposta, prepara o checklist do banco e, sem documento obrigatório faltando, envia para a Fila de digitação; Esteira com bloco "Antes da fila" (rascunho, documentos pendentes, pronta) e "Cancelar" com motivo (não apaga; motivo vira anotação; lead volta para Negociando). Migration `20261008200952_cancel_proposal_before_queue_v1` (md5 conferido). Teste do dono (Maria das Graças): proposta criada às 15:08 em rascunho; dono vai cancelar pelo "Antes da fila".
+  - #123 layout de importação de contratos Hope (relatório BuscaContrato): ADE = NumeroContrato, tabela pelo nome, "PAGO AO CLIENTE" = pago na DataStatusBancoCliente; colunas de comissão da promotora ignoradas; parcela 0 = não informada (todos os layouts). Contrato 143413 importado pelo dono em 08/10: corretor alterado (comissão calculada: Hope 15% = R$ 772,08, imposto 6%, corretor 9,16% = R$ 471,48), recebimento manual de R$ 772,08 em 05/10 na C6 conciliado; repasse alterado para 10% (ajuste +R$ 43,24 = R$ 514,72, aprovado, não pago).
 
 ## Validado com o dono
 - 06/10: contrato real do início ao fim; 2 contas bancárias no Financeiro; pagamento em lote de 9 vendedores (R$ 1.610,10) por QR Code PIX; contrato 131259 concluído.
@@ -44,6 +46,8 @@
 - Implantação da MAIS VALOR (o dono auxilia; só usuários dela configuram): primeiro acesso e troca de senha; grupos de comissão; bancos, convênios, promotoras; tabelas (importação, layout do banco dela se precisar); equipe; vendedores; contas bancárias e repasse; layout de importação de contratos do banco dela. Login de outra empresa não entra nela: para ajudar por dentro, o dono usa outro e-mail. Termos: rascunho pronto; falta o advogado aprovar, preencher CNPJ, endereço, DPO, prazos e foro, e o dono publicar a versão em /platform (depois o dono aceita pela Smart e a administradora da MAIS VALOR pela empresa dela).
 - Fatores Daycoval Gov. Acre valem até 06/11/2026: importar a próxima Fator Price do banco antes disso. Outros bancos/convênios: sem fator ainda (simulador não mostra).
 - Painel lateral de Vendas (#120): validar com o dono no uso real e ajustar o que ele pedir.
+- Hope: mapear outros status do relatório (só "PAGO AO CLIENTE" conhecido) quando vier um relatório com eles.
+- Bancos/convênios sem lista de documentos: "Venda fechada" deixa a proposta em "Antes da fila"; cadastrar em Cadastros > Documentos por banco.
 - Consulta de dados do cliente por CPF em fornecedores (Promosys, Vanguard e outros): decisão do dono de seguir, com o alerta de LGPD registrado; só com a documentação da API do fornecedor, credencial por empresa e registro de cada consulta (quem, CPF, quando, fornecedor).
 - Ajustes conhecidos pelo dono (prioridade depois do tenant): parte operacional de contrato, CRM, painéis, tela de digitação de contratos, modelos de importação de contratos.
 - Antes de cada empresa nova: rodar `tests/security/tenant-isolation-sweep.sql`.
