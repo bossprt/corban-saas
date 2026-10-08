@@ -1,4 +1,4 @@
--- Contract test for 20261008_factor_price_import_v1: the bank's Fator Price is imported by the bank's table code and
+-- Contract test for 20261008141157_factor_price_import_v1: the bank's Fator Price is imported by the bank's table code and
 -- serves every partner promoter that sells that table; one published daily batch per date; a date without factor
 -- (weekend, holiday) offers nothing; importing again changes nothing; a changed factor is a new revision; a code
 -- without table is reported; a seller and another company are refused. One transaction, rolled back.

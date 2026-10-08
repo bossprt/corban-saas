@@ -51,7 +51,7 @@ test('fator price: a number cell (0.02816) is read as is', () => {
   assert.equal(r.sheets[0].dates[0].entries[0].factor, '0.02816')
 })
 test('factor price import: governed RPC, manager only, no float', () => {
-  const m = readFileSync('supabase/migrations/20261008_factor_price_import_v1.sql', 'utf8')
+  const m = readFileSync('supabase/migrations/20261008141157_factor_price_import_v1.sql', 'utf8')
   assert.match(m, /has_active_organization_role\(p_org, array\['admin','manager'\]\)/)
   assert.doesNotMatch(m, /security definer|float|double precision/i)
 })
