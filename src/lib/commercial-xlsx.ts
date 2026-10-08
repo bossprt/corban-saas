@@ -25,3 +25,24 @@ export async function xlsxRows(buffer: Buffer, maxRows = 1000): Promise<string[]
   }
   return rows
 }
+
+// Every worksheet as plain string rows (the bank's Fator Price report has one sheet per table).
+export async function xlsxSheets(buffer: Buffer, maxRows = 200, maxSheets = 100): Promise<{ name: string; rows: string[][] }[]> {
+  const wb = new ExcelJS.Workbook()
+  await wb.xlsx.load(buffer as unknown as ExcelJS.Buffer)
+  const text = (v: ExcelJS.CellValue): string => {
+    if (v === null || v === undefined) return ''
+    if (v instanceof Date) return v.toISOString()
+    if (typeof v === 'object') {
+      if ('text' in v) return String(v.text)
+      if ('result' in v) return String(v.result ?? '')
+      if ('richText' in v) return v.richText.map(x => x.text).join('')
+    }
+    return String(v)
+  }
+  return wb.worksheets.slice(0, maxSheets).map(sheet => {
+    const rows: string[][] = []
+    for (let n = 1; n <= Math.min(sheet.rowCount, maxRows); n++) rows.push(Array.from((sheet.getRow(n).values as ExcelJS.CellValue[]).slice(1), text))
+    return { name: sheet.name, rows }
+  })
+}

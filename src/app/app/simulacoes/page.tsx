@@ -66,6 +66,9 @@ export default async function SimulationsPage({ searchParams }: { searchParams: 
   const ready = !!agreement && !!type && !!value && value !== 'invalid' && !!term
   let offers: Offer[] = []
   let searchError: string | null = null
+  // Banks do not work on weekends: daily factors exist only for business days (owner, 08/10/2026).
+  const weekday = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', weekday: 'short' }).format(new Date())
+  const bankHoliday = weekday === 'Sat' || weekday === 'Sun'
   if (ready) {
     const { data, error } = await supabase.rpc('simulation_offers', {
       p_org: organization.id, p_agreement: agreement.id, p_contract_type: type.id, p_term: term, p_mode: mode, p_value: value, p_outstanding: balance,
@@ -122,7 +125,7 @@ export default async function SimulationsPage({ searchParams }: { searchParams: 
         <Card className="mb-6 overflow-hidden">
           <CardHeader title={<span className="flex items-center gap-2">Tabelas para {agreement!.name} · {type!.name} · {term}x <Badge tone="neutral">{offers.length}</Badge></span>} />
           {searchError ? <p role="alert" className="px-5 pb-5 pt-2 text-sm text-[#991B1B]">{searchError}</p> : !offers.length ? (
-            <p className="px-5 pb-5 pt-2 text-sm text-muted">Nenhuma tabela deste convênio tem fator para {term}x {mode === 'amount' ? 'neste valor' : 'nesta parcela'}. Cadastre os fatores em Cadastros &gt; Fatores.</p>
+            <p className="px-5 pb-5 pt-2 text-sm text-muted">{bankHoliday ? 'Hoje é sábado ou domingo: banco sem expediente, sem fator do dia. Simule em dia útil. ' : ''}Nenhuma tabela deste convênio tem fator para {term}x {mode === 'amount' ? 'neste valor' : 'nesta parcela'} hoje{bankHoliday ? '' : ' (em feriado bancário também não há fator)'}. Os fatores ficam em Cadastros &gt; Fatores.</p>
           ) : (
             <div className="mt-3 overflow-x-auto">
               <table className="w-full min-w-[820px] text-left text-sm">
