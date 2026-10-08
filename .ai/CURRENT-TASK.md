@@ -1,10 +1,10 @@
 # CURRENT TASK — CORBAN SaaS (reset de produto)
 
-**Atualização:** 07/10/2026
+**Atualização:** 08/10/2026
 **Branch:** `main` (todas as entregas abaixo mergeadas e aplicadas em produção, md5 das migrations conferido).
 
-## Estado (07/10/2026)
-- Fase atual: **validação na operação real da Smart Promotora**. F11 (planos, cobrança, teste grátis, cadastro sozinho) espera essa validação.
+## Estado (08/10/2026)
+- Fase atual: **validação na operação real da Smart Promotora** e **primeira empresa cliente (piloto MAIS VALOR)**, sem cobrança. F11 (planos, cobrança, teste grátis, cadastro sozinho) espera essa validação.
 - Entregas de 02 a 06/10/2026 (PR em bossprt/corban-saas):
   - #70–#77 tabelas NASP (Gov. Acre, Pref. Rio Branco, Refin igual ao Novo); importação de contratos por planilha com layouts NASP e PROSESP (WorkBank), CSV, ficha do cliente; PROPOSTA como ADE na PROSESP.
   - #74 repasse alterado só para o Administrador; #78/#79 repasse Diário (todos e padrão); #80 cadastro de vendedor não perde dados no erro.
@@ -22,6 +22,10 @@
   - #101 layout de importação de contratos FINTECH CORBAN (Id = ADE, tabela pelo IdTableComissao, FINALIZADA / PAGA = pago). Contrato 4184094 importado; comissão R$ 2.462,73 recebida e conciliada; Elves pago R$ 1.600,78.
   - #102 conta bancária nos recebimentos de comissão e nos repasses (importar relatório, recebimento manual, pagar vendedores); 33 recebimentos e 11 repasses antigos marcados na C6 (decisão do dono). #104 repasse de 11/09 (Fabiola, R$ 800,00) lançado e marcado na C6.
   - #103 Financeiro > Contas bancárias > Ver movimentações (saldo dia a dia, Excel) e filtro por conta em Contas a pagar e receber.
+- Entregas de 07–08/10/2026 (multiempresa):
+  - #106 revisão de segurança entre empresas (ADR-0052): RLS em 92 tabelas, storage por pasta da empresa, chave de serviço só após verificação; teste `tests/security/tenant-isolation-sweep.sql` (empresa B lê todas as tabelas e chama todas as funções com ids da A). Achado e corrigido: 5 funções pulavam a recusa para quem não é da empresa (`caller_role_in ... not in`); tipos de contrato próprios filtrados pela empresa ativa.
+  - #107 /platform > Nova empresa: o administrador da plataforma cria a empresa e o login (e-mail e senha) do primeiro administrador; ele cria equipe e vendedores.
+  - 08/10/2026 00:21: empresa **MAIS VALOR** criada pelo dono (7 papéis, 15 módulos, 8 etapas, admin sem outra empresa). Admin criado sem "pedir nova senha no primeiro acesso": orientar a trocar pelo "Esqueci minha senha".
 
 ## Validado com o dono
 - 06/10: contrato real do início ao fim; 2 contas bancárias no Financeiro; pagamento em lote de 9 vendedores (R$ 1.610,10) por QR Code PIX; contrato 131259 concluído.
@@ -29,7 +33,10 @@
 - 07/10: saldo inicial da C6 R$ 12.946,53 em 06/10/2026 (tudo o que entrou e saiu antes, pelo sistema); saldo de R$ 5.604,26 bateu com o banco. Nada pendente em "Comissões e repasses a lançar".
 
 ## Pendente — com o dono (validação)
-- Cliente piloto (outra empresa, quer usar o sistema e ajudar com melhorias; reunião sexta 09/10/2026): antes de criar a empresa dela, revisão de segurança com duas empresas (nada pode supor uma empresa só); criar a empresa por migration, sem copiar nada da Smart; acesso do admin dela criado pelo dono na tela Equipe; rascunho de termo de uso e privacidade para o dono levar ao advogado. Faltam do dono: nome da empresa, se é o cliente Bevicred, planilhas de tabelas e vendedores.
+- Implantação da MAIS VALOR (o dono auxilia; só usuários dela configuram): primeiro acesso e troca de senha; grupos de comissão; bancos, convênios, promotoras; tabelas (importação, layout do banco dela se precisar); equipe; vendedores; contas bancárias e repasse; layout de importação de contratos do banco dela. Login de outra empresa não entra nela: para ajudar por dentro, o dono usa outro e-mail. Termo de uso e privacidade para o dono levar ao advogado continua pendente.
+- Ajustes conhecidos pelo dono (prioridade depois do tenant): parte operacional de contrato, CRM, painéis, tela de digitação de contratos, modelos de importação de contratos.
+- Antes de cada empresa nova: rodar `tests/security/tenant-isolation-sweep.sql`.
+- Capacidade (resposta ao dono 07/10): hoje 3 a 5 pilotos acompanhados; para 20–30, backup com recuperação pontual, compute maior, termo de uso e roteiro de configuração; mais que isso é a fase F11.
 - Situações do relatório FINTECH além de "FINALIZADA / PAGA": mapear quando vier um relatório com elas.
 - Importar o relatório FINTECH de novo não atualiza contrato já existente (só cria): avaliar com o dono se quer atualização da situação.
 - Contrato 14493 (PROSESP): aguardando a comissão do banco.
