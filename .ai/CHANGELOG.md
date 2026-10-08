@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Esteira: "Antes da fila" em cartões, cancelar com confirmação clara (08/10/2026)
+- Corrigido (dono): a tabela larga obrigava a rolar e escondia o cliente na hora de cancelar. Cada proposta virou um cartão (cliente, valor, parcela, prazo, situação e botões juntos, sem rolagem lateral). "Cancelar" abre logo abaixo a pergunta com cliente, valor, prazo, parcela e data, o motivo e "Sim, cancelar" / "Voltar". Sem mudança no banco de dados.
+
 ### Layout de importação de contratos Hope (08/10/2026)
 - Adicionado (pedido do dono): em Esteira > Importar planilha, layout "Hope" para o relatório "BuscaContrato". NumeroContrato = ADE; Tabela = nome da tabela Hope; TipoContrato ("Contrato Novo", "COMBO" = Refin/Portabilidade); StatusBancoCliente "PAGO AO CLIENTE" = pago, com a data de DataStatusBancoCliente. Colunas de comissão, bônus e diferido do sistema da promotora, a empresa (NomeCorretor), o banco e o telefone mascarado são ignorados; o vendedor é escolhido no contrato. Parcela 0 vira "não informada" (vale para todos os layouts). Status diferentes de "PAGO AO CLIENTE" são recusados até serem mapeados. Sem mudança no banco de dados.
 
