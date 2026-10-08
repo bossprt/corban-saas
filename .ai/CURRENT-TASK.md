@@ -1,9 +1,9 @@
 # CURRENT TASK — CORBAN SaaS (reset de produto)
 
-**Atualização:** 01/10/2026
+**Atualização:** 07/10/2026
 **Branch:** `main` (todas as entregas abaixo mergeadas e aplicadas em produção, md5 das migrations conferido).
 
-## Estado (06/10/2026)
+## Estado (07/10/2026)
 - Fase atual: **validação na operação real da Smart Promotora**. F11 (planos, cobrança, teste grátis, cadastro sozinho) espera essa validação.
 - Entregas de 02 a 06/10/2026 (PR em bossprt/corban-saas):
   - #70–#77 tabelas NASP (Gov. Acre, Pref. Rio Branco, Refin igual ao Novo); importação de contratos por planilha com layouts NASP e PROSESP (WorkBank), CSV, ficha do cliente; PROPOSTA como ADE na PROSESP.
@@ -13,22 +13,32 @@
   - #86/#87/#90/#93 painéis: dono, operador, vendedor (celular) e "Meu painel de vendedor" para gerente/admin que vende.
   - #88/#91 contas a pagar: repetir x parcelar e intervalo em dias; #89 folha relançada em 4 meses.
   - #92 vendedor ligado a usuário da equipe de qualquer papel (GERDEAN e FRANCISCO JUNIOR ligados); #94 senha mínima 12 e nova tentativa de acesso ao portal.
+  - #96 portal do corretor externo: "Meus contratos" (inclusive os digitados pela Smart), com a parte dele.
+- Entregas de 07/10/2026:
+  - Acesso da corretora externa (Fabiola): e-mail de login estava digitado errado; corrigido direto no Auth (dado pessoal, sem migration), senha redefinida pelo dono, login confirmado. #97 mensagem de senha recusada diz "mínimo 12".
+  - #98 Bevicred: botão "Testar conexão" (Configuração > Bevicred, só admin da Smart), código de parceiro e API KEY como segredo na Vercel; conectou (ADR-0050). Fase 2 parada: a Smart não vende pela Bevicred; integração é para um futuro cliente, que precisará de credencial própria por empresa.
+  - #99 FINTECH CORBAN: 35 tabelas / 61 linhas (FGTS, CLT Privado, INSS), produção própria, sem IR/imposto, repasse 65/80/50/25/10%. Tela de tabela mostra Valor Inicial e Valor Final.
+  - #100 faixa de valor (ADR-0051): linha líquida compara com o valor liberado, bruta com o valor do contrato; importação de tabelas lê Valor Inicial / Valor Final e aceita linha sem taxa; exportação inclui tabelas com faixa.
+  - #101 layout de importação de contratos FINTECH CORBAN (Id = ADE, tabela pelo IdTableComissao, FINALIZADA / PAGA = pago). Contrato 4184094 importado; comissão R$ 2.462,73 recebida e conciliada; Elves pago R$ 1.600,78.
+  - #102 conta bancária nos recebimentos de comissão e nos repasses (importar relatório, recebimento manual, pagar vendedores); 33 recebimentos e 11 repasses antigos marcados na C6 (decisão do dono). #104 repasse de 11/09 (Fabiola, R$ 800,00) lançado e marcado na C6.
+  - #103 Financeiro > Contas bancárias > Ver movimentações (saldo dia a dia, Excel) e filtro por conta em Contas a pagar e receber.
 
-## Validado com o dono (06/10/2026)
-- Contrato real do início ao fim no Corban.
-- Contas bancárias da empresa no Financeiro (2 contas).
-- Pagamento de vendedores em lote: 9 vendedores, R$ 1.610,10, pagos por QR Code PIX lido no app do banco (valor e nome corretos).
-- Contrato 131259: recebimento HOPE R$ 1.900,00 (11/09) registrado; contrato concluído.
+## Validado com o dono
+- 06/10: contrato real do início ao fim; 2 contas bancárias no Financeiro; pagamento em lote de 9 vendedores (R$ 1.610,10) por QR Code PIX; contrato 131259 concluído.
+- 07/10: login da corretora externa no portal; conexão Bevicred; tabelas FINTECH conferidas na tela antes de aplicar; importação do relatório FINTECH (4184094); pagamento do Elves confirmado.
+- 07/10: saldo inicial da C6 R$ 12.946,53 em 06/10/2026 (tudo o que entrou e saiu antes, pelo sistema); saldo de R$ 5.604,26 bateu com o banco. Nada pendente em "Comissões e repasses a lançar".
 
 ## Pendente — com o dono (validação)
-- Relatório real de banco com parte diferida para testar a importação (não há no momento).
+- Cliente piloto (outra empresa, quer usar o sistema e ajudar com melhorias; reunião sexta 09/10/2026): antes de criar a empresa dela, revisão de segurança com duas empresas (nada pode supor uma empresa só); criar a empresa por migration, sem copiar nada da Smart; acesso do admin dela criado pelo dono na tela Equipe; rascunho de termo de uso e privacidade para o dono levar ao advogado. Faltam do dono: nome da empresa, se é o cliente Bevicred, planilhas de tabelas e vendedores.
+- Situações do relatório FINTECH além de "FINALIZADA / PAGA": mapear quando vier um relatório com elas.
+- Importar o relatório FINTECH de novo não atualiza contrato já existente (só cria): avaliar com o dono se quer atualização da situação.
 - Contrato 14493 (PROSESP): aguardando a comissão do banco.
-
-## Próximas melhorias combinadas
-- Portal do corretor externo (vendedor de fora da Smart): bloco "Meus contratos" com todos os contratos em que ele é o vendedor, inclusive os digitados pela Smart, com situação e a parte dele (pedido do dono em 06/10/2026, para depois).
+- Relatório real de banco com parte diferida para testar a importação (não há no momento).
+- C6: o repasse de R$ 800,00 de 11/09 foi marcado na C6, mas o saldo inicial foi calculado sem ele e bateu com o banco; o dono pode conferir no extrato de setembro qual entrada fora do Corban o compensou.
 
 ## Pendente — técnico
 - E2E do CRM de vendas quebrado (também no main; a tela funciona). E2E da simulação depende da ordem. Tarefas separadas.
+- Contratos SQL locais com falhas por dados antigos do banco local (iguais com as funções antigas): commission-engine-v2, company-finance, pay-account-now, payout-batch, manual-commission-receipt, data-scope, pipeline, sales-crm, commission-group-values, seller-payout, nasp-acre-tables. Recriar o banco local do zero e rodar de novo.
 - Por volta de 27/10/2026: pedir aprovação para apagar os schemas de backup `backup_c4`, `backup_c5`, `backup_c6`.
 - Código legado: `INTEGRATION_WORKER_SECRET` e `CORBAN_ALLOW_LOCAL_PROVIDERS` em `src/lib/preflight.ts` (rota do worker já removida).
 
