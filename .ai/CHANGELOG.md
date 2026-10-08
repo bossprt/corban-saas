@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Plataforma: nova empresa com administrador (07/10/2026)
+- Adicionado: em /platform (administrador da plataforma), "Nova empresa": nome, CNPJ, nome, e-mail e senha do primeiro administrador (senha digitada na tela, pedir nova no primeiro acesso). O login é criado confirmado e `bootstrap_organization_admin` cria a empresa com papéis, módulos e etapas padrão e a auditoria; se falhar, o login é removido. CNPJ repetido e e-mail que já tem login são recusados; nome parecido pede confirmação. O administrador cria a equipe e os vendedores da empresa dele. Sem mudança no banco de dados.
+
 ### Repasse de 11/09 na conta C6 (07/10/2026)
 - Corrigido em produção (decisão do dono): o repasse de R$ 800,00 do contrato 131259, pago em 11/09/2026 fora do Corban e lançado no financeiro em 07/10, saiu da conta C6. Só a conta do lançamento, com histórico; saldo da C6 inalterado (anterior ao saldo inicial). Migration `20261008005436_fabiola_payout_c6_v1` (md5 conferido).
 

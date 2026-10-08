@@ -5,6 +5,8 @@ import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabaseAdmin'
 import { requirePlatformAdmin } from '@/lib/platform.server'
 import { isPlanModule } from '@/lib/access'
+import { digitsOnly, isValidCnpj, sameOrganizationName } from '@/lib/platform'
+import { PASSWORD_MAX, PASSWORD_MIN, passwordRefusal, TEAM_ERROR_MESSAGES } from '@/lib/team'
 
 const clean = (v: FormDataEntryValue | null) => String(v ?? '').trim()
 const code = (v: string) => v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40)
@@ -54,4 +56,52 @@ export async function setOrganizationModule(f: FormData) {
   if (error) go('erro', 'Não foi possível alterar o módulo.')
   await admin.from('platform_admin_audit_events').insert({ actor_user_id: g.userId, organization_id: org, action: 'organization_module.set', metadata: { module_key: moduleKey, enabled } })
   go('ok', `Módulo ${enabled ? 'ligado' : 'desligado'}.`)
+}
+
+// New client company with its first administrator (owner request 07/10/2026): the platform administrator types the
+// company, the administrator's e-mail and a password (never e-mailed, never stored here). The administrator then creates
+// the company's own team and sellers. The login is created confirmed; the database creates the company with its
+// defaults, makes the person its administrator and audits it (bootstrap_organization_admin). If that fails, the new
+// login is removed so no orphan identity stays. An e-mail that already has a login is refused: one login, one company.
+export async function createCompanyWithAdmin(f: FormData) {
+  const g = await gate()
+  const name = clean(f.get('organization_name')).replace(/\s+/g, ' ')
+  const document = digitsOnly(clean(f.get('organization_document')))
+  const fullName = clean(f.get('full_name')).replace(/\s+/g, ' ')
+  const email = clean(f.get('email')).toLowerCase()
+  const password = String(f.get('password') ?? '')
+  const mustChange = f.get('must_change') === 'on'
+  if (name.length < 3 || name.length > 200) go('erro', 'Informe o nome da empresa (3 a 200 caracteres).')
+  if (!isValidCnpj(document)) go('erro', 'CNPJ inválido.')
+  if (fullName.length < 3 || fullName.length > 160) go('erro', 'Informe o nome do administrador.')
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 254) go('erro', 'E-mail do administrador inválido.')
+  if (password.length < PASSWORD_MIN || password.length > PASSWORD_MAX || password !== String(f.get('password_confirm') ?? ''))
+    go('erro', `Senha inválida: use no mínimo ${PASSWORD_MIN} caracteres e repita igual no segundo campo.`)
+
+  const admin = createAdminClient()
+  const { data: existing, error: listError } = await admin.from('organizations').select('name,document')
+  if (listError) go('erro', 'Não foi possível conferir as empresas existentes.')
+  if ((existing ?? []).some(o => digitsOnly(String(o.document ?? '')) === document)) go('erro', 'Já existe uma empresa com este CNPJ.')
+  if (f.get('confirm_similar') !== 'on' && (existing ?? []).some(o => sameOrganizationName(String(o.name ?? ''), name)))
+    go('erro', 'Já existe uma empresa com nome parecido. Confira e marque "o nome parecido está certo" para continuar.')
+
+  const { data: created, error: createError } = await admin.auth.admin.createUser({
+    email, password, email_confirm: true, app_metadata: { must_change_password: mustChange }, user_metadata: { full_name: fullName },
+  })
+  if (createError || !created.user) {
+    const weak = passwordRefusal(createError)
+    if (weak) go('erro', TEAM_ERROR_MESSAGES[weak])
+    if (/already|registered|exists/i.test(createError?.message ?? '')) go('erro', 'Este e-mail já tem acesso ao Corban. Use outro e-mail para o administrador da empresa nova.')
+    go('erro', 'Não foi possível criar o login do administrador.')
+  }
+  const userId = created.user!.id
+  const { error: bootstrapError } = await admin.rpc('bootstrap_organization_admin', {
+    p_platform_actor_user_id: g.userId, p_user_id: userId, p_organization_name: name, p_organization_document: document, p_plan_type: 'founder',
+  })
+  if (bootstrapError) {
+    await admin.auth.admin.deleteUser(userId)
+    go('erro', 'Não foi possível criar a empresa. Nada foi gravado.')
+  }
+  // No e-mail or name of the person in the address bar (personal data never goes in a URL).
+  go('ok', `${name} criada. O administrador entra com o e-mail e a senha informados${mustChange ? ' e escolhe uma nova senha no primeiro acesso' : ''}.`)
 }

@@ -3,7 +3,9 @@ import { Building2, Files, LogOut } from 'lucide-react'
 import { requirePlatformAdmin } from '@/lib/platform.server'
 import { createAdminClient } from '@/lib/supabaseAdmin'
 import { signOut } from '@/app/app/actions'
-import { addDocumentType, setOrganizationModule } from './actions'
+import { addDocumentType, createCompanyWithAdmin, setOrganizationModule } from './actions'
+import { PasswordPair } from '@/components/PasswordPair'
+import { SubmitButton } from '@/components/SubmitButton'
 import { PLAN_MODULE_LABEL, PLAN_MODULES } from '@/lib/access'
 import { Card } from '@/components/ui'
 
@@ -46,6 +48,23 @@ export default async function PlatformPage({searchParams}:{searchParams:Promise<
             <div className="mt-4 flex flex-wrap gap-2">{docs.data?.map(x=><span key={x.id} className="rounded-full border border-line px-3 py-1 text-xs text-ink-soft">{x.name}</span>)}</div>
           </Card>
         </div>
+      </section>
+
+      <section className="mt-8">
+        <h2 className="text-xl font-semibold text-ink">Nova empresa</h2>
+        <p className="mt-1 text-sm text-muted">Cria a empresa e o login do primeiro administrador. Ele mesmo cria a equipe, os vendedores e os cadastros da empresa.</p>
+        <Card className="mt-3 p-5">
+          <form action={createCompanyWithAdmin} className="grid gap-3 sm:grid-cols-2">
+            <label className="text-xs text-muted">Nome da empresa<input name="organization_name" required minLength={3} maxLength={200} className="field mt-1 block" /></label>
+            <label className="text-xs text-muted">CNPJ<input name="organization_document" required inputMode="numeric" placeholder="00.000.000/0000-00" className="field mt-1 block" /></label>
+            <label className="text-xs text-muted">Nome do administrador<input name="full_name" required minLength={3} maxLength={160} className="field mt-1 block" /></label>
+            <label className="text-xs text-muted">E-mail do administrador (login)<input name="email" type="email" required maxLength={254} autoComplete="off" className="field mt-1 block" /></label>
+            <div className="flex flex-wrap items-end gap-3 sm:col-span-2"><PasswordPair idPrefix="nova-empresa" label="Senha do administrador" /></div>
+            <label className="flex items-center gap-1.5 text-xs text-muted sm:col-span-2"><input type="checkbox" name="must_change" defaultChecked className="accent-[var(--brand)]" />Pedir nova senha no primeiro acesso</label>
+            <label className="flex items-center gap-1.5 text-xs text-muted sm:col-span-2"><input type="checkbox" name="confirm_similar" className="accent-[var(--brand)]" />Se avisar de nome parecido: o nome parecido está certo</label>
+            <div className="sm:col-span-2"><SubmitButton pendingText="Criando..." className={button}>Criar empresa e administrador</SubmitButton></div>
+          </form>
+        </Card>
       </section>
 
       <section className="mt-8">
