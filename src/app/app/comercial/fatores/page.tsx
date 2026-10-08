@@ -3,6 +3,7 @@ import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
 import { SubmitButton } from '@/components/SubmitButton'
 import { Card, PageHeader } from '@/components/ui'
+import { FactorPriceImport } from './FactorPriceImport'
 import { createFactorProfile, createManualFactor, importFactorFile, toggleFactorProfile } from './actions'
 
 const btn='inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong'
@@ -15,7 +16,7 @@ export default async function FactorsPage(){
  if(!atLeast(membership.role,'supervisor'))return <section><p className="text-sm text-muted">Sem permissão.</p></section>
  const canEdit=atLeast(membership.role,'manager')
  const [profiles,banks,agreements,tables,types,batches,entries]=await Promise.all([
-  supabase.from('commercial_factor_profiles').select('id,name,org_bank_id,org_agreement_id,product_table_id,contract_type_id,factor_mode,is_active').order('name'),
+  supabase.from('commercial_factor_profiles').select('id,name,org_bank_id,org_agreement_id,product_table_id,bank_table_code,contract_type_id,factor_mode,is_active').order('name'),
   supabase.from('organization_banks').select('id,name,is_active').order('name'),
   supabase.from('organization_agreements').select('id,name,is_active').order('name'),
   supabase.from('product_tables').select('id,name,status').order('name'),
@@ -51,12 +52,13 @@ export default async function FactorsPage(){
    <SubmitButton className={`${btn} mt-3`}>Criar perfil</SubmitButton>
    </form>
   </Card>}
+  {canEdit&&<FactorPriceImport banks={(banks.data??[]).filter(x=>x.is_active)} agreements={(agreements.data??[]).filter(x=>x.is_active)}/>}
 
   <div className="mt-5 space-y-3">{!(profiles.data??[]).length?<Card className="p-5"><p className="text-sm text-muted">Nenhum perfil de fator cadastrado.</p></Card>:(profiles.data??[]).map(p=>{
    const list=history.get(p.id)??[], b=current(p.factor_mode,list), es=b?entriesBy.get(b.id)??[]:[]
    const future=list.filter(x=>String(x.effective_date)>today)
    return <Card key={p.id} className={`p-5 ${p.is_active?'':'opacity-60'}`}>
-    <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-semibold text-ink">{p.name}</h2><p className="mt-1 text-xs text-muted">{MODE[p.factor_mode]??p.factor_mode} · {bankN.get(p.org_bank_id)??'Instituição'}{p.org_agreement_id?` · ${agrN.get(p.org_agreement_id)??'Convênio'}`:''}{p.product_table_id?` · ${tableN.get(p.product_table_id)??'Tabela'}`:''}{p.contract_type_id?` · ${typeN.get(p.contract_type_id)??'Tipo'}`:''}</p></div><div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-semibold text-ink">{p.name}</h2><p className="mt-1 text-xs text-muted">{MODE[p.factor_mode]??p.factor_mode} · {bankN.get(p.org_bank_id)??'Instituição'}{p.org_agreement_id?` · ${agrN.get(p.org_agreement_id)??'Convênio'}`:''}{p.product_table_id?` · ${tableN.get(p.product_table_id)??'Tabela'}`:''}{p.bank_table_code?` · tabela do banco ${p.bank_table_code} (todas as promotoras)`:''}{p.contract_type_id?` · ${typeN.get(p.contract_type_id)??'Tipo'}`:''}</p></div><div className="flex flex-wrap items-center gap-2">
      {!p.is_active?<span className="rounded-full bg-surface-muted px-2 py-0.5 text-xs text-muted">Desativado: o simulador não usa</span>
       :b?<span className="rounded-full bg-brand-soft px-2 py-0.5 text-xs text-brand-strong">Valendo hoje: {p.factor_mode==='daily'?`fator de ${brDate(String(b.effective_date))}`:`desde ${brDate(String(b.effective_date))}`} · rev. {b.revision}</span>
       :<span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">{p.factor_mode==='daily'?'Sem fator para hoje: o simulador não mostra estas tabelas':'Sem fator publicado'}</span>}
