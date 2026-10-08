@@ -1,4 +1,4 @@
--- Contract test for 20261007_fin_bank_account_receipts_payouts_v1: the account that received a commission report goes
+-- Contract test for 20261008001318_fin_bank_account_receipts_payouts_v1: the account that received a commission report goes
 -- to its receipts (already posted and posted later); a closed report changes only its account; the account of payout
 -- and receipt entries is set with an event, only by finance and only to an account of the company. Uses the test
 -- company's existing confirmed report and payout entries. One transaction, rolled back.
