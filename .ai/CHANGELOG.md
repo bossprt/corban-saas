@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Simulador: escolher a tabela (08/10/2026)
+- Adicionado (pedido do dono): campo "Tabela" ao lado de convênio e operação. Padrão "Todas as tabelas"; a lista segue o convênio e a operação escolhidos e mostra só tabelas com fator (perfil de fator ou coeficiente). A mesma tabela do banco vendida por várias promotoras é uma opção só (mesmo código, mesmo fator); o resultado mostra uma linha por promotora. Cliente deixa de ser obrigatório para simular (só para gravar). Sem mudança no banco de dados.
+
 ### Campo de arquivo visível em todas as telas (08/10/2026)
 - Corrigido (pedido do dono): o mesmo campo de arquivo (botão "Escolher arquivo", "ou arraste aqui" e o nome do arquivo escolhido) em documentos do cliente e da proposta, portal do corretor, extrato bancário, importar recebimentos, importar contratos, importação inteligente e base antiga. Versão compacta (`FileDrop compact`) onde o espaço é pequeno. Sem mudança no banco de dados.
 
