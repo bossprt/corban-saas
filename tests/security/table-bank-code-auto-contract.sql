@@ -1,4 +1,4 @@
--- Contract test for 20261009_table_bank_code_auto_v1: a table created later gets the bank's code by itself (from the
+-- Contract test for 20261009052702_table_bank_code_auto_v1: a table created later gets the bank's code by itself (from the
 -- system code ending in the number, or the name starting with it); a typed code is kept; a name without a number gives
 -- no code; the Fator Price import then finds the new table. One transaction, rolled back.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/table-bank-code-auto-contract.sql
