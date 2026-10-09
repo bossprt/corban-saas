@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Custo da Vercel: menos montagens (09/10/2026)
+- Alterado (aprovado pelo dono): o ciclo de cobrança da Vercel gastou o crédito de US$ 20 com montagem de versões (103 h de CPU, máquina Elastic que sobe até 30 vCPUs); o uso real do sistema custou ~US$ 0,37. O dono trocou a máquina de montagem para Basic (2 vCPUs). `vercel.json` ganhou `ignoreCommand`: commit que só muda documentação (`.ai/`, `*.md`) não monta versão. A atualização do CURRENT-TASK passa a ir no PR da própria entrega (metade dos merges).
+
 ### Código da tabela no banco automático (09/10/2026)
 - Corrigido: o "código da tabela no banco" (que liga a Fator Price às tabelas) só tinha sido preenchido nas tabelas Daycoval existentes em 08/10; tabela criada ou importada depois (de qualquer empresa, MAIS VALOR inclusive) ficava sem ele e a importação de fatores não a achava. Agora é preenchido sozinho ao criar ou renomear (código do sistema terminando no número, ex. day-bev-745031, ou nome começando por ele, ex. "745031 - ..."); código digitado nunca é trocado. Campo "Código da tabela no banco" na tela da tabela para conferir ou corrigir. Tabelas sem código receberam pela mesma regra (35 FINTECH, pelo número do código). Migration `20261009052702_table_bank_code_auto_v1` (aplicada em produção 09/10/2026, md5 conferido; 114 tabelas com código), contrato `tests/security/table-bank-code-auto-contract.sql` (6/6).
 
