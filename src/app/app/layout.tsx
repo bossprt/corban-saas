@@ -6,6 +6,7 @@ import { atLeast, canManageTeam } from '@/lib/rbac'
 import { can, type Permission } from '@/lib/access'
 import { ROLE_LABEL } from '@/lib/team'
 import { FlashBanner } from '@/components/FlashBanner'
+import { ImprovementLink } from '@/components/shell/ImprovementLink'
 import { BottomNav, SideNav, type NavItem } from '@/components/shell/NavLinks'
 import { CommandPalette } from '@/components/shell/CommandPalette'
 import { isPortalUser } from '@/lib/portal'
@@ -78,7 +79,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="mt-auto border-t border-line px-2 pt-3 text-xs text-muted">
           <div>{access?.roleName ?? ROLE_LABEL[membership.role] ?? membership.role}</div>
           {membershipCount > 1 && <Link href="/organizacao" className="underline hover:text-ink">Trocar empresa</Link>}
-          <form action={signOut} className="mt-2">
+          <div className="mt-2"><ImprovementLink /></div>
+          <form action={signOut}>
             <button type="submit" className="flex items-center gap-2 rounded-lg py-1.5 text-sm text-ink-soft hover:text-ink">
               <LogOut size={15} aria-hidden />Sair
             </button>
@@ -101,7 +103,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="text-sm text-muted">
           <div>{access?.roleName ?? ROLE_LABEL[membership.role] ?? membership.role} · {organization.name}</div>
           {membershipCount > 1 && <Link href="/organizacao" className="mt-2 inline-block underline">Trocar empresa</Link>}
-          <form action={signOut} className="mt-3">
+          <div className="mt-3"><ImprovementLink className="flex min-h-11 items-center gap-2 text-[15px] text-ink" /></div>
+          <form action={signOut}>
             <button type="submit" className="flex min-h-11 items-center gap-2 text-[15px] text-ink"><LogOut size={18} aria-hidden />Sair</button>
           </form>
         </div>
