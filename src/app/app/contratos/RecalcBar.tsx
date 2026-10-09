@@ -5,9 +5,16 @@ import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
 import { RefreshCw } from 'lucide-react'
 import type { RecalcResult } from './actions'
+import type { BulkSellerResult } from './quick-actions'
 
-// The row checkboxes live in the table (form="recalc-form"); this bar marks them and sends the chosen ones.
-export function RecalcBar({ action }: { action: (f: FormData) => Promise<RecalcResult> }) {
+// The row checkboxes live in the table (form="recalc-form"); this bar marks them and sends the chosen ones: to recalculate,
+// or (owner, 08/10/2026) to change their seller at once.
+export function RecalcBar({ action, sellerAction, sellers = [] }: {
+  action: (f: FormData) => Promise<RecalcResult>; sellerAction?: (f: FormData) => Promise<BulkSellerResult>; sellers?: { id: string; name: string }[]
+}) {
+  const [seller, setSeller] = useState('')
+  const [reason, setReason] = useState('')
+  const [kind, setKind] = useState<'recalc' | 'seller'>('recalc')
   const router = useRouter()
   const [result, setResult] = useState<RecalcResult | null>(null)
   const [count, setCount] = useState(0)
@@ -17,11 +24,23 @@ export function RecalcBar({ action }: { action: (f: FormData) => Promise<RecalcR
   const submit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const data = new FormData(e.currentTarget)
-    setResult(null)
+    setResult(null); setKind('recalc')
     start(async () => {
       const r = await action(data)
       setResult(r)
       if (!r.error) { mark(() => false); router.refresh() }
+    })
+  }
+  const changeSeller = () => {
+    if (!sellerAction || !seller) return
+    const data = new FormData()
+    boxes().filter(b => b.checked).forEach(b => data.append('ids', b.value))
+    data.set('seller_id', seller); data.set('reason', reason)
+    setResult(null); setKind('seller')
+    start(async () => {
+      const r = await sellerAction(data)
+      setResult(r)
+      if (!r.error) { mark(() => false); setSeller(''); setReason(''); router.refresh() }
     })
   }
   const btn = 'inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line-strong bg-surface px-3 text-sm text-ink hover:bg-surface-muted'
@@ -36,9 +55,19 @@ export function RecalcBar({ action }: { action: (f: FormData) => Promise<RecalcR
           <RefreshCw size={15} aria-hidden className={pending ? 'animate-spin' : ''} />{pending ? 'Recalculando...' : 'Recalcular selecionados'}
         </button>
       </div>
+      {sellerAction && count > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-ink-soft">Trocar o vendedor dos {count} marcado(s) para</span>
+          <select value={seller} onChange={e => setSeller(e.target.value)} aria-label="Novo vendedor dos marcados" className="field h-9 w-auto py-1">
+            <option value="">Escolha</option>{sellers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+          <input value={reason} onChange={e => setReason(e.target.value)} maxLength={500} placeholder="Motivo (obrigatório para contrato pago)" aria-label="Motivo da troca" className="field h-9 w-64 py-1" />
+          <button type="button" onClick={changeSeller} disabled={pending || !seller} className="inline-flex h-9 items-center rounded-[10px] bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50">{pending ? 'Salvando...' : 'Trocar vendedor'}</button>
+        </div>
+      )}
       {result && (
         <div role="status" className={`rounded-[10px] border px-3 py-2 text-sm ${result.error || result.failed.length ? 'border-[#FCD34D] bg-[#FFFBEB] text-[#92400E]' : 'border-[#86EFAC] bg-[#F0FDF4] text-[#166534]'}`}>
-          {result.error ?? `${result.ok} contrato(s) recalculado(s).${result.failed.length ? ` ${result.failed.length} não puderam ser recalculados:` : ''}`}
+          {result.error ?? `${result.ok} contrato(s) ${kind === 'seller' ? 'com vendedor trocado' : 'recalculado(s)'}.${result.failed.length ? ` ${result.failed.length} não puderam ser ${kind === 'seller' ? 'alterados' : 'recalculados'}:` : ''}`}
           {!!result.failed.length && <ul className="mt-1 list-disc pl-5">{result.failed.map(x => <li key={x.id}><Link href={`/app/propostas/${x.id}`} className="underline">{x.label}</Link>: {x.reason}</li>)}</ul>}
         </div>
       )}
