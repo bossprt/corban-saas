@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
@@ -6,7 +7,13 @@ import { ACTIVE_ORG_COOKIE,resolveActiveMembership,scopeToOrganization,type Memb
 import { isScope, type Access, type Tier } from '@/lib/access'
 
 // `allowPendingTerms`: only the terms page itself, which must open while the company has not accepted them yet.
-export async function requireAppContext(opts?: { allowPendingTerms?: boolean }) {
+// Speed (09/10/2026): one screen calls this from the layout, the page and its parts; React's cache makes it run once
+// per request (in a server action it simply runs), and the checks that do not depend on each other run together.
+export function requireAppContext(opts?: { allowPendingTerms?: boolean }) {
+  return loadAppContext(!!opts?.allowPendingTerms)
+}
+
+const loadAppContext = cache(async (allowPendingTerms: boolean) => {
   const rawClient = await createClient()
   const { data: { user }, error: userError } = await rawClient.auth.getUser()
   if (userError || !user) redirect('/login')
@@ -38,30 +45,28 @@ export async function requireAppContext(opts?: { allowPendingTerms?: boolean }) 
   if (resolution.kind === 'choose') redirect('/organizacao')
 
   const membership = { organization_id: resolution.membership.organization_id, role: resolution.membership.role, status: 'active' }
-  const { data: organization, error: organizationError } = await rawClient
-    .from('organizations')
-    .select('id, name')
-    .eq('id', membership.organization_id)
-    .single()
+  const org = membership.organization_id
+  // The company, the terms, the caller's access and the company's modules do not depend on each other: asked together.
+  const [{ data: organization, error: organizationError }, termsResult, { data: accessRows }, { data: moduleRows }] = await Promise.all([
+    rawClient.from('organizations').select('id, name').eq('id', org).single(),
+    allowPendingTerms ? Promise.resolve({ data: false }) : rawClient.rpc('terms_pending', { p_org: org }),
+    rawClient.rpc('my_access', { p_org: org }),
+    rawClient.rpc('my_modules', { p_org: org }),
+  ])
 
   if (organizationError || !organization) redirect('/access-pending')
 
   // Terms of use (08/10/2026): while the company has not accepted the version in force, every screen goes to the terms
   // page. A failure to check never blocks (the database refuses nothing on its own because of the terms).
-  if (!opts?.allowPendingTerms) {
-    const { data: pending } = await rawClient.rpc('terms_pending', { p_org: organization.id })
-    if (pending === true) redirect('/termos')
-  }
+  if (!allowPendingTerms && termsResult.data === true) redirect('/termos')
 
   const supabase = scopeToOrganization(rawClient, organization.id)
   // Role, scope and permissions of the caller in this company. A failure leaves `access` null, which denies every permission.
-  const { data: accessRows } = await rawClient.rpc('my_access', { p_org: organization.id })
   const a = Array.isArray(accessRows) ? accessRows[0] : null
   const access: Access | null = a && isScope(a.scope)
     ? { roleId: a.role_id, roleKey: a.role_key, roleName: a.role_name, tier: a.tier as Tier, scope: a.scope, permissions: new Set<string>(a.permissions ?? []) }
     : null
   // Modules switched on for this company (plan). A failure leaves the set empty, which hides every module.
-  const { data: moduleRows } = await rawClient.rpc('my_modules', { p_org: organization.id })
   const modules = new Set<string>(Array.isArray(moduleRows) ? (moduleRows as string[]) : [])
   return { supabase, user, membership, organization, access, modules, membershipCount: (rows ?? []).length }
-}
+})

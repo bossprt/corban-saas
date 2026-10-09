@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Velocidade: conferência de acesso uma vez por tela (09/10/2026)
+- Alterado (dono: cliques demoram): a conferência de cada tela (usuário, empresa, termos, permissões, módulos) rodava de novo no menu, na página e em cada parte (painel, janelas), 6 consultas em fila a cada vez. Agora roda uma vez por tela (cache do React por pedido) e as 4 consultas independentes (empresa, termos, permissões, módulos) vão juntas. Medido local no painel de um lead: conferência de 4 vezes para 1; consultas ao banco de 41 para 32 (as restantes em paralelo). Regras e permissões iguais. Sem mudança no banco de dados.
+
 ### Contratos: canceladas e recusadas escondidas; formulários sempre POST (09/10/2026)
 - Alterado (MEL-2026-0001, pedido do dono): em Contratos, canceladas e recusadas ficam escondidas por padrão; o botão "Mostrar canceladas e recusadas (N)" traz de volta (e "Esconder" esconde); escolhendo Cancelado ou Recusado no filtro Situação elas aparecem. Os totais do topo somam só o que está na lista.
 - Segurança: o formulário de login (e outros enviados por JavaScript: definir senha, vendedor, pagar em lote, recalcular, Fator Price) não tinha método; se enviado antes de a página carregar, o navegador mandava os campos no endereço (GET), inclusive a senha. Agora todos são POST; as caixas de busca de lista ficam GET de propósito. Teste unitário garante que nenhum formulário volte a ficar sem método.
