@@ -1,4 +1,4 @@
--- Contract test for 20261009_proposal_seller_links_v1: an association (bank, ADE or CPF, seller) gives its seller to the
+-- Contract test for 20261009025438_proposal_seller_links_v1: an association (bank, ADE or CPF, seller) gives its seller to the
 -- contract that arrives later, over the seller the import brings (owner decision); by ADE, else by CPF for a contract
 -- created after it; used once; an existing contract with the ADE gets the seller at once; an association can be cancelled
 -- with a reason; another company is refused; nobody writes the table directly. One transaction, rolled back.
