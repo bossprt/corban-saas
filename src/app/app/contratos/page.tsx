@@ -55,6 +55,8 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
     situacao: one(sp.situacao), cliente: isUuid(one(sp.cliente)) ? one(sp.cliente) : '', comissao: one(sp.comissao), alterado: one(sp.alterado), repasse: one(sp.repasse), desatualizado: one(sp.desatualizado),
     // Paid to the client between these dates (the dashboard opens the contracts behind each number).
     pago_de: one(sp.pago_de), pago_ate: one(sp.pago_ate),
+    // Cancelled and rejected contracts are hidden unless asked for (owner, MEL-2026-0001, 09/10/2026).
+    encerradas: one(sp.encerradas) === '1' ? '1' : '',
     // A CPF typed in the search is looked up by POST (CpfSearchForm) and becomes cliente=<id>; a CPF that still reaches
     // the URL is ignored.
     q: CPF_LIKE.test(text) ? '' : text.toLowerCase(),
@@ -123,7 +125,9 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
     return { table: t?.name ?? '—', bank: r?.org_bank_id ?? '', agreement: r?.org_agreement_id ?? '' }
   }
 
-  const filtered = contracts.map(c => ({ c, w: where(c), s: c.seller_id ? sellerOf.get(c.seller_id) : undefined })).filter(({ c, w, s }) =>
+  const CLOSED_STATUSES = ['cancelled', 'rejected']
+  const showClosed = !!f.encerradas || CLOSED_STATUSES.includes(f.situacao)
+  const matching = contracts.map(c => ({ c, w: where(c), s: c.seller_id ? sellerOf.get(c.seller_id) : undefined })).filter(({ c, w, s }) =>
     (!f.de || c.created_at.slice(0, 10) >= f.de) && (!f.ate || c.created_at.slice(0, 10) <= f.ate)
     && (!f.banco || w.bank === f.banco) && (!f.convenio || w.agreement === f.convenio)
     && (!f.vendedor || c.seller_id === f.vendedor) && (!f.grupo || s?.commission_group_id === f.grupo)
@@ -135,6 +139,8 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
     && (!f.repasse || repasseOf(c.id) === f.repasse || (f.repasse === 'concluido' && ['pago', 'sem_repasse'].includes(repasseOf(c.id)))
       || (f.repasse === 'banco' && waitingOf(c.id) === 'bank') || (f.repasse === 'divergente' && waitingOf(c.id) === 'divergent'))
     && (!f.q || String(c.customer_snapshot?.full_name ?? '').toLowerCase().includes(f.q) || String(c.external_proposal_id ?? '').toLowerCase().includes(f.q)))
+  const hiddenClosed = showClosed ? 0 : matching.filter(x => CLOSED_STATUSES.includes(x.c.status)).length
+  const filtered = showClosed ? matching : matching.filter(x => !CLOSED_STATUSES.includes(x.c.status))
   const size = pageSize(one(sp.n), 25), pages = Math.max(1, Math.ceil(filtered.length / size))
   const page = Math.min(Math.max(1, Number(one(sp.p)) || 1), pages)
   const rows = filtered.slice((page - 1) * size, page * size)
@@ -178,6 +184,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
             <input name="q" defaultValue={f.q ? text : ''} maxLength={80} placeholder="Nome, CPF ou nº do contrato" className="field mt-1.5" />
           </label>
           {f.cliente && <input type="hidden" name="cliente" value={f.cliente} />}
+          {f.encerradas && <input type="hidden" name="encerradas" value="1" />}
           {f.pago_de && <input type="hidden" name="pago_de" value={f.pago_de} />}{f.pago_ate && <input type="hidden" name="pago_ate" value={f.pago_ate} />}
           <label className={lbl}>De<input type="date" name="de" defaultValue={f.de} className="field mt-1.5" /></label>
           <label className={lbl}>Até<input type="date" name="ate" defaultValue={f.ate} className="field mt-1.5" /></label>
@@ -223,7 +230,9 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
       </div>}
 
       <Card>
-        <CardHeader title={<span className="flex items-center gap-2">Contratos <Badge tone="neutral">{filtered.length}</Badge></span>} />
+        <CardHeader title={<span className="flex items-center gap-2">Contratos <Badge tone="neutral">{filtered.length}</Badge></span>}
+          action={CLOSED_STATUSES.includes(f.situacao) ? undefined : <Link href={qs({ encerradas: f.encerradas ? '' : '1', p: 1 })} scroll={false} className="inline-flex h-9 items-center rounded-[10px] border border-line bg-surface px-3 text-sm text-ink-soft hover:bg-surface-muted">
+            {f.encerradas ? 'Esconder canceladas e recusadas' : `Mostrar canceladas e recusadas (${hiddenClosed})`}</Link>} />
         {canRecalc && <div className="mt-3"><RecalcBar action={recalcContracts} sellerAction={bulkSeller} sellers={(sellers ?? []).map(s => ({ id: s.id, name: `${s.code ? `${String(s.code).padStart(3, '0')} · ` : ''}${s.name}` }))} /></div>}
         <div className="mt-3 overflow-x-auto">
           <table className="w-full min-w-[940px] text-left text-[13px]">

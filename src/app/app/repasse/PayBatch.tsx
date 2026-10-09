@@ -74,7 +74,7 @@ export function PayBatch({ lines, action, today, banks = [], suggestedBank = '' 
   if (!lines.length) return <p className="px-5 py-4 text-sm text-ink-soft">Nenhum vendedor com valor liberado para pagar agora.</p>
   const th = 'px-3 py-2 font-medium'
   return (
-    <form onSubmit={submit}>
+    <form method="post" onSubmit={submit}>
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 pb-3 text-sm">
         <span className="text-ink-soft">{lines.length} a pagar · <strong className="text-ink">{brlText(totalAll)}</strong> · marcados {chosen.length} · <strong className="text-ink">{brlText(totalChosen)}</strong></span>
         <span className="flex flex-wrap gap-2">

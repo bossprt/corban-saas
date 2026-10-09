@@ -23,7 +23,7 @@ export function BoardSearch({ children, className }: { children: ReactNode; clas
 
   return (
     <>
-      <form action="/app/crm" onSubmit={onSubmit} role="search" className={className}>{children}</form>
+      <form action="/app/crm" method="get" onSubmit={onSubmit} role="search" className={className}>{children}</form>
       {notFound && <p role="status" className="mb-4 rounded-[10px] border border-line bg-surface px-4 py-2.5 text-sm text-ink-soft">Nenhum lead seu com este CPF.</p>}
     </>
   )

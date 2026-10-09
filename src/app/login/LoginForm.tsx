@@ -41,7 +41,7 @@ export default function LoginForm({ notice }: { notice?: string }) {
             <p className="text-sm text-muted">Acesse sua operação</p>
           </div>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-5 rounded-[16px] border border-line bg-surface p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+        <form method="post" onSubmit={handleSubmit} className="space-y-5 rounded-[16px] border border-line bg-surface p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
           <div>
             <label htmlFor="login-email" className="mb-1.5 block text-[13px] font-medium text-ink-soft">E-mail</label>
             <input id="login-email" name="email" type="email" autoComplete="email" required className="field h-11" />

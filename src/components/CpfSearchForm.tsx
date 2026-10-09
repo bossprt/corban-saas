@@ -35,7 +35,7 @@ export function CpfSearchForm({ action, mode, className, children }: { action: s
 
   return (
     <>
-      <form action={action} onSubmit={onSubmit} className={className} role="search" aria-busy={busy}>{children}</form>
+      <form action={action} method="get" onSubmit={onSubmit} className={className} role="search" aria-busy={busy}>{children}</form>
       {notFound && (
         <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-[10px] border border-line bg-surface px-4 py-3 text-sm text-ink-soft">
           Nenhum cliente com este CPF.
