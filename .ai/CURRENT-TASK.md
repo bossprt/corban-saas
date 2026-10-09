@@ -1,6 +1,6 @@
 # CURRENT TASK — CORBAN SaaS (reset de produto)
 
-**Atualização:** 08/10/2026 (venda até a fila, layout Hope)
+**Atualização:** 08/10/2026 (Contratos: setinha e Associar proposta)
 **Branch:** `main` (todas as entregas abaixo mergeadas e aplicadas em produção, md5 das migrations conferido).
 
 ## Estado (08/10/2026)
@@ -37,6 +37,8 @@
   - #122 "Venda fechada" cria a proposta, prepara o checklist do banco e, sem documento obrigatório faltando, envia para a Fila de digitação; Esteira com bloco "Antes da fila" (rascunho, documentos pendentes, pronta) e "Cancelar" com motivo (não apaga; motivo vira anotação; lead volta para Negociando). Migration `20261008200952_cancel_proposal_before_queue_v1` (md5 conferido). Teste do dono (Maria das Graças): proposta criada às 15:08 e cancelada pelo dono às 20:38 com motivo "era teste" (não apagada; lead voltou para Negociando; sem repasse).
   - #123 layout de importação de contratos Hope (relatório BuscaContrato): ADE = NumeroContrato, tabela pelo nome, "PAGO AO CLIENTE" = pago na DataStatusBancoCliente; colunas de comissão da promotora ignoradas; parcela 0 = não informada (todos os layouts). Contrato 143413 importado pelo dono em 08/10: corretor alterado (comissão calculada: Hope 15% = R$ 772,08, imposto 6%, corretor 9,16% = R$ 471,48), recebimento manual de R$ 772,08 em 05/10 na C6 conciliado; repasse alterado para 10% (ajuste +R$ 43,24 = R$ 514,72, aprovado, não pago).
   - #125 Esteira: "Antes da fila" em cartões (sem rolagem lateral); "Cancelar" abre confirmação abaixo do cartão com cliente, valor, prazo, parcela e data, motivo, "Sim, cancelar" / "Voltar" (pedido do dono: perdia o cliente de vista ao rolar).
+  - #127 Contratos: setinha abaixo da caixinha de cada contrato com menu de alterações rápidas em janela sobre a lista (Alterar vendedor, Alterar/Ver comissão ou Cadastrar comissão com o motivo e o campo que resolve, Dados do contrato, Alterar ADE, Documentos, Observações, Abrir contrato); trocar vendedor de vários marcados; totais líquido e bruto dos filtrados; etiquetas (pago/não pago ao vendedor, físico, pendência). Alterar ADE: `20261009015632_contract_ade_edit_v1` (md5 conferido; ADE repetida recusada; número anterior continua achando o contrato nos relatórios).
+  - #128 Associar proposta (ADR-0055): banco, nº/ADE e/ou CPF, nome, vendedor; o contrato que chega (qualquer importação, cadastro, portal) recebe o vendedor associado no lugar do da planilha (decisão do dono), pelo nº no mesmo banco ou, sem nº, pelo CPF só para contrato novo; contrato que já existe com o nº recebe na hora; uso único; cancelar com motivo. `20261009025438_proposal_seller_links_v1` (md5 conferido).
 
 ## Validado com o dono
 - 06/10: contrato real do início ao fim; 2 contas bancárias no Financeiro; pagamento em lote de 9 vendedores (R$ 1.610,10) por QR Code PIX; contrato 131259 concluído.
@@ -47,6 +49,7 @@
 - Implantação da MAIS VALOR (o dono auxilia; só usuários dela configuram): primeiro acesso e troca de senha; grupos de comissão; bancos, convênios, promotoras; tabelas (importação, layout do banco dela se precisar); equipe; vendedores; contas bancárias e repasse; layout de importação de contratos do banco dela. Login de outra empresa não entra nela: para ajudar por dentro, o dono usa outro e-mail. Termos: rascunho pronto; falta o advogado aprovar, preencher CNPJ, endereço, DPO, prazos e foro, e o dono publicar a versão em /platform (depois o dono aceita pela Smart e a administradora da MAIS VALOR pela empresa dela).
 - Fatores Daycoval Gov. Acre valem até 06/11/2026: importar a próxima Fator Price do banco antes disso. Outros bancos/convênios: sem fator ainda (simulador não mostra).
 - Painel lateral de Vendas (#120): validar com o dono no uso real e ajustar o que ele pedir.
+- Contratos: dono vai pedindo novas alterações rápidas para o menu da setinha (entram como novos itens).
 - Hope: mapear outros status do relatório (só "PAGO AO CLIENTE" conhecido) quando vier um relatório com eles.
 - Bancos/convênios sem lista de documentos: "Venda fechada" deixa a proposta em "Antes da fila"; cadastrar em Cadastros > Documentos por banco.
 - Consulta de dados do cliente por CPF em fornecedores (Promosys, Vanguard e outros): decisão do dono de seguir, com o alerta de LGPD registrado; só com a documentação da API do fornecedor, credencial por empresa e registro de cada consulta (quem, CPF, quando, fornecedor).
