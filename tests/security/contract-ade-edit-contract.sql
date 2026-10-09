@@ -1,4 +1,4 @@
--- Contract test for 20261009_contract_ade_edit_v1: an admin changes a contract's ADE (history and a new bank identity are
+-- Contract test for 20261009015632_contract_ade_edit_v1: an admin changes a contract's ADE (history and a new bank identity are
 -- kept, the old identity stays); an ADE used by another contract is refused; a malformed ADE is refused; a cancelled
 -- contract is refused; another company is refused. One transaction, rolled back.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/contract-ade-edit-contract.sql
