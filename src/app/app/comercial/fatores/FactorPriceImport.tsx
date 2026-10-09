@@ -35,7 +35,7 @@ export function FactorPriceImport({ banks, agreements }: { banks: { id: string; 
   return <Card className="mt-5 p-5">
     <h2 className="font-semibold text-ink">Importar Fator Price do banco</h2>
     <p className="mt-1 text-xs text-muted">Planilha do banco com uma aba por tabela (Convênio = código da tabela) e uma linha por dia útil. O fator vale para todas as promotoras que vendem a tabela. Sábado, domingo e feriado não têm fator: o simulador não mostra a tabela nesses dias.</p>
-    <form onSubmit={check} className="mt-3 grid gap-2 md:grid-cols-3">
+    <form method="post" onSubmit={check} className="mt-3 grid gap-2 md:grid-cols-3">
       <select required name="bank" defaultValue="" className="field"><option value="" disabled>Banco</option>{banks.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select>
       <select required name="agreement" defaultValue="" className="field"><option value="" disabled>Convênio</option>{agreements.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select>
       <div className="md:col-span-3"><FileDrop name="files" accept=".xlsx" multiple required hint="Fator Price do banco, .xlsx; pode mandar várias juntas" onChange={() => { setPreview(null); setForm(null) }} /></div>

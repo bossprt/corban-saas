@@ -57,7 +57,7 @@ export function SellerForm({ action, seller, accounts = [], contacts = [], group
     })
   }
   return (
-    <form onSubmit={submit} className="grid gap-6">
+    <form method="post" onSubmit={submit} className="grid gap-6">
       {s && <input type="hidden" name="seller_id" value={s.id} />}
       {s && canEdit && (
         <div className="flex flex-wrap items-center justify-between gap-3">

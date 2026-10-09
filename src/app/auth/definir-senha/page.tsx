@@ -75,7 +75,7 @@ export default function SetPasswordPage() {
       {state === 'used' && <p role="alert" className={authError}>Este link já foi usado (cada link vale uma vez) ou expirou. Use &ldquo;Esqueci minha senha&rdquo; na tela de login com o mesmo e-mail para receber um novo.</p>}
       {state === 'invalid' && <p role="alert" className={authError}>Este link é inválido ou expirou. Peça um novo convite ao administrador, ou use &ldquo;Esqueci minha senha&rdquo; na tela de login.</p>}
       {state === 'ready' && (
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form method="post" onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label htmlFor="new-password" className={authLabel}>Nova senha <span className="font-normal text-muted">(mínimo {MIN_LENGTH} caracteres)</span></label>
             <input id="new-password" name="password" type="password" autoComplete="new-password" required minLength={MIN_LENGTH} className="field h-11" />

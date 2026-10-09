@@ -45,7 +45,7 @@ export function RecalcBar({ action, sellerAction, sellers = [] }: {
   }
   const btn = 'inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line-strong bg-surface px-3 text-sm text-ink hover:bg-surface-muted'
   return (
-    <form id="recalc-form" onSubmit={submit} onChange={() => setCount(boxes().filter(b => b.checked).length)} className="grid gap-2 border-b border-line px-5 py-3">
+    <form id="recalc-form" method="post" onSubmit={submit} onChange={() => setCount(boxes().filter(b => b.checked).length)} className="grid gap-2 border-b border-line px-5 py-3">
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="text-ink-soft">{count ? `${count} marcado(s)` : 'Marque os contratos para recalcular a comissão'}</span>
         <button type="button" onClick={() => mark(() => true)} className={btn}>Marcar todos desta página</button>
