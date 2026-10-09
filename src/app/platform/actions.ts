@@ -126,3 +126,14 @@ export async function publishTermsVersion(f: FormData) {
   await admin.from('platform_admin_audit_events').insert({ actor_user_id: g.userId, action: 'terms_version.publish', metadata: { version, terms_version_id: data!.id, body_sha256: sha } })
   go('ok', `Termos versão ${version} publicados. Cada empresa aceita no próximo acesso do administrador.`)
 }
+
+// Answer an improvement request (status and the answer the company sees); the database checks the platform administrator.
+export async function answerImprovement(f: FormData) {
+  const g = await gate()
+  const id = clean(f.get('request_id')), status = clean(f.get('status')), response = clean(f.get('response'))
+  if (!/^[0-9a-f-]{36}$/.test(id) || !['received', 'analyzing', 'approved', 'declined', 'delivered'].includes(status)) go('erro', 'Solicitação inválida.')
+  if (status === 'declined' && response.length < 3) go('erro', 'Para "Não será feita", escreva o motivo na resposta.')
+  const { error } = await createAdminClient().rpc('platform_answer_improvement_request', { p_request: id, p_status: status, p_response: response || null, p_actor: g.userId })
+  if (error) go('erro', 'Não foi possível salvar a resposta.')
+  go('ok', 'Resposta salva. A empresa vê na tela Sugerir melhoria.')
+}

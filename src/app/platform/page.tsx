@@ -3,29 +3,37 @@ import { Building2, Files, LogOut } from 'lucide-react'
 import { requirePlatformAdmin } from '@/lib/platform.server'
 import { createAdminClient } from '@/lib/supabaseAdmin'
 import { signOut } from '@/app/app/actions'
-import { addDocumentType, createCompanyWithAdmin, publishTermsVersion, setOrganizationModule } from './actions'
+import { addDocumentType, answerImprovement, createCompanyWithAdmin, publishTermsVersion, setOrganizationModule } from './actions'
+import { IMPROVEMENT_KIND, IMPROVEMENT_STATUS } from '@/lib/improvements'
 import { PasswordPair } from '@/components/PasswordPair'
 import { SubmitButton } from '@/components/SubmitButton'
 import { PLAN_MODULE_LABEL, PLAN_MODULES } from '@/lib/access'
-import { Card } from '@/components/ui'
+import { Badge, Card } from '@/components/ui'
 
 const button='inline-flex h-10 items-center justify-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong'
 
-export default async function PlatformPage({searchParams}:{searchParams:Promise<{ok?:string;erro?:string}>}) {
+export default async function PlatformPage({searchParams}:{searchParams:Promise<{ok?:string;erro?:string;sol?:string}>}) {
   const gate=await requirePlatformAdmin()
   if(!gate.ok) redirect('/login')
   const admin=createAdminClient()
-  const [docs,orgs,orgModules,terms]=await Promise.all([
+  const [docs,orgs,orgModules,terms,improvements]=await Promise.all([
     admin.from('document_types').select('id,code,name,is_active').order('name'),
     admin.from('organizations').select('id,name,document,is_active').order('name'),
     admin.from('organization_modules').select('organization_id,module_key,enabled'),
     admin.from('terms_versions').select('id,version,published_at').order('published_at',{ascending:false}).limit(1).maybeSingle(),
+    admin.from('improvement_requests').select('id,organization_id,protocol,kind,title,body,page_path,status,response,created_at').order('created_at',{ascending:false}).limit(300),
   ])
   // Terms of use (08/10/2026): the version in force and which companies accepted it.
   const currentTerms=terms.data as {id:string;version:string;published_at:string}|null
   const { data: acceptances }=currentTerms?await admin.from('organization_terms_acceptances').select('organization_id,accepted_at').eq('terms_version_id',currentTerms.id):{data:[]}
   const acceptedBy=new Map(((acceptances??[]) as {organization_id:string;accepted_at:string}[]).map(a=>[a.organization_id,a.accepted_at]))
   const sp=await searchParams
+  // Improvement requests of every company (08/10/2026): open ones by default; ?sol=todas shows all.
+  type Req={id:string;organization_id:string;protocol:string;kind:string;title:string;body:string;page_path:string|null;status:string;response:string|null;created_at:string}
+  const allReqs=(improvements.data??[]) as Req[]
+  const showAll=sp.sol==='todas'
+  const reqs=showAll?allReqs:allReqs.filter(r=>!['declined','delivered'].includes(r.status))
+  const orgName=new Map((orgs.data??[]).map(o=>[o.id,o.name]))
 
   return <main className="min-h-screen bg-canvas p-4 md:p-8">
     <div className="mx-auto max-w-7xl">
@@ -41,6 +49,25 @@ export default async function PlatformPage({searchParams}:{searchParams:Promise<
         <Card className="p-5"><Building2 className="text-brand"/><div className="mt-3 text-3xl font-semibold text-ink">{orgs.data?.length??0}</div><div className="text-sm text-muted">Organizações</div></Card>
         <Card className="p-5"><Files className="text-brand"/><div className="mt-3 text-3xl font-semibold text-ink">{docs.data?.length??0}</div><div className="text-sm text-muted">Tipos de documento</div></Card>
       </div>
+
+      <section className="mt-8">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div><h2 className="text-xl font-semibold text-ink">Solicitações de melhoria</h2>
+            <p className="mt-1 text-sm text-muted">Pedidos das empresas pelo botão Sugerir melhoria. A resposta aparece para quem pediu e para o administrador da empresa.</p></div>
+          <a href={showAll?'/platform':'/platform?sol=todas'} className="text-sm text-brand hover:underline">{showAll?'Só as abertas':`Ver todas (${allReqs.length})`}</a>
+        </div>
+        <div className="mt-3 space-y-3">{reqs.map(r=>{const [st,tone]=IMPROVEMENT_STATUS[r.status]??[r.status,'neutral' as const];return <Card key={r.id} className="p-4">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm"><span className="font-mono text-xs text-muted">{r.protocol}</span><span className="font-medium text-ink">{r.title}</span><Badge tone="neutral">{IMPROVEMENT_KIND[r.kind]??r.kind}</Badge><Badge tone={tone}>{st}</Badge><span className="ml-auto text-xs text-muted">{orgName.get(r.organization_id)??'Empresa'} · {new Date(r.created_at).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'})}{r.page_path?` · ${r.page_path}`:''}</span></div>
+          <p className="mt-1 whitespace-pre-wrap text-sm text-ink-soft">{r.body}</p>
+          <form action={answerImprovement} className="mt-3 grid gap-2 sm:grid-cols-[220px_1fr_auto] sm:items-end"><input type="hidden" name="request_id" value={r.id}/>
+            <label className="text-xs text-muted">Situação<select name="status" defaultValue={r.status} className="field mt-1 block">{Object.entries(IMPROVEMENT_STATUS).map(([k,[v]])=><option key={k} value={k}>{v}</option>)}</select></label>
+            <label className="text-xs text-muted">Resposta para a empresa<input name="response" maxLength={4000} defaultValue={r.response??''} placeholder="Obrigatória para Não será feita" className="field mt-1 block"/></label>
+            <SubmitButton pendingText="Salvando..." className={button}>Salvar</SubmitButton>
+          </form>
+        </Card>})}
+        {!reqs.length&&<Card className="p-4"><p className="text-sm text-muted">Nenhuma solicitação {showAll?'':'aberta '}.</p></Card>}
+        </div>
+      </section>
 
       <section className="mt-8">
         <h2 className="text-xl font-semibold text-ink">Tipos de documento</h2>

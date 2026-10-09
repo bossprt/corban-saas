@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Sugerir melhoria (08/10/2026)
+- Adicionado (pedido do dono): "Sugerir melhoria" no menu de todas as telas (perto de Sair). Tipo (melhoria, erro, dúvida), título e descrição; a tela de origem vai junto; aviso para não colocar CPF nem dados de clientes. Gera protocolo (MEL-2026-0001). Cada usuário vê as suas; o administrador da empresa, todas da empresa; nenhuma empresa vê a de outra. Em /platform, "Solicitações de melhoria" de todas as empresas: situação (Recebida, Em análise, Aprovada: vai ser feita, Não será feita (com motivo), Entregue) e resposta que a empresa vê. Histórico de cada mudança; nada é apagado; até 20 pedidos por usuário por dia. Migration `20261009_improvement_requests_v1` (ainda não aplicada em produção), contrato `tests/security/improvement-requests-contract.sql` (13/13).
+
 ### Contratos: Associar proposta (08/10/2026)
 - Adicionado (pedido do dono): botão "Associar proposta" em Contratos: banco, nº da proposta/ADE e/ou CPF, nome do cliente e vendedor. Quando o contrato chega ao Corban (qualquer layout de importação, cadastro, portal), o vendedor da associação entra sozinho, no lugar do vendedor da planilha (decisão do dono), com histórico no contrato; a importação avisa "Vendedor da proposta associada". Achado no mesmo banco pelo nº (ADE) e, sem nº, pelo CPF só para contrato novo (contratos antigos do cliente não mudam). Contrato que já existe com o nº recebe o vendedor na hora (recalculado). Cada associação vale uma vez; cancelar pede motivo e não apaga. Lista com aguardando, usadas e canceladas. Migration `20261009025438_proposal_seller_links_v1` (aplicada em produção 08/10/2026, md5 conferido), contrato `tests/security/proposal-seller-links-contract.sql` (10/10).
 
