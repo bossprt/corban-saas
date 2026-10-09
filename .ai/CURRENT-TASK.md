@@ -1,6 +1,6 @@
 # CURRENT TASK — CORBAN SaaS (reset de produto)
 
-**Atualização:** 08/10/2026 (Contratos: setinha e Associar proposta)
+**Atualização:** 09/10/2026 (Sugerir melhoria)
 **Branch:** `main` (todas as entregas abaixo mergeadas e aplicadas em produção, md5 das migrations conferido).
 
 ## Estado (08/10/2026)
@@ -39,6 +39,7 @@
   - #125 Esteira: "Antes da fila" em cartões (sem rolagem lateral); "Cancelar" abre confirmação abaixo do cartão com cliente, valor, prazo, parcela e data, motivo, "Sim, cancelar" / "Voltar" (pedido do dono: perdia o cliente de vista ao rolar).
   - #127 Contratos: setinha abaixo da caixinha de cada contrato com menu de alterações rápidas em janela sobre a lista (Alterar vendedor, Alterar/Ver comissão ou Cadastrar comissão com o motivo e o campo que resolve, Dados do contrato, Alterar ADE, Documentos, Observações, Abrir contrato); trocar vendedor de vários marcados; totais líquido e bruto dos filtrados; etiquetas (pago/não pago ao vendedor, físico, pendência). Alterar ADE: `20261009015632_contract_ade_edit_v1` (md5 conferido; ADE repetida recusada; número anterior continua achando o contrato nos relatórios).
   - #128 Associar proposta (ADR-0055): banco, nº/ADE e/ou CPF, nome, vendedor; o contrato que chega (qualquer importação, cadastro, portal) recebe o vendedor associado no lugar do da planilha (decisão do dono), pelo nº no mesmo banco ou, sem nº, pelo CPF só para contrato novo; contrato que já existe com o nº recebe na hora; uso único; cancelar com motivo. `20261009025438_proposal_seller_links_v1` (md5 conferido).
+  - #130 Sugerir melhoria: botão no menu de todas as telas; tipo (melhoria, erro, dúvida), título, descrição, tela de origem; protocolo MEL-AAAA-NNNN; cada usuário vê as suas, admin da empresa todas da empresa; /platform → "Solicitações de melhoria" (situação + resposta; "Não será feita" exige motivo); histórico imutável; até 20/dia por usuário. `20261009040423_improvement_requests_v1` (md5 conferido).
 
 ## Validado com o dono
 - 06/10: contrato real do início ao fim; 2 contas bancárias no Financeiro; pagamento em lote de 9 vendedores (R$ 1.610,10) por QR Code PIX; contrato 131259 concluído.
@@ -49,6 +50,7 @@
 - Implantação da MAIS VALOR (o dono auxilia; só usuários dela configuram): primeiro acesso e troca de senha; grupos de comissão; bancos, convênios, promotoras; tabelas (importação, layout do banco dela se precisar); equipe; vendedores; contas bancárias e repasse; layout de importação de contratos do banco dela. Login de outra empresa não entra nela: para ajudar por dentro, o dono usa outro e-mail. Termos: rascunho pronto; falta o advogado aprovar, preencher CNPJ, endereço, DPO, prazos e foro, e o dono publicar a versão em /platform (depois o dono aceita pela Smart e a administradora da MAIS VALOR pela empresa dela).
 - Fatores Daycoval Gov. Acre valem até 06/11/2026: importar a próxima Fator Price do banco antes disso. Outros bancos/convênios: sem fator ainda (simulador não mostra).
 - Painel lateral de Vendas (#120): validar com o dono no uso real e ajustar o que ele pedir.
+- Sugerir melhoria: responder as solicitações em /platform. Depois, se o dono quiser: anexar print e aviso por e-mail quando a situação mudar.
 - Contratos: dono vai pedindo novas alterações rápidas para o menu da setinha (entram como novos itens).
 - Hope: mapear outros status do relatório (só "PAGO AO CLIENTE" conhecido) quando vier um relatório com eles.
 - Bancos/convênios sem lista de documentos: "Venda fechada" deixa a proposta em "Antes da fila"; cadastrar em Cadastros > Documentos por banco.
