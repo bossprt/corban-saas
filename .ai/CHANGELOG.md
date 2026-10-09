@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Código da tabela no banco automático (09/10/2026)
+- Corrigido: o "código da tabela no banco" (que liga a Fator Price às tabelas) só tinha sido preenchido nas tabelas Daycoval existentes em 08/10; tabela criada ou importada depois (de qualquer empresa, MAIS VALOR inclusive) ficava sem ele e a importação de fatores não a achava. Agora é preenchido sozinho ao criar ou renomear (código do sistema terminando no número, ex. day-bev-745031, ou nome começando por ele, ex. "745031 - ..."); código digitado nunca é trocado. Campo "Código da tabela no banco" na tela da tabela para conferir ou corrigir. Tabelas sem código receberam pela mesma regra (35 FINTECH, pelo número do código). Migration `20261009052702_table_bank_code_auto_v1` (aplicada em produção 09/10/2026, md5 conferido; 114 tabelas com código), contrato `tests/security/table-bank-code-auto-contract.sql` (6/6).
+
 ### Velocidade: servidor das telas em São Paulo (09/10/2026)
 - Alterado (aprovado pelo dono): as funções da Vercel passam a rodar em São Paulo (`gru1`, `vercel.json`), ao lado do banco (Supabase `sa-east-1`), em vez de Washington (`iad1`). Cada consulta ao banco deixa de cruzar Washington ↔ São Paulo (~0,13 s de ida e volta). Sem mudança de dados, endereço, login ou variáveis. Para voltar: remover `regions` do `vercel.json`.
 
