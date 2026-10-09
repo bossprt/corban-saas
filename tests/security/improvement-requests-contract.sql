@@ -1,4 +1,4 @@
--- Contract test for 20261009_improvement_requests_v1: a member sends a request and gets a protocol; the sender sees their
+-- Contract test for 20261009040423_improvement_requests_v1: a member sends a request and gets a protocol; the sender sees their
 -- own, the company's administrator sees all of the company, a seller does not see a colleague's; another company sees
 -- nothing and cannot send for it; nobody writes the tables directly; only a platform administrator answers (service
 -- role), "declined" needs the reason, every change is in the history; nothing is deleted. One transaction, rolled back.
