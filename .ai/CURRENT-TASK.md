@@ -1,6 +1,6 @@
 # CURRENT TASK — CORBAN SaaS (reset de produto)
 
-**Atualização:** 09/10/2026 (velocidade)
+**Atualização:** 09/10/2026 (instalação MAIS VALOR marcada)
 **Branch:** `main` (todas as entregas abaixo mergeadas e aplicadas em produção, md5 das migrations conferido).
 
 ## Estado (08/10/2026)
@@ -49,6 +49,7 @@
 - 07/10: saldo inicial da C6 R$ 12.946,53 em 06/10/2026 (tudo o que entrou e saiu antes, pelo sistema); saldo de R$ 5.604,26 bateu com o banco. Nada pendente em "Comissões e repasses a lançar".
 
 ## Pendente — com o dono (validação)
+- MAIS VALOR: instalação marcada com a administradora para 10/10/2026. Estado em 09/10: 1 usuária (já entrou), nada cadastrado; nenhuma versão de termos publicada (não trava). Roteiro combinado: senha → equipe → grupos → bancos/convênios/promotoras → tabelas (importação) → vendedores (grupo, PIX) → contas bancárias (saldo inicial) → documentos por banco → fatores (se usar simulador) → contratos (layout novo se o banco não for NASP/PROSESP/FINTECH/Hope: pedir relatório de exemplo). Levar: planilhas de tabelas, lista de vendedores, contas, relatório de contratos por banco.
 - Implantação da MAIS VALOR (o dono auxilia; só usuários dela configuram): primeiro acesso e troca de senha; grupos de comissão; bancos, convênios, promotoras; tabelas (importação, layout do banco dela se precisar); equipe; vendedores; contas bancárias e repasse; layout de importação de contratos do banco dela. Login de outra empresa não entra nela: para ajudar por dentro, o dono usa outro e-mail. Termos: rascunho pronto; falta o advogado aprovar, preencher CNPJ, endereço, DPO, prazos e foro, e o dono publicar a versão em /platform (depois o dono aceita pela Smart e a administradora da MAIS VALOR pela empresa dela).
 - Fatores Daycoval Gov. Acre valem até 06/11/2026: importar a próxima Fator Price do banco antes disso. Outros bancos/convênios: sem fator ainda (simulador não mostra).
 - Painel lateral de Vendas (#120): validar com o dono no uso real e ajustar o que ele pedir.
