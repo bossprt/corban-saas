@@ -263,7 +263,9 @@ export async function importContracts(formData: FormData): Promise<ImportResult>
     if (error || !row) { done.failed++; out.status = 'error'; out.messages = [rpcMessage(error?.message)]; continue }
     if (row.duplicate) { done.existed++; out.status = 'exists'; out.messages = ['Já cadastrado no Corban (contrato não alterado)', ...(await enrich(clientId))]; continue }
     done.created++
-    const tail = [...(r.sellerId ? [] : [NO_SELLER]), ...(await enrich(clientId))]
+    // "Associar proposta": the associated seller replaced the spreadsheet's (owner decision, 08/10/2026).
+    const { data: link } = await supabase.from('proposal_seller_links').select('matched_by').eq('proposal_id', row.proposal_id).maybeSingle()
+    const tail = [...(link ? [`Vendedor da proposta associada (achada pelo ${link.matched_by === 'ade' ? 'nº' : 'CPF'})`] : r.sellerId ? [] : [NO_SELLER]), ...(await enrich(clientId))]
     out.messages = ['Cadastrado', ...tail]
     const initial = l.ade ? 'submitted' : 'digitization_queue'
     if (r.stageId && l.stage !== initial) {

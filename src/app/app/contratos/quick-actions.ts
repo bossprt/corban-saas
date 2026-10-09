@@ -7,6 +7,7 @@ import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedba
 import { parseMoneyInput } from '@/lib/money-input'
 import { normalizePct } from '@/lib/commission/groupRule'
 import { isUuid } from '@/lib/team'
+import { isValidCpf } from '@/lib/cpf'
 
 // Quick changes from the Contratos list (owner request 08/10/2026): each one goes through the same database call as the
 // contract page (update_contract, set_contract_ade, set_payout_override, add_contract_note, calculate_contract_commission)
@@ -151,4 +152,43 @@ export async function bulkSeller(f: FormData): Promise<BulkSellerResult> {
   }
   revalidatePath('/app/contratos')
   return result
+}
+
+// "Associar proposta" (owner, 08/10/2026): bank + ADE and/or CPF + seller, before the contract reaches the Corban.
+export async function linkSeller(f: FormData) {
+  const { supabase, organization } = await requireAppContext()
+  const bank = text(f, 'bank_id'), seller = text(f, 'seller_id'), ade = text(f, 'ade'), cpfRaw = text(f, 'cpf'), name = text(f, 'client_name')
+  const reopen = { id: '', acao: 'associar' }
+  const goA = (code: FeedbackCode): never => {
+    revalidatePath('/app/contratos')
+    const to = listOf(f)
+    return redirect(feedbackUrl(`${to}${to.includes('?') ? '&' : '?'}acao=${reopen.acao}`, code))
+  }
+  if (!isUuid(bank) || !isUuid(seller)) return goA('erro:requisicao_invalida')
+  const cpf = cpfRaw.replace(/\D/g, '')
+  if (!ade && !cpf) return goA('erro:associacao_sem_numero')
+  if (ade && !/^[0-9A-Za-z./-]{1,40}$/.test(ade)) return goA('erro:ade_invalida')
+  if (cpf && !isValidCpf(cpf)) return goA('erro:cpf_invalido')
+  const { data, error } = await supabase.rpc('link_proposal_seller', { p_org: organization.id, p_bank: bank, p_ade: ade || null, p_cpf: cpf || null, p_name: name || null, p_seller: seller })
+  if (error) {
+    const m = error.message ?? ''
+    return goA(/link_already_waiting/.test(m) ? 'erro:associacao_repetida' : /seller_not_found/.test(m) ? 'erro:contrato_vendedor' : /invalid_cpf/.test(m) ? 'erro:cpf_invalido' : /invalid_ade/.test(m) ? 'erro:ade_invalida' : /not_authorized/.test(m) ? 'erro:sem_permissao' : classifyDbFeedback(error))
+  }
+  const r = data as { applied: boolean; reason: string | null; proposal_id: string | null }
+  return goA(r.applied ? 'ok:associacao_aplicada' : r.reason ? 'ok:associacao_nao_aplicada' : 'ok:associacao_aguardando')
+}
+
+export async function cancelLink(f: FormData) {
+  const id = text(f, 'link_id'), reason = text(f, 'reason')
+  const goA = (code: FeedbackCode): never => {
+    revalidatePath('/app/contratos')
+    const to = listOf(f)
+    return redirect(feedbackUrl(`${to}${to.includes('?') ? '&' : '?'}acao=associar`, code))
+  }
+  if (!isUuid(id)) return goA('erro:requisicao_invalida')
+  if (reason.length < 3) return goA('erro:motivo_cancelamento')
+  const { supabase } = await requireAppContext()
+  const { error } = await supabase.rpc('cancel_proposal_seller_link', { p_link: id, p_reason: reason })
+  if (error) return goA(/link_not_waiting/.test(error.message ?? '') ? 'erro:associacao_ja_usada' : /not_authorized/.test(error.message ?? '') ? 'erro:sem_permissao' : classifyDbFeedback(error))
+  return goA('ok:associacao_cancelada')
 }

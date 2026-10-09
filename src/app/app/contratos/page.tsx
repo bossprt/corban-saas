@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { ChevronRight, FilePlus2, Search, X } from 'lucide-react'
+import { ChevronRight, FilePlus2, Link2, Search, X } from 'lucide-react'
 import { Badge, Card, CardHeader, PageHeader, type Tone } from '@/components/ui'
 import { can } from '@/lib/access'
 import { atLeast } from '@/lib/rbac'
@@ -15,6 +15,7 @@ import { recalcContracts } from './actions'
 import { bulkSeller } from './quick-actions'
 import { QUICK_ACTIONS, QuickModal, type QuickAction } from './QuickModal'
 import { RowMenu, type RowMenuItem } from './RowMenu'
+import { AssociateModal } from './AssociateModal'
 import { RecalcBar } from './RecalcBar'
 
 type SP = Record<string, string | string[] | undefined>
@@ -166,8 +167,10 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
 
   return (
     <section>
+      {canRecalc && one(sp.acao) === 'associar' && <AssociateModal back={qs({})} />}
       {quick && <QuickModal id={quick.id} acao={quick.acao} back={qs({})} canEdit={canEditContract} finance={finance} owner={owner} />}
-      <PageHeader title="Contratos" description="Busque os contratos e veja a comissão de cada um: o que a empresa recebe, o que o vendedor recebe pela tabela e o grupo dele, e a margem." actions={newButton('Novo contrato')} />
+      <PageHeader title="Contratos" description="Busque os contratos e veja a comissão de cada um: o que a empresa recebe, o que o vendedor recebe pela tabela e o grupo dele, e a margem."
+        actions={<>{canRecalc && <Link href={`${qs({})}&acao=associar`} scroll={false} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-line-strong bg-surface px-4 text-sm font-medium text-ink hover:bg-surface-muted"><Link2 size={16} aria-hidden />Associar proposta</Link>}{newButton('Novo contrato')}</>} />
 
       <Card className="mb-4">
         <CpfSearchForm action="/app/contratos" mode="filter" className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-4">

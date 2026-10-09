@@ -98,7 +98,7 @@ insert into results select 'a changed factor is a new revision and is used (290,
   and (select count(*) = 3 from public.commercial_factor_batches b join public.commercial_factor_profiles p on p.id = b.profile_id
        where p.bank_table_code = '745031' and p.org_bank_id = (select id from made where label = 'bank') and b.status = 'published');
 insert into results select 'a profile cannot point at one table and a bank code at once',
-  pg_temp.err(format('update public.commercial_factor_profiles set product_table_id = (select id from public.product_tables where code = %L) where bank_table_code = %L', 'ctr-a-745031', '745031')) like '%one_table_scope%';
+  pg_temp.err(format('update public.commercial_factor_profiles set product_table_id = (select id from public.product_tables where code = %L) where bank_table_code = %L and org_bank_id = %L', 'ctr-a-745031', '745031', (select id from made where label = 'bank'))) like '%one_table_scope%';
 
 select check_name, ok from results order by ok, check_name;
 do $$ begin
