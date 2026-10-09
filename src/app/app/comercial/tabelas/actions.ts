@@ -34,6 +34,16 @@ export async function setTableFormalization(f: FormData) {
   return go(`${tablePage(id)}#nome`, error ? classifyDbFeedback(error) : 'ok:tabela_formalizacao')
 }
 
+// The bank's code of the table (09/10/2026): links the bank's factors (Fator Price) to it; empty = taken from the name.
+export async function setTableBankCode(f: FormData) {
+  const id = text(f, 'table_id'), code = text(f, 'bank_table_code')
+  if (!isUuid(id)) return go(LIST, 'erro:requisicao_invalida')
+  if (code && !/^[0-9A-Za-z._-]{1,30}$/.test(code)) return go(`${tablePage(id)}#nome`, 'erro:tabela_codigo_banco')
+  const ctx = await manager(); if (!ctx) return go(tablePage(id), 'erro:sem_permissao')
+  const { error } = await ctx.supabase.from('product_tables').update({ bank_table_code: code || null }).eq('id', id)
+  return go(`${tablePage(id)}#nome`, error ? classifyDbFeedback(error) : 'ok:tabela_codigo_banco')
+}
+
 // $ Start a new "vigência" as a copy of the chosen one (or open the draft that already exists).
 export async function cloneVersion(f: FormData) {
   const id = text(f, 'table_id'), version = text(f, 'version_id')

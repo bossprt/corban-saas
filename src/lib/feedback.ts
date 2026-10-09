@@ -101,6 +101,8 @@ export const FEEDBACK = {
   'erro:associacao_sem_numero': 'Informe o nº da proposta/ADE ou o CPF do cliente.',
   'erro:associacao_repetida': 'Já existe uma associação aguardando para esse nº neste banco. Cancele a anterior se estiver errada.',
   'erro:associacao_ja_usada': 'Essa associação já foi usada ou cancelada.',
+  'ok:tabela_codigo_banco': 'Código da tabela no banco salvo. A importação da Fator Price acha esta tabela por ele.',
+  'erro:tabela_codigo_banco': 'Código inválido: use só letras, números, ponto, hífen ou sublinhado (até 30).',
   'ok:ade_alterada': 'ADE alterada. O número anterior fica no histórico e continua achando o contrato nos relatórios do banco.',
   'erro:ade_repetida': 'Essa ADE já é de outro contrato da empresa.',
   'erro:ade_invalida': 'ADE inválida: use só letras, números, ponto, barra ou hífen (até 40).',

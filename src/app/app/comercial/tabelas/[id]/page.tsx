@@ -8,7 +8,7 @@ import { atLeast, canViewCommission } from '@/lib/rbac'
 import { isUuid } from '@/lib/team'
 import { decimalBr, PAGE_SIZES, pageSize, termText, valueText, VERSION_STATUS } from '@/lib/commission/tableValues'
 import { fetchAll } from '@/lib/fetchAll'
-import { cloneVersion, publishVersion, renameTable, setTableFormalization } from '../actions'
+import { cloneVersion, publishVersion, renameTable, setTableBankCode, setTableFormalization } from '../actions'
 import { NewSearchLink } from '../NewSearchLink'
 
 type SP = Record<string, string | string[] | undefined>
@@ -30,7 +30,7 @@ export default async function TablePage({ params, searchParams }: { params: Prom
   const sp = await searchParams
 
   const [{ data: table }, { data: versions }, { data: types }, { data: components }, { data: groups }, { data: rules }] = await Promise.all([
-    supabase.from('product_tables').select('id,route_id,code,name,status,formalization').eq('id', id).maybeSingle(),
+    supabase.from('product_tables').select('id,route_id,code,name,status,formalization,bank_table_code').eq('id', id).maybeSingle(),
     supabase.from('product_table_versions').select('id,version,status,effective_from,effective_until,published_at,created_at').eq('product_table_id', id).order('version', { ascending: false }),
     supabase.from('contract_types').select('id,name'),
     supabase.from('commission_component_types').select('id,tech_key,name,sort_order').eq('is_active', true).order('sort_order'),
@@ -143,6 +143,14 @@ export default async function TablePage({ params, searchParams }: { params: Prom
               <SubmitButton className="h-10 rounded-[10px] border border-line-strong bg-surface px-4 text-sm text-ink hover:bg-surface-muted" pendingText="Salvando...">Salvar formalização</SubmitButton>
             </form>
           ) : <p className="border-t border-line px-5 py-3 text-sm text-ink-soft">Formalização: {table.formalization === 'physical' ? 'Física' : 'Digital'}</p>}
+          {canEdit ? (
+            <form action={setTableBankCode} className="flex flex-wrap items-end gap-2 border-t border-line px-5 pb-5 pt-3">
+              <input type="hidden" name="table_id" value={id} />
+              <label className={`${lbl} flex-1`}>Código da tabela no banco <span className="font-normal text-muted">(liga os fatores do banco, ex.: 745031; em branco = automático pelo nome)</span>
+                <input name="bank_table_code" maxLength={30} defaultValue={table.bank_table_code ?? ''} className="field mt-1.5" /></label>
+              <SubmitButton className="h-10 rounded-[10px] border border-line-strong bg-surface px-4 text-sm text-ink hover:bg-surface-muted" pendingText="Salvando...">Salvar código</SubmitButton>
+            </form>
+          ) : <p className="border-t border-line px-5 py-3 text-sm text-ink-soft">Código da tabela no banco: {table.bank_table_code ?? '—'}</p>}
         </Card>
       </div>
 
