@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Velocidade: servidor das telas em São Paulo (09/10/2026)
+- Alterado (aprovado pelo dono): as funções da Vercel passam a rodar em São Paulo (`gru1`, `vercel.json`), ao lado do banco (Supabase `sa-east-1`), em vez de Washington (`iad1`). Cada consulta ao banco deixa de cruzar Washington ↔ São Paulo (~0,13 s de ida e volta). Sem mudança de dados, endereço, login ou variáveis. Para voltar: remover `regions` do `vercel.json`.
+
 ### Velocidade: conferência de acesso uma vez por tela (09/10/2026)
 - Alterado (dono: cliques demoram): a conferência de cada tela (usuário, empresa, termos, permissões, módulos) rodava de novo no menu, na página e em cada parte (painel, janelas), 6 consultas em fila a cada vez. Agora roda uma vez por tela (cache do React por pedido) e as 4 consultas independentes (empresa, termos, permissões, módulos) vão juntas. Medido local no painel de um lead: conferência de 4 vezes para 1; consultas ao banco de 41 para 32 (as restantes em paralelo). Regras e permissões iguais. Sem mudança no banco de dados.
 
