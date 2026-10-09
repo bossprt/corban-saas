@@ -12,6 +12,9 @@ import { formatCpf } from '@/lib/cpf'
 import { isUuid } from '@/lib/team'
 import { CpfSearchForm } from '@/components/CpfSearchForm'
 import { recalcContracts } from './actions'
+import { bulkSeller } from './quick-actions'
+import { QUICK_ACTIONS, QuickModal, type QuickAction } from './QuickModal'
+import { RowMenu, type RowMenuItem } from './RowMenu'
 import { RecalcBar } from './RecalcBar'
 
 type SP = Record<string, string | string[] | undefined>
@@ -20,13 +23,14 @@ const lbl = 'text-[13px] font-medium text-ink-soft'
 const STATUS_LABEL: Record<string, string> = {
   digitization_queue: 'Aguardando digitação', digitizing: 'Em digitação', submitted: 'Em análise', pending_external: 'Pendência',
   approved: 'Aprovado', paid: 'Pago ao cliente', rejected: 'Recusado', cancelled: 'Cancelado',
+  draft: 'Rascunho', documents_pending: 'Documentos pendentes', ready_for_digitization: 'Pronta para digitação', digitization: 'Em digitação',
 }
 const STATUS_TONE: Record<string, Tone> = { paid: 'received', approved: 'received', pending_external: 'diverged', rejected: 'reversed', cancelled: 'neutral' }
 const CPF_LIKE = /^\s*\d{3}\.?\d{3}\.?\d{3}-?\d{2}\s*$/
 const ZERO = fromDecimalString('0')
 const money = (v: Rational | undefined) => brlText(toDecimalString(v ?? ZERO, 2))
 
-type Contract = { id: string; external_proposal_id: string | null; status: string; requested_amount: string | null; released_amount: string | null; term: number | null; customer_snapshot: { full_name?: string; cpf?: string } | null; customer_id: string | null; seller_id: string | null; product_table_version_id: string | null; created_at: string; paid_to_client_on: string | null }
+type Contract = { id: string; external_proposal_id: string | null; status: string; requested_amount: string | null; released_amount: string | null; term: number | null; customer_snapshot: { full_name?: string; cpf?: string } | null; customer_id: string | null; seller_id: string | null; product_table_version_id: string | null; created_at: string; paid_to_client_on: string | null; formalization: string | null; physical_received_at: string | null; physical_bank_at: string | null }
 // The embedded calculation comes back as one object (many-to-one); typed loosely by the untyped client.
 type CalcLine = { line_kind: string; amount: string; multiplier: number; proposal_commission_calcs: { proposal_id: string } | { proposal_id: string }[] }
 
@@ -55,8 +59,8 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
     q: CPF_LIKE.test(text) ? '' : text.toLowerCase(),
   }
 
-  const [contracts, { data: versions }, { data: tables }, { data: routes }, { data: banks }, { data: agreements }, { data: sellers }, { data: groups }] = await Promise.all([
-    fetchAll<Contract>((a, b) => supabase.from('proposals_v2').select('id,external_proposal_id,status,requested_amount,released_amount,term,customer_snapshot,customer_id,seller_id,product_table_version_id,created_at,paid_to_client_on')
+  const [contracts, { data: versions }, { data: tables }, { data: routes }, { data: banks }, { data: agreements }, { data: sellers }, { data: groups }, cases] = await Promise.all([
+    fetchAll<Contract>((a, b) => supabase.from('proposals_v2').select('id,external_proposal_id,status,requested_amount,released_amount,term,customer_snapshot,customer_id,seller_id,product_table_version_id,created_at,paid_to_client_on,formalization,physical_received_at,physical_bank_at')
       .order('created_at', { ascending: false }).order('id').range(a, b)),
     supabase.from('product_table_versions').select('id,product_table_id,version'),
     supabase.from('product_tables').select('id,name,route_id'),
@@ -65,7 +69,10 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
     supabase.from('organization_agreements').select('id,name').order('name'),
     supabase.from('commercial_sellers').select('id,name,code,commission_group_id').order('name'),
     supabase.from('commission_groups').select('id,name').order('sort_order').order('name'),
+    // Open pendencies of the pipeline (the row's "Pendência" label).
+    fetchAll<{ proposal_id: string; pendency_reason: string | null }>((a, b) => supabase.from('operational_cases').select('proposal_id,pendency_reason').not('pendency_reason', 'is', null).order('id').range(a, b)),
   ])
+  const pendencyOf = new Map(cases.map(c => [c.proposal_id, c.pendency_reason]))
   const lines = finance ? await fetchAll<CalcLine>((a, b) => supabase.from('proposal_commission_lines')
     .select('line_kind,amount,multiplier,proposal_commission_calcs!inner(proposal_id,status)').eq('proposal_commission_calcs.status', 'active')
     .order('id').range(a, b)) : []
@@ -131,6 +138,10 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
   const page = Math.min(Math.max(1, Number(one(sp.p)) || 1), pages)
   const rows = filtered.slice((page - 1) * size, page * size)
   const sum = (kind: string) => filtered.reduce((acc, x) => add(acc, totals.get(x.c.id)?.get(kind) ?? ZERO), ZERO)
+  // Owner, 08/10/2026: the filtered contracts' total (gross and net), as in the bank systems.
+  const sumOf = (k: 'requested_amount' | 'released_amount') => filtered.reduce((acc, x) => add(acc, x.c[k] ? fromDecimalString(String(x.c[k])) : ZERO), ZERO)
+  // The quick-change window (?contrato=&acao=) over the list; forms return to the list with its filters.
+  const quick = isUuid(one(sp.contrato)) && (QUICK_ACTIONS as readonly string[]).includes(one(sp.acao)) ? { id: one(sp.contrato), acao: one(sp.acao) as QuickAction } : null
   const qs = (patch: Record<string, string | number>) => {
     const q = new URLSearchParams(Object.entries({ ...f, q: f.q ? text : '', n: size, p: page, ...patch }).filter(([, x]) => x !== '' && x !== undefined).map(([k, x]) => [k, String(x)]))
     return `/app/contratos?${q.toString()}`
@@ -140,8 +151,22 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
   const newHref = `/app/propostas/nova${f.cliente ? `?cliente=${f.cliente}` : ''}`
   const newButton = (label: string) => canCreate ? <Link href={newHref} className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><FilePlus2 size={16} aria-hidden />{label}</Link> : null
 
+  // The arrow menu of each row: what this user may do, each item opening its window over this same list.
+  const canEditContract = canRecalc
+  const menuOf = (id: string): RowMenuItem[] => {
+    const at = (acao: string) => `${qs({})}&contrato=${id}&acao=${acao}`
+    const items: RowMenuItem[] = []
+    if (canEditContract) items.push({ acao: 'vendedor', label: 'Alterar vendedor', href: at('vendedor') })
+    if (finance) items.push({ acao: 'comissao', label: totals.has(id) ? (owner ? 'Alterar comissão' : 'Ver comissão') : 'Cadastrar comissão', href: at(totals.has(id) ? 'comissao' : 'calcular') })
+    if (canEditContract) items.push({ acao: 'dados', label: 'Dados do contrato', href: at('dados') }, { acao: 'ade', label: 'Alterar ADE', href: at('ade') })
+    items.push({ acao: 'documentos', label: 'Documentos', href: at('documentos') }, { acao: 'observacoes', label: 'Observações', href: at('observacoes') },
+      { acao: 'abrir', label: 'Abrir contrato completo', href: `/app/propostas/${id}` })
+    return items
+  }
+
   return (
     <section>
+      {quick && <QuickModal id={quick.id} acao={quick.acao} back={qs({})} canEdit={canEditContract} finance={finance} owner={owner} />}
       <PageHeader title="Contratos" description="Busque os contratos e veja a comissão de cada um: o que a empresa recebe, o que o vendedor recebe pela tabela e o grupo dele, e a margem." actions={newButton('Novo contrato')} />
 
       <Card className="mb-4">
@@ -182,6 +207,12 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
         )}
       </Card>
 
+      <div className="mb-3 grid gap-3 sm:grid-cols-2">
+        {[['Total líquido', sumOf('released_amount')], ['Total bruto', sumOf('requested_amount')]].map(([k, v]) => (
+          <Card key={String(k)} className="px-5 py-4"><div className="text-xs text-muted">{String(k)} · contratos filtrados</div><div className="num mt-1 text-xl font-semibold text-ink">{money(v as Rational)}</div></Card>
+        ))}
+      </div>
+
       {finance && <div className={`mb-4 grid gap-3 sm:grid-cols-2 ${owner ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
         {[['Empresa recebe', sum('received')], ['Vendedores recebem', sum('payable')], ['Margem', sum('margin')], ...(owner ? [['Ganho com alterações de repasse', sum('gain')]] : [])].map(([k, v]) => (
           <Card key={String(k)} className="px-5 py-4"><div className="text-xs text-muted">{String(k)} · contratos filtrados</div><div className="num mt-1 text-xl font-semibold text-ink">{money(v as Rational)}</div></Card>
@@ -190,12 +221,12 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
 
       <Card>
         <CardHeader title={<span className="flex items-center gap-2">Contratos <Badge tone="neutral">{filtered.length}</Badge></span>} />
-        {canRecalc && <div className="mt-3"><RecalcBar action={recalcContracts} /></div>}
+        {canRecalc && <div className="mt-3"><RecalcBar action={recalcContracts} sellerAction={bulkSeller} sellers={(sellers ?? []).map(s => ({ id: s.id, name: `${s.code ? `${String(s.code).padStart(3, '0')} · ` : ''}${s.name}` }))} /></div>}
         <div className="mt-3 overflow-x-auto">
           <table className="w-full min-w-[940px] text-left text-[13px]">
             <thead className="border-y border-line bg-surface-muted text-xs text-muted">
               <tr>
-                {canRecalc && <th className="w-10 pl-5 pr-1 py-2"><span className="sr-only">Marcar</span></th>}
+                <th className="w-10 pl-5 pr-1 py-2"><span className="sr-only">Marcar e alterar</span></th>
                 <th className="px-5 py-2 font-medium">Cliente</th><th className="px-3 py-2 font-medium">Vendedor</th><th className="px-3 py-2 font-medium">Banco · tabela</th>
                 <th className="px-3 py-2 text-right font-medium">Valor</th><th className="px-3 py-2 font-medium">Situação</th>
                 {finance && <><th className="px-3 py-2 text-right font-medium">Empresa recebe</th><th className="px-3 py-2 text-right font-medium">Vendedor recebe</th><th className="px-3 py-2 text-right font-medium">Margem</th></>}
@@ -208,7 +239,10 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
                 const margin = t ? toDecimalString(t.get('margin') ?? t.get('company') ?? ZERO, 2) : ''
                 return (
                   <tr key={c.id} className="border-t border-line hover:bg-surface-muted/60">
-                    {canRecalc && <td className="pl-5 pr-1 py-2.5"><input type="checkbox" form="recalc-form" name="ids" value={c.id} data-stale={stale(c) ? '1' : ''} aria-label={`Marcar ${c.customer_snapshot?.full_name ?? 'contrato'} para recalcular`} className="accent-[var(--brand)]" /></td>}
+                    <td className="pl-5 pr-1 py-2.5 align-top">
+                      {canRecalc && <input type="checkbox" form="recalc-form" name="ids" value={c.id} data-stale={stale(c) ? '1' : ''} aria-label={`Marcar ${c.customer_snapshot?.full_name ?? 'contrato'}`} className="accent-[var(--brand)]" />}
+                      <RowMenu label={c.customer_snapshot?.full_name ?? 'contrato'} items={menuOf(c.id)} />
+                    </td>
                     <td className="px-5 py-2.5">
                       <span className="block font-medium text-ink">{c.customer_snapshot?.full_name ?? '—'}</span>
                       <span className="text-xs text-muted">{formatCpf(c.customer_snapshot?.cpf)}{c.external_proposal_id ? ` · nº ${c.external_proposal_id}` : ''} · {new Date(c.created_at).toLocaleDateString('pt-BR')}</span>
@@ -216,7 +250,12 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
                     <td className="px-3 py-2.5"><span className="block text-ink">{s?.name ?? '—'}</span><span className="text-xs text-muted">{s?.commission_group_id ? groupName.get(s.commission_group_id) ?? '' : 'sem grupo'}</span>{stale(c) && <Badge tone="pending" className="ml-1.5">Comissão desatualizada</Badge>}</td>
                     <td className="px-3 py-2.5"><span className="block text-ink">{bankName.get(w.bank) ?? '—'} · {agreementName.get(w.agreement) ?? '—'}</span><span className="text-xs text-muted">{w.table}{c.term ? ` · ${termText(c.term, c.term, c.term)}` : ''}</span></td>
                     <td className="num whitespace-nowrap px-3 py-2.5 text-right">{brlText(String(c.requested_amount ?? c.released_amount ?? '0'))}{c.released_amount && c.released_amount !== c.requested_amount && <span className="block text-xs text-muted">líq. {brlText(String(c.released_amount))}</span>}</td>
-                    <td className="whitespace-nowrap px-3 py-2.5"><Badge tone={STATUS_TONE[c.status] ?? 'neutral'}>{STATUS_LABEL[c.status] ?? c.status}</Badge></td>
+                    <td className="px-3 py-2.5"><span className="flex max-w-[180px] flex-wrap gap-1">
+                      <Badge tone={STATUS_TONE[c.status] ?? 'neutral'}>{STATUS_LABEL[c.status] ?? c.status}</Badge>
+                      {finance && (() => { const r = repasseOf(c.id); return r === 'pago' ? <Badge tone="received">Pago ao vendedor</Badge> : r === 'creditado' ? <Badge tone="pending">A pagar ao vendedor</Badge> : r === 'aguardando' ? <Badge tone="neutral">Não pago ao vendedor</Badge> : r === 'sem_repasse' ? <Badge tone="neutral">Sem repasse</Badge> : null })()}
+                      {c.formalization === 'physical' && <Badge tone={c.physical_received_at ? 'received' : 'pending'}>{c.physical_bank_at ? 'Físico no banco' : c.physical_received_at ? 'Físico recebido' : 'Físico pendente'}</Badge>}
+                      {pendencyOf.get(c.id) && <span title={pendencyOf.get(c.id) ?? ''}><Badge tone="diverged">Pendência</Badge></span>}
+                    </span></td>
                     {finance && (t ? <>
                       <td className="num whitespace-nowrap px-3 py-2.5 text-right">{money(t.get('received'))}</td>
                       <td className="num whitespace-nowrap px-3 py-2.5 text-right">{money(t.get('payable') ?? t.get('originator'))}{owner && payout.get(c.id)?.overridden && <Badge tone="pending" className="ml-1.5">Alterado</Badge>}

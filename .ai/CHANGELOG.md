@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Contratos: setinha de alterações rápidas, totais e etiquetas (08/10/2026)
+- Adicionado (pedido do dono): em cada contrato da lista, uma setinha abaixo da caixinha abre um menu (Alterar vendedor, Alterar/Ver comissão ou Cadastrar comissão, Dados do contrato, Alterar ADE, Documentos, Observações, Abrir contrato completo); cada opção abre uma janela sobre a lista com o contrato escrito no topo (cliente, ADE, valor, prazo) e volta para a mesma lista e filtros. "Cadastrar comissão" mostra o motivo de não ter calculado e o campo que resolve (vendedor, linha da tabela) ou o cadastro a corrigir. Marcados: "Trocar vendedor" em vários de uma vez (cada um recalculado; contrato pago pede motivo). Totais líquido e bruto dos contratos filtrados. Etiquetas na linha: pago/não pago ao vendedor, físico (pendente, recebido, no banco), pendência. Alterar ADE: função nova (ADE de outro contrato recusada; número anterior continua achando o contrato nos relatórios; antes → depois no histórico). Migration `20261009_contract_ade_edit_v1` (ainda não aplicada em produção), contrato `tests/security/contract-ade-edit-contract.sql` (9/9).
+
 ### Esteira: "Antes da fila" em cartões, cancelar com confirmação clara (08/10/2026)
 - Corrigido (dono): a tabela larga obrigava a rolar e escondia o cliente na hora de cancelar. Cada proposta virou um cartão (cliente, valor, parcela, prazo, situação e botões juntos, sem rolagem lateral). "Cancelar" abre logo abaixo a pergunta com cliente, valor, prazo, parcela e data, o motivo e "Sim, cancelar" / "Voltar". Sem mudança no banco de dados.
 

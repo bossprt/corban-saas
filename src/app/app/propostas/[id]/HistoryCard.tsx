@@ -14,11 +14,11 @@ const STATE: Record<string, string> = {
   digitization_queue: 'Aguardando digitação', digitizing: 'Em digitação', submitted: 'Em análise', pending_external: 'Pendência',
   approved: 'Aprovado', paid: 'Pago ao cliente', rejected: 'Recusado', cancelled: 'Cancelado',
 }
-const FIELD: Record<string, string> = { table_version_id: 'Tabela', seller_id: 'Vendedor', requested_amount: 'Valor bruto', released_amount: 'Valor líquido', installment_amount: 'Parcela', term: 'Prazo', formalization: 'Formalização', paid_to_client_on: 'Pago ao cliente em' }
+const FIELD: Record<string, string> = { external_proposal_id: 'ADE', table_version_id: 'Tabela', seller_id: 'Vendedor', requested_amount: 'Valor bruto', released_amount: 'Valor líquido', installment_amount: 'Parcela', term: 'Prazo', formalization: 'Formalização', paid_to_client_on: 'Pago ao cliente em' }
 const COMPONENT: Record<string, string> = { upfront: 'à vista', deferred: 'diferido', bonus_1: 'bônus 1', bonus_2: 'bônus 2', bonus_3: 'bônus 3', plastic: 'plástico', insurance_fixed: 'seguro' }
 const money = (v: unknown) => (v === null || v === undefined || v === '' ? '—' : brlText(String(v)))
 const fieldValue = (k: string, side: unknown, label?: unknown) =>
-  k.endsWith('_amount') ? money(side) : k === 'term' ? (side ? `${String(side)}x` : '—')
+  k === 'external_proposal_id' ? String(side ?? '—') : k.endsWith('_amount') ? money(side) : k === 'term' ? (side ? `${String(side)}x` : '—')
     : k === 'formalization' ? (side === 'physical' ? 'Física' : 'Digital') : k === 'paid_to_client_on' ? (side ? new Date(`${String(side)}T12:00:00Z`).toLocaleDateString('pt-BR') : '—') : String(label ?? '—')
 
 function describe(e: ContractEvent): string {
