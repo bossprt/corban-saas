@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### API de contratos para o NASP (12/10/2026)
+- Adicionado: `POST /api/v1/contracts` (ADR-0056). Outro sistema (primeiro: NASP) envia o estado completo do contrato a cada mudança de etapa; o Corban cria o contrato na primeira vez e depois acompanha ADE, valores, prazo, tabela, tipo, vendedor (se não tinha) e etapa. Mão única. Contrato localizado pelo `external_id` do remetente; chamada com `sequencia` menor ou igual à última aplicada não muda nada; contrato que já existe com o mesmo banco + ADE é ligado, não duplicado. Etapas NASP convertidas no Corban; pago, recusado ou cancelado não muda mais pela API (cancelamento depois de pago vira anotação no contrato). Tabela pela correspondência cadastrada ou pelo nome terminado em " - <tabela>" no banco; vendedor pelo nome do agente (não achado: sem vendedor e aviso). Ficha do cliente só preenche o que está vazio. Valores lidos como decimal exato (texto até o banco). Chave nova com uso "Contratos" em Configuração > API; a chave age como o administrador que a criou. Descrição em `/api/v1/openapi.json`. Migration `20261013045254_api_contracts_v1` (aplicada em produção 12/10/2026, md5 conferido), contrato `tests/security/api-contracts-contract.sql` (30/30).
+
 ### Custo da Vercel: menos montagens (09/10/2026)
 - Alterado (aprovado pelo dono): o ciclo de cobrança da Vercel gastou o crédito de US$ 20 com montagem de versões (103 h de CPU, máquina Elastic que sobe até 30 vCPUs); o uso real do sistema custou ~US$ 0,37. O dono trocou a máquina de montagem para Basic (2 vCPUs). `vercel.json` ganhou `ignoreCommand`: commit que só muda documentação (`.ai/`, `*.md`) não monta versão. A atualização do CURRENT-TASK passa a ir no PR da própria entrega (metade dos merges).
 

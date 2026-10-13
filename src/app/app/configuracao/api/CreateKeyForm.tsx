@@ -12,6 +12,12 @@ export function CreateKeyForm() {
         <label className="text-[13px] font-medium text-ink-soft">Nome da chave
           <input name="name" required minLength={2} maxLength={60} placeholder="DeskcommCRM" className="field mt-1.5 w-72" />
         </label>
+        <label className="text-[13px] font-medium text-ink-soft">Uso
+          <select name="scope" defaultValue="leads.write" className="field mt-1.5 w-56">
+            <option value="leads.write">Leads (CRM, site)</option>
+            <option value="contracts.write">Contratos (sistema do banco)</option>
+          </select>
+        </label>
         <Button type="submit" disabled={pending}>{pending ? 'Criando...' : 'Criar chave'}</Button>
       </form>
       {state.error && <p role="alert" className="rounded-lg bg-[#FDE2E1] px-3 py-2 text-sm text-[#991B1B]">{state.error}</p>}
