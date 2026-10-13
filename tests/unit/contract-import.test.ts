@@ -209,3 +209,18 @@ test('PROSESP lines: cancelled, refin, product not in the list kept as written, 
   assert.equal(lines[2].table, 'OUTRO PRODUTO')
   assert.deepEqual(lines.map(l => l.line), [3, 4, 5, 6, 7])
 })
+
+test('PROSESP: ANDAMENTO and CONFERÊNCIA are in analysis at the bank; an unknown stage keeps the sheet text', () => {
+  const prosesp = CONTRACT_LAYOUTS.find(l => l.key === 'prosesp')!
+  const { lines } = parseContractSheet(prosespSheet(
+    prosespRow({ 'SITUAÇÃO': 'ANDAMENTO' }),
+    prosespRow({ 'SITUAÇÃO': 'CONFERÊNCIA' }),
+    prosespRow({ 'SITUAÇÃO': 'QUALQUER OUTRA' }),
+  ), TODAY, prosesp)
+  assert.equal(lines[0].stage, 'submitted')
+  assert.equal(lines[1].stage, 'submitted')
+  assert.deepEqual(lines[0].issues, [])
+  assert.equal(lines[2].stage, null)
+  assert.equal(lines[2].stageRaw, 'QUALQUER OUTRA')
+  assert.ok(lines[2].issues.includes('stage_unknown'))
+})

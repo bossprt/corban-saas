@@ -200,7 +200,8 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
   })
   result.lines = resolved.map(({ line: l, tableName, status, messages }) => ({
     line: l.line, cpf: l.cpf, name: l.name, table: tableName ?? l.table, term: l.term, amount: l.released ?? l.requested,
-    ade: l.ade, stage: l.stage ? STAGE_LABEL[l.stage] ?? l.stage : null, seller: l.seller, status, messages,
+    // An unknown stage shows the sheet's own text (it used to read "Automática", the label for no stage at all).
+    ade: l.ade, stage: l.stage ? STAGE_LABEL[l.stage] ?? l.stage : l.stageRaw || null, seller: l.seller, status, messages,
   }))
   return { result, resolved }
 }
