@@ -38,11 +38,14 @@ export function PayBatch({ lines, action, today, banks = [], suggestedBank = '' 
   const router = useRouter()
   const [checked, setChecked] = useState<Set<string>>(() => new Set(lines.filter(l => l.method).map(l => l.account)))
   const [qr, setQr] = useState<number | null>(null)
+  // The QR Code sequence is fixed when it opens: only the checked sellers (owner, 13/10/2026: with 5 of 6 checked it
+  // showed all 6, so an unchecked seller could be paid by mistake).
+  const [qrList, setQrList] = useState<string[]>([])
   const [drawn, setDrawn] = useState<{ code: string; svg: string } | null>(null)
   const [result, setResult] = useState<PayBatchResult | null>(null)
   const [pending, start] = useTransition()
   const dialog = useRef<HTMLDialogElement>(null)
-  const pixLines = lines.filter(l => codeOf(l))
+  const pixLines = qrList.map(id => lines.find(l => l.account === id)).filter((l): l is PayLine => !!l && !!codeOf(l))
   const current = qr === null ? null : pixLines[qr]
   const currentCode = current ? codeOf(current) : null
 
@@ -58,6 +61,12 @@ export function PayBatch({ lines, action, today, banks = [], suggestedBank = '' 
   const chosen = lines.filter(l => checked.has(l.account))
   const totalAll = fromCents(lines.reduce((a, l) => a + cents(l.amount), BigInt(0)))
   const totalChosen = fromCents(chosen.reduce((a, l) => a + cents(l.amount), BigInt(0)))
+  const chosenPix = chosen.filter(l => codeOf(l))
+  const openQr = (l?: PayLine) => {
+    const ids = chosenPix.map(x => x.account)
+    if (l && !ids.includes(l.account)) { setQrList([l.account]); setQr(0); return }
+    setQrList(ids); setQr(l ? ids.indexOf(l.account) : 0)
+  }
   const toggle = (id: string) => setChecked(s => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n })
 
   const submit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -80,7 +89,7 @@ export function PayBatch({ lines, action, today, banks = [], suggestedBank = '' 
         <span className="flex flex-wrap gap-2">
           <button type="button" onClick={() => setChecked(new Set(lines.map(l => l.account)))} className="h-9 rounded-[10px] border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted">Marcar todos</button>
           <button type="button" onClick={() => setChecked(new Set())} className="h-9 rounded-[10px] border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted">Desmarcar</button>
-          {pixLines.length > 0 && <button type="button" onClick={() => setQr(0)} className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted"><QrCode size={15} aria-hidden />Pagar com QR Code</button>}
+          {lines.some(l => codeOf(l)) && <button type="button" onClick={() => openQr()} disabled={!chosenPix.length} className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted disabled:opacity-50"><QrCode size={15} aria-hidden />Pagar marcados com QR Code ({chosenPix.length})</button>}
           <a href="/api/repasse/pagamentos" download className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted"><Download size={15} aria-hidden />Baixar Excel</a>
         </span>
       </div>
@@ -104,7 +113,7 @@ export function PayBatch({ lines, action, today, banks = [], suggestedBank = '' 
                     {!l.method ? <span className="rounded-md bg-[#FEF2F2] px-2 py-0.5 text-xs text-[#991B1B]">Sem chave PIX nem conta no cadastro</span>
                       : l.method === 'pix' ? <>
                         <span>PIX {PIX_TYPE_LABEL[l.pixType ?? ''] ?? ''}: <span className="font-mono">{l.pixKey}</span></span>{l.pixKey && <CopyButton text={l.pixKey} label="Copiar chave PIX" />}
-                        {code ? <button type="button" onClick={() => setQr(pixLines.indexOf(l))} className="ml-1 inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs text-brand hover:bg-surface-muted"><QrCode size={14} aria-hidden />QR Code</button>
+                        {code ? <button type="button" onClick={() => openQr(l)} className="ml-1 inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs text-brand hover:bg-surface-muted"><QrCode size={14} aria-hidden />QR Code</button>
                           : <span className="ml-1 text-xs text-[#92400E]">chave fora do padrão: confira o cadastro</span>}
                       </> : <><span>TED {tedText(l)}</span><CopyButton text={tedText(l)} label="Copiar dados da conta" /></>}
                     {l.holderName && <span className="block text-xs text-[#92400E]">Favorecido: {l.holderName}{l.holderDocument ? ` · ${formatTaxId(l.holderDocument)}` : ''}</span>}
