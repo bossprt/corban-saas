@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### PROSESP: novo de 12 meses no Governo do Acre - Temporário (13/10/2026)
+- Adicionado (decisão do dono: "são novos de 12 meses, 8%"): a planilha de produção PROSESP (WorkBank) trouxe contratos novos de 12 meses, recusados na conferência ("Prazo 12 fora da tabela (4 a 5, 6 a 8)"). A tabela "PROSESP - Governo do Acre - Temporário" ganhou vigência nova desde 01/01/2026 com linha de novo para 12 meses igual à de 6 a 8 meses (8% à vista sobre o líquido; repasse Balcão 4, Corretor 3, Parceiro 3, Call Center 2, Afiliado 0,8). A vigência anterior fica no histórico. As linhas antigas da PROSESP têm origem "converted", que a função de repasse não aceita: a linha nova vai como "manual". Ensaiada em produção sem gravar. Migration `20261013194510_prosesp_temporario_novo_12_v1` (aplicada em produção 13/10/2026, md5 conferido).
+
 ### NASP: base da comissão por tipo (13/10/2026)
 - Corrigido (regra do dono: novo e refinanciamento sobre o líquido, compra de dívida sobre o bruto): a API de contratos gravava só o bruto (como valor liberado), então linha sobre o líquido calculava sobre o bruto (refinanciamento pagaria a mais). Agora `valor_liberado` (bruto) vira o valor do contrato e `valor_liquido_cliente` o valor liberado (sem ele, o bruto; líquido acima do bruto é recusado). Catálogo: as duas linhas de compra de dívida ainda sobre o líquido (Governo "COMPRA NORMAL" e Prefeitura "Normal - Efetivo / Pensionista") ganharam vigência nova desde 01/01/2026 sobre o bruto; contratos já cadastrados mantêm o cálculo. Ensaiada em produção sem gravar. Migration `20261013055148_nasp_commission_base_v1` (aplicada em produção 13/10/2026, md5 conferido), contrato `tests/security/api-contracts-contract.sql` (31/31).
 
