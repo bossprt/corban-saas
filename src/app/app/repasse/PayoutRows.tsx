@@ -2,15 +2,16 @@ import Link from 'next/link'
 import { Badge } from '@/components/ui'
 import { brlText } from '@/lib/receipts/format'
 import { dateBr, PAYOUT_STATUS_LABEL, PAYOUT_STATUS_TONE } from '@/lib/payout/format'
-import { decidePayout, markPaid } from './actions'
+import { decidePayout, markPaid, reversePayout } from './actions'
 
 const todayIso = () => new Date().toISOString().slice(0, 10)
 
-export type PayoutRow = { id: string; account_id: string; kind: string; period_start: string | null; period_end: string | null; carry_in: string | null; period_net: string | null; debt_deduction: string | null; amount: string; carry_out: string | null; status: string; requested_at: string; paid_on: string | null; payment_reference: string | null; note: string | null }
+export type PayoutRow = { id: string; account_id: string; kind: string; period_start: string | null; period_end: string | null; carry_in: string | null; period_net: string | null; debt_deduction: string | null; amount: string; carry_out: string | null; status: string; requested_at: string; paid_on: string | null; payment_reference: string | null; note: string | null; reversal_reason?: string | null }
 
 // Statements and withdrawals with their approval and payment actions (the database enforces who may do what).
 // payTo: the seller's primary payment account per payout account, shown next to "Marcar pago" (only when the viewer may see bank data).
-export function PayoutRows({ rows, names, back, canApprove, canPay, payTo }: { rows: PayoutRow[]; names?: Map<string, string>; back: string; canApprove: boolean; canPay: boolean; payTo?: Map<string, string> }) {
+// canReverse: administrators may undo a payment registered but not made in the bank (the database allows only the last one).
+export function PayoutRows({ rows, names, back, canApprove, canPay, payTo, canReverse }: { rows: PayoutRow[]; names?: Map<string, string>; back: string; canApprove: boolean; canPay: boolean; payTo?: Map<string, string>; canReverse?: boolean }) {
   const today = todayIso()
   return (
     <div className="overflow-x-auto">
@@ -29,7 +30,7 @@ export function PayoutRows({ rows, names, back, canApprove, canPay, payTo }: { r
               <td className="num px-3 py-2 text-right">{brlText(p.debt_deduction)}</td>
               <td className="num px-3 py-2 text-right font-semibold text-ink">{brlText(p.amount)}</td>
               <td className="num px-3 py-2 text-right">{brlText(p.carry_out)}</td>
-              <td className="px-3 py-2"><Badge tone={PAYOUT_STATUS_TONE[p.status]}>{PAYOUT_STATUS_LABEL[p.status]}</Badge>{p.status === 'paid' && <div className="mt-1 text-xs text-muted">{dateBr(p.paid_on)} · {p.payment_reference}</div>}</td>
+              <td className="px-3 py-2"><Badge tone={PAYOUT_STATUS_TONE[p.status]}>{PAYOUT_STATUS_LABEL[p.status]}</Badge>{(p.status === 'paid' || p.status === 'reversed') && <div className="mt-1 text-xs text-muted">{dateBr(p.paid_on)} · {p.payment_reference}</div>}{p.status === 'reversed' && p.reversal_reason && <div className="text-xs text-muted">Motivo: {p.reversal_reason}</div>}</td>
               <td className="px-3 py-2">
                 {p.status === 'pending' && canApprove && (
                   <div className="flex flex-col gap-1">
@@ -41,6 +42,17 @@ export function PayoutRows({ rows, names, back, canApprove, canPay, payTo }: { r
                 )}
                 {p.status === 'approved' && canPay && payTo?.has(p.account_id) && (
                   <div className="mb-1 max-w-xs text-xs text-ink-soft">{payTo.get(p.account_id) ? <>Pagar para: <span className="font-mono text-ink">{payTo.get(p.account_id)}</span></> : <span className="text-[#92400E]">Sem conta para pagamento no cadastro do vendedor.</span>}</div>
+                )}
+                {p.status === 'paid' && canReverse && (
+                  <details>
+                    <summary className="cursor-pointer text-xs text-[#991B1B] hover:underline">Desfazer pagamento</summary>
+                    <form action={reversePayout} className="mt-1 flex max-w-xs flex-col gap-1 rounded-md border border-line bg-surface-muted p-2">
+                      <input type="hidden" name="payout_id" value={p.id} /><input type="hidden" name="back" value={back} />
+                      <p className="text-xs text-ink-soft">Use quando o pagamento foi registrado aqui mas não foi feito no banco. {brlText(p.amount)} voltam ao saldo e a saída do banco é anulada.</p>
+                      <input name="reason" required minLength={3} maxLength={300} placeholder="Motivo (ex.: PIX não foi feito)" className="field h-8 text-xs" />
+                      <button className="h-8 rounded-md bg-[#991B1B] px-2 text-xs font-semibold text-white hover:opacity-90">Sim, desfazer</button>
+                    </form>
+                  </details>
                 )}
                 {p.status === 'approved' && canPay && (
                   <form action={markPaid} className="flex flex-wrap gap-1"><input type="hidden" name="payout_id" value={p.id} /><input type="hidden" name="back" value={back} />

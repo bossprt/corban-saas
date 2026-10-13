@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Repasse: Desfazer pagamento (13/10/2026)
+- Adicionado (pedido do dono: pagou 5 vendedores no Corban, R$ 1.009,48, sem fazer o PIX): botão "Desfazer pagamento" nos repasses pagos da conta de cada pessoa, só para administrador, com motivo. Nada é apagado: o repasse fica "Pagamento desfeito" (quem, quando, motivo), os lançamentos que ele fechou voltam a ficar abertos, um crédito "Pagamento desfeito" anula o débito do pagamento no extrato, e a saída da conta bancária da empresa é cancelada com o motivo no histórico. Só o último pagamento da pessoa, e não se a saída já foi conciliada com o extrato do banco. Os contratos voltam a "não pago ao vendedor". Migration `20261013230214_payout_reversal_v1` (aplicada em produção 13/10/2026, md5 conferido; ADR-0057). Usado nos 5 pagamentos de 13/10 (R$ 1.009,48): desfeitos, saldo e valor a pagar de volta, saídas do banco canceladas, contrato `tests/security/payout-reversal-contract.sql` (17/17).
+
 ### Importação PROSESP: situações ANDAMENTO e CONFERÊNCIA (13/10/2026)
 - Corrigido (dono: "os dois estão em análise"): na planilha WorkBank (PROSESP), as situações "ANDAMENTO" e "CONFERÊNCIA" entram como Em análise no banco. Antes eram recusadas com "Etapa não reconhecida".
 - Corrigido: na conferência da importação de contratos, uma situação não reconhecida aparecia como "Automática" (o rótulo de quando a planilha não tem etapa). Agora a tela mostra o texto da planilha. Teste em `tests/unit/contract-import.test.ts`.

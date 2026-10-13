@@ -114,6 +114,27 @@ export async function decidePayout(formData: FormData) {
   return go(path, 'ok:repasse_decidido')
 }
 
+// "Desfazer pagamento" (owner request 13/10/2026): a payment registered but not made in the bank. Administrators only;
+// the database reverses it with the reason, returns the amount to the balance and cancels the bank outflow.
+export async function reversePayout(formData: FormData) {
+  const { supabase } = await requireAppContext()
+  const path = back(formData)
+  const payout = String(formData.get('payout_id') ?? '')
+  const reason = String(formData.get('reason') ?? '').trim()
+  if (!isUuid(payout)) return go(path, 'erro:requisicao_invalida')
+  if (reason.length < 3 || reason.length > 300) return go(path, 'erro:repasse_desfazer_motivo')
+  const { error } = await supabase.rpc('reverse_payout', { p_payout: payout, p_reason: reason })
+  if (error) {
+    const m = error.message ?? ''
+    if (/later_payout_exists/.test(m)) return go(path, 'erro:repasse_desfazer_posterior')
+    if (/payout_reconciled/.test(m)) return go(path, 'erro:repasse_desfazer_conciliado')
+    if (/payout_not_paid/.test(m)) return go(path, 'erro:repasse_desfazer_nao_pago')
+    return fail(path, error)
+  }
+  revalidatePath(path); revalidatePath('/app/repasse'); revalidatePath('/app/financeiro/empresa')
+  return go(path, 'ok:repasse_desfeito')
+}
+
 export async function markPaid(formData: FormData) {
   const { supabase, organization } = await requireAppContext()
   const path = back(formData)

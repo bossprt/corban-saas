@@ -22,13 +22,13 @@ const todayIso = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao
 export default async function PayoutAccountPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   if (!isUuid(id)) notFound()
-  const { supabase, organization, access } = await requireAppContext()
+  const { supabase, organization, access, membership } = await requireAppContext()
   const { data: summaryRows } = await supabase.rpc('payout_account_summaries', { p_org: organization.id })
   const account = ((summaryRows ?? []) as Summary[]).find(s => s.account_id === id)
   if (!account) notFound()
   const [{ data: entryRows }, { data: payoutRows }] = await Promise.all([
     supabase.from('payout_entries').select('id,kind,amount,effective_on,description,status,proposal_id,beneficiary_role,created_at,decision_note,statement_id').eq('account_id', id).order('effective_on', { ascending: false }).order('created_at', { ascending: false }).limit(1000),
-    supabase.from('payouts').select('id,account_id,kind,period_start,period_end,carry_in,period_net,debt_deduction,amount,carry_out,status,requested_at,paid_on,payment_reference,note').eq('account_id', id).order('requested_at', { ascending: false }).limit(200),
+    supabase.from('payouts').select('id,account_id,kind,period_start,period_end,carry_in,period_net,debt_deduction,amount,carry_out,status,requested_at,paid_on,payment_reference,note,reversal_reason').eq('account_id', id).order('requested_at', { ascending: false }).limit(200),
   ])
   const entries = (entryRows ?? []) as Entry[]
   const finance = can(access, 'repasse.view')
@@ -102,7 +102,7 @@ export default async function PayoutAccountPage({ params }: { params: Promise<{ 
 
       <Card className="mb-4 overflow-hidden">
         <CardHeader title="Repasses" />
-        <PayoutRows rows={(payoutRows ?? []) as PayoutRow[]} back={back} canApprove={canApprove} canPay={canCreate || canApprove} />
+        <PayoutRows rows={(payoutRows ?? []) as PayoutRow[]} back={back} canApprove={canApprove} canPay={canCreate || canApprove} canReverse={membership.role === 'admin'} />
       </Card>
 
       <Card className="overflow-hidden">
