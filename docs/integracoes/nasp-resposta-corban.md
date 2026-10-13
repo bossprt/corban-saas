@@ -39,8 +39,9 @@ Resposta à oferta `docs/integracoes/corban-saas-oferta-nasp.md` do NASP. Esta �
    Código desconhecido: 422 `stage_unknown`.
 3. **Tipo de operação:** `novo`, `refinanciamento`, `compra_divida` ou `portabilidade`.
 4. **Valor:** mandem os dois.
-   - `valor_liberado` é o valor bruto. Ele vira o "valor liberado" do Corban.
-   - `valor_liquido_cliente` só é conferido.
+   - `valor_liberado` é o valor bruto. Ele vira o "valor do contrato" do Corban.
+   - `valor_liquido_cliente` é o que o cliente recebe. Ele vira o "valor liberado" do Corban. Sem ele, vale o bruto. Não pode passar do bruto (422 `invalid_amount`).
+   - Comissão (regra do dono, 13/10/2026): novo e refinanciamento sobre o líquido; compra de dívida sobre o bruto. Por isso mandem sempre os dois valores.
 5. **Vendedor:** `vendedor.agente`.
    - O Corban procura pelo nome exato entre os vendedores ativos. Maiúsculas e acentos não fazem diferença.
    - Se não achar, ou se o nome for repetido, o contrato entra sem vendedor. A resposta traz o aviso `seller_not_found` ou `seller_ambiguous`. Não é erro.

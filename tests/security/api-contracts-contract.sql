@@ -1,4 +1,4 @@
--- Contract test for 20261013045254_api_contracts_v1 (ADR-0056): POST /api/v1/contracts. A key with contracts.write acts as
+-- Contract test for 20261013045254_api_contracts_v1 and 20261013055148_nasp_commission_base_v1 (ADR-0056): POST /api/v1/contracts. A key with contracts.write acts as
 -- the administrator who created it; the contract is found by the sender's external_id; an old or repeated call changes
 -- nothing; the ADE arrives later; stages follow the sender until the contract is closed; money is exact.
 -- One transaction, rolled back.  psql -v ON_ERROR_STOP=1 -f tests/security/api-contracts-contract.sql
@@ -72,6 +72,7 @@ select pg_temp.call('bad_type', 'ck_live_nasp_test_key_000000000000', pg_temp.wi
 select pg_temp.call('bad_term', 'ck_live_nasp_test_key_000000000000', pg_temp.with_contract(1, 'digitado', '{"prazo_meses": 200}'));
 select pg_temp.call('bad_money', 'ck_live_nasp_test_key_000000000000', pg_temp.with_contract(1, 'digitado', '{"valor_liberado": "5.000,00"}'));
 select pg_temp.call('bad_money3', 'ck_live_nasp_test_key_000000000000', pg_temp.with_contract(1, 'digitado', '{"valor_liberado": 10.005}'));
+select pg_temp.call('net_above_gross', 'ck_live_nasp_test_key_000000000000', pg_temp.with_contract(1, 'digitado', '{"valor_liquido_cliente": "6000.00"}'));
 select pg_temp.call('bad_bank', 'ck_live_nasp_test_key_000000000000', pg_temp.with_contract(1, 'digitado', '{"banco": "Outro"}'));
 select pg_temp.call('bad_cpf', 'ck_live_nasp_test_key_000000000000', pg_temp.body(1, 'digitado', '{"cliente": {"cpf": "11111111111", "nome": "X"}}'));
 select pg_temp.call('paid_no_date', 'ck_live_nasp_test_key_000000000000', pg_temp.body(1, 'credito_liberado'));
@@ -103,6 +104,7 @@ insert into results select 'type the table does not have', (select r->>'error' =
 insert into results select 'term outside the table', (select r->>'error' = 'term_out_of_table' from r where label = 'bad_term');
 insert into results select 'money in Brazilian format is refused (dot decimal only)', (select r->>'error' = 'invalid_amount' from r where label = 'bad_money');
 insert into results select 'money with 3 decimals is refused', (select r->>'error' = 'invalid_amount' from r where label = 'bad_money3');
+insert into results select 'net above gross is refused', (select r->>'error' = 'invalid_amount' from r where label = 'net_above_gross');
 insert into results select 'unknown bank', (select r->>'error' = 'bank_not_found' from r where label = 'bad_bank');
 insert into results select 'invalid CPF', (select r->>'error' = 'invalid_cpf' from r where label = 'bad_cpf');
 insert into results select 'paid without the payment date', (select r->>'error' = 'paid_on_required' from r where label = 'paid_no_date');
@@ -117,8 +119,8 @@ insert into results select 'an older call is ignored', (select (r->>'stale')::bo
 insert into results select 'pendency carries the sender note', (select r->>'stage' = 'pending_external' from r where label = 'pending')
   and exists (select 1 from public.operational_events e join public.operational_cases c on c.id = e.operational_case_id
               where c.proposal_id = (select id from pid) and e.to_state = 'pending_external' and e.metadata->>'note' = 'Falta contracheque');
-insert into results select 'an open contract follows new values, exactly', (select r->>'stage' = 'approved' from r where label = 'approved')
-  and (select released_amount = 5100.50 and installment_amount = 692.84 from public.proposals_v2 where id = (select id from pid));
+insert into results select 'an open contract follows new values, exactly (gross = contract amount, net = released)', (select r->>'stage' = 'approved' from r where label = 'approved')
+  and (select requested_amount = 5100.50 and released_amount = 5000.00 and installment_amount = 692.84 from public.proposals_v2 where id = (select id from pid));
 insert into results select 'paid with the date', (select r->>'stage' = 'paid' from r where label = 'paid')
   and (select status = 'paid' and paid_to_client_on = current_date - 1 from public.proposals_v2 where id = (select id from pid));
 insert into results select 'cancel after paid does not move the contract, it leaves a note',
@@ -137,7 +139,7 @@ insert into results select 'the client record got the empty fields',
 insert into results select 'the writes are recorded as the key administrator',
   (select created_by = (select admin_user from ids) from public.proposals_v2 where id = (select id from pid));
 insert into results select 'every call is in the request log, without payload',
-  (select count(*) from public.api_request_log where endpoint = 'contracts.upsert') = (select count(*) from calls) - 1;
+  (select count(*) from public.api_request_log where endpoint = 'contracts.upsert' and api_key_id in (select id from public.api_keys where prefix in ('ck_live_nasp_tes', 'ck_live_leads_te', 'ck_live_seller_t'))) = (select count(*) from calls) - 1;
 
 -- A contract already in Corban with the same bank + ADE is linked, not duplicated.
 select set_config('request.jwt.claims', json_build_object('sub', (select admin_user from ids), 'role', 'authenticated')::text, true);
