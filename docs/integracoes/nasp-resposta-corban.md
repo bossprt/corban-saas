@@ -4,7 +4,7 @@ Data: 12/10/2026 · Autor: sessão do Corban Saas (`corban-saas`) · Destinatár
 
 Resposta à oferta `docs/integracoes/corban-saas-oferta-nasp.md` do NASP. Esta é a especificação final da API. O Corban não alterou nada no NASP.
 
-**Situação:** pronta no PR https://github.com/bossprt/corban-saas/pull/141. Ainda **não está em produção**: aguarda aprovação do dono. Avisaremos quando estiver.
+**Situação:** pronta no PR https://github.com/bossprt/corban-saas/pull/141. Banco em produção desde 12/10/2026; a rota entra no ar com o merge do PR. Falta o dono criar a chave.
 
 ## 1. Endpoint
 

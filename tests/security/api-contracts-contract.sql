@@ -1,4 +1,4 @@
--- Contract test for 20261012_api_contracts_v1 (ADR-0056): POST /api/v1/contracts. A key with contracts.write acts as
+-- Contract test for 20261013045254_api_contracts_v1 (ADR-0056): POST /api/v1/contracts. A key with contracts.write acts as
 -- the administrator who created it; the contract is found by the sender's external_id; an old or repeated call changes
 -- nothing; the ADE arrives later; stages follow the sender until the contract is closed; money is exact.
 -- One transaction, rolled back.  psql -v ON_ERROR_STOP=1 -f tests/security/api-contracts-contract.sql
