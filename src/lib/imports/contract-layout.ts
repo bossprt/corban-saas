@@ -278,8 +278,9 @@ const STAGE_KEYS: Record<string, string> = {
   pendencia: 'pending_external', pendente: 'pending_external',
   aprovada: 'approved', aprovado: 'approved',
   paga: 'paid', pago: 'paid', 'credito liberado': 'paid', liberado: 'paid', 'pago ao cliente': 'paid', concretizado: 'paid', concretizada: 'paid',
-  // WorkBank (PROSESP): "CR CLIENTE" is the credit paid to the client.
-  'cr cliente': 'paid',
+  // WorkBank (PROSESP): "CR CLIENTE" is the credit paid to the client; "ANDAMENTO" and "CONFERÊNCIA" are still in
+  // analysis at the bank (owner, 13/10/2026).
+  'cr cliente': 'paid', andamento: 'submitted', conferencia: 'submitted',
   // FINTECH CORBAN: "FINALIZADA / PAGA" is the contract paid to the client.
   'finalizada / paga': 'paid', 'finalizada/paga': 'paid',
   recusada: 'rejected', recusado: 'rejected', reprovada: 'rejected', reprovado: 'rejected',
@@ -304,7 +305,7 @@ export type ContractLine = {
   line: number
   cpf: string; name: string; table: string; term: number | null
   released: string | null; requested: string | null; installment: string | null; outstanding: string | null
-  ade: string; typeKey: string | null; stage: string | null; paidOn: string | null
+  ade: string; typeKey: string | null; stage: string | null; stageRaw: string; paidOn: string | null
   seller: string; originBank: string; originContract: string; phone: string; email: string; note: string
   client: ClientExtra
   issues: LineIssue[]
@@ -456,7 +457,7 @@ export function parseContractLine(row: string[], columns: Columns, line: number,
   if (!validEmail) warnings.push('E-mail inválido: não gravado na ficha')
   return {
     line, cpf, name: get('name'), table, term, released, requested, installment, outstanding,
-    ade: get('ade'), typeKey, stage, paidOn, seller: get('seller'), originBank: get('originBank'), originContract: get('originContract'),
+    ade: get('ade'), typeKey, stage, stageRaw: get('stage'), paidOn, seller: get('seller'), originBank: get('originBank'), originContract: get('originContract'),
     phone: get('phone'), email: validEmail ? email : '', note: get('note').slice(0, 500),
     client: clientExtra(get, today, warnings), issues, warnings,
   }

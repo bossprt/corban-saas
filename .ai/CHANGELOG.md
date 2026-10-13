@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Importação PROSESP: situações ANDAMENTO e CONFERÊNCIA (13/10/2026)
+- Corrigido (dono: "os dois estão em análise"): na planilha WorkBank (PROSESP), as situações "ANDAMENTO" e "CONFERÊNCIA" entram como Em análise no banco. Antes eram recusadas com "Etapa não reconhecida".
+- Corrigido: na conferência da importação de contratos, uma situação não reconhecida aparecia como "Automática" (o rótulo de quando a planilha não tem etapa). Agora a tela mostra o texto da planilha. Teste em `tests/unit/contract-import.test.ts`.
+
 ### PROSESP: novo de 12 meses no Governo do Acre - Temporário (13/10/2026)
 - Adicionado (decisão do dono: "são novos de 12 meses, 8%"): a planilha de produção PROSESP (WorkBank) trouxe contratos novos de 12 meses, recusados na conferência ("Prazo 12 fora da tabela (4 a 5, 6 a 8)"). A tabela "PROSESP - Governo do Acre - Temporário" ganhou vigência nova desde 01/01/2026 com linha de novo para 12 meses igual à de 6 a 8 meses (8% à vista sobre o líquido; repasse Balcão 4, Corretor 3, Parceiro 3, Call Center 2, Afiliado 0,8). A vigência anterior fica no histórico. As linhas antigas da PROSESP têm origem "converted", que a função de repasse não aceita: a linha nova vai como "manual". Ensaiada em produção sem gravar. Migration `20261013194510_prosesp_temporario_novo_12_v1` (aplicada em produção 13/10/2026, md5 conferido).
 
