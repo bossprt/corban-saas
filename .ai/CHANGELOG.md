@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### NASP: compra de dívida nas tabelas Temporário e Comissionado (13/10/2026)
+- Adicionado (decisão do dono: "igual ao novo, a comissão é no bruto"): o primeiro envio do NASP pela API trouxe 4 contratos Pagos certos e 1 compra de dívida recusada (table_not_found), porque as tabelas Temporário e Comissionado só tinham novo e refinanciamento. As 8 tabelas (4 Governo do Acre, 4 Prefeitura de Rio Branco) ganharam nova vigência desde 01/01/2026 com linha de compra de dívida igual à do novo (6% nas de 4 a 7 meses, 10% nas demais, mesmo repasse por grupo), com base de cálculo no bruto. A vigência anterior fica no histórico; contratos já cadastrados mantêm o cálculo. Ensaiada em produção sem gravar antes. Migration `20261013054347_nasp_compra_divida_lines_v1` (aplicada em produção 13/10/2026, md5 conferido).
+
 ### NASP Prefeitura: tabela Normal (13/10/2026)
 - Adicionado (pedido do dono: mesma regra de comissão recebida e repassada do Governo do Acre): tabela "NASP - Pref. Rio Branco - Prefeitura Normal - Efetivo / Pensionista", com novo, refinanciamento e compra de dívida (no Governo são três tabelas com a mesma regra), prazo 24 a 84, sem taxa nem imposto, comissão à vista 10% sobre o líquido, repasse Balcão 5%, Corretor 4%, Parceiro 4%, Call Center 2,5%, Afiliado 1%, vigência desde 01/01/2026. A API de contratos acha a tabela pelo nome do NASP "Prefeitura Normal - Efetivo / Pensionista". Ensaiada em produção sem gravar antes de aplicar. Migration `20261013052608_nasp_rio_branco_normal_table_v1` (aplicada em produção 13/10/2026, md5 conferido).
 
