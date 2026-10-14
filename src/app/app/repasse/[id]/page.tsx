@@ -12,7 +12,7 @@ import { bankAccountChoice } from '@/lib/finBankAccounts'
 import { addEntry, decideEntry, payNow, requestWithdrawal, setAccountModel } from '../actions'
 import { PayoutRows, type PayoutRow } from '../PayoutRows'
 
-type Entry = { id: string; kind: string; amount: string; effective_on: string; description: string | null; status: string; proposal_id: string | null; beneficiary_role: string | null; created_at: string; decision_note: string | null; statement_id: string | null }
+type Entry = { id: string; kind: string; amount: string; effective_on: string; description: string | null; status: string; proposal_id: string | null; beneficiary_role: string | null; created_at: string; decision_note: string | null; statement_id: string | null; payout_id: string | null }
 type Summary = { account_id: string; holder_name: string; model: string; balance: string; available: string }
 const ROLE_LABEL: Record<string, string> = { originator: 'vendedor', supervisor: 'supervisor', manager: 'gerente' }
 const label = 'text-[13px] font-medium text-ink-soft'
@@ -27,11 +27,15 @@ export default async function PayoutAccountPage({ params }: { params: Promise<{ 
   const account = ((summaryRows ?? []) as Summary[]).find(s => s.account_id === id)
   if (!account) notFound()
   const [{ data: entryRows }, { data: payoutRows }] = await Promise.all([
-    supabase.from('payout_entries').select('id,kind,amount,effective_on,description,status,proposal_id,beneficiary_role,created_at,decision_note,statement_id').eq('account_id', id).order('effective_on', { ascending: false }).order('created_at', { ascending: false }).limit(1000),
+    supabase.from('payout_entries').select('id,kind,amount,effective_on,description,status,proposal_id,beneficiary_role,created_at,decision_note,statement_id,payout_id').eq('account_id', id).order('effective_on', { ascending: false }).order('created_at', { ascending: false }).limit(1000),
     supabase.from('payouts').select('id,account_id,kind,period_start,period_end,carry_in,period_net,debt_deduction,amount,carry_out,status,requested_at,paid_on,payment_reference,note,reversal_reason').eq('account_id', id).order('requested_at', { ascending: false }).limit(200),
   ])
-  const entries = (entryRows ?? []) as Entry[]
   const finance = can(access, 'repasse.view')
+  // A payment undone (registered but not made) and its compensation are shown only to finance: the person sees the
+  // payments that happened and the chargebacks (owner, 14/10/2026).
+  const undone = new Set(((payoutRows ?? []) as PayoutRow[]).filter(p => p.status === 'reversed').map(p => p.id))
+  const payouts = ((payoutRows ?? []) as PayoutRow[]).filter(p => finance || !undone.has(p.id))
+  const entries = ((entryRows ?? []) as Entry[]).filter(e => finance || !e.payout_id || !undone.has(e.payout_id))
   const canCreate = can(access, 'repasse.create') || can(access, 'repasse.edit')
   const canApprove = can(access, 'repasse.approve')
   const payBanks = canApprove ? await bankAccountChoice(supabase, 'payout') : { banks: [], suggested: '' }
@@ -102,7 +106,7 @@ export default async function PayoutAccountPage({ params }: { params: Promise<{ 
 
       <Card className="mb-4 overflow-hidden">
         <CardHeader title="Repasses" />
-        <PayoutRows rows={(payoutRows ?? []) as PayoutRow[]} back={back} canApprove={canApprove} canPay={canCreate || canApprove} canReverse={membership.role === 'admin'} />
+        <PayoutRows rows={payouts} back={back} canApprove={canApprove} canPay={canCreate || canApprove} canReverse={membership.role === 'admin'} />
       </Card>
 
       <Card className="overflow-hidden">

@@ -1,7 +1,9 @@
 import { Lightbulb } from 'lucide-react'
 import { Badge, Card, CardHeader, PageHeader, type Tone } from '@/components/ui'
 import { SubmitButton } from '@/components/SubmitButton'
+import { redirect } from 'next/navigation'
 import { requireAppContext } from '@/lib/appContext'
+import { isPortalUser } from '@/lib/portal'
 import { IMPROVEMENT_KIND, IMPROVEMENT_STATUS } from '@/lib/improvements'
 import { atLeast } from '@/lib/rbac'
 import { memberEmails } from '@/lib/team.server'
@@ -17,7 +19,8 @@ type Row = { id: string; protocol: string; kind: string; title: string; body: st
 // Melhorias (owner, 08/10/2026): any user suggests an improvement, reports an error or asks a question and gets a
 // protocol; the platform answers whether it will be done. Each user sees their own; the company administrator, all.
 export default async function ImprovementsPage({ searchParams }: { searchParams: Promise<{ de?: string; protocolo?: string; erro?: string }> }) {
-  const { supabase, user, membership } = await requireAppContext()
+  const { supabase, user, membership, access, modules } = await requireAppContext()
+  if (isPortalUser(access?.roleKey, modules)) redirect('/app/portal')
   const sp = await searchParams
   const from = /^\/app[A-Za-z0-9/_-]{0,195}$/.test(sp.de ?? '') ? sp.de! : ''
   const { data } = await supabase.from('improvement_requests').select('id,protocol,kind,title,body,page_path,status,response,created_by,created_at')

@@ -57,7 +57,8 @@ const PORTAL_NAV: NavItem[] = [
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { organization, membership, membershipCount, modules, access } = await requireAppContext()
-  const items: NavItem[] = isPortalUser(access?.roleKey, modules) ? PORTAL_NAV : NAV.filter(n => (!n.show || n.show(membership.role)) && (!n.module || modules.has(n.module)) && (!n.perm || can(access, n.perm))).map(({ key, href, label, sections }) => ({
+  const portal = isPortalUser(access?.roleKey, modules)
+  const items: NavItem[] = portal ? PORTAL_NAV : NAV.filter(n => (!n.show || n.show(membership.role)) && (!n.module || modules.has(n.module)) && (!n.perm || can(access, n.perm))).map(({ key, href, label, sections }) => ({
     key, href, label, sections,
     ...(key === 'comercial' ? { children: REGISTRATIONS.filter(r => !r.teamOnly || canManageTeam(membership.role)).map(r => ({ href: r.href, label: r.label })) } : {}),
     ...(key === 'financeiro' ? { children: FINANCE_PAGES } : {}),
@@ -79,7 +80,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="mt-auto border-t border-line px-2 pt-3 text-xs text-muted">
           <div>{access?.roleName ?? ROLE_LABEL[membership.role] ?? membership.role}</div>
           {membershipCount > 1 && <Link href="/organizacao" className="underline hover:text-ink">Trocar empresa</Link>}
-          <div className="mt-2"><ImprovementLink /></div>
+          {!portal && <div className="mt-2"><ImprovementLink /></div>}
           <form action={signOut}>
             <button type="submit" className="flex items-center gap-2 rounded-lg py-1.5 text-sm text-ink-soft hover:text-ink">
               <LogOut size={15} aria-hidden />Sair
@@ -103,7 +104,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="text-sm text-muted">
           <div>{access?.roleName ?? ROLE_LABEL[membership.role] ?? membership.role} · {organization.name}</div>
           {membershipCount > 1 && <Link href="/organizacao" className="mt-2 inline-block underline">Trocar empresa</Link>}
-          <div className="mt-3"><ImprovementLink className="flex min-h-11 items-center gap-2 text-[15px] text-ink" /></div>
+          {!portal && <div className="mt-3"><ImprovementLink className="flex min-h-11 items-center gap-2 text-[15px] text-ink" /></div>}
           <form action={signOut}>
             <button type="submit" className="flex min-h-11 items-center gap-2 text-[15px] text-ink"><LogOut size={18} aria-hidden />Sair</button>
           </form>

@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Corretor externo: extrato sem pagamento desfeito e sem "Sugerir melhoria" (14/10/2026)
+- Alterado (pedido do dono: "essas informações só abrem brecha para questionamentos"): no Extrato, quem não é do financeiro não vê o pagamento desfeito nem os 2 lançamentos dele (pagamento e ajuste); vê os pagamentos feitos e os estornos. O financeiro continua vendo tudo.
+- Alterado: o corretor externo (portal) não tem mais o botão "Sugerir melhoria"; a página e o envio também recusam (só os usuários da empresa sugerem).
+
 ### Banco local de teste recriado (14/10/2026)
 - Adicionado `scripts/f0/rebuild-local.sh`: recria o banco local de teste do zero (baseline de produção + migrations; pula e lista as migrations de dados da Smart). Seed de teste não liga o vendedor ao usuário antes de ele ser membro da empresa (falhava em banco novo). Sem mudança em produção.
 
