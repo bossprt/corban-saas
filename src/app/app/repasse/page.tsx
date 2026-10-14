@@ -65,7 +65,8 @@ export default async function PayoutPage() {
 
   return (
     <section>
-      <PageHeader title="Repasse" description="Conta corrente de cada pessoa: comissões conciliadas, estornos, vales, bônus e descontos. Todo pagamento é aprovado por outra pessoa." />
+      <PageHeader title="Repasse" description="Conta corrente de cada pessoa: comissões conciliadas, estornos, vales, bônus e descontos. Todo pagamento é aprovado por outra pessoa."
+        actions={can(access, 'repasse.view') ? <Link href="/app/repasse/lotes" className="inline-flex h-9 items-center rounded-[10px] border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted">Lotes de pagamento</Link> : null} />
 
       {canApprove && (
         <Card className="mb-4" id="pagar">

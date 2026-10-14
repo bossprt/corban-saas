@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Repasse: Lotes de pagamento (13/10/2026)
+- Adicionado (pedido do dono, como no NASP): cada "Confirmar pagos" vira um lote. Repasse > "Lotes de pagamento": data, quantidade, valor total, conta que pagou, comprovante, quem pagou e situação (Pago, Desfeito, Desfeito em parte). O lote mostra cada pessoa paga com os contratos (ADE, cliente, valor por contrato), Excel e Imprimir/PDF, e "Desfazer lote" (administrador, com motivo) desfaz todos os pagamentos ainda pagos de uma vez, pelo mesmo caminho do "Desfazer pagamento". Pagamento de uma pessoa só vira um lote dela. Pagamentos antigos agrupados em 7 lotes (quem pagou, data, comprovante e minuto), entre eles o de 06/10 com 9 vendedores e os dois de 13/10 (um desfeito). Ensaiada em produção sem gravar. Migration `20261014000452_payout_batches_v1` (aplicada em produção, md5 conferido; ADR-0058), contrato `tests/security/payout-batches-contract.sql` (16/16).
+
 ### Pagar vendedores: QR Code só dos marcados (13/10/2026)
 - Corrigido (dono: com 5 de 6 marcados, "Pagar com QR Code" mostrou os 6): a sequência de QR Codes passa a ter só os vendedores marcados, fixada ao abrir; o botão mostra quantos ("Pagar marcados com QR Code (5)") e fica desligado sem nenhum marcado. O QR Code de uma linha não marcada abre sozinho, sem entrar na sequência.
 
