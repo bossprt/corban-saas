@@ -56,6 +56,8 @@
 
 - 14/10: tipo de comissão "Gratificação" (igual ao Bônus nos grupos da Smart; `20261014052051_commission_gratification_v1`). Ativada também na MAIS VALOR a pedido do dono (4 grupos, `20261014052220_commission_gratification_mais_valor_v1`).
 
+- 14/10: comissão recebida lançada à mão por contrato (setinha > Alterar/Ver comissão; % líquido, % bruto ou R$; ADR-0059, `20261014053535_manual_received_commission_v1`). Para a Gratificação render repasse ao vendedor, a tabela precisa ter os valores dos grupos na coluna Gratificação.
+
 ## Validado com o dono
 - 06/10: contrato real do início ao fim; 2 contas bancárias no Financeiro; pagamento em lote de 9 vendedores (R$ 1.610,10) por QR Code PIX; contrato 131259 concluído.
 - 07/10: login da corretora externa no portal; conexão Bevicred; tabelas FINTECH conferidas na tela antes de aplicar; importação do relatório FINTECH (4184094); pagamento do Elves confirmado.
