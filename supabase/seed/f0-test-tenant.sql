@@ -125,7 +125,9 @@ insert into public.commercial_sellers (id, organization_id, tech_key, name, sell
 select '00000000-0000-4000-8000-0000000c0801', '00000000-0000-4000-8000-00000000c0b1', 'vendedor_teste', 'Vendedor Teste', 'pf',
        '00000000-0000-4000-8000-0000000c0601',
        (select id from public.organization_branches where organization_id = '00000000-0000-4000-8000-00000000c0b1' and code = 'MTZ'),
-       (select id from auth.users where email = 'vendedor@corban-teste.local'), true
+       -- Linked only when the user is already a member (the seller-user link requires it); users.sh links it otherwise.
+       (select m.user_id from public.organization_memberships m join auth.users u on u.id = m.user_id
+        where u.email = 'vendedor@corban-teste.local' and m.organization_id = '00000000-0000-4000-8000-00000000c0b1'), true
 where not exists (select 1 from public.commercial_sellers where id = '00000000-0000-4000-8000-0000000c0801');
 
 -- Part C1: group Ouro pays 100% of its own column on every commission type (the approved example: 50% of 6% = 3% on
