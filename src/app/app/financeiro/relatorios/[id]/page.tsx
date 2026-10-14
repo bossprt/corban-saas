@@ -34,6 +34,15 @@ export default async function ReceiptReportPage({ params, searchParams }: { para
   const shown = lines.filter(l => ver === 'todas' || (ver === 'resolver' ? OPEN.includes(l.status) : l.status === ver))
   const totalOk = rep.declared_total === null || rep.declared_total === rep.lines_total
   const deferred = rep.report_kind === 'deferred'
+  // Confirming moves the report's contracts to "Paga" (14/10/2026); the ones that did not move are listed to check.
+  const linked = [...new Set(lines.filter(l => l.proposal_id).map(l => l.proposal_id as string))]
+  const { data: contractRows } = rep.status === 'confirmed' && rep.report_kind !== 'chargeback' && linked.length
+    ? await supabase.from('proposals_v2').select('id,status,seller_id').in('id', linked)
+    : { data: [] as { id: string; status: string; seller_id: string | null }[] }
+  const toCheck = (contractRows ?? []).filter(c => c.status !== 'paid')
+  const lineOf = new Map(lines.filter(l => l.proposal_id).map(l => [l.proposal_id as string, l]))
+  const whyNot = (c: { status: string; seller_id: string | null }) =>
+    c.status === 'cancelled' ? 'contrato cancelado' : c.status === 'rejected' ? 'contrato recusado' : !c.seller_id ? 'sem vendedor' : 'sem comissão calculada'
 
   return (
     <section>
@@ -61,6 +70,21 @@ export default async function ReceiptReportPage({ params, searchParams }: { para
             {canConfirm && <form action={reportAction}><input type="hidden" name="report_id" value={id} /><input type="hidden" name="op" value="confirm" /><button disabled={open > 0 || !totalOk} className="h-9 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50">Confirmar e lançar recebimentos</button></form>}
             {canEdit && <form action={reportAction}><input type="hidden" name="report_id" value={id} /><input type="hidden" name="op" value="discard" /><button className="h-9 rounded-[10px] px-3 text-sm text-ink-soft hover:bg-surface-muted">Descartar relatório</button></form>}
           </div>
+        </Card>
+      )}
+
+      {toCheck.length > 0 && (
+        <Card className="mb-4 overflow-hidden">
+          <CardHeader title={<span className="flex items-center gap-2">Conferir: não foram para pago ao cliente <Badge tone="pending">{toCheck.length}</Badge></span>} />
+          <p className="px-5 pt-2 text-sm text-ink-soft">Os outros contratos deste relatório foram para pago ao cliente ao confirmar. Estes ficaram como estavam; acerte o contrato e mova a esteira.</p>
+          <ul className="mt-3 text-sm">
+            {toCheck.map(c => (
+              <li key={c.id} className="flex items-center justify-between gap-3 border-t border-line px-5 py-2.5">
+                <Link href={`/app/propostas/${c.id}`} className="text-ink hover:underline">{lineOf.get(c.id)?.ade ?? 'Contrato'}</Link>
+                <Badge tone="pending">{whyNot(c)}</Badge>
+              </li>
+            ))}
+          </ul>
         </Card>
       )}
 

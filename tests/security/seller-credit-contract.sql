@@ -145,10 +145,12 @@ set constraints all immediate; set constraints all deferred;  -- as at commit
 select pg_temp.receive('up4', 'upfront', 'ADE-C3-4', '600.00');
 select pg_temp.receive('dif4', 'deferred', 'ADE-C3-4', '11.67');
 set constraints all immediate; set constraints all deferred;  -- as at commit
-insert into results select 'bank paid before the client: still waiting for the client', pg_temp.state('late') = 'client' and pg_temp.credited('late') = 0;
-select public.move_operational_case(pg_temp.case_of('late'), 'paid', 'Pago ao cliente', null, current_date);
-set constraints all immediate; set constraints all deferred;  -- as at commit
+-- 14/10/2026: the confirmed commission report moves the contract to "Paga" (the bank paid, so the client got the money).
 reset role;
+insert into results select 'bank paid before the pipeline was updated: the report moved the contract to Paga',
+  (select status = 'paid' and paid_to_client_on = current_date from public.proposals_v2 where id = (select id from made where label = 'late'))
+  and (select canonical_state = 'paid' from public.operational_cases where proposal_id = (select id from made where label = 'late'))
+  and exists (select 1 from public.proposal_status_evidence where proposal_id = (select id from made where label = 'late') and source = 'commission_report');
 insert into results select 'released: à vista 300,00 plus installment 1 of 5,83', pg_temp.credited('late') = 305.83;
 
 -- A payment made outside Corban (the Fabiola case): owner only, even before the bank pays; it locks the contract.
