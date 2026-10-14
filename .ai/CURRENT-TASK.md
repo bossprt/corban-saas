@@ -54,7 +54,7 @@
 
 - 13/10: QR Code só dos marcados (#149). Lotes de pagamento (ADR-0058, `20261014000452_payout_batches_v1`, md5 conferido): lista, detalhe com contratos, Excel, PDF e "Desfazer lote"; 7 lotes antigos. Até o merge da tela, a confirmação em lote antiga cria um lote por pessoa.
 
-- 14/10: tipo de comissão "Gratificação" (igual ao Bônus nos grupos da Smart; `20261014052051_commission_gratification_v1`). Na MAIS VALOR, a administradora decide ao salvar cada grupo.
+- 14/10: tipo de comissão "Gratificação" (igual ao Bônus nos grupos da Smart; `20261014052051_commission_gratification_v1`). Ativada também na MAIS VALOR a pedido do dono (4 grupos, `20261014052220_commission_gratification_mais_valor_v1`).
 
 ## Validado com o dono
 - 06/10: contrato real do início ao fim; 2 contas bancárias no Financeiro; pagamento em lote de 9 vendedores (R$ 1.610,10) por QR Code PIX; contrato 131259 concluído.
