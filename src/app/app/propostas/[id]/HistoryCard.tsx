@@ -35,6 +35,12 @@ function describe(e: ContractEvent): string {
     return `Repasse do vendedor (${COMPONENT[String(d.component)] ?? d.component}): ${money(d.previous)} → ${money(d.payable)} (${how}; pela regra ${money(d.rule_amount)})`
   }
   if (e.kind === 'payout_override_cleared') return `Repasse do vendedor (${COMPONENT[String(d.component)] ?? d.component}) voltou para a regra: ${money(d.payable)}`
+  if (e.kind === 'manual_commission') {
+    const name = COMPONENT[String(d.component)] ?? String(d.component)
+    if (d.kind === 'remove') return `Comissão recebida (${name}) lançada à mão removida: volta a da tabela`
+    const how = d.kind === 'fixed_brl' ? money(d.value) : `${decimalBr(String(d.value ?? ''))}% sobre o ${d.base === 'BRUTO' ? 'bruto' : 'líquido'}`
+    return `Comissão recebida (${name}) lançada à mão: ${how}`
+  }
   if (e.kind === 'recalculated') return 'Comissão recalculada'
   if (e.kind === 'physical') return `${({ received: 'Físico recebido pela empresa', sent: 'Físico enviado ao banco', bank: 'Físico recepcionado pelo banco' } as Record<string, string>)[String(d.step)] ?? 'Físico'} em ${new Date(String(d.at)).toLocaleString('pt-BR')}`
   if (e.kind === 'external_payout') return `Repasse pago fora do Corban: ${money(d.amount)} em ${new Date(`${String(d.paid_on)}T12:00:00Z`).toLocaleDateString('pt-BR')}`

@@ -75,6 +75,8 @@ export const FEEDBACK = {
   'erro:repasse_nada_a_pagar': 'Não há repasse creditado e em aberto neste contrato.',
   'erro:repasse_comprovante': 'Informe a data (hoje ou antes) e o comprovante ou a referência do pagamento.',
   'ok:repasse_alterado': 'Repasse do vendedor alterado.',
+  'ok:comissao_manual': 'Comissão recebida lançada e contrato recalculado.',
+  'ok:comissao_manual_removida': 'Comissão lançada à mão removida e contrato recalculado.',
   'ok:repasse_regra': 'Repasse do vendedor voltou para a regra.',
   'ok:observacao_salva': 'Observação registrada.',
   'erro:contrato_recebido': 'O vendedor já recebeu a comissão deste contrato: nada mais pode mudar.',

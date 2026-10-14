@@ -102,6 +102,26 @@ export async function quickPayout(f: FormData) {
   return go(f, clear ? 'ok:repasse_regra' : 'ok:repasse_alterado')
 }
 
+// Commission the company receives, typed for this contract (owner request 14/10/2026, Gratificação first): % of the net,
+// % of the gross or R$, or removed. Administrators and managers (database); recalculates at once.
+export async function quickManualCommission(f: FormData) {
+  const id = text(f, 'proposal_id'), component = text(f, 'component'), reason = text(f, 'reason')
+  const kind = text(f, 'kind')
+  if (!isUuid(id) || !/^[a-z0-9_]{1,40}$/.test(component) || !['pct_liquido', 'pct_bruto', 'brl', 'remove'].includes(kind)) return go(f, 'erro:requisicao_invalida')
+  if (reason.length < 3) return go(f, 'erro:contrato_motivo', { id, acao: 'comissao' })
+  let value: string | null = null
+  if (kind !== 'remove') {
+    const raw = text(f, 'value')
+    const parsed = kind === 'brl' ? parseMoneyInput(raw) : normalizePct(raw.replace(/%$/, ''))
+    if (!parsed || parsed === 'invalid') return go(f, 'erro:valor_invalido', { id, acao: 'comissao' })
+    value = parsed
+  }
+  const { supabase } = await requireAppContext()
+  const { error } = await supabase.rpc('set_contract_manual_commission', { p_proposal: id, p_component: component, p_kind: kind, p_value: value, p_reason: reason })
+  if (error) return go(f, dbCode(error.message ?? '', classifyDbFeedback(error)), { id, acao: 'comissao' })
+  return go(f, kind === 'remove' ? 'ok:comissao_manual_removida' : 'ok:comissao_manual', { id, acao: 'comissao' })
+}
+
 export async function quickNote(f: FormData) {
   const id = text(f, 'proposal_id'), note = text(f, 'note')
   if (!isUuid(id)) return go(f, 'erro:requisicao_invalida')
