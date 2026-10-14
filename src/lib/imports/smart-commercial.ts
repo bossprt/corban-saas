@@ -103,10 +103,11 @@ const componentAliases:Record<string,string[]>={
  bonus_3:['bonus_3','bonus_3_percent'],
  plastic:['plastico','cartao_plastico'],
  insurance_fixed:['seguro_fixo','seguro'],
+ gratification:['gratificacao','gratificacao_percent'],
 }
 
 // Columns that carry money but are not understood are REFUSED (silently dropping a commission column would be a financial error). Known harmless ones are listed.
-const MONEY_WORDS=/(comiss|bonus|repasse|diferido|a_vista|avista|plastico|seguro|spread|premio)/
+const MONEY_WORDS=/(comiss|bonus|repasse|diferido|a_vista|avista|plastico|seguro|spread|premio|gratific)/
 const IGNORABLE=/^(base_calculo|id_|idade|valor_contrato|taxa_inicial|taxa_final|ativacao)/
 const n=(v:unknown)=>normalizeHeader(v)
 const cell=(row:readonly unknown[],i:number|undefined)=>i===undefined?'':String(row[i]??'').trim()

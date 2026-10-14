@@ -13,7 +13,7 @@ type Supa = Awaited<ReturnType<typeof import('@/lib/appContext').requireAppConte
 type Line = { component_key: string; part: string; multiplier: number; line_kind: string; amount: string }
 type Payout = { component_key: string; received: string; rule_amount: string; base_amount: string | null; value_kind: string | null; value: string | null; payable: string; overridden: boolean; locked: boolean }
 
-const COMPONENT_LABEL: Record<string, string> = { upfront: 'À vista', deferred: 'Diferido', bonus_1: 'Bônus 1', bonus_2: 'Bônus 2', bonus_3: 'Bônus 3', plastic: 'Plástico', insurance_fixed: 'Seguro' }
+const COMPONENT_LABEL: Record<string, string> = { upfront: 'À vista', deferred: 'Diferido', bonus_1: 'Bônus 1', bonus_2: 'Bônus 2', bonus_3: 'Bônus 3', plastic: 'Plástico', insurance_fixed: 'Seguro', gratification: 'Gratificação' }
 const MODE_LABEL: Record<string, string> = { group_values: 'Tabela e grupo do vendedor', cascade: 'Cascata (antigo)', group_table: 'Tabela por grupo (antigo)' }
 const ZERO = fromDecimalString('0')
 const R = (v: string | number | null | undefined) => fromDecimalString(String(v ?? '0'))

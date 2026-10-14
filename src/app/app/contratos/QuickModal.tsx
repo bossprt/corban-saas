@@ -17,7 +17,7 @@ const TITLE: Record<QuickAction, string> = {
   vendedor: 'Alterar vendedor', comissao: 'Comissão', calcular: 'Cadastrar comissão', dados: 'Dados do contrato', ade: 'Alterar ADE',
   documentos: 'Documentos', observacoes: 'Observações',
 }
-const COMPONENT_LABEL: Record<string, string> = { upfront: 'À vista', deferred: 'Diferido', bonus_1: 'Bônus 1', bonus_2: 'Bônus 2', bonus_3: 'Bônus 3', plastic: 'Plástico', insurance_fixed: 'Seguro' }
+const COMPONENT_LABEL: Record<string, string> = { upfront: 'À vista', deferred: 'Diferido', bonus_1: 'Bônus 1', bonus_2: 'Bônus 2', bonus_3: 'Bônus 3', plastic: 'Plástico', insurance_fixed: 'Seguro', gratification: 'Gratificação' }
 const lbl = 'block text-[13px] font-medium text-ink-soft'
 const primary = 'inline-flex h-10 items-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong'
 const ghost = 'inline-flex h-10 items-center rounded-[10px] border border-line bg-surface px-4 text-sm text-ink hover:bg-surface-muted'
