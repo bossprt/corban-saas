@@ -50,8 +50,8 @@ select pg_temp.balance('closing') bal_c, private.pay_now_amount((select id from 
 -- Paid by the administrator (the payment that "was not made").
 select pg_temp.act_as((select admin_user from ids));
 set local role authenticated;
-insert into made select 'pay_c', public.pay_account_now((select id from made where label = 'closing'), current_date, 'PIX-NAO-FEITO');
-insert into made select 'pay_w', public.pay_account_now((select id from made where label = 'withdrawal'), current_date, 'PIX-NAO-FEITO');
+insert into made select 'pay_c', public.pay_account_now((select id from made where label = 'closing'), (now() at time zone 'America/Sao_Paulo')::date, 'PIX-NAO-FEITO');
+insert into made select 'pay_w', public.pay_account_now((select id from made where label = 'withdrawal'), (now() at time zone 'America/Sao_Paulo')::date, 'PIX-NAO-FEITO');
 reset role;
 insert into results select 'paid: the bank outflow exists',
   (select count(*) = 2 from public.fin_entries where source = 'payout' and status = 'settled' and source_ref in (select id from made where label in ('pay_c', 'pay_w')));
@@ -89,7 +89,7 @@ insert into results select 'the company outflow of the other payment is untouche
 -- Paid again, for the same amount; the reversed one is no longer undoable.
 select pg_temp.act_as((select admin_user from ids));
 set local role authenticated;
-insert into made select 'pay_c2', public.pay_account_now((select id from made where label = 'closing'), current_date, 'PIX-AGORA-SIM');
+insert into made select 'pay_c2', public.pay_account_now((select id from made where label = 'closing'), (now() at time zone 'America/Sao_Paulo')::date, 'PIX-AGORA-SIM');
 reset role;
 insert into results select 'paid again for the same amount',
   (select amount = (select due_c from before) and status = 'paid' from public.payouts where id = (select id from made where label = 'pay_c2'));
@@ -107,7 +107,7 @@ set local session_replication_role = origin;
 create temp table before_w2 as select private.payout_available((select id from made where label = 'withdrawal')) avail;
 select pg_temp.act_as((select admin_user from ids));
 set local role authenticated;
-insert into made select 'pay_w2', public.pay_account_now((select id from made where label = 'withdrawal'), current_date, 'PIX-2');
+insert into made select 'pay_w2', public.pay_account_now((select id from made where label = 'withdrawal'), (now() at time zone 'America/Sao_Paulo')::date, 'PIX-2');
 insert into results select 'only the last payment of an account can be undone',
   pg_temp.err(format('select public.reverse_payout(%L::uuid, %L)', (select id from made where label = 'pay_w'), 'nao foi pago')) like '%later_payout_exists%';
 insert into results select 'the last withdrawal can be undone',

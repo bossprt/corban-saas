@@ -52,6 +52,8 @@
 
 - 13/10: "Desfazer pagamento" no repasse (ADR-0057, `20261013230214_payout_reversal_v1`, md5 conferido): os 5 pagamentos de 13/10 (R$ 1.009,48, sem PIX) foram desfeitos; saldos de volta; o dono paga de novo quando fizer o PIX.
 
+- 13/10: QR Code só dos marcados (#149). Lotes de pagamento (ADR-0058, `20261014000452_payout_batches_v1`, md5 conferido): lista, detalhe com contratos, Excel, PDF e "Desfazer lote"; 7 lotes antigos. Até o merge da tela, a confirmação em lote antiga cria um lote por pessoa.
+
 ## Validado com o dono
 - 06/10: contrato real do início ao fim; 2 contas bancárias no Financeiro; pagamento em lote de 9 vendedores (R$ 1.610,10) por QR Code PIX; contrato 131259 concluído.
 - 07/10: login da corretora externa no portal; conexão Bevicred; tabelas FINTECH conferidas na tela antes de aplicar; importação do relatório FINTECH (4184094); pagamento do Elves confirmado.

@@ -139,6 +139,7 @@ export function PayBatch({ lines, action, today, banks = [], suggestedBank = '' 
         {result && (
           <div role="status" className={`rounded-[10px] border px-3 py-2 text-sm ${result.error || result.failed.length ? 'border-[#FCD34D] bg-[#FFFBEB] text-[#92400E]' : 'border-[#86EFAC] bg-[#F0FDF4] text-[#166534]'}`}>
             {result.error ?? `${result.ok} pagamento(s) registrado(s) · ${brlText(result.total)}.${result.failed.length ? ` ${result.failed.length} não registrado(s):` : ''}`}
+            {result.batchId && <> <Link href={`/app/repasse/lotes/${result.batchId}`} className="font-semibold underline">Ver o lote</Link></>}
             {!!result.failed.length && <ul className="mt-1 list-disc pl-5">{result.failed.map(x => <li key={x.account}>{x.name}: {x.reason}</li>)}</ul>}
           </div>
         )}

@@ -178,7 +178,7 @@ export async function payNow(formData: FormData) {
   return go(path, 'ok:repasse_pago_agora')
 }
 
-export type PayBatchResult = { error?: string; ok: number; total: string; failed: { account: string; name: string; reason: string }[] }
+export type PayBatchResult = { error?: string; ok: number; total: string; failed: { account: string; name: string; reason: string }[]; batchId?: string }
 const PAY_REASON: [RegExp, string][] = [
   [/amount_changed/, 'o valor mudou desde que a lista foi aberta: atualize a página e confira antes de confirmar'],
   [/nothing_to_pay/, 'não há nada a pagar'],
@@ -199,22 +199,45 @@ export async function payBatch(formData: FormData): Promise<PayBatchResult> {
   if (!chosen.length) return { ...empty, error: 'Marque pelo menos um vendedor.' }
   if (chosen.length > 300) return { ...empty, error: 'Marque no máximo 300 por vez.' }
   const result: PayBatchResult = { ok: 0, total: '0.00', failed: [] }
+  // One confirmation is one batch (owner, 13/10/2026): its list, detail and "Desfazer lote" in Repasse > Lotes.
+  const batch = crypto.randomUUID()
   let cents = BigInt(0)
   const paid: string[] = []
   for (const account of chosen) {
     const expected = String(formData.get(`amount_${account}`) ?? '')
     const name = String(formData.get(`name_${account}`) ?? 'Conta')
     if (!/^\d{1,12}\.\d{2}$/.test(expected)) { result.failed.push({ account, name, reason: 'valor inválido' }); continue }
-    const { data: payout, error } = await supabase.rpc('pay_account_now_checked', { p_account: account, p_paid_on: paidOn, p_reference: reference, p_expected: expected })
+    const { data: payout, error } = await supabase.rpc('pay_account_in_batch', { p_account: account, p_paid_on: paidOn, p_reference: reference, p_expected: expected, p_batch: batch })
     if (!error && isUuid(String(payout ?? ''))) paid.push(String(payout))
     if (error) { result.failed.push({ account, name, reason: PAY_REASON.find(([re]) => re.test(error.message ?? ''))?.[1] ?? 'não foi possível registrar' }); continue }
     result.ok++
     cents += BigInt(expected.replace('.', ''))
   }
   result.total = `${cents / BigInt(100)}.${String(cents % BigInt(100)).padStart(2, '0')}`
+  if (result.ok) result.batchId = batch
   // The company account the money left from (07/10/2026).
   if (!(await assignBankAccount(supabase, organization.id, 'payout', paid, bankAccountOf(formData))))
     result.error = 'Pagamentos registrados, mas a conta bancária não foi gravada: informe-a em Financeiro.'
-  revalidatePath('/app/repasse'); revalidatePath('/app/financeiro/empresa')
+  revalidatePath('/app/repasse'); revalidatePath('/app/repasse/lotes'); revalidatePath('/app/financeiro/empresa')
   return result
+}
+
+// "Desfazer lote": every payment of the batch still paid, at once (administrators; the database checks).
+export async function reverseBatch(formData: FormData) {
+  const { supabase } = await requireAppContext()
+  const batch = String(formData.get('batch_id') ?? '')
+  const path = isUuid(batch) ? `/app/repasse/lotes/${batch}` : '/app/repasse/lotes'
+  const reason = String(formData.get('reason') ?? '').trim()
+  if (!isUuid(batch)) return go('/app/repasse/lotes', 'erro:requisicao_invalida')
+  if (reason.length < 3 || reason.length > 300) return go(path, 'erro:repasse_desfazer_motivo')
+  const { error } = await supabase.rpc('reverse_payout_batch', { p_batch: batch, p_reason: reason })
+  if (error) {
+    const m = error.message ?? ''
+    if (/later_payout_exists/.test(m)) return go(path, 'erro:repasse_desfazer_posterior')
+    if (/payout_reconciled/.test(m)) return go(path, 'erro:repasse_desfazer_conciliado')
+    if (/batch_already_reversed|batch_nothing_to_reverse/.test(m)) return go(path, 'erro:lote_ja_desfeito')
+    return fail(path, error)
+  }
+  revalidatePath(path); revalidatePath('/app/repasse/lotes'); revalidatePath('/app/repasse'); revalidatePath('/app/financeiro/empresa')
+  return go(path, 'ok:lote_desfeito')
 }
