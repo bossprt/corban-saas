@@ -3,10 +3,13 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
+import { isPortalUser } from '@/lib/portal'
 
 // Improvement requests (owner, 08/10/2026): the database gives the protocol; the page shows it.
 export async function submitImprovement(f: FormData) {
-  const { supabase, organization } = await requireAppContext()
+  const { supabase, organization, access, modules } = await requireAppContext()
+  // Only the company's own users suggest improvements; external brokers do not (owner, 14/10/2026).
+  if (isPortalUser(access?.roleKey, modules)) redirect('/app/portal')
   const kind = String(f.get('kind') ?? ''), title = String(f.get('title') ?? '').trim(), body = String(f.get('body') ?? '').trim()
   const page = String(f.get('page') ?? '')
   const fail = (e: string): never => redirect(`/app/melhorias?erro=${e}`)

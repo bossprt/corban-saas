@@ -15,6 +15,13 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Corretor externo: extrato sem pagamento desfeito e sem "Sugerir melhoria" (14/10/2026)
+- Alterado (pedido do dono: "essas informações só abrem brecha para questionamentos"): no Extrato, quem não é do financeiro não vê o pagamento desfeito nem os 2 lançamentos dele (pagamento e ajuste); vê os pagamentos feitos e os estornos. O financeiro continua vendo tudo.
+- Alterado: o corretor externo (portal) não tem mais o botão "Sugerir melhoria"; a página e o envio também recusam (só os usuários da empresa sugerem).
+
+### Banco local de teste recriado (14/10/2026)
+- Adicionado `scripts/f0/rebuild-local.sh`: recria o banco local de teste do zero (baseline de produção + migrations; pula e lista as migrations de dados da Smart). Seed de teste não liga o vendedor ao usuário antes de ele ser membro da empresa (falhava em banco novo). Sem mudança em produção.
+
 ### Relatório de comissão marca o contrato como pago ao cliente (14/10/2026)
 - Alterado (pedido do dono: o contrato da Dandara só liberou o repasse depois de mexer na esteira, embora o banco já tivesse pago a comissão): ao confirmar um relatório de comissão, cada contrato do relatório que ainda não estava em "Paga" vai para "Paga" (pago ao cliente) com a data em que o banco pagou, e a parte do vendedor é liberada na hora (o pagamento continua manual no Repasse). Só contratos com vendedor e comissão calculada; os outros ficam como estão e aparecem no quadro "Conferir" da tela do relatório. Relatório de estorno não muda contrato. A esteira registra "Pago ao cliente pelo relatório de comissão <arquivo>". Os 2 contratos PROSESP que já tinham a comissão recebida e continuavam em análise (Acerto da Produção 8 e 10) foram passados para pago ao cliente: R$ 176,00 e R$ 150,00 liberados aos vendedores. Migrations `20261014162354_commission_report_marks_paid_v1` e `20261014162359_commission_report_paid_backfill_v1` (aplicadas em produção; ADR-0060), contrato `tests/security/commission-report-marks-paid-contract.sql` (7/7); `seller-credit` e `commission-receipts` ajustados à regra nova.
 
