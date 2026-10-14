@@ -165,10 +165,11 @@ insert into results select 'chargeback alert', exists (select 1 from public.fina
 reset role;
 
 -- Paid proposal without receipt after 30 days alerts (evidence moved back in time as the database owner).
-select set_config('corban.paid_evidence_rpc', 'on', true);
-update public.proposals_v2 set status = 'approved' where id in ((select id from made where label = 'p1'), (select id from made where label = 'p3'));
-update public.proposals_v2 set status = 'paid' where id in ((select id from made where label = 'p1'), (select id from made where label = 'p3'));
+-- Since 14/10/2026 the confirmed reports already moved them to "Paga" (the bank paid, so the client got the money).
+insert into results select 'confirmed reports moved the contracts to Paga',
+  (select count(*) = 2 from public.proposals_v2 where status = 'paid' and id in ((select id from made where label = 'p1'), (select id from made where label = 'p3')));
 update public.proposals_v2 set updated_at = now() - interval '70 days' where id in ((select id from made where label = 'p1'), (select id from made where label = 'p3'));
+update public.proposal_status_evidence set evidenced_at = now() - interval '70 days' where proposal_id in ((select id from made where label = 'p1'), (select id from made where label = 'p3'));
 select pg_temp.act_as((select admin_user from ids));
 set local role authenticated;
 insert into results select 'paid proposals with upfront received do not alert',

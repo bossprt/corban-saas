@@ -58,7 +58,7 @@ export const FEEDBACK = {
   'erro:legado_arquivo_repetido': 'Este arquivo já foi importado.',
   'erro:legado_lote_vazio': 'Nenhuma linha sem problema para importar.',
   'erro:legado_motivo': 'Informe o motivo (pelo menos 3 letras).',
-  'ok:relatorio_confirmado': 'Relatório confirmado. Os recebimentos foram lançados.',
+  'ok:relatorio_confirmado': 'Relatório confirmado. Os recebimentos foram lançados e os contratos foram para pago ao cliente.',
   'ok:relatorio_descartado': 'Relatório descartado.',
   'ok:linha_vinculada': 'Linha vinculada à proposta e comparada de novo.',
   'ok:linha_ignorada': 'Linha ignorada.',
