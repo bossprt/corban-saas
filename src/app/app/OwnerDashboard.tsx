@@ -27,11 +27,13 @@ export function periodRange(key: PeriodKey) {
   const [y, m, d] = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date()).split('-').map(Number)
   const today = utc(y, m - 1, d)
   const shift = (dt: Date, days: number) => new Date(dt.getTime() + days * 86_400_000)
-  if (key === 'hoje') return { from: iso(today), to: iso(today), prevFrom: iso(shift(today, -1)), prevTo: iso(shift(today, -1)), label: 'ontem' }
-  if (key === '7d') return { from: iso(shift(today, -6)), to: iso(today), prevFrom: iso(shift(today, -13)), prevTo: iso(shift(today, -7)), label: '7 dias anteriores' }
-  if (key === 'ano') return { from: iso(utc(y, 0, 1)), to: iso(today), prevFrom: iso(utc(y - 1, 0, 1)), prevTo: iso(utc(y - 1, m - 1, Math.min(d, new Date(Date.UTC(y - 1, m, 0)).getUTCDate()))), label: 'mesmo período do ano passado' }
+  // "Banco não pagou há mais de 30 dias": paid to the client on or before this day (owner_dashboard: < today - 30).
+  const lateUntil = iso(shift(today, -31))
+  if (key === 'hoje') return { from: iso(today), to: iso(today), prevFrom: iso(shift(today, -1)), prevTo: iso(shift(today, -1)), label: 'ontem', lateUntil }
+  if (key === '7d') return { from: iso(shift(today, -6)), to: iso(today), prevFrom: iso(shift(today, -13)), prevTo: iso(shift(today, -7)), label: '7 dias anteriores', lateUntil }
+  if (key === 'ano') return { from: iso(utc(y, 0, 1)), to: iso(today), prevFrom: iso(utc(y - 1, 0, 1)), prevTo: iso(utc(y - 1, m - 1, Math.min(d, new Date(Date.UTC(y - 1, m, 0)).getUTCDate()))), label: 'mesmo período do ano passado', lateUntil }
   const lastPrev = new Date(Date.UTC(y, m - 1, 0)).getUTCDate()
-  return { from: iso(utc(y, m - 1, 1)), to: iso(today), prevFrom: iso(utc(y, m - 2, 1)), prevTo: iso(utc(y, m - 2, Math.min(d, lastPrev))), label: 'mesmos dias do mês passado' }
+  return { from: iso(utc(y, m - 1, 1)), to: iso(today), prevFrom: iso(utc(y, m - 2, 1)), prevTo: iso(utc(y, m - 2, Math.min(d, lastPrev))), label: 'mesmos dias do mês passado', lateUntil }
 }
 
 const R = (v: number | string | null | undefined) => fromDecimalString(String(v ?? 0))
@@ -82,16 +84,16 @@ export async function OwnerDashboard({ supabase, organizationId, organizationNam
   const kpis: { label: string; value: number; prev: number; href: string; hint: string }[] = [
     { label: 'Produção paga', value: cur.production, prev: prev.production, href: paidLink(), hint: `${cur.contracts} contrato(s) pagos ao cliente` },
     { label: 'Comissão prevista', value: cur.expected, prev: prev.expected, href: paidLink(), hint: 'o que os bancos pagam por esses contratos' },
-    { label: 'Recebido dos bancos', value: cur.received, prev: prev.received, href: '/app/financeiro/conciliacao', hint: 'comissão que entrou no período' },
+    { label: 'Recebido dos bancos', value: cur.received, prev: prev.received, href: `/app/financeiro/conciliacao?${new URLSearchParams({ de: range.from, ate: range.to })}`, hint: 'comissão que entrou no período' },
     { label: 'Fica na empresa', value: cur.margin, prev: prev.margin, href: paidLink(), hint: `depois de imposto e de ${short(cur.sellers)} aos vendedores` },
   ]
   const alerts = [
-    { n: at.bank_late.n, label: 'Banco não pagou há mais de 30 dias', value: at.bank_late.amount, href: '/app/contratos?repasse=banco&n=100', tone: 'danger' },
+    { n: at.bank_late.n, label: 'Banco não pagou há mais de 30 dias', value: at.bank_late.amount, href: `/app/contratos?repasse=banco&pago_ate=${range.lateUntil}&n=100`, tone: 'danger' },
     { n: at.divergent.n, label: 'Comissão do banco diferente do previsto', value: null, href: '/app/contratos?repasse=divergente&n=100', tone: 'warn' },
     { n: at.to_pay.n, label: 'Vendedores com repasse a pagar', value: at.to_pay.amount, href: '/app/repasse#pagar', tone: 'warn' },
     { n: at.stale.n, label: 'Comissões desatualizadas (vendedor ou grupo mudou)', value: null, href: '/app/contratos?desatualizado=1&n=100', tone: 'warn' },
     { n: at.no_calc.n, label: 'Contratos pagos sem comissão calculada', value: null, href: '/app/contratos?comissao=pendente&situacao=paid&n=100', tone: 'warn' },
-    { n: at.overdue.n, label: 'Contratos parados além do prazo da etapa', value: null, href: '/app/operacao', tone: 'warn' },
+    { n: at.overdue.n, label: 'Contratos parados além do prazo da etapa', value: null, href: '/app/propostas?atrasado=1', tone: 'warn' },
   ].filter(a => a.n > 0)
   // Every day (or month) of the period, the empty ones too, so the gaps show.
   const byDay = new Map(board.series.map(s => [s.day, s]))
@@ -160,7 +162,7 @@ export async function OwnerDashboard({ supabase, organizationId, organizationNam
           <CardHeader title="Vendedores · produção paga" />
           {board.sellers.length === 0 ? <p className="px-5 pb-5 pt-2 text-sm text-muted">Sem produção paga neste período.</p> : (
             <ul className="px-5 pb-4 pt-2">{board.sellers.map((s, i) => (
-              <li key={s.id ?? 'none'}><Link href={s.id ? paidLink({ vendedor: s.id }) : paidLink()} className="block rounded-md py-1.5 hover:bg-surface-muted">
+              <li key={s.id ?? 'none'}><Link href={paidLink({ vendedor: s.id ?? 'none' })} className="block rounded-md py-1.5 hover:bg-surface-muted">
                 <span className="flex items-baseline justify-between gap-2 text-[13px]"><span className="truncate text-ink"><span className="mr-1.5 text-muted">{i + 1}</span>{s.name}</span><span className="num shrink-0 font-medium text-ink">{short(s.production)}</span></span>
                 <span className="mt-1 block h-1.5 rounded-full bg-surface-muted"><span className="block h-1.5 rounded-full bg-[#1D9E75]" style={{ width: `${pct(s.production, maxSeller)}%` }} /></span>
                 <span className="mt-0.5 block text-[11px] text-muted">{s.contracts} contrato(s) · recebe {money(s.payable)}</span>
@@ -174,7 +176,7 @@ export async function OwnerDashboard({ supabase, organizationId, organizationNam
         <CardHeader title="Por banco" />
         {board.banks.length === 0 ? <p className="px-5 pb-5 pt-2 text-sm text-muted">Sem produção paga neste período.</p> : (
           <div className="grid gap-3 px-5 pb-5 pt-3 sm:grid-cols-2 xl:grid-cols-3">{board.banks.map(b => (
-            <Link key={b.id ?? 'none'} href={b.id ? paidLink({ banco: b.id }) : paidLink()} className="rounded-[12px] border border-line p-4 hover:border-line-strong hover:bg-surface-muted">
+            <Link key={b.id ?? 'none'} href={paidLink({ banco: b.id ?? 'none' })} className="rounded-[12px] border border-line p-4 hover:border-line-strong hover:bg-surface-muted">
               <span className="block text-sm font-semibold text-ink">{b.name}</span>
               <span className="num mt-1 block text-xl font-semibold text-ink">{short(b.production)}</span>
               <span className="mt-2 grid gap-1 text-[13px]">
@@ -192,7 +194,7 @@ export async function OwnerDashboard({ supabase, organizationId, organizationNam
         <CardHeader title="Esteira agora" />
         <div className="flex flex-wrap gap-2 px-5 pb-5 pt-3">
           {pipeline.length === 0 ? <span className="text-sm text-muted">Nenhum contrato em andamento.</span> : pipeline.map(([state, n]) => (
-            <Link key={state} href="/app/operacao" className={`rounded-[10px] border px-3 py-2 text-sm hover:bg-surface-muted ${state === 'pending_external' ? 'border-[#FCD34D] bg-[#FFFBEB] text-[#92400E]' : 'border-line text-ink'}`}>
+            <Link key={state} href={`/app/propostas?estado=${state}`} className={`rounded-[10px] border px-3 py-2 text-sm hover:bg-surface-muted ${state === 'pending_external' ? 'border-[#FCD34D] bg-[#FFFBEB] text-[#92400E]' : 'border-line text-ink'}`}>
               {STATE_LABEL[state] ?? state} <strong className="num ml-1">{n}</strong>
             </Link>
           ))}

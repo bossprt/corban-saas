@@ -129,8 +129,8 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
   const showClosed = !!f.encerradas || CLOSED_STATUSES.includes(f.situacao)
   const matching = contracts.map(c => ({ c, w: where(c), s: c.seller_id ? sellerOf.get(c.seller_id) : undefined })).filter(({ c, w, s }) =>
     (!f.de || c.created_at.slice(0, 10) >= f.de) && (!f.ate || c.created_at.slice(0, 10) <= f.ate)
-    && (!f.banco || w.bank === f.banco) && (!f.convenio || w.agreement === f.convenio)
-    && (!f.vendedor || c.seller_id === f.vendedor) && (!f.grupo || s?.commission_group_id === f.grupo)
+    && (!f.banco || w.bank === (f.banco === 'none' ? '' : f.banco)) && (!f.convenio || w.agreement === f.convenio)
+    && (!f.vendedor || (f.vendedor === 'none' ? !c.seller_id : c.seller_id === f.vendedor)) && (!f.grupo || s?.commission_group_id === f.grupo)
     && (!f.situacao || c.status === f.situacao) && (!f.cliente || c.customer_id === f.cliente)
     && (!f.comissao || (f.comissao === 'calculada') === totals.has(c.id))
     && (!f.alterado || !!payout.get(c.id)?.overridden)
@@ -189,9 +189,9 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
           <label className={lbl}>De<input type="date" name="de" defaultValue={f.de} className="field mt-1.5" /></label>
           <label className={lbl}>Até<input type="date" name="ate" defaultValue={f.ate} className="field mt-1.5" /></label>
           <label className={lbl}>Situação<select name="situacao" defaultValue={f.situacao} className="field mt-1.5"><option value="">Todas</option>{Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
-          <label className={lbl}>Banco<select name="banco" defaultValue={f.banco} className="field mt-1.5"><option value="">Todos</option>{(banks ?? []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
+          <label className={lbl}>Banco<select name="banco" defaultValue={f.banco} className="field mt-1.5"><option value="">Todos</option><option value="none">Sem banco</option>{(banks ?? []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
           <label className={lbl}>Convênio<select name="convenio" defaultValue={f.convenio} className="field mt-1.5"><option value="">Todos</option>{(agreements ?? []).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
-          <label className={lbl}>Vendedor<select name="vendedor" defaultValue={f.vendedor} className="field mt-1.5"><option value="">Todos</option>{(sellers ?? []).map(s => <option key={s.id} value={s.id}>{s.code ? `${String(s.code).padStart(3, '0')} · ` : ''}{s.name}</option>)}</select></label>
+          <label className={lbl}>Vendedor<select name="vendedor" defaultValue={f.vendedor} className="field mt-1.5"><option value="">Todos</option><option value="none">Sem vendedor</option>{(sellers ?? []).map(s => <option key={s.id} value={s.id}>{s.code ? `${String(s.code).padStart(3, '0')} · ` : ''}{s.name}</option>)}</select></label>
           <label className={lbl}>Grupo do vendedor<select name="grupo" defaultValue={f.grupo} className="field mt-1.5"><option value="">Todos</option>{(groups ?? []).map(g => <option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
           {finance && <label className={lbl}>Comissão<select name="comissao" defaultValue={f.comissao} className="field mt-1.5"><option value="">Todas</option><option value="calculada">Calculada</option><option value="pendente">Não calculada</option></select></label>}
           {finance && <label className={lbl}>Repasse ao vendedor<select name="repasse" defaultValue={f.repasse} className="field mt-1.5"><option value="">Todos</option><option value="aguardando">Aguardando (cliente, físico ou banco)</option><option value="banco">Aguardando comissão do banco</option><option value="divergente">Comissão do banco divergente</option><option value="creditado">Liberado, a pagar</option><option value="pago">Pago ao vendedor</option><option value="sem_repasse">Sem repasse (vendedor recebe R$ 0)</option><option value="concluido">Concluído (pago ou sem repasse)</option></select></label>}

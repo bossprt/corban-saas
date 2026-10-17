@@ -11,15 +11,19 @@ const ZERO = fromDecimalString('0')
 const dec = (v: string | number | null) => fromDecimalString(String(v ?? '0'))
 
 // Contract by contract: what the ledger received (upfront, deferred installments, chargebacks) and the divergences still open.
-export default async function ReconciliationPage({ searchParams }: { searchParams: Promise<{ ver?: string }> }) {
-  const { ver = 'abertas' } = await searchParams
+export default async function ReconciliationPage({ searchParams }: { searchParams: Promise<{ ver?: string; de?: string; ate?: string }> }) {
+  const sp = await searchParams
+  // Dashboard "Recebido dos bancos": only what was received in the period (received_on), every contract.
+  const isDate = (v?: string) => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v)
+  const de = isDate(sp.de) ? sp.de! : '', ate = isDate(sp.ate) ? sp.ate! : ''
+  const ver = de || ate ? 'todas' : (sp.ver ?? 'abertas')
   const { supabase, access } = await requireAppContext()
   if (!can(access, 'financeiro.view')) return <section><PageHeader title="Conciliação" /><Card className="p-5 text-sm text-ink-soft">Seu perfil não vê o financeiro.</Card></section>
   const [{ data: entryRows }, { data: resolutions }] = await Promise.all([
     supabase.from('commission_receipts').select('id,proposal_id,entry_kind,component_key,installment_number,amount,expected_amount,reconciliation,received_on,created_at').order('created_at', { ascending: false }).limit(5000),
     supabase.from('commission_receipt_resolutions').select('receipt_id,note'),
   ])
-  const entries = (entryRows ?? []) as Entry[]
+  const entries = ((entryRows ?? []) as Entry[]).filter(e => (!de || (e.received_on ?? '') >= de) && (!ate || (!!e.received_on && e.received_on <= ate)))
   const accepted = new Map((resolutions ?? []).map(r => [r.receipt_id, r.note]))
   const proposalIds = [...new Set(entries.map(e => e.proposal_id))]
   const { data: proposals } = proposalIds.length ? await supabase.from('proposals_v2').select('id,external_proposal_id,customer_snapshot,term').in('id', proposalIds) : { data: [] }
@@ -42,6 +46,9 @@ export default async function ReconciliationPage({ searchParams }: { searchParam
     <section>
       <PageHeader title="Conciliação por contrato" description="O que cada contrato já recebeu do banco ou da promotora, e as divergências ainda em aberto."
         actions={<Link href="/app/financeiro" className="text-sm text-brand hover:underline">Voltar ao financeiro</Link>} />
+      {(de || ate) && <p className="mb-4 flex flex-wrap items-center gap-2 rounded-[10px] border border-line bg-surface-muted px-4 py-2 text-sm">
+        <span className="text-ink-soft">Recebido {de && `de ${de.split('-').reverse().join('/')} `}{ate && `até ${ate.split('-').reverse().join('/')}`}</span>
+        <Link href="?ver=todas" className="text-brand hover:underline">Ver tudo</Link></p>}
       <Card className="overflow-hidden">
         <CardHeader title={ver === 'todas' ? 'Todos os contratos com recebimento' : 'Contratos com divergência em aberto'} action={
           <nav className="flex gap-1 text-[13px]">

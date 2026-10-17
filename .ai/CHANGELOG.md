@@ -15,6 +15,13 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Dashboard: cada número abre só os contratos dele (17/10/2026)
+- Corrigido (pedido do dono: "Esteira agora" mostrava a esteira inteira e não só as 2 pendências): os números de "Esteira agora" abrem a Esteira filtrada pela situação (`/app/propostas?estado=`), com a aba da etapa marcada.
+- Corrigido: "Contratos parados além do prazo da etapa" abre só os parados (`/app/propostas?atrasado=1`), não mais a Operação inteira.
+- Corrigido: "Banco não pagou há mais de 30 dias" abre só os pagos ao cliente há mais de 30 dias (antes listava todos os que esperam o banco).
+- Corrigido: "Recebido dos bancos" abre a Conciliação só com o recebido no período escolhido (`?de=&ate=`).
+- Corrigido: "Sem vendedor" e "Sem banco" abrem só os contratos sem vendedor ou sem banco; os filtros de Contratos ganharam essas opções.
+
 ### Corretor externo: extrato sem pagamento desfeito e sem "Sugerir melhoria" (14/10/2026)
 - Alterado (pedido do dono: "essas informações só abrem brecha para questionamentos"): no Extrato, quem não é do financeiro não vê o pagamento desfeito nem os 2 lançamentos dele (pagamento e ajuste); vê os pagamentos feitos e os estornos. O financeiro continua vendo tudo.
 - Alterado: o corretor externo (portal) não tem mais o botão "Sugerir melhoria"; a página e o envio também recusam (só os usuários da empresa sugerem).

@@ -23,7 +23,7 @@ const days = (iso: string) => Math.max(0, Math.floor((Date.now() - new Date(iso)
 
 // Esteira: every proposal in the pipeline with its stage, how long it is there and the alerts that need action.
 // Stages are the company's own (names and order); visibility follows the caller's scope (RLS).
-export default async function PipelinePage({ searchParams }: { searchParams: Promise<{ etapa?: string; visao?: string }> }) {
+export default async function PipelinePage({ searchParams }: { searchParams: Promise<{ etapa?: string; visao?: string; estado?: string; atrasado?: string }> }) {
   const { supabase, access } = await requireAppContext()
   const sp = await searchParams
 
@@ -38,7 +38,13 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
   const stage = kanban ? undefined : (stages ?? []).find(s => s.code === sp.etapa)
   // Kanban: open proposals, plus the ones closed in the last 7 days (so a card just dropped in Paga stays in sight).
   const weekAgo = requestTime() - 7 * 86_400_000
+  // Dashboard "Esteira agora" opens one canonical state (it groups every stage of that state).
+  const state = kanban || stage ? undefined : sp.estado
+  // Dashboard "parados além do prazo": open cases past the stage deadline (owner_dashboard overdue).
+  const late = !kanban && !stage && sp.atrasado === '1'
   const shown = stage ? cases.filter(c => c.current_stage_id === stage.id)
+    : state ? cases.filter(c => c.canonical_state === state)
+    : late ? cases.filter(c => !CLOSED.includes(c.canonical_state) && !!c.due_at && new Date(c.due_at).getTime() < requestTime())
     : cases.filter(c => !CLOSED.includes(c.canonical_state) || (kanban && new Date(c.entered_stage_at).getTime() >= weekAgo))
   const canMove = can(access, 'esteira.edit')
   const stageOptions = (stages ?? []).map(s => ({ id: s.id, name: s.name, canonical_state: s.canonical_state }))
@@ -79,13 +85,16 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
 
       <PreQueue />
 
+      {late && <p className="mb-4 flex flex-wrap items-center gap-2 rounded-[10px] border border-line bg-surface-muted px-4 py-2 text-sm">
+        <span className="text-ink-soft">Só os parados além do prazo da etapa</span>
+        <Link href="/app/propostas" className="text-brand hover:underline">Ver todos</Link></p>}
       <nav aria-label="Etapas" className="mb-4 flex gap-1 overflow-x-auto border-b border-line">
-        <Link href="/app/propostas" aria-current={!stage ? 'page' : undefined} className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2.5 text-sm ${!stage ? 'border-brand font-semibold text-ink' : 'border-transparent text-ink-soft hover:text-ink'}`}>
+        <Link href="/app/propostas" aria-current={!stage && !state && !late ? 'page' : undefined} className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2.5 text-sm ${!stage && !state && !late ? 'border-brand font-semibold text-ink' : 'border-transparent text-ink-soft hover:text-ink'}`}>
           Em andamento <span className="num ml-1 text-xs text-muted">{openCount}</span>
         </Link>
         {(stages ?? []).map(s => (
-          <Link key={s.id} href={`/app/propostas?etapa=${s.code}`} aria-current={stage?.id === s.id ? 'page' : undefined}
-            className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2.5 text-sm ${stage?.id === s.id ? 'border-brand font-semibold text-ink' : 'border-transparent text-ink-soft hover:text-ink'}`}>
+          <Link key={s.id} href={`/app/propostas?etapa=${s.code}`} aria-current={stage?.id === s.id || s.canonical_state === state ? 'page' : undefined}
+            className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2.5 text-sm ${stage?.id === s.id || s.canonical_state === state ? 'border-brand font-semibold text-ink' : 'border-transparent text-ink-soft hover:text-ink'}`}>
             {s.name} <span className="num ml-1 text-xs text-muted">{count(s.id)}</span>
           </Link>
         ))}
