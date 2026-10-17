@@ -59,6 +59,7 @@
 - 14/10: comissão recebida lançada à mão por contrato (setinha > Alterar/Ver comissão; % líquido, % bruto ou R$; ADR-0059, `20261014053535_manual_received_commission_v1`). Para a Gratificação render repasse ao vendedor, a tabela precisa ter os valores dos grupos na coluna Gratificação.
 
 - 14/10: confirmar relatório de comissão passa os contratos do relatório para pago ao cliente e libera o repasse (ADR-0060); contratos sem vendedor ou sem comissão calculada ficam no quadro "Conferir" do relatório.
+- 17/10: Dashboard — cada número abre só os contratos dele (Esteira agora por situação, parados além do prazo, banco há mais de 30 dias, recebido no período, sem vendedor/sem banco). Só tela, sem migration.
 
 ## Validado com o dono
 - 06/10: contrato real do início ao fim; 2 contas bancárias no Financeiro; pagamento em lote de 9 vendedores (R$ 1.610,10) por QR Code PIX; contrato 131259 concluído.
