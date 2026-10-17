@@ -8,7 +8,10 @@ export type BatchRow = {
 
 // partial: this payment paid only part of the contract (payment from the balance, oldest contracts first, 17/10/2026).
 // kind: set when the item has no contract (bonus, discount, ...; 'unmatched' when the ledger could not explain it).
-export type BatchContract = { proposal_id: string | null; ade: string | null; client: string | null; amount: string; partial?: boolean; kind?: string | null }
+export type BatchContract = { proposal_id: string | null; ade: string | null; client: string | null; amount: string; partial?: boolean; kind?: string | null
+  // Contract details (17/10/2026): bank, agreement, product (contract type), released to the client, paid to the client on.
+  bank?: string | null; agreement?: string | null; product?: string | null; released?: string | null; paid_to_client_on?: string | null
+}
 
 const ITEM_LABEL: Record<string, string> = { bonus: 'Bônus', advance: 'Adiantamento', discount: 'Desconto', adjustment: 'Ajuste', commission: 'Comissão', chargeback: 'Estorno', unmatched: 'Sem contrato identificado' }
 export const batchItemLabel = (c: BatchContract) => c.proposal_id ? (c.ade ?? 'sem ADE') : (ITEM_LABEL[c.kind ?? ''] ?? 'Outro lançamento')

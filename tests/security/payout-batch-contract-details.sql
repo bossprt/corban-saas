@@ -1,7 +1,7 @@
--- Contract test for 20261017120000_payout_withdrawal_contracts_v1: a payment from the balance lists the contracts its
+-- Contract test for 20261017190216_payout_batch_contract_details_v1: a payment from the balance lists the contracts its
 -- amount covered, oldest first, with "pago em parte" when it ended in the middle of one; a chargeback lowers its own
--- contract first; the contracts always add up to the amount paid. One transaction, rolled back.
---   psql -v ON_ERROR_STOP=1 -f tests/security/payout-withdrawal-contracts.sql
+-- contract first; the contracts always add up to the amount paid; each contract brings its details. One transaction, rolled back.
+--   psql -v ON_ERROR_STOP=1 -f tests/security/payout-batch-contract-details.sql
 
 begin;
 
@@ -78,6 +78,9 @@ insert into results select 'the contracts add up to the amount paid, in both pay
   (select sum((value->>'amount')::numeric) from c1) = 120.00 and (select sum((value->>'amount')::numeric) from c2) = 50.00;
 insert into results select 'the client name comes along',
   (select bool_and(value->>'client' = 'Cliente Saque') from c1);
+insert into results select 'each contract brings bank, agreement, product and the amount released',
+  (select bool_and(value->>'bank' is not null and value->>'agreement' is not null and value->>'product' is not null
+                   and (value->>'released')::numeric = 9500.00 and value ? 'paid_to_client_on') from c1);
 insert into results select 'the allocation is not callable by users',
   not has_function_privilege('authenticated', 'private.withdrawal_allocation(uuid)', 'execute');
 

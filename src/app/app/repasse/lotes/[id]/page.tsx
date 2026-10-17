@@ -58,7 +58,8 @@ export default async function PayoutBatchPage({ params }: { params: Promise<{ id
                   <td className="px-4 py-2.5"><Link href={`/app/repasse/${l.account_id}`} className="font-medium text-ink hover:underline print:no-underline">{l.holder}</Link></td>
                   <td className="px-4 py-2.5 text-[13px] text-ink-soft">
                     {l.contracts.length ? l.contracts.map(c => (
-                      <div key={c.proposal_id ?? c.kind ?? ''}>{c.proposal_id ? <Link href={`/app/propostas/${c.proposal_id}`} className="hover:underline">{batchItemLabel(c)}</Link> : batchItemLabel(c)}{c.client ? ` · ${c.client}` : ''} · {brlText(c.amount)}{c.partial && <span className="ml-1 text-xs text-[#92400E]">(pago em parte)</span>}</div>
+                      <div key={c.proposal_id ?? c.kind ?? ''}>{c.proposal_id ? <Link href={`/app/propostas/${c.proposal_id}`} className="hover:underline">{batchItemLabel(c)}</Link> : batchItemLabel(c)}{c.client ? ` · ${c.client}` : ''} · {brlText(c.amount)}{c.partial && <span className="ml-1 text-xs text-[#92400E]">(pago em parte)</span>}
+                        {c.proposal_id && <div className="mb-1 text-xs text-muted">{[c.bank, c.agreement, c.product, c.released ? `liberado ${brlText(c.released)}` : null, c.paid_to_client_on ? `pago ao cliente em ${dateBr(c.paid_to_client_on)}` : null].filter(Boolean).join(' · ')}</div>}</div>
                     )) : <span className="text-muted">{l.kind === 'withdrawal' ? 'Saque do saldo' : l.status === 'reversed' ? 'Contratos voltaram para o próximo pagamento' : '—'}</span>}
                   </td>
                   <td className="num px-4 py-2.5 text-right font-semibold text-ink">{brlText(l.amount)}</td>

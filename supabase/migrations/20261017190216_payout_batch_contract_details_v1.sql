@@ -1,7 +1,12 @@
--- Owner (17/10/2026): in a payment batch, a payment from the balance ("Saque do saldo", the default for daily sellers) showed
--- only the person, not the contracts inside the amount paid. Owner chose (option 1): the amount paid covers the oldest
--- contracts of the balance first; each contract shows how much of it this payment paid, and "pago em parte" when the
--- payment ended in the middle of it. The sum always equals the amount paid. Read only: nothing is stored or changed.
+-- Owner (17/10/2026), payment batch screen and Excel:
+--   1. each contract paid shows its details: bank, agreement, product (contract type), amount released to the client and
+--      the day it was paid to the client (owner chose option 1);
+--   2. a payment from the balance ("Saque do saldo") lists the contracts inside the amount paid (below).
+--
+-- Payment from the balance: until now it showed only the person (no such payment existed yet on 17/10; all were closings).
+-- Owner chose: the amount paid covers the oldest contracts of the balance first; each contract shows how much of it this
+-- payment paid, and "pago em parte" when the payment ended in the middle of it. The sum always equals the amount paid.
+-- Read only: nothing is stored or changed.
 --
 -- private.withdrawal_allocation walks the account's ledger in time order (no closing entries, no undone payments):
 --   * a credit enters the queue (first paying any debt left by an earlier chargeback);
@@ -94,6 +99,27 @@ end
 $$;
 revoke all on function private.withdrawal_allocation(uuid) from public, anon, authenticated;
 
+-- The details of one contract shown in a payment batch (bank, agreement, product, released, paid to the client on).
+create or replace function private.batch_contract_info(p_proposal uuid)
+returns jsonb
+language sql
+stable
+security definer
+set search_path to ''
+as $$
+  select jsonb_build_object('bank', b.name, 'agreement', ag.name, 'product', coalesce(ct.name, t.name),
+                            'released', pr.released_amount::text, 'paid_to_client_on', pr.paid_to_client_on)
+  from public.proposals_v2 pr
+  left join public.product_table_versions v on v.id = pr.product_table_version_id
+  left join public.product_tables t on t.id = v.product_table_id
+  left join public.organization_product_routes r on r.id = t.route_id
+  left join public.organization_banks b on b.id = r.org_bank_id
+  left join public.organization_agreements ag on ag.id = r.org_agreement_id
+  left join public.contract_types ct on ct.id = pr.contract_type_id
+  where pr.id = p_proposal
+$$;
+revoke all on function private.batch_contract_info(uuid) from public, anon, authenticated;
+
 -- One batch: header and one line per payment, with the contracts it paid (ADE, client, amount). A closing lists the
 -- contracts it closed; a payment from the balance lists the contracts its amount covered, oldest first (17/10/2026).
 create or replace function public.payout_batch_detail(p_batch uuid)
@@ -122,7 +148,7 @@ begin
         'contracts', case when p.kind = 'withdrawal' then coalesce((
           -- What this payment from the balance covered: one line per contract (or per item without a contract).
           select jsonb_agg(jsonb_build_object('proposal_id', c.proposal_id, 'ade', c.ade, 'client', c.client, 'amount', c.amount::text,
-                                              'partial', c.partial, 'kind', c.kind) order by c.ade nulls last, c.kind)
+                                              'partial', c.partial, 'kind', c.kind) || coalesce(private.batch_contract_info(c.proposal_id), '{}'::jsonb) order by c.ade nulls last, c.kind)
           from (select a.r_proposal as proposal_id, pr.external_proposal_id as ade, pr.customer_snapshot->>'full_name' as client,
                        sum(a.r_amount) as amount, bool_or(a.r_amount < a.r_item) as partial,
                        case when a.r_proposal is null then a.r_kind end as kind
@@ -132,7 +158,7 @@ begin
         else coalesce((
           -- One line per contract: its commission, chargebacks and adjustments in this closing, added up.
           select jsonb_agg(jsonb_build_object('proposal_id', c.proposal_id, 'ade', c.ade, 'client', c.client, 'amount', c.amount::text,
-                                              'partial', false, 'kind', null) order by c.ade)
+                                              'partial', false, 'kind', null) || coalesce(private.batch_contract_info(c.proposal_id), '{}'::jsonb) order by c.ade)
           from (select e.proposal_id, pr.external_proposal_id as ade, pr.customer_snapshot->>'full_name' as client, sum(e.amount) as amount
                 from public.payout_entries e join public.proposals_v2 pr on pr.id = e.proposal_id
                 where e.statement_id = p.id and e.kind in ('commission', 'chargeback', 'adjustment') and e.status = 'approved'
