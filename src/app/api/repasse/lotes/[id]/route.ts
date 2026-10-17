@@ -3,7 +3,7 @@ import { requireAppContext } from '@/lib/appContext'
 import { can } from '@/lib/access'
 import { isUuid } from '@/lib/team'
 import { PAYOUT_STATUS_LABEL } from '@/lib/payout/format'
-import type { BatchDetail } from '@/lib/payout/batches'
+import { batchItemLabel, type BatchDetail } from '@/lib/payout/batches'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,7 +22,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const ws = wb.addWorksheet('Lote')
   ws.columns = [
     { header: 'Pagamento dia', width: 14 }, { header: 'Pessoa', width: 34 }, { header: 'ADE', width: 14 }, { header: 'Cliente', width: 34 },
-    { header: 'Comissão do contrato (R$)', width: 22 }, { header: 'Valor pago à pessoa (R$)', width: 22 }, { header: 'Situação', width: 18 },
+    { header: 'Comissão do contrato (R$)', width: 22 }, { header: 'Valor pago à pessoa (R$)', width: 22 }, { header: 'Pago em parte', width: 14 }, { header: 'Situação', width: 18 },
     { header: 'Comprovante', width: 20 }, { header: 'Conta que pagou', width: 24 },
   ]
   ws.getRow(1).font = { bold: true }
@@ -31,7 +31,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const status = PAYOUT_STATUS_LABEL[l.status] ?? l.status
     const rows = l.contracts.length ? l.contracts : [null]
     rows.forEach((c, i) => ws.addRow([
-      day, l.holder, c?.ade ?? '', c?.client ?? '', c ? Number(c.amount) : null, i === 0 ? Number(l.amount) : null, status,
+      day, l.holder, c ? batchItemLabel(c) : '', c?.client ?? '', c ? Number(c.amount) : null, i === 0 ? Number(l.amount) : null, c?.partial ? 'Sim' : '', status,
       b.payment_reference ?? '', b.bank_accounts ?? '',
     ]))
   }

@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Lote de pagamento: contratos dentro de cada saque (17/10/2026)
+- Alterado (pedido do dono: "só aparece quem eu paguei, mas não detalha os contratos que foram pagos dentro daquele valor"): no lote de pagamento (tela e Excel), o pagamento do saldo ("Saque do saldo") lista os contratos que o valor pagou, dos mais antigos para os mais novos, com "pago em parte" quando o valor acabou no meio de um contrato. A soma bate com o valor pago. Só leitura, nada é gravado (ADR-0061, `20261017120000_payout_withdrawal_contracts_v1`).
+
 ### Dashboard: cada número abre só os contratos dele (17/10/2026)
 - Corrigido (pedido do dono: "Esteira agora" mostrava a esteira inteira e não só as 2 pendências): os números de "Esteira agora" abrem a Esteira filtrada pela situação (`/app/propostas?estado=`), com a aba da etapa marcada.
 - Corrigido: "Contratos parados além do prazo da etapa" abre só os parados (`/app/propostas?atrasado=1`), não mais a Operação inteira.
