@@ -60,6 +60,7 @@
 
 - 14/10: confirmar relatório de comissão passa os contratos do relatório para pago ao cliente e libera o repasse (ADR-0060); contratos sem vendedor ou sem comissão calculada ficam no quadro "Conferir" do relatório.
 - 17/10: Dashboard — cada número abre só os contratos dele (Esteira agora por situação, parados além do prazo, banco há mais de 30 dias, recebido no período, sem vendedor/sem banco). Só tela, sem migration.
+- 17/10: lote de pagamento mostra banco, convênio, produto, liberado e data paga ao cliente de cada contrato (tela e Excel) e lista os contratos de cada saque do saldo (mais antigos primeiro, "pago em parte"; ADR-0061, `20261017190216_payout_batch_contract_details_v1`; teste `payout-batch-contract-details.sql` 7/7).
 
 ## Validado com o dono
 - 06/10: contrato real do início ao fim; 2 contas bancárias no Financeiro; pagamento em lote de 9 vendedores (R$ 1.610,10) por QR Code PIX; contrato 131259 concluído.

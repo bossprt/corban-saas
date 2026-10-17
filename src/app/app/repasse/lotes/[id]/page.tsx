@@ -6,14 +6,15 @@ import { requireAppContext } from '@/lib/appContext'
 import { isUuid } from '@/lib/team'
 import { brlText } from '@/lib/receipts/format'
 import { dateBr, PAYOUT_STATUS_LABEL, PAYOUT_STATUS_TONE } from '@/lib/payout/format'
-import { batchStatus, type BatchDetail } from '@/lib/payout/batches'
+import { batchItemLabel, batchStatus, type BatchDetail } from '@/lib/payout/batches'
 import { PrintButton } from '@/components/PrintButton'
 import { reverseBatch } from '../../actions'
 
 const box = 'rounded-[14px] border border-line bg-surface px-4 py-3'
 const btn = 'inline-flex h-9 items-center rounded-[10px] border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted print:hidden'
 
-// One payment batch: header, one line per person paid with the contracts a closing paid, Excel, print and "Desfazer lote".
+// One payment batch: header, one line per person paid with the contracts the payment paid (a payment from the balance
+// covers the oldest contracts first), Excel, print and "Desfazer lote".
 export default async function PayoutBatchPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   if (!isUuid(id)) notFound()
@@ -57,7 +58,8 @@ export default async function PayoutBatchPage({ params }: { params: Promise<{ id
                   <td className="px-4 py-2.5"><Link href={`/app/repasse/${l.account_id}`} className="font-medium text-ink hover:underline print:no-underline">{l.holder}</Link></td>
                   <td className="px-4 py-2.5 text-[13px] text-ink-soft">
                     {l.contracts.length ? l.contracts.map(c => (
-                      <div key={c.proposal_id}><Link href={`/app/propostas/${c.proposal_id}`} className="hover:underline">{c.ade ?? 'sem ADE'}</Link>{c.client ? ` · ${c.client}` : ''} · {brlText(c.amount)}</div>
+                      <div key={c.proposal_id ?? c.kind ?? ''}>{c.proposal_id ? <Link href={`/app/propostas/${c.proposal_id}`} className="hover:underline">{batchItemLabel(c)}</Link> : batchItemLabel(c)}{c.client ? ` · ${c.client}` : ''} · {brlText(c.amount)}{c.partial && <span className="ml-1 text-xs text-[#92400E]">(pago em parte)</span>}
+                        {c.proposal_id && <div className="mb-1 text-xs text-muted">{[c.bank, c.agreement, c.product, c.released ? `liberado ${brlText(c.released)}` : null, c.paid_to_client_on ? `pago ao cliente em ${dateBr(c.paid_to_client_on)}` : null].filter(Boolean).join(' · ')}</div>}</div>
                     )) : <span className="text-muted">{l.kind === 'withdrawal' ? 'Saque do saldo' : l.status === 'reversed' ? 'Contratos voltaram para o próximo pagamento' : '—'}</span>}
                   </td>
                   <td className="num px-4 py-2.5 text-right font-semibold text-ink">{brlText(l.amount)}</td>

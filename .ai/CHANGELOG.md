@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Lote de pagamento: detalhes de cada contrato pago (17/10/2026)
+- Alterado (pedido do dono: detalhar os contratos pagos dentro de cada valor; escolheu a opção 1): no lote de pagamento (tela e Excel), cada contrato mostra banco, convênio, produto (tipo de contrato), valor liberado ao cliente e data em que foi pago ao cliente. O Excel ganhou essas colunas e "Pago em parte".
+- Adicionado: o pagamento do saldo ("Saque do saldo", ainda não usado em 17/10) lista os contratos que o valor pagou, dos mais antigos para os mais novos, com "pago em parte"; a soma bate com o valor pago. Só leitura, nada é gravado (ADR-0061, `20261017190216_payout_batch_contract_details_v1`).
+
 ### Dashboard: cada número abre só os contratos dele (17/10/2026)
 - Corrigido (pedido do dono: "Esteira agora" mostrava a esteira inteira e não só as 2 pendências): os números de "Esteira agora" abrem a Esteira filtrada pela situação (`/app/propostas?estado=`), com a aba da etapa marcada.
 - Corrigido: "Contratos parados além do prazo da etapa" abre só os parados (`/app/propostas?atrasado=1`), não mais a Operação inteira.

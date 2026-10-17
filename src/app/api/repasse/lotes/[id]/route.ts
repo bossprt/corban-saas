@@ -3,7 +3,7 @@ import { requireAppContext } from '@/lib/appContext'
 import { can } from '@/lib/access'
 import { isUuid } from '@/lib/team'
 import { PAYOUT_STATUS_LABEL } from '@/lib/payout/format'
-import type { BatchDetail } from '@/lib/payout/batches'
+import { batchItemLabel, type BatchDetail } from '@/lib/payout/batches'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,7 +22,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const ws = wb.addWorksheet('Lote')
   ws.columns = [
     { header: 'Pagamento dia', width: 14 }, { header: 'Pessoa', width: 34 }, { header: 'ADE', width: 14 }, { header: 'Cliente', width: 34 },
-    { header: 'Comissão do contrato (R$)', width: 22 }, { header: 'Valor pago à pessoa (R$)', width: 22 }, { header: 'Situação', width: 18 },
+    { header: 'Banco', width: 20 }, { header: 'Convênio', width: 22 }, { header: 'Produto', width: 18 }, { header: 'Liberado ao cliente (R$)', width: 20 }, { header: 'Pago ao cliente em', width: 16 },
+    { header: 'Comissão do contrato (R$)', width: 22 }, { header: 'Valor pago à pessoa (R$)', width: 22 }, { header: 'Pago em parte', width: 14 }, { header: 'Situação', width: 18 },
     { header: 'Comprovante', width: 20 }, { header: 'Conta que pagou', width: 24 },
   ]
   ws.getRow(1).font = { bold: true }
@@ -31,13 +32,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     const status = PAYOUT_STATUS_LABEL[l.status] ?? l.status
     const rows = l.contracts.length ? l.contracts : [null]
     rows.forEach((c, i) => ws.addRow([
-      day, l.holder, c?.ade ?? '', c?.client ?? '', c ? Number(c.amount) : null, i === 0 ? Number(l.amount) : null, status,
+      day, l.holder, c ? batchItemLabel(c) : '', c?.client ?? '', c?.bank ?? '', c?.agreement ?? '', c?.product ?? '', c?.released ? Number(c.released) : null,
+      c?.paid_to_client_on ? `${c.paid_to_client_on.slice(8, 10)}/${c.paid_to_client_on.slice(5, 7)}/${c.paid_to_client_on.slice(0, 4)}` : '', c ? Number(c.amount) : null, i === 0 ? Number(l.amount) : null, c?.partial ? 'Sim' : '', status,
       b.payment_reference ?? '', b.bank_accounts ?? '',
     ]))
   }
   ws.addRow([])
-  ws.addRow(['Total', '', '', '', null, Number(b.total)]).font = { bold: true }
-  for (const c of [5, 6]) ws.getColumn(c).numFmt = '#,##0.00'
+  ws.addRow(['Total', '', '', '', '', '', '', null, '', null, Number(b.total)]).font = { bold: true }
+  for (const c of [8, 10, 11]) ws.getColumn(c).numFmt = '#,##0.00'
   ws.getColumn(3).numFmt = '@'
   ws.views = [{ state: 'frozen', ySplit: 1 }]
   const buffer = await wb.xlsx.writeBuffer()
