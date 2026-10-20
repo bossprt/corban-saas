@@ -346,6 +346,20 @@ export const FEEDBACK = {
   'erro:portal_papel': 'O papel Corretor não existe ou está inativo. Confira em Configurações > Papéis.',
   'erro:portal_acesso_existente': 'Este cadastro já tem acesso ao sistema.',
   'erro:portal_documento': 'Não foi possível anexar o documento. Confira o arquivo e tente de novo.',
+  'ok:tarefa_criada': 'Tarefa criada.',
+  'ok:tarefa_concluida': 'Tarefa concluída.',
+  'ok:tarefa_cancelada': 'Tarefa cancelada.',
+  'ok:contato_registrado': 'Contato registrado.',
+  'erro:tarefa_invalida': 'Confira a tarefa: tipo, descrição (até 200 letras) e data.',
+  'erro:tarefa_fechada': 'Esta tarefa já foi concluída ou cancelada.',
+  'erro:etapa_invalida': 'Confira a etapa: nome (até 40 letras) e tipo.',
+  'erro:etapa_nome_repetido': 'Já existe uma etapa ativa com este nome.',
+  'ok:leads_devolvidos': 'Leads devolvidos para a fila.',
+  'erro:nada_selecionado': 'Marque pelo menos um lead.',
+  'ok:nao_perturbe_marcado': 'Telefone marcado como "Não perturbe".',
+  'ok:nao_perturbe_ja_estava': 'Este telefone já estava no "Não perturbe".',
+  'ok:nao_perturbe_removido': 'Telefone retirado do "Não perturbe".',
+  'erro:telefone_invalido': 'Telefone inválido: use DDD e número (10 ou 11 dígitos).',
 } as const
 export type FeedbackCode = keyof typeof FEEDBACK
 export const isFeedbackCode = (v: unknown): v is FeedbackCode => typeof v === 'string' && Object.prototype.hasOwnProperty.call(FEEDBACK, v)

@@ -2,12 +2,12 @@ import { Suspense } from 'react'
 import Link from 'next/link'
 import { FlashBanner } from '@/components/FlashBanner'
 import { redirect } from 'next/navigation'
-import { Calculator, Megaphone, Search, UserPlus } from 'lucide-react'
+import { Calculator, Columns3, Hourglass, Megaphone, PhoneOff, Search, UserPlus } from 'lucide-react'
 import { ButtonLink, Card, PageHeader } from '@/components/ui'
 import { SubmitButton } from '@/components/SubmitButton'
 import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
-import { LEAD_STAGES, OPEN_STAGES, isLeadStage, type LeadStage } from '@/lib/crm'
+import { BASE_STAGES, LEAD_STAGES, OPEN_STAGES, STAGE_LABEL, isLeadStage, normalizePhone, type LeadStage } from '@/lib/crm'
 import { isPortalUser } from '@/lib/portal'
 import { digitsOnly, searchTerm } from '@/lib/search'
 import { memberEmails } from '@/lib/team.server'
@@ -41,7 +41,7 @@ export default async function SalesBoardPage({ searchParams }: { searchParams: P
   const q = searchTerm(sp.q)
 
   let leadsQuery = supabase.from('leads')
-    .select('id,full_name,status,next_contact_at,owner_user_id,campaign_id,customer_id,created_at')
+    .select('id,full_name,status,stage_id,phone,metadata,next_contact_at,owner_user_id,campaign_id,customer_id,created_at')
     .or(`status.in.(${OPEN_STAGES.join(',')}),stage_changed_at.gte.${closedSince()}`)
     .order('created_at', { ascending: true })
     .limit(3000)
@@ -49,37 +49,57 @@ export default async function SalesBoardPage({ searchParams }: { searchParams: P
   if (seller) leadsQuery = leadsQuery.eq('owner_user_id', seller)
   if (q) { const d = digitsOnly(q); leadsQuery = leadsQuery.or(d.length >= 4 ? `full_name.ilike.%${q}%,phone.ilike.%${d}%` : `full_name.ilike.%${q}%`) }
 
-  const [{ data: leads }, { data: campaigns }, { data: queue }, { data: members }] = await Promise.all([
+  const [{ data: leads }, { data: campaigns }, { data: queue }, { data: members }, { data: stageRows }] = await Promise.all([
     leadsQuery,
     supabase.from('sales_campaigns').select('id,name,status').order('status').order('created_at', { ascending: false }),
     supabase.rpc('lead_queue_count', { p_org: organization.id, p_campaign: campaign }),
     supervisor ? supabase.from('organization_memberships').select('user_id').eq('status', 'active') : Promise.resolve({ data: [] as { user_id: string }[] }),
+    supabase.from('sales_lead_stages').select('id,name,base_status,sort_order').eq('is_active', true).order('sort_order').order('name'),
   ])
   const rows = leads ?? []
+  // Phones on the company's "Não perturbe" list (asked in one call; only phones travel).
+  const phoneOf = (r: { phone: string | null; metadata: unknown }) => [r.phone, ((r.metadata ?? {}) as { phone2?: string }).phone2].map(normalizePhone).filter(Boolean) as string[]
+  const phones = [...new Set(rows.flatMap(phoneOf))]
+  const { data: dndRows, error: dndError } = phones.length ? await supabase.rpc('dnd_phones_in', { p_org: organization.id, p_phones: phones }) : { data: [] as string[], error: null }
+  const dnd = new Set((dndRows ?? []) as string[])
   const campaignName = new Map((campaigns ?? []).map(c => [c.id, c.name]))
   const emails = supervisor ? await memberEmails([...(members ?? []).map(m => m.user_id), ...rows.map(r => r.owner_user_id).filter(Boolean) as string[]]) : new Map<string, string>()
   const now = nowMs()
 
-  const byStage = new Map<LeadStage, BoardCard[]>(LEAD_STAGES.map(s => [s, []]))
+  // Columns: the company's stages over Novo / Em contato / Negociando (a step without stages keeps its own column),
+  // then Proposta, Ganho and Perdido. A lead without a company stage shows in the first column of its step.
+  const stages = (stageRows ?? []) as { id: string; name: string; base_status: string }[]
+  const layout: { key: string; label: string; base: LeadStage }[] = []
+  for (const base of LEAD_STAGES) {
+    const own = (BASE_STAGES as readonly string[]).includes(base) ? stages.filter(s => s.base_status === base) : []
+    if (own.length) for (const s of own) layout.push({ key: s.id, label: s.name, base })
+    else layout.push({ key: base, label: STAGE_LABEL[base], base })
+  }
+  const firstOf = new Map<string, string>()
+  for (const c of layout) if (!firstOf.has(c.base)) firstOf.set(c.base, c.key)
+  const known = new Set(layout.map(c => c.key))
+  const byColumn = new Map<string, BoardCard[]>(layout.map(c => [c.key, []]))
   for (const r of rows) {
     if (!isLeadStage(r.status)) continue
-    byStage.get(r.status)!.push({
-      id: r.id, name: r.full_name, status: r.status, campaign: r.campaign_id ? campaignName.get(r.campaign_id) ?? null : null,
+    const column = r.stage_id && known.has(r.stage_id) ? r.stage_id : firstOf.get(r.status)!
+    byColumn.get(column)!.push({
+      id: r.id, name: r.full_name, status: r.status, column, campaign: r.campaign_id ? campaignName.get(r.campaign_id) ?? null : null,
       owner: r.owner_user_id ? (r.owner_user_id === user.id ? 'Você' : (emails.get(r.owner_user_id) ?? 'Vendedor').split('@')[0]) : null,
       nextContact: r.next_contact_at, overdue: !!r.next_contact_at && new Date(r.next_contact_at).getTime() < now, isClient: !!r.customer_id,
+      dnd: phoneOf(r).some(p => dnd.has(p)),
     })
   }
-  // Open stages: the most urgent return first, then the oldest lead.
+  // Open steps: the most urgent return first, then the oldest lead.
   const urgency = (c: BoardCard) => (c.nextContact ? new Date(c.nextContact).getTime() : Number.MAX_SAFE_INTEGER)
-  const columns: BoardColumn[] = LEAD_STAGES.map(stage => {
-    const cards = byStage.get(stage)!
-    if ((OPEN_STAGES as readonly string[]).includes(stage)) cards.sort((a, b) => urgency(a) - urgency(b))
+  const columns: BoardColumn[] = layout.map(col => {
+    const cards = byColumn.get(col.key)!
+    if ((OPEN_STAGES as readonly string[]).includes(col.base)) cards.sort((a, b) => urgency(a) - urgency(b))
     else cards.reverse()
-    return { stage, cards: cards.slice(0, PER_COLUMN), total: cards.length }
+    return { ...col, cards: cards.slice(0, PER_COLUMN), total: cards.length }
   })
   const openCount = rows.filter(r => (OPEN_STAGES as readonly string[]).includes(r.status)).length
   const overdue = rows.filter(r => r.next_contact_at && new Date(r.next_contact_at).getTime() < now && (OPEN_STAGES as readonly string[]).includes(r.status)).length
-  const won = byStage.get('won')!.length
+  const won = rows.filter(r => r.status === 'won').length
   // The board's own filters: kept when a lead opens in the side panel and when it closes.
   const boardQuery = new URLSearchParams(Object.entries({ campanha: sp.campanha, vendedor: sp.vendedor, q: sp.q }).filter(([, v]) => v) as [string, string][])
   const boardHref = (extra: Record<string, string> = {}) => {
@@ -112,6 +132,12 @@ export default async function SalesBoardPage({ searchParams }: { searchParams: P
         }
       />
 
+      <nav aria-label="Ferramentas de vendas" className="mb-4 flex flex-wrap gap-2 text-sm">
+        <Link href="/app/crm/nao-perturbe" className="inline-flex items-center gap-1.5 rounded-[10px] border border-line bg-surface px-3 py-1.5 text-ink-soft hover:bg-surface-muted"><PhoneOff size={14} aria-hidden />Não perturbe</Link>
+        {supervisor && <Link href="/app/crm/parados" className="inline-flex items-center gap-1.5 rounded-[10px] border border-line bg-surface px-3 py-1.5 text-ink-soft hover:bg-surface-muted"><Hourglass size={14} aria-hidden />Leads parados</Link>}
+        {supervisor && <Link href="/app/crm/etapas" className="inline-flex items-center gap-1.5 rounded-[10px] border border-line bg-surface px-3 py-1.5 text-ink-soft hover:bg-surface-muted"><Columns3 size={14} aria-hidden />Etapas</Link>}
+      </nav>
+
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
         {[['Em aberto', openCount], ['Retornos atrasados', overdue], ['Esperando na fila', waiting], ['Ganhos (30 dias)', won]].map(([k, v]) => (
           <Card key={String(k)} className="px-4 py-3">
@@ -143,6 +169,7 @@ export default async function SalesBoardPage({ searchParams }: { searchParams: P
         <button className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><Search size={15} aria-hidden />Filtrar</button>
       </BoardSearch>
 
+      {dndError && <p role="alert" className="mb-3 rounded-[10px] bg-[#FDF3DC] px-4 py-2 text-sm text-[#92400E]">Não foi possível conferir a lista &quot;Não perturbe&quot; agora: os cartões podem estar sem a marca.</p>}
       <Board columns={columns} showOwner={supervisor} boardQuery={boardQuery.toString()} />
 
       {openLead && (

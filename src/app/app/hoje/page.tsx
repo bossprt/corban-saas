@@ -8,7 +8,7 @@ import { proposalStatusLabel } from '@/lib/operational'
 import { atLeast } from '@/lib/rbac'
 import { isPortalUser } from '@/lib/portal'
 import { Badge, ButtonLink, Card, CardHeader, PageHeader, type Tone } from '@/components/ui'
-import { OPEN_STAGES, stageLabel } from '@/lib/crm'
+import { OPEN_STAGES, TASK_KIND_LABEL, isTaskKind, stageLabel } from '@/lib/crm'
 
 const SEVERITY_TONE: Record<Severity, Tone> = { critical: 'reversed', high: 'diverged', medium: 'paid-out', low: 'neutral' }
 const OPEN_PROPOSAL = ['draft', 'documents_pending', 'ready_for_digitization', 'digitization', 'submitted', 'approved']
@@ -31,12 +31,14 @@ export default async function TodayPage() {
   if (isPortalUser(ctx.access?.roleKey, ctx.modules)) redirect('/app/portal')
   const { supabase, user, membership } = ctx
 
-  const [attention, leads, proposals, goals] = await Promise.all([
+  const [attention, leads, proposals, goals, tasks] = await Promise.all([
     loadAttention(ctx),
     // Returns first (the most overdue on top), then the oldest leads without a return.
     supabase.from('leads').select('id,full_name,status,channel,created_at,next_contact_at').eq('owner_user_id', user.id).in('status', [...OPEN_STAGES]).order('next_contact_at', { ascending: true, nullsFirst: false }).order('created_at', { ascending: true }).limit(8),
     supabase.from('proposals_v2').select('id,status,requested_amount,updated_at,customer_snapshot').eq('created_by', user.id).in('status', OPEN_PROPOSAL).order('updated_at', { ascending: true }).limit(6),
     supabase.rpc('goal_progress', { p_org: ctx.organization.id, p_month: monthStart() }),
+    // The caller's open tasks on leads: overdue first, then the next ones.
+    supabase.from('lead_tasks').select('id,lead_id,kind,title,due_at,leads(full_name)').eq('assigned_to', user.id).eq('status', 'open').order('due_at').limit(8),
   ])
   const myGoal = ((goals.data ?? []) as { user_id: string; target_amount: string; paid_amount: string; paid_count: number }[]).find(g => g.user_id === user.id)
   const goalTarget = Number(myGoal?.target_amount ?? 0)
@@ -110,6 +112,28 @@ export default async function TodayPage() {
         </Card>
 
         <div className="grid content-start gap-4">
+          {(tasks.data ?? []).length > 0 && (
+            <Card>
+              <CardHeader title="Minhas tarefas" action={<Link href="/app/crm" className="text-sm text-brand hover:text-brand-strong">Vendas</Link>} />
+              <ul className="px-2 pb-2 pt-2">
+                {(tasks.data ?? []).map(t => {
+                  const lead = (Array.isArray(t.leads) ? t.leads[0] : t.leads) as { full_name?: string } | null
+                  return (
+                    <li key={t.id}>
+                      <Link href={`/app/crm?lead=${t.lead_id}`} className="flex items-center gap-3 rounded-lg border-t border-line px-3 py-2.5 first:border-t-0 hover:bg-surface-muted">
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium text-ink">{lead?.full_name ?? 'Lead'}</span>
+                          <span className="block truncate text-xs text-muted">{isTaskKind(t.kind) ? TASK_KIND_LABEL[t.kind] : ''} · {t.title}</span>
+                        </span>
+                        <span className={`shrink-0 text-xs ${isOverdue(t.due_at) ? 'font-semibold text-[#B91C1C]' : 'text-muted'}`}>{returnAt(t.due_at)}</span>
+                      </Link>
+                    </li>
+                  )
+                })}
+              </ul>
+            </Card>
+          )}
+
           <Card>
             <CardHeader title="Retornos e leads" action={<Link href="/app/crm" className="text-sm text-brand hover:text-brand-strong">Vendas</Link>} />
             <ul className="px-2 pb-2 pt-2">

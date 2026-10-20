@@ -15,6 +15,13 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Vendas (CRM), fase 1: tarefas, etapas da empresa, leads parados e "Não perturbe" (20/10/2026)
+- Adicionado (pedido do dono: "profissionalizar esse CRM", depois do comparativo com o mercado): tarefas por lead (ligação, WhatsApp, visita, e-mail, outro), com data, responsável e resultado ao concluir; "Registrar contato" grava um contato já feito com o resultado e pode marcar o próximo. O próximo contato do lead é a tarefa aberta mais próxima; os retornos marcados antes viraram tarefas. A tela Hoje mostra "Minhas tarefas".
+- Adicionado: etapas da empresa (Vendas > Etapas, supervisor) dentro de Novo, Em contato e Negociando; o quadro mostra as colunas da empresa. Proposta, Ganho e Perdido continuam fixos (seguem a proposta).
+- Adicionado: Leads parados (supervisor): leads com vendedor sem movimento há N dias e sem tarefa à frente; passar para outro vendedor ou devolver para a fila. Lead passado para outro vendedor leva as tarefas abertas.
+- Adicionado (dono: "o que mais se usa é o telefone no Não perturbe"; os bancos mandam lista): lista "Não perturbe" da empresa, com marca no lead, cadastro de um número e importação da lista do banco (só a coluna de telefone sai do computador). O quadro e o lead avisam; o lead sai da fila; nada é bloqueado. A consulta ao Lemit entra na mesma lista quando houver a documentação.
+- Migration `20261020163941_crm_followup_v1` (ADR-0062); teste `crm-followup-contract.sql` (38 verificações).
+
 ### Data de "hoje" em Brasília, segurança fina e testes em dia (19/10/2026)
 - Corrigido (achado nos testes, dono aprovou): o banco roda em UTC; entre 21h e meia-noite de Brasília, "hoje" já era amanhã em 30 funções (mover para Paga sem data gravava amanhã, data paga de amanhã era aceita, lançamentos de repasse/financeiro podiam ficar com data de amanhã). Essas funções agora rodam no fuso de São Paulo; a conta bancária nova usa a data de Brasília (`20261020031521_sao_paulo_today_v1`, teste `sao-paulo-today-contract.sql` que falha se uma função voltar a ler "hoje" sem o fuso).
 - Segurança: anon não executa mais 5 funções internas nem lê as tabelas de termos (nenhuma era alcançável na prática); `pay_account_in_batch` confere a permissão por conta própria (`20261020031458_grants_hygiene_v2`).

@@ -3,26 +3,29 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CalendarClock } from 'lucide-react'
-import { MANUAL_STAGES, STAGE_LABEL, type LeadStage } from '@/lib/crm'
+import { CalendarClock, PhoneOff } from 'lucide-react'
+import { MANUAL_STAGES, type LeadStage } from '@/lib/crm'
 import { moveLeadOnBoard } from './actions'
 
 export type BoardCard = {
   id: string
   name: string
   status: LeadStage
+  column: string               // key of the column the card is in
   campaign: string | null
   owner: string | null
   nextContact: string | null   // ISO
   overdue: boolean
   isClient: boolean
+  dnd: boolean                 // phone on the company's "Não perturbe" list
 }
-export type BoardColumn = { stage: LeadStage; cards: BoardCard[]; total: number }
+// key: a company stage id, or the base step for the fixed columns. base: the step the column belongs to.
+export type BoardColumn = { key: string; label: string; base: LeadStage; cards: BoardCard[]; total: number }
 
 const ACCENT: Record<LeadStage, string> = {
   new: 'bg-[#94A3B8]', contacted: 'bg-[#F59E0B]', negotiating: 'bg-[#6366F1]', proposal: 'bg-brand', won: 'bg-[#16A34A]', lost: 'bg-[#DC2626]',
 }
-// A card can be dropped only on the stages a seller moves by hand ("lost" asks for a reason on the lead page).
+// A card can be dropped only on the steps a seller moves by hand ("lost" asks for a reason on the lead page).
 const DROPPABLE = new Set<LeadStage>(MANUAL_STAGES.filter(s => s !== 'lost'))
 
 const when = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
@@ -31,20 +34,20 @@ const when = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-di
 export function Board({ columns, showOwner, boardQuery = '' }: { columns: BoardColumn[]; showOwner: boolean; boardQuery?: string }) {
   const router = useRouter()
   const [dragging, setDragging] = useState<BoardCard | null>(null)
-  const [over, setOver] = useState<LeadStage | null>(null)
+  const [over, setOver] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [pending, start] = useTransition()
 
-  function drop(stage: LeadStage) {
+  function drop(col: BoardColumn) {
     const card = dragging
     setOver(null); setDragging(null)
-    if (!card || card.status === stage) return
-    if (!DROPPABLE.has(stage) || !DROPPABLE.has(card.status)) {
-      setMessage(stage === 'lost' ? 'Para marcar como perdido, abra o lead e informe o motivo.' : 'Proposta e Ganho seguem a proposta do cliente: não se movem à mão.')
+    if (!card || card.column === col.key) return
+    if (!DROPPABLE.has(col.base) || !DROPPABLE.has(card.status)) {
+      setMessage(col.base === 'lost' ? 'Para marcar como perdido, abra o lead e informe o motivo.' : 'Proposta e Ganho seguem a proposta do cliente: não se movem à mão.')
       return
     }
     start(async () => {
-      const r = await moveLeadOnBoard(card.id, stage)
+      const r = await moveLeadOnBoard(card.id, col.key)
       setMessage(r.ok ? null : r.message)
       router.refresh()
     })
@@ -54,19 +57,19 @@ export function Board({ columns, showOwner, boardQuery = '' }: { columns: BoardC
     <div>
       {message && <p role="alert" className="mb-3 rounded-[10px] border border-[#F3D9A4] bg-[#FDF3DC] px-4 py-2.5 text-sm text-[#92400E]">{message}</p>}
       <div className="-mx-4 overflow-x-auto px-4 pb-2 md:mx-0 md:px-0" aria-busy={pending}>
-        <div className="grid min-w-[900px] grid-cols-6 gap-2.5">
+        <div className="grid gap-2.5" style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(150px, 1fr))`, minWidth: `${columns.length * 155}px` }}>
           {columns.map(col => (
             <section
-              key={col.stage}
-              aria-label={`${STAGE_LABEL[col.stage]}: ${col.total}`}
-              onDragOver={e => { if (dragging) { e.preventDefault(); setOver(col.stage) } }}
-              onDragLeave={() => setOver(o => (o === col.stage ? null : o))}
-              onDrop={e => { e.preventDefault(); drop(col.stage) }}
-              className={`flex min-h-[320px] min-w-0 flex-col rounded-[12px] border bg-surface-muted/60 p-2 transition-colors ${over === col.stage ? (DROPPABLE.has(col.stage) ? 'border-brand bg-brand/5' : 'border-[#DC2626]/40') : 'border-line'}`}
+              key={col.key}
+              aria-label={`${col.label}: ${col.total}`}
+              onDragOver={e => { if (dragging) { e.preventDefault(); setOver(col.key) } }}
+              onDragLeave={() => setOver(o => (o === col.key ? null : o))}
+              onDrop={e => { e.preventDefault(); drop(col) }}
+              className={`flex min-h-[320px] min-w-0 flex-col rounded-[12px] border bg-surface-muted/60 p-2 transition-colors ${over === col.key ? (DROPPABLE.has(col.base) ? 'border-brand bg-brand/5' : 'border-[#DC2626]/40') : 'border-line'}`}
             >
               <header className="mb-2 flex items-center gap-2 px-1.5 pt-1">
-                <span className={`size-2 rounded-full ${ACCENT[col.stage]}`} aria-hidden />
-                <h2 className="text-[13px] font-semibold text-ink">{STAGE_LABEL[col.stage]}</h2>
+                <span className={`size-2 shrink-0 rounded-full ${ACCENT[col.base]}`} aria-hidden />
+                <h2 className="truncate text-[13px] font-semibold text-ink" title={col.label}>{col.label}</h2>
                 <span className="num ml-auto text-xs text-muted">{col.total}</span>
               </header>
               <ul className="grid min-w-0 gap-2">
@@ -87,6 +90,7 @@ export function Board({ columns, showOwner, boardQuery = '' }: { columns: BoardC
                             <CalendarClock size={12} aria-hidden />{c.overdue ? 'Atrasado · ' : ''}{when(c.nextContact)}
                           </span>
                         )}
+                        {c.dnd && <span className="inline-flex items-center gap-1 rounded bg-[#FDE2E1] px-1.5 py-px font-medium text-[#991B1B]"><PhoneOff size={11} aria-hidden />Não perturbe</span>}
                         {c.isClient && <span className="rounded bg-brand/10 px-1.5 py-px font-medium text-brand">Cliente</span>}
                         {showOwner && <span className="block min-w-0 max-w-full truncate text-muted">{c.owner ?? 'Sem vendedor'}</span>}
                       </span>
