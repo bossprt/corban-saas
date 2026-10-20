@@ -1,4 +1,4 @@
--- Contract test for 20261020120000_crm_followup_v1: tasks per lead (the next contact is the earliest open task), logged
+-- Contract test for 20261020163941_crm_followup_v1: tasks per lead (the next contact is the earliest open task), logged
 -- contacts, company stages over the three open steps, idle leads for the supervisor, and the "Não perturbe" list (marked,
 -- imported, skipped by the queue). A seller only works their own leads. One transaction, rolled back.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/crm-followup-contract.sql
