@@ -63,6 +63,7 @@
 - 17/10: lote de pagamento mostra banco, convênio, produto, liberado e data paga ao cliente de cada contrato (tela e Excel) e lista os contratos de cada saque do saldo (mais antigos primeiro, "pago em parte"; ADR-0061, `20261017190216_payout_batch_contract_details_v1`; teste `payout-batch-contract-details.sql` 7/7).
 - 19/10: "hoje" em Brasília nas 30 funções que liam a data (antes UTC: entre 21h e 24h virava amanhã); anon sem execução/leitura sobrando; `pay_account_in_batch` com checagem própria; 81/81 testes SQL locais.
 - 20/10: CRM fase 1 (tarefas por lead, registrar contato, etapas da empresa, leads parados, lista "Não perturbe" com importação do banco; ADR-0062). Pendente: consulta Lemit (aguarda documentação da API), plano para ficar à frente da StormFin/New Corban.
+- 20/10: importação de contratos atualiza a etapa dos que já existem (só para frente; Paga nunca muda; valores/vendedor/comissão nunca mudam).
 
 ## Validado com o dono
 - 06/10: contrato real do início ao fim; 2 contas bancárias no Financeiro; pagamento em lote de 9 vendedores (R$ 1.610,10) por QR Code PIX; contrato 131259 concluído.

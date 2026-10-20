@@ -7,6 +7,7 @@ import { xlsxRows } from '@/lib/commercial-xlsx'
 import { csvRows } from '@/lib/imports/csv'
 import { enrichClient } from '@/lib/imports/client-enrich'
 import { parseMoneyInput } from '@/lib/money-input'
+import { reportMove } from '@/lib/imports/report-move'
 import {
   CONTRACT_LAYOUTS, MAX_CONTRACT_LINES, matchTable, normalize, parseContractSheet,
   type ContractLine, type HeaderIssue, type LineIssue,
@@ -23,7 +24,7 @@ export type ImportResult = {
   error?: string
   fileIssues: string[]; ignored: string[]; tooMany: boolean
   lines: PreviewLine[]
-  done?: { created: number; existed: number; failed: number }
+  done?: { created: number; existed: number; failed: number; updated?: number }
 }
 
 const LINE_MESSAGE: Record<LineIssue, string> = {
@@ -57,6 +58,35 @@ type Resolved = {
   line: ContractLine
   versionId?: string; tableName?: string; typeId?: string; sellerId?: string | null; stageId?: string; clientId?: string; agreementId?: string | null
   status: PreviewLine['status']; messages: string[]
+  // Contract already in Corban that the report moves: its pipeline case and the stage it goes to.
+  move?: { caseId: string; stageId: string; from: string; to: string }
+  existingId?: string
+}
+
+// Contracts already in Corban: where the report moves each one (or why not), in words on the line.
+async function planMoves(ctx: Ctx, resolved: Resolved[], stageByState: Map<string, string>) {
+  const say = (r: Resolved, text: string) => { const i = r.messages.indexOf('Já cadastrado no Corban'); if (i >= 0) r.messages[i] = text }
+  const ids = [...new Set(resolved.filter(r => r.status === 'exists' && r.existingId).map(r => r.existingId!))]
+  if (!ids.length) return
+  const { data: cases } = await ctx.supabase.from('operational_cases').select('id,proposal_id,canonical_state').in('proposal_id', ids)
+  const caseOf = new Map(((cases ?? []) as { id: string; proposal_id: string; canonical_state: string }[]).map(c => [c.proposal_id, c]))
+  for (const r of resolved) {
+    if (r.status !== 'exists') continue
+    const c = r.existingId ? caseOf.get(r.existingId) : undefined
+    const target = r.line.stage
+    if (!c || !target) { say(r, 'Já cadastrado no Corban (contrato não alterado)'); continue }
+    const verdict = reportMove(c.canonical_state, target)
+    const from = STAGE_LABEL[c.canonical_state] ?? c.canonical_state, to = STAGE_LABEL[target] ?? target
+    const stageId = stageByState.get(target)
+    if (verdict === 'move' && stageId) {
+      r.move = { caseId: c.id, stageId, from: c.canonical_state, to: target }
+      say(r, `Já cadastrado: vai mudar de ${from} para ${to}`)
+    } else if (verdict === 'paid_conflict') {
+      say(r, `Já cadastrado e Paga no Corban, mas ${to} no relatório: confira (não será alterado)`)
+    } else {
+      say(r, verdict === 'same' ? `Já cadastrado, já está ${from} (não muda)` : `Já cadastrado, está ${from} (não muda)`)
+    }
+  }
 }
 
 // Reads the file and checks every line against the company's catalog. Nothing is written here.
@@ -133,23 +163,25 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
   // Already in Corban: same bank + ADE.
   const ades = [...new Set(sheet.lines.map(l => l.ade).filter(Boolean))]
   const { data: known } = ades.length
-    ? await supabase.from('proposal_external_identities').select('external_proposal_number,institution_key').in('external_proposal_number', ades)
+    ? await supabase.from('proposal_external_identities').select('external_proposal_number,institution_key,proposal_id').in('external_proposal_number', ades)
     : { data: [] }
   const bankKey = (bank.tech_key ?? bank.name).toLowerCase()
-  const knownAde = new Set(((known ?? []) as { external_proposal_number: string; institution_key: string }[])
-    .filter(k => k.institution_key.toLowerCase() === bankKey).map(k => k.external_proposal_number))
+  const knownRows = ((known ?? []) as { external_proposal_number: string; institution_key: string; proposal_id: string }[])
+    .filter(k => k.institution_key.toLowerCase() === bankKey)
+  const knownAde = new Set(knownRows.map(k => k.external_proposal_number))
+  const proposalByAde = new Map(knownRows.map(k => [k.external_proposal_number, k.proposal_id]))
   // Without ADE: the same client, table, term and amount already registered counts as the same contract.
   const clientIds = [...clientByCpf.values()]
   const { data: existing } = clientIds.length
-    ? await supabase.from('proposals_v2').select('customer_id,product_table_version_id,term,released_amount,requested_amount,status').in('customer_id', clientIds)
+    ? await supabase.from('proposals_v2').select('id,customer_id,product_table_version_id,term,released_amount,requested_amount,status').in('customer_id', clientIds)
     : { data: [] }
   // Amounts compared as exact decimal text ("1500.00"), never as floats.
   const exact = (v: string | number | null) => { const m = v === null ? null : parseMoneyInput(String(v)); return m === 'invalid' ? null : m }
   const sameKey = (c: string, v: string, term: number | null, rel: string | null, req: string | null) => `${c}|${v}|${term}|${rel ?? ''}|${req ?? ''}`
-  const existingKeys = new Set(((existing ?? []) as { customer_id: string; product_table_version_id: string; term: number | null; released_amount: string | number | null; requested_amount: string | number | null; status: string }[])
+  const existingRows = ((existing ?? []) as { id: string; customer_id: string; product_table_version_id: string; term: number | null; released_amount: string | number | null; requested_amount: string | number | null; status: string }[])
     .filter(p => p.status !== 'cancelled')
-    .map(p => sameKey(p.customer_id, p.product_table_version_id, p.term,
-      exact(p.released_amount), exact(p.requested_amount))))
+  const proposalByKey = new Map(existingRows.map(p => [sameKey(p.customer_id, p.product_table_version_id, p.term, exact(p.released_amount), exact(p.requested_amount)), p.id]))
+  const existingKeys = new Set(proposalByKey.keys())
 
   const seenInFile = new Set<string>()
   const resolved: Resolved[] = sheet.lines.map(line => {
@@ -191,13 +223,16 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
     if (seenInFile.has(fileKey)) { r.status = 'error'; messages.push('Linha repetida na planilha'); return r }
     seenInFile.add(fileKey)
     if ((line.ade && knownAde.has(line.ade)) || (!line.ade && r.clientId && existingKeys.has(sameKey(r.clientId, r.versionId!, line.term, line.released, line.requested)))) {
-      r.status = 'exists'; messages.push('Já cadastrado no Corban (não será alterado)')
+      r.status = 'exists'
+      r.existingId = line.ade ? proposalByAde.get(line.ade) : proposalByKey.get(sameKey(r.clientId!, r.versionId!, line.term, line.released, line.requested))
+      messages.push('Já cadastrado no Corban')
     } else if (!r.sellerId) messages.push(NO_SELLER)
     const parts = clientParts(line)
     if (parts.length) messages.push(`Ficha do cliente: ${parts.join(', ')} (só preenche o que estiver vazio)`)
     messages.push(...line.warnings)
     return r
   })
+  await planMoves(ctx, resolved, stageByState)
   result.lines = resolved.map(({ line: l, tableName, status, messages }) => ({
     line: l.line, cpf: l.cpf, name: l.name, table: tableName ?? l.table, term: l.term, amount: l.released ?? l.requested,
     // An unknown stage shows the sheet's own text (it used to read "Automática", the label for no stage at all).
@@ -231,7 +266,7 @@ export async function importContracts(formData: FormData): Promise<ImportResult>
   if (result.error || result.fileIssues.length) return result
   if (resolved.some(r => r.status === 'error')) return { ...result, error: 'Corrija as linhas com erro antes de importar.' }
   const { supabase, organization } = ctx
-  const done = { created: 0, existed: 0, failed: 0 }
+  const done: { created: number; existed: number; failed: number; updated?: number } = { created: 0, existed: 0, failed: 0, updated: 0 }
   for (const [i, r] of resolved.entries()) {
     const out = result.lines[i]
     const l = r.line
@@ -242,7 +277,18 @@ export async function importContracts(formData: FormData): Promise<ImportResult>
     }
     if (r.status === 'exists') {
       done.existed++
-      out.messages = ['Já cadastrado no Corban (contrato não alterado)', ...(r.clientId ? await enrich(r.clientId) : [])]
+      const head = out.messages.find(m => m.startsWith('Já cadastrado')) ?? 'Já cadastrado no Corban (contrato não alterado)'
+      let moved: string[] = []
+      if (r.move) {
+        // The bank's report moves the contract (owner, 20/10/2026); the pipeline history says so.
+        const { error: moveError } = await supabase.rpc('move_case_to_stage', {
+          p_case_id: r.move.caseId, p_stage_id: r.move.stageId, p_note: 'Pelo relatório do banco (importação de contratos)',
+          p_pendency_due_at: null, p_paid_on: r.move.to === 'paid' ? l.paidOn : null,
+        })
+        if (moveError) moved = [`Já cadastrado, mas a etapa não mudou (${rpcMessage(moveError.message)})`]
+        else { done.updated = (done.updated ?? 0) + 1; moved = [`Atualizado: ${STAGE_LABEL[r.move.from] ?? r.move.from} → ${STAGE_LABEL[r.move.to] ?? r.move.to}`] }
+      }
+      out.messages = [...(moved.length ? moved : [head]), ...(r.clientId ? await enrich(r.clientId) : [])]
       continue
     }
     const { data: client, error: clientError } = await supabase.rpc('upsert_client', {
