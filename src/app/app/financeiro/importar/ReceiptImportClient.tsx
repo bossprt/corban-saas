@@ -139,10 +139,12 @@ export function ReceiptImportClient({ sources, bankAccounts, suggestedBank }: { 
               </label>
             ))}
           </div>
-          <div className="overflow-x-auto rounded-[10px] border border-line">
+          {/* Every line of the file (owner, 20/10/2026: five sample lines looked like only five would be imported). */}
+          <p className="text-[13px] font-medium text-ink-soft">Prévia: {inspect.sheet.body.filter(r => r.some(c => c !== '')).length} linha(s) do arquivo</p>
+          <div className="max-h-[420px] overflow-auto rounded-[10px] border border-line">
             <table className="w-full text-left text-[12px]">
-              <thead className="bg-surface-muted text-muted"><tr>{inspect.sheet.headers.map((h, i) => <th key={i} className="whitespace-nowrap px-3 py-2 font-medium">{h}</th>)}</tr></thead>
-              <tbody>{inspect.sheet.body.filter(r => r.some(c => c !== '')).slice(0, 5).map((r, i) => <tr key={i} className="border-t border-line">{inspect.sheet.headers.map((_, j) => <td key={j} className="whitespace-nowrap px-3 py-1.5 text-ink-soft">{r[j]}</td>)}</tr>)}</tbody>
+              <thead className="sticky top-0 bg-surface-muted text-muted"><tr>{inspect.sheet.headers.map((h, i) => <th key={i} className="whitespace-nowrap px-3 py-2 font-medium">{h}</th>)}</tr></thead>
+              <tbody>{inspect.sheet.body.filter(r => r.some(c => c !== '')).slice(0, 1000).map((r, i) => <tr key={i} className="border-t border-line">{inspect.sheet.headers.map((_, j) => <td key={j} className="whitespace-nowrap px-3 py-1.5 text-ink-soft">{r[j]}</td>)}</tr>)}</tbody>
             </table>
           </div>
           {check && (

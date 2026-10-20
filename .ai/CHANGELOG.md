@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Relatório de comissão: a prévia mostra todas as linhas (20/10/2026)
+- Alterado (dono: "por que a tela só mostra 5 contratos?"): a prévia da importação mostrava só 5 linhas de amostra; agora mostra todas (até 1.000), com rolagem e a contagem "Prévia: X linha(s)".
+
 ### Relatório de comissão: aviso antes de importar (20/10/2026)
 - Adicionado (dono: "pq o sistema não avisou? ... o arquivo possui X contratos e os contratos não podem ser importados porque não possuem vendedor"): ao escolher a coluna do contrato, a tela confere cada número do arquivo com a mesma regra da importação e diz quantos estão prontos e, por grupo, os que têm pendência (sem vendedor, sem comissão calculada, já recebida, não encontrado, repetido), com o link para os contratos sem vendedor. O botão vira "Importar mesmo assim" quando há pendência. No relatório importado, a linha "Sem comissão calculada" diz quando o contrato está sem vendedor. `20261020202219_receipt_file_check_v1`, teste `receipt-file-check-contract.sql`.
 
