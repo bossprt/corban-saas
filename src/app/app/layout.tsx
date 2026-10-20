@@ -39,6 +39,7 @@ const NAV: (NavItem & { show?: (role: string) => boolean; module?: string; perm?
 const SALES_PAGES = [
   { href: '/app/crm', label: 'Quadro de vendas' },
   { href: '/app/simulacoes', label: 'Simulador' },
+  { href: '/app/ranking', label: 'Ranking' },
 ]
 
 const FINANCE_PAGES = [

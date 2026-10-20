@@ -65,6 +65,7 @@
 - 20/10: CRM fase 1 (tarefas por lead, registrar contato, etapas da empresa, leads parados, lista "Não perturbe" com importação do banco; ADR-0062). Pendente: consulta Lemit (aguarda documentação da API), plano para ficar à frente da StormFin/New Corban.
 - 20/10: importação de contratos atualiza a etapa dos que já existem (só para frente; Paga nunca muda; valores/vendedor/comissão nunca mudam).
 - 20/10: relatório de comissão confere o arquivo antes de importar (prontos x sem vendedor/sem comissão/já recebido/não encontrado).
+- 21/10: ranking de vendas e painel da equipe com modo TV (plano fase 2). Próximas fases do plano: WhatsApp oficial, oportunidades de refin/portabilidade, discadora, bancos; Lemit aguarda documentação.
 
 ## Validado com o dono
 - 06/10: contrato real do início ao fim; 2 contas bancárias no Financeiro; pagamento em lote de 9 vendedores (R$ 1.610,10) por QR Code PIX; contrato 131259 concluído.

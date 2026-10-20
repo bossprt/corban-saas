@@ -8,6 +8,7 @@ export default async function ReportsHubPage() {
   const supervisor = atLeast(membership.role, 'supervisor')
   const items = [
     ['Visão geral', 'Indicadores atuais de leads, clientes, propostas e operação.', '/app', true],
+    ['Ranking de vendas', 'Produção paga e digitada por vendedor, meta da equipe e funil; modo TV.', '/app/ranking', true],
     ['Operacional', 'Fila e situação atual da operação.', '/app/operacao', true],
     ['Central de atenção', 'Pendências e sinais objetivos da organização.', '/app/atencao', supervisor],
   ] as const
