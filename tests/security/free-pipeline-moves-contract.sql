@@ -57,7 +57,7 @@ insert into results select 'pendency without note or due date',
 -- Each move in its own statement: a subquery in the same statement may be evaluated before the move.
 insert into results select 'straight to Paga without note', pg_temp.mv('a', 'paid') = 'ok';
 insert into results select 'paid today when no date is given',
-  (select paid_to_client_on = current_date and status = 'paid' from public.proposals_v2 where id = pg_temp.id('a'));
+  (select paid_to_client_on = (now() at time zone 'America/Sao_Paulo')::date and status = 'paid' from public.proposals_v2 where id = pg_temp.id('a'));
 insert into results select 'admin takes a contract without money out of Paga', pg_temp.mv('a', 'cancelled') = 'ok';
 insert into results select 'out of Paga: cancelled, paid date cleared',
   pg_temp.status('a') = 'cancelled/cancelled' and (select paid_to_client_on is null from public.proposals_v2 where id = pg_temp.id('a'));
@@ -68,14 +68,14 @@ insert into results select 'rejected straight from Aguardando digitação',
 insert into results select 'every move in the history',
   (select count(*) from public.operational_events e where e.operational_case_id = pg_temp.case_of('a') and e.event_type = 'state_transition') = 5;
 insert into results select 'paid date in the future refused',
-  pg_temp.err(format('select public.move_case_to_stage(%L::uuid, %L::uuid, null, null, %L::date)', pg_temp.case_of('a'), pg_temp.stage('paid'), current_date + 1)) like '%invalid_paid_on%';
+  pg_temp.err(format('select public.move_case_to_stage(%L::uuid, %L::uuid, null, null, %L::date)', pg_temp.case_of('a'), pg_temp.stage('paid'), (now() at time zone 'America/Sao_Paulo')::date + 1)) like '%invalid_paid_on%';
 insert into results select 'former call by state still works',
   pg_temp.err(format('select public.move_operational_case(%L::uuid, %L, null, null, null)', pg_temp.case_of('a'), 'approved')) = 'ok'
   and pg_temp.status('a') = 'approved/approved';
 -- Paid with commission received: stays in Paga.
 insert into results select 'paid again', pg_temp.mv('a', 'paid') = 'ok';
 insert into results select 'commission received', pg_temp.err(format('select public.register_manual_receipt(%L::uuid, %L, %L, %L::date, null, %L)',
-  pg_temp.id('a'), 'upfront', '600.00', current_date, 'caiu na conta')) = 'ok';
+  pg_temp.id('a'), 'upfront', '600.00', (now() at time zone 'America/Sao_Paulo')::date, 'caiu na conta')) = 'ok';
 insert into results select 'contract with money does not leave Paga', pg_temp.mv('a', 'cancelled') like '%paid_contract_has_money%' and pg_temp.status('a') = 'paid/paid';
 insert into results select 'unknown stage refused',
   pg_temp.err(format('select public.move_case_to_stage(%L::uuid, %L::uuid)', pg_temp.case_of('b'), gen_random_uuid())) like '%target_operational_stage_not_configured%';

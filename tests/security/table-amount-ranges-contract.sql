@@ -7,6 +7,9 @@
 begin;
 
 create temp table results (check_name text, ok boolean);
+-- The Corretor group exists in production; a fresh local seed may not have it, so the fixture makes sure of it.
+insert into public.commission_groups (organization_id, name)
+values ('00000000-0000-4000-8000-00000000c0b1', 'Corretor') on conflict do nothing;
 create temp table ids as
 select '00000000-0000-4000-8000-00000000c0b1'::uuid as org,
        (select id from auth.users where email = 'admin@corban-teste.local') as admin_user,

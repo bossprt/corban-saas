@@ -38,7 +38,7 @@ grant execute on function pg_temp.case_of(text) to authenticated;
 create function pg_temp.receive(p_label text, p_kind text, p_ade text, p_amount text) returns void language plpgsql as $$
 declare v uuid;
 begin
-  v := public.import_receipt_report((select org from ids), 'bank', (select id from made where label = 'bank'), p_kind, current_date,
+  v := public.import_receipt_report((select org from ids), 'bank', (select id from made where label = 'bank'), p_kind, (now() at time zone 'America/Sao_Paulo')::date,
          p_label || '.csv', encode(sha256(convert_to(p_label || clock_timestamp()::text, 'utf8')), 'hex'), null,
          jsonb_build_array(jsonb_build_object('row', 1, 'ade', p_ade, 'amount', p_amount)));
   perform public.confirm_receipt_report(v);
@@ -53,8 +53,13 @@ insert into made select 'bank', r.org_bank_id
 from public.product_table_versions v join public.product_tables t on t.id = v.product_table_id join public.organization_product_routes r on r.id = t.route_id
 where v.id = (select tv from ids);
 
+-- Sellers now default to the daily frequency; this contract checks closing by frequency, so the seller is set to a
+-- monthly closing explicitly (frequency monthly, account in the closing model).
+update public.commercial_sellers set commission_payment_frequency = 'monthly' where id = (select seller from ids);
+
 select pg_temp.act_as((select admin_user from ids));
 set local role authenticated;
+select public.set_payout_account_model(public.ensure_payout_account((select org from ids), (select seller from ids), null), 'closing');
 insert into made select 'client', u.client_id from public.upsert_client((select org from ids), '52998224725', 'Cliente C3', '68999770009', null, 'manual') u;
 
 -- Digital contract: released only once paid to the client AND the bank's commission reconciled.
@@ -64,7 +69,7 @@ set constraints all immediate; set constraints all deferred;  -- as at commit
 insert into results select 'digital by default (from the table)', (select formalization = 'digital' from public.proposals_v2 where id = (select id from made where label = 'dig'));
 insert into results select 'nothing released before the client is paid', pg_temp.state('dig') = 'client';
 insert into results select 'the client payment date cannot be in the future',
-  pg_temp.err(format('select public.move_operational_case(%L, %L, %L, null, %L)', pg_temp.case_of('dig'), 'paid', 'pago', current_date + 1)) = 'invalid_paid_on';
+  pg_temp.err(format('select public.move_operational_case(%L, %L, %L, null, %L)', pg_temp.case_of('dig'), 'paid', 'pago', (now() at time zone 'America/Sao_Paulo')::date + 1)) = 'invalid_paid_on';
 select public.move_operational_case(pg_temp.case_of('dig'), 'paid', 'Pago ao cliente', null, date '2026-09-10');
 set constraints all immediate; set constraints all deferred;  -- as at commit
 insert into results select 'paid on 10/09 recorded', (select paid_to_client_on = date '2026-09-10' from public.proposals_v2 where id = (select id from made where label = 'dig'));
@@ -90,7 +95,7 @@ set local role authenticated;
 select public.update_contract((select id from made where label = 'dig'), '{"requested_amount":"12000.00"}'::jsonb, 'valor corrigido');
 set constraints all immediate; set constraints all deferred;  -- as at commit
 insert into results select 'the paid date can be corrected, never to the future',
-  pg_temp.err(format('select public.update_contract(%L, %L::jsonb, %L)', (select id from made where label = 'dig'), jsonb_build_object('paid_to_client_on', current_date + 1), 'data')) = 'invalid_paid_on';
+  pg_temp.err(format('select public.update_contract(%L, %L::jsonb, %L)', (select id from made where label = 'dig'), jsonb_build_object('paid_to_client_on', (now() at time zone 'America/Sao_Paulo')::date + 1), 'data')) = 'invalid_paid_on';
 reset role;
 insert into results select 'edit after release: adjustment +40,00 (2% of 12.000,00 = 240,00)', pg_temp.credited('dig') = 240.00
   and (select count(*) from public.payout_entries where proposal_id = (select id from made where label = 'dig') and source = 'contract') = 3;
@@ -148,7 +153,7 @@ set constraints all immediate; set constraints all deferred;  -- as at commit
 -- 14/10/2026: the confirmed commission report moves the contract to "Paga" (the bank paid, so the client got the money).
 reset role;
 insert into results select 'bank paid before the pipeline was updated: the report moved the contract to Paga',
-  (select status = 'paid' and paid_to_client_on = current_date from public.proposals_v2 where id = (select id from made where label = 'late'))
+  (select status = 'paid' and paid_to_client_on = (now() at time zone 'America/Sao_Paulo')::date from public.proposals_v2 where id = (select id from made where label = 'late'))
   and (select canonical_state = 'paid' from public.operational_cases where proposal_id = (select id from made where label = 'late'))
   and exists (select 1 from public.proposal_status_evidence where proposal_id = (select id from made where label = 'late') and source = 'commission_report');
 insert into results select 'released: à vista 300,00 plus installment 1 of 5,83', pg_temp.credited('late') = 305.83;
@@ -180,10 +185,10 @@ insert into results select 'the bank pays later: the seller is not credited twic
   and (select count(*) from public.payout_entries where proposal_id = (select id from made where label = 'ext') and beneficiary_role = 'originator' and source = 'contract') = 1;
 
 -- Closing by frequency: the seller is monthly; a weekly closing leaves them out.
-insert into results select 'weekly closing does not touch a monthly seller', public.close_payout_period((select org from ids), current_date, 'weekly') = 0;
-insert into results select 'monthly closing takes the open credits', public.close_payout_period((select org from ids), current_date, 'monthly') = 1;
+insert into results select 'weekly closing does not touch a monthly seller', public.close_payout_period((select org from ids), (now() at time zone 'America/Sao_Paulo')::date, 'weekly') = 0;
+insert into results select 'monthly closing takes the open credits', public.close_payout_period((select org from ids), (now() at time zone 'America/Sao_Paulo')::date, 'monthly') = 1;
 insert into results select 'direct writes to payout entries are refused',
-  pg_temp.err(format('insert into public.payout_entries (organization_id, account_id, kind, amount, effective_on, status) values (%L, %L, %L, 1, current_date, %L)',
+  pg_temp.err(format('insert into public.payout_entries (organization_id, account_id, kind, amount, effective_on, status) values (%L, %L, %L, 1, (now() at time zone ''America/Sao_Paulo'')::date, %L)',
     (select org from ids), (select account_id from public.payout_entries where proposal_id = (select id from made where label = 'fis') limit 1), 'bonus', 'approved')) <> 'ok';
 reset role;
 

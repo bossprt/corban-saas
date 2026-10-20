@@ -61,6 +61,7 @@
 - 14/10: confirmar relatório de comissão passa os contratos do relatório para pago ao cliente e libera o repasse (ADR-0060); contratos sem vendedor ou sem comissão calculada ficam no quadro "Conferir" do relatório.
 - 17/10: Dashboard — cada número abre só os contratos dele (Esteira agora por situação, parados além do prazo, banco há mais de 30 dias, recebido no período, sem vendedor/sem banco). Só tela, sem migration.
 - 17/10: lote de pagamento mostra banco, convênio, produto, liberado e data paga ao cliente de cada contrato (tela e Excel) e lista os contratos de cada saque do saldo (mais antigos primeiro, "pago em parte"; ADR-0061, `20261017190216_payout_batch_contract_details_v1`; teste `payout-batch-contract-details.sql` 7/7).
+- 19/10: "hoje" em Brasília nas 30 funções que liam a data (antes UTC: entre 21h e 24h virava amanhã); anon sem execução/leitura sobrando; `pay_account_in_batch` com checagem própria; 81/81 testes SQL locais.
 
 ## Validado com o dono
 - 06/10: contrato real do início ao fim; 2 contas bancárias no Financeiro; pagamento em lote de 9 vendedores (R$ 1.610,10) por QR Code PIX; contrato 131259 concluído.
@@ -90,7 +91,7 @@
 
 ## Pendente — técnico
 - Banco local de teste: há uma versão de termos "teste-local-1" publicada e aceita pela empresa de teste (para os e2e não pararem em /termos); a empresa "Empresa Piloto Teste" e o login plataforma@corban-teste.local existem só no local (credenciais em `$TEMP/f0/users.sh`).
-- E2E do CRM de vendas quebrado (também no main; a tela funciona). E2E da simulação depende da ordem. Tarefas separadas.
+- E2E do CRM de vendas quebrado (também no main; a tela funciona). E2E da simulação depende da ordem. Fazer junto com a profissionalização do CRM (dono, 19/10).
 - 14/10: banco local recriado do zero (`scripts/f0/rebuild-local.sh`: baseline + 95 migrations, 1 pulada por ser dado da Smart; seed e usuários de teste; cópia do banco anterior em `$TEMP/f0/backup`). Contratos SQL: 71 de 79 passam (com os arquivos em /tmp que 5 deles pedem). Falham: `grants-hygiene` e `security-definer-inventory` (iguais em produção: anon com EXECUTE em 5 funções de gatilho do schema private, que anon não alcança, e SELECT em `terms_versions`/`organization_terms_acceptances`, cujas políticas são só de authenticated; `pay_account_in_batch` sem checagem própria, protegida pela `pay_account_now_checked` que chama); testes desatualizados: `seller-credit` (vendedor agora é diário por padrão), `nasp-acre-refin`, `table-version-start-date`, `table-amount-ranges`, `fin-bank-account`, `fintech-corban-tables`.
 - Por volta de 27/10/2026: pedir aprovação para apagar os schemas de backup `backup_c4`, `backup_c5`, `backup_c6`.
 - Código legado: `INTEGRATION_WORKER_SECRET` e `CORBAN_ALLOW_LOCAL_PROVIDERS` em `src/lib/preflight.ts` (rota do worker já removida).

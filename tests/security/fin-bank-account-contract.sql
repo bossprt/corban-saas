@@ -1,21 +1,54 @@
 -- Contract test for 20261008001318_fin_bank_account_receipts_payouts_v1: the account that received a commission report goes
 -- to its receipts (already posted and posted later); a closed report changes only its account; the account of payout
--- and receipt entries is set with an event, only by finance and only to an account of the company. Uses the test
--- company's existing confirmed report and payout entries. One transaction, rolled back.
+-- and receipt entries is set with an event, only by finance and only to an account of the company. Builds its own
+-- company account, a confirmed (manual) commission report with its posted receipt and a paid payout, so it does not
+-- depend on what the local database already holds. One transaction, rolled back.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/fin-bank-account-contract.sql
 
 begin;
 
 create temp table results (check_name text, ok boolean);
+
+-- Fixture: a company account; a contract whose commission is registered by hand (a confirmed report, receipt posted to
+-- the company finance); a supervisor's withdrawal account with a credit, paid now (a settled payout entry).
+create temp table fx (label text, id uuid);
+grant insert, select on fx to authenticated;
+insert into fx select 'admin', id from auth.users where email = 'admin@corban-teste.local';
+insert into fx select 'sup', id from auth.users where email = 'supervisor@corban-teste.local';
+with k as (insert into public.fin_bank_accounts (organization_id, bank_name, label, is_active)
+           values ('00000000-0000-4000-8000-00000000c0b1', 'Banco Teste', 'Conta da empresa (teste)', true) returning id)
+insert into fx select 'bank', id from k;
+select set_config('request.jwt.claims', json_build_object('sub', (select id from fx where label = 'admin'), 'role', 'authenticated')::text, true);
+set local role authenticated;
+insert into fx select 'client', u.client_id from public.upsert_client('00000000-0000-4000-8000-00000000c0b1', '52998224725', 'Cliente Conta', '68999770019', null, 'manual') u;
+insert into fx select 'contract', d.proposal_id from public.create_direct_proposal('00000000-0000-4000-8000-00000000c0b1', (select id from fx where label = 'client'),
+  '00000000-0000-4000-8000-0000000c0302', '00000000-0000-4000-8000-0000000c0801', 10000, 9500, 250, 120, 'ADE-CONTA-1', 'submitted') d;
+insert into fx select 'account', public.ensure_payout_account('00000000-0000-4000-8000-00000000c0b1', null, (select id from fx where label = 'sup'));
+reset role;
+set constraints all immediate; set constraints all deferred;  -- as at commit (contracts are born calculated)
+select set_config('corban.payout_rpc', 'on', true);
+update public.payout_accounts set model = 'account' where id = (select id from fx where label = 'account');
+insert into public.payout_entries (organization_id, account_id, kind, amount, effective_on, description, status)
+values ('00000000-0000-4000-8000-00000000c0b1', (select id from fx where label = 'account'), 'bonus', 150.00,
+        (now() at time zone 'America/Sao_Paulo')::date - 1, 'crédito de teste', 'approved');
+select set_config('corban.payout_rpc', 'off', true);
+set local role authenticated;
+select public.register_manual_receipt((select id from fx where label = 'contract'), 'upfront', '600.00', (now() at time zone 'America/Sao_Paulo')::date, null, 'caiu na conta');
+insert into fx select 'payout', public.pay_account_now((select id from fx where label = 'account'), (now() at time zone 'America/Sao_Paulo')::date, 'PIX-CONTA-1');
+reset role;
+set constraints all immediate; set constraints all deferred;  -- as at commit
+select set_config('request.jwt.claims', '', true);
+
 create temp table ids as
 select '00000000-0000-4000-8000-00000000c0b1'::uuid as org,
-       (select id from auth.users where email = 'admin@corban-teste.local') as admin_user,
+       (select id from fx where label = 'admin') as admin_user,
        (select id from auth.users where email = 'vendedor@corban-teste.local') as seller_user,
-       (select k.id from public.fin_bank_accounts k where k.organization_id = '00000000-0000-4000-8000-00000000c0b1' and k.is_active order by k.created_at limit 1) as bank,
+       (select id from fx where label = 'bank') as bank,
        (select r.id from public.receipt_reports r where r.organization_id = '00000000-0000-4000-8000-00000000c0b1' and r.status <> 'draft'
-          and exists (select 1 from public.commission_receipts c join public.fin_entries e on e.source = 'commission_receipt' and e.source_ref = c.id where c.report_id = r.id)
-        order by r.created_at limit 1) as report,
-       (select e.source_ref from public.fin_entries e where e.organization_id = '00000000-0000-4000-8000-00000000c0b1' and e.source = 'payout' and e.status = 'settled' limit 1) as payout;
+          and exists (select 1 from public.commission_receipts c join public.fin_entries e on e.source = 'commission_receipt' and e.source_ref = c.id
+                      where c.report_id = r.id and c.proposal_id = (select id from fx where label = 'contract'))) as report,
+       (select e.source_ref from public.fin_entries e where e.organization_id = '00000000-0000-4000-8000-00000000c0b1' and e.source = 'payout' and e.status = 'settled'
+          and e.source_ref = (select id from fx where label = 'payout')) as payout;
 grant select on ids to authenticated;
 grant insert, select on results to authenticated;
 create function pg_temp.err(p_sql text) returns text language plpgsql as $$
