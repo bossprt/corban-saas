@@ -1,4 +1,4 @@
--- Contract test for 20261020200000_receipt_file_check_v1: before importing a commission report, each contract number says
+-- Contract test for 20261020202219_receipt_file_check_v1: before importing a commission report, each contract number says
 -- whether it is ready or why not (no seller, not found, already received). Finance only. One transaction, rolled back.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/receipt-file-check-contract.sql
 
