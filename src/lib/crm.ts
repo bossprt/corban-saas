@@ -15,6 +15,32 @@ export const OPEN_STAGES: readonly LeadStage[] = ['new', 'contacted', 'negotiati
 export const isLeadStage = (v: unknown): v is LeadStage => typeof v === 'string' && (LEAD_STAGES as readonly string[]).includes(v)
 export const stageLabel = (v: string) => (isLeadStage(v) ? STAGE_LABEL[v] : v)
 
+// Tasks and logged contacts (20/10/2026).
+export const TASK_KINDS = ['call', 'whatsapp', 'visit', 'email', 'other'] as const
+export type TaskKind = (typeof TASK_KINDS)[number]
+export const TASK_KIND_LABEL: Record<TaskKind, string> = { call: 'Ligação', whatsapp: 'WhatsApp', visit: 'Visita', email: 'E-mail', other: 'Outro' }
+export const isTaskKind = (v: unknown): v is TaskKind => typeof v === 'string' && (TASK_KINDS as readonly string[]).includes(v)
+export const TASK_OUTCOMES = ['answered', 'no_answer', 'wrong_number', 'call_back', 'interested', 'not_interested', 'sold', 'other'] as const
+export type TaskOutcome = (typeof TASK_OUTCOMES)[number]
+export const TASK_OUTCOME_LABEL: Record<TaskOutcome, string> = {
+  answered: 'Atendeu', no_answer: 'Não atendeu', wrong_number: 'Número errado', call_back: 'Pediu retorno',
+  interested: 'Interessado', not_interested: 'Sem interesse', sold: 'Fechou', other: 'Outro',
+}
+export const isTaskOutcome = (v: unknown): v is TaskOutcome => typeof v === 'string' && (TASK_OUTCOMES as readonly string[]).includes(v)
+
+// Company stages sit on the three open steps a seller moves by hand.
+export const BASE_STAGES = ['new', 'contacted', 'negotiating'] as const
+export type BaseStage = (typeof BASE_STAGES)[number]
+export const isBaseStage = (v: unknown): v is BaseStage => typeof v === 'string' && (BASE_STAGES as readonly string[]).includes(v)
+
+// Phones as the database stores them (55 + DDD + number), for the "Não perturbe" list.
+export function normalizePhone(v: string | null | undefined): string | null {
+  const d = String(v ?? '').replace(/\D/g, '')
+  if (/^55\d{10,11}$/.test(d)) return d
+  if (/^\d{10,11}$/.test(d)) return `55${d}`
+  return null
+}
+
 export const DISTRIBUTIONS = ['queue', 'round_robin', 'manual'] as const
 export type Distribution = (typeof DISTRIBUTIONS)[number]
 export const DISTRIBUTION_LABEL: Record<Distribution, string> = {

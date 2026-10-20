@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { buildCampaignRows, chunk, guessCampaignMapping, localDateTimeToIso, MANUAL_STAGES, whatsappHref } from '../../src/lib/crm'
+import { buildCampaignRows, chunk, guessCampaignMapping, isBaseStage, isTaskKind, isTaskOutcome, localDateTimeToIso, MANUAL_STAGES, normalizePhone, whatsappHref } from '../../src/lib/crm'
 
 test('sales CRM: the header names of a campaign spreadsheet are recognized', () => {
   const m = guessCampaignMapping(['Nome do Cliente', 'CPF', 'Celular', 'Telefone 2', 'E-mail', 'Margem', 'Banco'])
@@ -28,4 +28,16 @@ test('sales CRM: helpers', () => {
   assert.deepEqual(chunk([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]])
   // "proposal" and "won" are never set by hand.
   assert.ok(!MANUAL_STAGES.includes('proposal') && !MANUAL_STAGES.includes('won'))
+})
+
+test('sales CRM: follow-up helpers (tasks, stages, "Não perturbe")', () => {
+  assert.equal(normalizePhone('(68) 99955-0001'), '5568999550001')
+  assert.equal(normalizePhone('5568999550001'), '5568999550001')
+  assert.equal(normalizePhone('6832240000'), '556832240000')
+  assert.equal(normalizePhone('123'), null)
+  assert.equal(normalizePhone(null), null)
+  assert.ok(isTaskKind('call') && isTaskKind('whatsapp') && !isTaskKind('sms'))
+  assert.ok(isTaskOutcome('no_answer') && !isTaskOutcome('maybe'))
+  // Company stages sit only on the open steps a seller moves by hand.
+  assert.ok(isBaseStage('negotiating') && !isBaseStage('proposal') && !isBaseStage('won') && !isBaseStage('lost'))
 })

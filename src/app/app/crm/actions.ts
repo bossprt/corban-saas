@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
 import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedback'
 import { isValidCpf } from '@/lib/cpf'
-import { CAMPAIGN_LIMITS, isDistribution, localDateTimeToIso, MANUAL_STAGES, type CampaignRow, type LeadStage } from '@/lib/crm'
+import { CAMPAIGN_LIMITS, isBaseStage, isDistribution, isTaskKind, isTaskOutcome, localDateTimeToIso, MANUAL_STAGES, normalizePhone, type CampaignRow, type LeadStage } from '@/lib/crm'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const DATE = /^\d{4}-\d{2}-\d{2}$/
@@ -32,6 +32,11 @@ function crmError(error: { message?: string; code?: string }): FeedbackCode {
   if (/lead_already_taken/.test(m)) return 'erro:lead_ja_assumido'
   if (/campaign_name_mismatch/.test(m)) return 'erro:campanha_nome_confirmacao'
   if (/campaign_has_sales/.test(m)) return 'erro:campanha_com_vendas'
+  if (/invalid_task/.test(m)) return 'erro:tarefa_invalida'
+  if (/task_closed/.test(m)) return 'erro:tarefa_fechada'
+  if (/stage_name_taken/.test(m)) return 'erro:etapa_nome_repetido'
+  if (/invalid_stage/.test(m)) return 'erro:etapa_invalida'
+  if (/invalid_phone/.test(m)) return 'erro:telefone_invalido'
   return classifyDbFeedback(error)
 }
 
@@ -74,34 +79,19 @@ export async function setLeadStage(formData: FormData) {
 }
 
 // Board drag and drop: same rule as setLeadStage, answered in place (no redirect) so the board just refreshes.
+// stage: a base step ("new", "contacted", "negotiating") or a company stage id.
 export async function moveLeadOnBoard(leadId: string, stage: string): Promise<{ ok: true } | { ok: false; message: string }> {
   const { supabase } = await requireAppContext()
-  if (!UUID.test(leadId) || !MANUAL_STAGES.includes(stage as LeadStage) || stage === 'lost') return { ok: false, message: 'Movimento não permitido.' }
-  const { error } = await supabase.rpc('set_lead_status', { p_lead_id: leadId, p_status: stage, p_lost_reason: null })
+  if (!UUID.test(leadId) || (!UUID.test(stage) && (!MANUAL_STAGES.includes(stage as LeadStage) || stage === 'lost'))) return { ok: false, message: 'Movimento não permitido.' }
+  const { error } = UUID.test(stage)
+    ? await supabase.rpc('move_lead_to_stage', { p_lead: leadId, p_stage: stage })
+    : await supabase.rpc('set_lead_status', { p_lead_id: leadId, p_status: stage, p_lost_reason: null })
   if (error) {
     const code = crmError(error)
     return { ok: false, message: code === 'erro:lead_com_proposta' ? 'Este lead tem proposta em andamento: a etapa segue a proposta.' : 'Não foi possível mover o lead.' }
   }
   refresh(leadPath(leadId))
   return { ok: true }
-}
-
-export async function setNextContact(formData: FormData) {
-  const { supabase } = await requireAppContext()
-  const id = text(formData, 'lead_id')
-  if (!UUID.test(id)) return go('/app/crm', 'erro:requisicao_invalida')
-  const raw = text(formData, 'next_contact_at')
-  const at = raw ? localDateTimeToIso(raw) : null
-  if (raw && !at) return go(back(formData, leadPath(id)), 'erro:data_invalida')
-  const { error } = await supabase.rpc('set_lead_next_contact', { p_lead_id: id, p_at: at })
-  if (error) return go(back(formData, leadPath(id)), crmError(error))
-  const note = text(formData, 'note')
-  if (note) {
-    const { error: e } = await supabase.rpc('add_lead_note', { p_lead_id: id, p_text: note.slice(0, 1000) })
-    if (e) return go(back(formData, leadPath(id)), crmError(e))
-  }
-  refresh(leadPath(id))
-  return go(back(formData, leadPath(id)), at ? 'ok:retorno_marcado' : 'ok:lead_atualizado')
 }
 
 export async function addLeadNote(formData: FormData) {
@@ -163,7 +153,9 @@ export async function assignLeads(formData: FormData) {
   const to = back(formData, '/app/crm')
   if (!UUID.test(owner)) return go(to, 'erro:vendedor_invalido')
   let args: { p_lead_ids: string[] | null; p_campaign: string | null; p_count: number | null }
+  const many = formData.getAll('lead_ids').map(String).filter(v => UUID.test(v)).slice(0, 500)
   if (UUID.test(leadId)) args = { p_lead_ids: [leadId], p_campaign: null, p_count: null }
+  else if (many.length) args = { p_lead_ids: many, p_campaign: null, p_count: null }
   else if (UUID.test(campaign) && Number.isInteger(count) && count >= 1 && count <= 1000) args = { p_lead_ids: null, p_campaign: campaign, p_count: count }
   else return go(to, 'erro:requisicao_invalida')
   const { data, error } = await supabase.rpc('assign_leads', { p_org: organization.id, p_owner: owner, ...args })
@@ -251,4 +243,158 @@ export async function closeCampaign(formData: FormData) {
   if (error) return go(`/app/crm/campanhas/${id}`, crmError(error))
   refresh('/app/crm', '/app/crm/campanhas', `/app/crm/campanhas/${id}`)
   return go(`/app/crm/campanhas/${id}`, 'ok:campanha_encerrada')
+}
+
+// Tasks (20/10/2026): what to do with the lead, when, and the result.
+export async function createLeadTask(formData: FormData) {
+  const { supabase } = await requireAppContext()
+  const id = text(formData, 'lead_id')
+  if (!UUID.test(id)) return go('/app/crm', 'erro:requisicao_invalida')
+  const to = back(formData, leadPath(id))
+  const kind = text(formData, 'kind')
+  const title = text(formData, 'title')
+  const at = localDateTimeToIso(text(formData, 'due_at'))
+  const assignee = text(formData, 'assigned_to')
+  if (!isTaskKind(kind) || !title || title.length > 200 || !at || (assignee && !UUID.test(assignee))) return go(to, 'erro:tarefa_invalida')
+  const { error } = await supabase.rpc('create_lead_task', { p_lead: id, p_kind: kind, p_title: title, p_due_at: at, p_assignee: assignee || null })
+  if (error) return go(to, crmError(error))
+  refresh(leadPath(id))
+  return go(to, 'ok:tarefa_criada')
+}
+
+export async function finishLeadTask(formData: FormData) {
+  const { supabase } = await requireAppContext()
+  const task = text(formData, 'task_id')
+  const to = back(formData, '/app/crm')
+  const done = text(formData, 'done') !== 'no'
+  const outcome = text(formData, 'outcome')
+  const note = text(formData, 'note')
+  if (!UUID.test(task) || (outcome && !isTaskOutcome(outcome)) || note.length > 1000) return go(to, 'erro:tarefa_invalida')
+  const { error } = await supabase.rpc('finish_lead_task', { p_task: task, p_done: done, p_outcome: outcome || null, p_note: note || null })
+  if (error) return go(to, crmError(error))
+  refresh()
+  return go(to, done ? 'ok:tarefa_concluida' : 'ok:tarefa_cancelada')
+}
+
+// A contact already made: logged with its result; optionally the next task in the same step.
+export async function logLeadActivity(formData: FormData) {
+  const { supabase } = await requireAppContext()
+  const id = text(formData, 'lead_id')
+  if (!UUID.test(id)) return go('/app/crm', 'erro:requisicao_invalida')
+  const to = back(formData, leadPath(id))
+  const kind = text(formData, 'kind')
+  const outcome = text(formData, 'outcome')
+  const note = text(formData, 'note')
+  const nextRaw = text(formData, 'next_at')
+  const next = nextRaw ? localDateTimeToIso(nextRaw) : null
+  if (!isTaskKind(kind) || !isTaskOutcome(outcome) || note.length > 1000 || (nextRaw && !next)) return go(to, 'erro:tarefa_invalida')
+  const { error } = await supabase.rpc('log_lead_activity', {
+    p_lead: id, p_kind: kind, p_outcome: outcome, p_note: note || null, p_next_at: next, p_next_title: text(formData, 'next_title').slice(0, 200) || null,
+  })
+  if (error) return go(to, crmError(error))
+  refresh(leadPath(id))
+  return go(to, 'ok:contato_registrado')
+}
+
+// "Não perturbe" from the lead: the client asked not to be contacted on this phone.
+export async function markLeadDnd(formData: FormData) {
+  const { supabase, organization } = await requireAppContext()
+  const id = text(formData, 'lead_id')
+  if (!UUID.test(id)) return go('/app/crm', 'erro:requisicao_invalida')
+  const to = back(formData, leadPath(id))
+  const phone = normalizePhone(text(formData, 'phone'))
+  if (!phone) return go(to, 'erro:telefone_invalido')
+  const { data, error } = await supabase.rpc('mark_phone_dnd', { p_org: organization.id, p_phone: phone, p_note: text(formData, 'note').slice(0, 300) || null, p_lead: id })
+  if (error) return go(to, crmError(error))
+  refresh(leadPath(id), '/app/crm/nao-perturbe')
+  return go(to, data ? 'ok:nao_perturbe_marcado' : 'ok:nao_perturbe_ja_estava')
+}
+
+// The lead's stage buttons when the company has its own stages.
+export async function moveLeadToStage(formData: FormData) {
+  const { supabase } = await requireAppContext()
+  const id = text(formData, 'lead_id')
+  const stage = text(formData, 'stage_id')
+  const to = back(formData, UUID.test(id) ? leadPath(id) : '/app/crm')
+  if (!UUID.test(id) || !UUID.test(stage)) return go(to, 'erro:requisicao_invalida')
+  const { error } = await supabase.rpc('move_lead_to_stage', { p_lead: id, p_stage: stage })
+  if (error) return go(to, crmError(error))
+  refresh(leadPath(id))
+  return go(to, 'ok:lead_atualizado')
+}
+
+// Company stages (supervisor).
+export async function saveLeadStage(formData: FormData) {
+  const { supabase, organization } = await requireAppContext()
+  const id = text(formData, 'stage_id')
+  const name = text(formData, 'name')
+  const base = text(formData, 'base_status')
+  const order = Number(text(formData, 'sort_order') || '0')
+  // Without the field (plain Salvar) the stage keeps its on/off state.
+  const active = formData.has('active') ? text(formData, 'active') !== 'no' : null
+  const to = '/app/crm/etapas'
+  if ((id && !UUID.test(id)) || !name || name.length > 40 || !isBaseStage(base) || !Number.isInteger(order) || order < 0 || order > 999) return go(to, 'erro:etapa_invalida')
+  const { error } = await supabase.rpc('save_sales_lead_stage', { p_org: organization.id, p_id: id || null, p_name: name, p_base_status: base, p_sort_order: order, p_active: active })
+  if (error) return go(to, crmError(error))
+  refresh(to)
+  return go(to, 'ok:etapa_salva')
+}
+
+// Idle leads (supervisor): back to the queue.
+export async function releaseLeads(formData: FormData) {
+  const { supabase, organization } = await requireAppContext()
+  const ids = formData.getAll('lead_ids').map(String).filter(v => UUID.test(v)).slice(0, 500)
+  const to = back(formData, '/app/crm/parados')
+  if (!ids.length) return go(to, 'erro:nada_selecionado')
+  const { error } = await supabase.rpc('release_leads', { p_org: organization.id, p_lead_ids: ids })
+  if (error) return go(to, crmError(error))
+  refresh('/app/crm/parados')
+  return go(to, 'ok:leads_devolvidos')
+}
+
+// "Não perturbe" list: anyone who works leads adds one phone; a supervisor imports lists and removes.
+export async function addDndPhone(formData: FormData) {
+  const { supabase, organization } = await requireAppContext()
+  const phone = normalizePhone(text(formData, 'phone'))
+  const to = '/app/crm/nao-perturbe'
+  if (!phone) return go(to, 'erro:telefone_invalido')
+  const { data, error } = await supabase.rpc('mark_phone_dnd', { p_org: organization.id, p_phone: phone, p_note: text(formData, 'note').slice(0, 300) || null, p_lead: null })
+  if (error) return go(to, crmError(error))
+  refresh(to)
+  return go(to, data ? 'ok:nao_perturbe_marcado' : 'ok:nao_perturbe_ja_estava')
+}
+
+export async function removeDndPhone(formData: FormData) {
+  const { supabase, organization } = await requireAppContext()
+  const phone = normalizePhone(text(formData, 'phone'))
+  const to = '/app/crm/nao-perturbe'
+  if (!phone) return go(to, 'erro:telefone_invalido')
+  const { error } = await supabase.rpc('unmark_phone_dnd', { p_org: organization.id, p_phone: phone })
+  if (error) return go(to, crmError(error))
+  refresh(to)
+  return go(to, 'ok:nao_perturbe_removido')
+}
+
+// Phone search on the list: sent by POST (a phone never goes in the address).
+export async function findDndPhone(raw: string): Promise<{ found: false } | { found: true; source: string; note: string | null; fileName: string | null; createdAt: string } | { error: string }> {
+  const { supabase } = await requireAppContext()
+  const phone = normalizePhone(String(raw ?? ''))
+  if (!phone) return { error: 'Telefone inválido: use DDD e número.' }
+  const { data } = await supabase.from('do_not_disturb_phones').select('source,note,file_name,created_at').eq('phone', phone).is('removed_at', null).maybeSingle()
+  return data ? { found: true, source: data.source, note: data.note, fileName: data.file_name, createdAt: data.created_at } : { found: false }
+}
+
+export type DndImportResult = { ok: true; added: number; already: number; invalid: number } | { ok: false; message: string }
+
+// One chunk of a "Não perturbe" list (read in the browser). Only phone numbers travel.
+export async function importDndChunk(input: { fileName: string; phones: string[] }): Promise<DndImportResult> {
+  const { supabase, organization } = await requireAppContext()
+  const { fileName, phones } = input ?? {}
+  if (typeof fileName !== 'string' || !Array.isArray(phones) || phones.length === 0 || phones.length > 5000) return { ok: false, message: 'Arquivo ou linhas inválidos.' }
+  const clean = phones.map(p => String(p ?? '').replace(/\D/g, '').slice(0, 20))
+  const { data, error } = await supabase.rpc('import_dnd_phones', { p_org: organization.id, p_file_name: fileName.trim().slice(0, 255), p_phones: clean })
+  if (error) return { ok: false, message: crmError(error) === 'erro:sem_permissao' ? 'Sem permissão para importar.' : 'Não foi possível importar esta parte do arquivo.' }
+  revalidatePath('/app/crm/nao-perturbe'); revalidatePath('/app/crm')
+  const r = data as { added: number; already: number; invalid: number }
+  return { ok: true, added: r.added, already: r.already, invalid: r.invalid }
 }
