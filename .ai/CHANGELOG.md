@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Importação de contratos atualiza a etapa dos que já existem (20/10/2026)
+- Alterado (pedido do dono, relatório WorkBank da PROSESP: 4 contratos "Em análise" no Corban já estavam CONCRETIZADO no banco): ao importar, um contrato que já existe segue a situação do relatório, só para frente ("Em análise" e "Pendência" podem trocar). Paga, Cancelada e Recusada nunca mudam; CANCELADA no arquivo cancela um contrato ainda não pago; contrato Pago com CANCELADA no arquivo vira aviso para conferir. Valores, vendedor e comissão nunca mudam pelo arquivo. A prévia mostra "vai mudar de X para Y"; a mudança fica no histórico da esteira como "Pelo relatório do banco". Só tela, sem migration (`src/lib/imports/report-move.ts`, teste `report-move.test.ts`).
+
 ### Vendas (CRM), fase 1: tarefas, etapas da empresa, leads parados e "Não perturbe" (20/10/2026)
 - Adicionado (pedido do dono: "profissionalizar esse CRM", depois do comparativo com o mercado): tarefas por lead (ligação, WhatsApp, visita, e-mail, outro), com data, responsável e resultado ao concluir; "Registrar contato" grava um contato já feito com o resultado e pode marcar o próximo. O próximo contato do lead é a tarefa aberta mais próxima; os retornos marcados antes viraram tarefas. A tela Hoje mostra "Minhas tarefas".
 - Adicionado: etapas da empresa (Vendas > Etapas, supervisor) dentro de Novo, Em contato e Negociando; o quadro mostra as colunas da empresa. Proposta, Ganho e Perdido continuam fixos (seguem a proposta).

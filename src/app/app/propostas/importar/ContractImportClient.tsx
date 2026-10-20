@@ -63,7 +63,7 @@ export function ContractImportClient({ layouts }: { layouts: { key: string; labe
 
       {done && (
         <p role="status" className="rounded-[10px] border border-received/40 bg-received/5 px-4 py-3 font-medium text-ink">
-          Importação concluída: {done.created} cadastrado(s), {done.existed} já existia(m), {done.failed} com erro.{' '}
+          Importação concluída: {done.created} cadastrado(s), {done.existed} já existia(m){done.updated ? ` (${done.updated} com a etapa atualizada pelo relatório)` : ''}, {done.failed} com erro.{' '}
           <Link href="/app/propostas" className="text-brand hover:text-brand-strong">Ver na esteira</Link>
         </p>
       )}
