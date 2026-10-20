@@ -1,4 +1,4 @@
--- Contract test for 20261021120000_sales_ranking_v1: the team's ranking counts contracts paid to the client in the
+-- Contract test for 20261020225536_sales_ranking_v1: the team's ranking counts contracts paid to the client in the
 -- period per seller (released amount) and contracts typed; no commission or payout leaves; the external broker does not
 -- see it. One transaction, rolled back.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/sales-ranking-contract.sql

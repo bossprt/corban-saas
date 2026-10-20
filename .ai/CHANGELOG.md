@@ -16,7 +16,7 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 ## [Unreleased]
 
 ### Ranking de vendas e painel da equipe, com modo TV (21/10/2026)
-- Adicionado (plano fase 2; dono escolheu: a equipe toda vê o ranking): Vendas > Ranking. Por período (hoje, 7 dias, mês, ano) e por produção paga (valor liberado dos pagos ao cliente) ou digitada (cadastrados, sem cancelados/recusados): pódio, tabela por vendedor com contratos e % da meta do mês, total, ticket médio, meta da equipe, funil (leads → digitados → pagos) e últimos pagos ao cliente. Comissão e repasse nunca aparecem. "Modo TV" ocupa a tela e atualiza a cada minuto. Corretor externo não vê. `20261021120000_sales_ranking_v1`, teste `sales-ranking-contract.sql`.
+- Adicionado (plano fase 2; dono escolheu: a equipe toda vê o ranking): Vendas > Ranking. Por período (hoje, 7 dias, mês, ano) e por produção paga (valor liberado dos pagos ao cliente) ou digitada (cadastrados, sem cancelados/recusados): pódio, tabela por vendedor com contratos e % da meta do mês, total, ticket médio, meta da equipe, funil (leads → digitados → pagos) e últimos pagos ao cliente. Comissão e repasse nunca aparecem. "Modo TV" ocupa a tela e atualiza a cada minuto. Corretor externo não vê. `20261020225536_sales_ranking_v1`, teste `sales-ranking-contract.sql`.
 
 ### Relatório de comissão: a prévia mostra todas as linhas (20/10/2026)
 - Alterado (dono: "por que a tela só mostra 5 contratos?"): a prévia da importação mostrava só 5 linhas de amostra; agora mostra todas (até 1.000), com rolagem e a contagem "Prévia: X linha(s)".
