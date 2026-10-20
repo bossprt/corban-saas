@@ -1,9 +1,10 @@
 'use client'
 import { FileDrop } from '@/components/FileDrop'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { readLegacyFileInBrowser, type LegacySheet } from '@/lib/legacy/browser-read'
-import { importReceiptFile, inspectReceiptFile } from '../actions'
+import { checkReceiptFile, importReceiptFile, inspectReceiptFile, type FileCheck } from '../actions'
 
 type Source = { value: string; label: string }
 const FIELDS: { key: 'ade' | 'amount' | 'installment' | 'paid_on' | 'bank'; label: string; required?: boolean; hint?: string }[] = [
@@ -14,6 +15,13 @@ const FIELDS: { key: 'ade' | 'amount' | 'installment' | 'paid_on' | 'bank'; labe
   { key: 'bank', label: 'Banco (só para consulta)' },
 ]
 const label = 'text-[13px] font-medium text-ink-soft'
+const CHECK_TEXT: Record<Exclude<FileCheck['result'], 'ready'>, string> = {
+  no_seller: 'Sem vendedor: a comissão ainda não foi calculada. Informe o vendedor em Contratos antes de importar.',
+  no_calc: 'Sem comissão calculada (confira a tabela ou o grupo do vendedor).',
+  received: 'Comissão já recebida em outro relatório.',
+  not_found: 'Contrato não encontrado neste banco ou promotora.',
+  ambiguous: 'Mais de um contrato com este número.',
+}
 const thisMonth = () => new Date().toISOString().slice(0, 7)
 
 // Two steps on the same file: read the columns (in the browser, nothing stored), then import with the chosen columns.
@@ -30,6 +38,21 @@ export function ReceiptImportClient({ sources, bankAccounts, suggestedBank }: { 
   const [error, setError] = useState('')
   const [issues, setIssues] = useState<{ row: number; message: string }[]>([])
   const [busy, setBusy] = useState(false)
+  const [checked, setChecked] = useState<{ key: string; lines: FileCheck[] } | null>(null)
+
+  // As soon as the contract column is known, every number of the file is checked (ready, or why not).
+  const adeCol = inspect ? inspect.sheet.headers.indexOf(cols.ade ?? '') : -1
+  const checkKey = inspect && adeCol >= 0 ? `${source}|${kind}|${adeCol}|${inspect.sheet.sha}` : null
+  useEffect(() => {
+    if (!inspect || !checkKey) return
+    let live = true
+    const ades = inspect.sheet.body.map(r => String(r[adeCol] ?? '').trim()).filter(Boolean)
+    checkReceiptFile({ source, kind, ades }).then(r => { if (live && r.ok) setChecked({ key: checkKey, lines: r.lines }) })
+    return () => { live = false }
+  }, [inspect, checkKey, adeCol, source, kind])
+  const check = checked && checked.key === checkKey ? checked.lines : null
+  const problems = (check ?? []).filter(c => c.result !== 'ready')
+  const groups = (Object.keys(CHECK_TEXT) as (keyof typeof CHECK_TEXT)[]).map(k => ({ k, ades: problems.filter(p => p.result === k).map(p => p.ade) })).filter(g => g.ades.length)
 
   async function readColumns() {
     if (!file || !source) { setError('Escolha a fonte pagadora e o arquivo.'); return }
@@ -122,8 +145,18 @@ export function ReceiptImportClient({ sources, bankAccounts, suggestedBank }: { 
               <tbody>{inspect.sheet.body.filter(r => r.some(c => c !== '')).slice(0, 5).map((r, i) => <tr key={i} className="border-t border-line">{inspect.sheet.headers.map((_, j) => <td key={j} className="whitespace-nowrap px-3 py-1.5 text-ink-soft">{r[j]}</td>)}</tr>)}</tbody>
             </table>
           </div>
+          {check && (
+            <div role="status" className={`rounded-[10px] border px-4 py-3 text-sm ${problems.length ? 'border-[#F3D9A4] bg-[#FDF3DC] text-[#92400E]' : 'border-[#BBE5C8] bg-[#E3F5E9] text-[#15803D]'}`}>
+              <p className="font-semibold">O arquivo tem {check.length} contrato(s): {check.length - problems.length} pronto(s) para conferir{problems.length ? `, ${problems.length} com pendência` : ''}.</p>
+              {groups.map(g => (
+                <p key={g.k} className="mt-1.5">{g.ades.length} — {CHECK_TEXT[g.k]} <span className="num block text-xs">{g.ades.join(', ')}</span></p>
+              ))}
+              {groups.some(g => g.k === 'no_seller') && <Link href="/app/contratos?vendedor=none&n=100" className="mt-2 inline-block font-medium underline">Abrir os contratos sem vendedor</Link>}
+              {problems.length > 0 && <p className="mt-2 text-xs">Se importar assim, essas linhas ficam &quot;A resolver&quot; e o relatório só pode ser confirmado depois de resolvidas ou ignoradas.</p>}
+            </div>
+          )}
           <div className="flex justify-end">
-            <button type="button" onClick={runImport} disabled={busy || !cols.ade || !cols.amount} className="h-10 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50">Importar para conferência</button>
+            <button type="button" onClick={runImport} disabled={busy || !cols.ade || !cols.amount} className="h-10 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50">{problems.length ? 'Importar mesmo assim' : 'Importar para conferência'}</button>
           </div>
         </div>
       )}

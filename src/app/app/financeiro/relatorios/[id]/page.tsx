@@ -26,6 +26,10 @@ export default async function ReceiptReportPage({ params, searchParams }: { para
     supabase.from(rep.source_kind === 'bank' ? 'organization_banks' : 'organization_providers').select('name').eq('id', rep.source_id).maybeSingle(),
   ])
   const lines = (lineRows ?? []) as Line[]
+  // "Sem comissão calculada" because the contract has no seller yet: said on the line (owner, 20/10/2026).
+  const noCalcIds = [...new Set(lines.filter(l => l.status === 'no_calc' && l.proposal_id).map(l => l.proposal_id!))]
+  const { data: noSellerRows } = noCalcIds.length ? await supabase.from('proposals_v2').select('id').in('id', noCalcIds).is('seller_id', null) : { data: [] as { id: string }[] }
+  const noSeller = new Set((noSellerRows ?? []).map(r => r.id))
   const draft = rep.status === 'draft'
   const canEdit = draft && can(access, 'financeiro.edit')
   const canConfirm = draft && can(access, 'financeiro.approve')
@@ -111,7 +115,7 @@ export default async function ReceiptReportPage({ params, searchParams }: { para
                     <td className="num px-3 py-2 text-right">{brlText(l.amount)}</td>
                     <td className="num px-3 py-2 text-right text-ink-soft">{brlText(l.expected_amount)}</td>
                     <td className={`num px-3 py-2 text-right ${diff && !isZero(diff) ? 'font-medium text-[#92400E]' : 'text-muted'}`}>{diff === null ? '—' : brlText(toDecimalString(diff, 2))}</td>
-                    <td className="px-3 py-2"><Badge tone={LINE_STATUS_TONE[l.status]}>{LINE_STATUS_LABEL[l.status]}</Badge>{l.note && <div className="mt-1 text-xs text-muted">{l.note}</div>}</td>
+                    <td className="px-3 py-2"><Badge tone={LINE_STATUS_TONE[l.status]}>{LINE_STATUS_LABEL[l.status]}</Badge>{l.proposal_id && noSeller.has(l.proposal_id) && <div className="mt-1 text-xs text-[#92400E]">Contrato sem vendedor: informe o vendedor no contrato e a comissão é calculada.</div>}{l.note && <div className="mt-1 text-xs text-muted">{l.note}</div>}</td>
                     {canEdit && (
                       <td className="px-3 py-2">
                         {l.status !== 'ignored' && l.status !== 'ok' && (
