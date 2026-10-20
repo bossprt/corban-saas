@@ -16,8 +16,8 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 ## [Unreleased]
 
 ### Data de "hoje" em Brasília, segurança fina e testes em dia (19/10/2026)
-- Corrigido (achado nos testes, dono aprovou): o banco roda em UTC; entre 21h e meia-noite de Brasília, "hoje" já era amanhã em 30 funções (mover para Paga sem data gravava amanhã, data paga de amanhã era aceita, lançamentos de repasse/financeiro podiam ficar com data de amanhã). Essas funções agora rodam no fuso de São Paulo; a conta bancária nova usa a data de Brasília (`20261019120100_sao_paulo_today_v1`, teste `sao-paulo-today-contract.sql` que falha se uma função voltar a ler "hoje" sem o fuso).
-- Segurança: anon não executa mais 5 funções internas nem lê as tabelas de termos (nenhuma era alcançável na prática); `pay_account_in_batch` confere a permissão por conta própria (`20261019120000_grants_hygiene_v2`).
+- Corrigido (achado nos testes, dono aprovou): o banco roda em UTC; entre 21h e meia-noite de Brasília, "hoje" já era amanhã em 30 funções (mover para Paga sem data gravava amanhã, data paga de amanhã era aceita, lançamentos de repasse/financeiro podiam ficar com data de amanhã). Essas funções agora rodam no fuso de São Paulo; a conta bancária nova usa a data de Brasília (`20261020031521_sao_paulo_today_v1`, teste `sao-paulo-today-contract.sql` que falha se uma função voltar a ler "hoje" sem o fuso).
+- Segurança: anon não executa mais 5 funções internas nem lê as tabelas de termos (nenhuma era alcançável na prática); `pay_account_in_batch` confere a permissão por conta própria (`20261020031458_grants_hygiene_v2`).
 - Testes: os 81 contratos SQL passam no banco local recriado (9 desatualizados corrigidos: data de Brasília, vendedor diário por padrão, grupo obrigatório, fixtures próprias; os que precisam de migration em /tmp documentam o `docker cp`).
 
 ### Lote de pagamento: detalhes de cada contrato pago (17/10/2026)

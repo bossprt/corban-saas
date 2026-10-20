@@ -1,4 +1,4 @@
--- Contract test for 20261019120100_sao_paulo_today_v1: every function that reads "today" (current_date, now()::date,
+-- Contract test for 20261020031521_sao_paulo_today_v1: every function that reads "today" (current_date, now()::date,
 -- localtimestamp, date_trunc) runs with the São Paulo time zone, so between 21:00 and midnight in Brasília "today" is
 -- not already tomorrow. A "create or replace" that drops the SET clause makes this test fail. Read only.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/sao-paulo-today-contract.sql
