@@ -4,11 +4,20 @@
 
 begin;
 
--- Own data on the seed table: a published vigência starting 28/09/2026 and a draft after it (rate set, so it can publish).
+-- Dates are relative to today in Brasília (the seed's own published versions start when the seed ran, so fixed past
+-- dates could fall before them): v3 starts in 7 days, the draft is published to start in 14.
+create temp table dates as
+select (now() at time zone 'America/Sao_Paulo')::date + 7 as d_v3,
+       (now() at time zone 'America/Sao_Paulo')::date + 3 as d_before,
+       (now() at time zone 'America/Sao_Paulo')::date + 14 as d_new,
+       (now() at time zone 'America/Sao_Paulo')::date + 15 as d_again;
+grant select on dates to authenticated;
+
+-- Own data on the seed table: a published vigência starting in 7 days and a draft after it (rate set, so it can publish).
 create temp table made as
 with p as (
   insert into public.product_table_versions (organization_id, product_table_id, version, status, effective_from, published_at, rate)
-  select organization_id, id, 90, 'published', '2026-09-28 03:00:00+00', now(), 1.8 from public.product_tables where id = '00000000-0000-4000-8000-0000000c0201'
+  select organization_id, id, 90, 'published', (select d_v3 from dates)::timestamp at time zone 'America/Sao_Paulo', now(), 1.8 from public.product_tables where id = '00000000-0000-4000-8000-0000000c0201'
   returning id
 ), d as (
   insert into public.product_table_versions (organization_id, product_table_id, version, status, rate)
@@ -42,7 +51,7 @@ insert into results select 'seed: draft and v3 exist', (select draft is not null
 select pg_temp.act_as((select seller from ids));
 set local role authenticated;
 -- A seller cannot even lock the draft for writing (RLS), so the call stops before the role check.
-insert into results select 'seller cannot publish', pg_temp.pub('2026-10-05') ~ '(not_authorized|version_not_found)';
+insert into results select 'seller cannot publish', pg_temp.pub((select d_new from dates)::text) ~ '(not_authorized|version_not_found)';
 reset role;
 
 select pg_temp.act_as((select admin_user from ids));
@@ -50,24 +59,24 @@ set local role authenticated;
 insert into results select 'date required', pg_temp.err(format('select public.publish_product_table_version(%L::uuid, null::date)', (select draft from ids))) like '%effective_from_required%';
 insert into results select 'more than a year ahead refused', pg_temp.pub(((now() at time zone 'America/Sao_Paulo')::date + 400)::text) like '%effective_from_out_of_range%';
 insert into results select 'before 2000 refused', pg_temp.pub('1999-12-31') like '%effective_from_out_of_range%';
-insert into results select 'before the published v3 refused', pg_temp.pub('2026-09-01') like '%future_published_version_exists%';
+insert into results select 'before the published v3 refused', pg_temp.pub((select d_before from dates)::text) like '%future_published_version_exists%';
 reset role;
 insert into results select 'refusals left the draft untouched',
   (select status = 'draft' and effective_from is null from public.product_table_versions where id = (select draft from ids));
 
 select pg_temp.act_as((select admin_user from ids));
 set local role authenticated;
-insert into results select 'admin publishes with a start date', pg_temp.pub('2026-10-05') = 'ok';
+insert into results select 'admin publishes with a start date', pg_temp.pub((select d_new from dates)::text) = 'ok';
 reset role;
 insert into results select 'starts at midnight in Brasília',
-  (select status = 'published' and effective_from = '2026-10-05 03:00:00+00'::timestamptz and published_at is not null
+  (select status = 'published' and effective_from = (select d_new from dates)::timestamp at time zone 'America/Sao_Paulo' and published_at is not null
    from public.product_table_versions where id = (select draft from ids));
 insert into results select 'previous vigência ends at the new start',
-  (select effective_until = '2026-10-05 03:00:00+00'::timestamptz from public.product_table_versions where id = (select v3 from ids));
+  (select effective_until = (select d_new from dates)::timestamp at time zone 'America/Sao_Paulo' from public.product_table_versions where id = (select v3 from ids));
 
 select pg_temp.act_as((select admin_user from ids));
 set local role authenticated;
-insert into results select 'published version cannot be published again', pg_temp.pub('2026-10-06') like '%version_not_draft%';
+insert into results select 'published version cannot be published again', pg_temp.pub((select d_again from dates)::text) like '%version_not_draft%';
 reset role;
 
 insert into results select 'anon cannot run it', not has_function_privilege('anon', 'public.publish_product_table_version(uuid,date)', 'execute');

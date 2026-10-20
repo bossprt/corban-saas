@@ -57,7 +57,7 @@ set local role authenticated;
 insert into results select 'a seller gets an empty pay list',
   not exists (select 1 from public.payout_pay_list((select org from ids)));
 insert into results select 'a seller cannot pay',
-  pg_temp.err(format('select public.pay_account_now_checked(%L::uuid, current_date, %L, 309.83)', (select id from made where label = 'closing'), 'x')) like '%not_authorized%';
+  pg_temp.err(format('select public.pay_account_now_checked(%L::uuid, (now() at time zone ''America/Sao_Paulo'')::date, %L, 309.83)', (select id from made where label = 'closing'), 'x')) like '%not_authorized%';
 reset role;
 
 select pg_temp.act_as((select admin_user from ids));
@@ -68,11 +68,11 @@ insert into results select 'pay list: closing 309,83; debt 42,00; withdrawal 150
   = '{"closing": 309.83, "debt": 42.00, "withdrawal": 150.00, "open": 77.00}'::jsonb;
 insert into results select 'the own account is not listed', not exists (select 1 from listed where label = 'own');
 insert into results select 'a different amount is refused (amount_changed)',
-  pg_temp.err(format('select public.pay_account_now_checked(%L::uuid, current_date, %L, 300)', (select id from made where label = 'closing'), 'PIX')) like '%amount_changed%';
+  pg_temp.err(format('select public.pay_account_now_checked(%L::uuid, (now() at time zone ''America/Sao_Paulo'')::date, %L, 300)', (select id from made where label = 'closing'), 'PIX')) like '%amount_changed%';
 insert into results select 'own account cannot be paid',
-  pg_temp.err(format('select public.pay_account_now_checked(%L::uuid, current_date, %L, 99)', (select id from made where label = 'own'), 'PIX')) like '%cannot_pay_yourself%';
+  pg_temp.err(format('select public.pay_account_now_checked(%L::uuid, (now() at time zone ''America/Sao_Paulo'')::date, %L, 99)', (select id from made where label = 'own'), 'PIX')) like '%cannot_pay_yourself%';
 insert into results select 'each listed amount is paid',
-  (select bool_and(pg_temp.err(format('select public.pay_account_now_checked(%L::uuid, current_date, %L, %s)', (select id from made where label = l.label), 'PIX lote', l.amount)) = 'ok') from listed l);
+  (select bool_and(pg_temp.err(format('select public.pay_account_now_checked(%L::uuid, (now() at time zone ''America/Sao_Paulo'')::date, %L, %s)', (select id from made where label = l.label), 'PIX lote', l.amount)) = 'ok') from listed l);
 insert into results select 'each payment recorded exactly the listed amount',
   not exists (select 1 from listed l
                   where (select p.amount from public.payouts p where p.account_id = (select id from made where label = l.label) and p.status = 'paid' order by p.paid_at desc limit 1) is distinct from l.amount);

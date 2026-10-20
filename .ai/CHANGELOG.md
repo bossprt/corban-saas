@@ -15,6 +15,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Data de "hoje" em Brasília, segurança fina e testes em dia (19/10/2026)
+- Corrigido (achado nos testes, dono aprovou): o banco roda em UTC; entre 21h e meia-noite de Brasília, "hoje" já era amanhã em 30 funções (mover para Paga sem data gravava amanhã, data paga de amanhã era aceita, lançamentos de repasse/financeiro podiam ficar com data de amanhã). Essas funções agora rodam no fuso de São Paulo; a conta bancária nova usa a data de Brasília (`20261019120100_sao_paulo_today_v1`, teste `sao-paulo-today-contract.sql` que falha se uma função voltar a ler "hoje" sem o fuso).
+- Segurança: anon não executa mais 5 funções internas nem lê as tabelas de termos (nenhuma era alcançável na prática); `pay_account_in_batch` confere a permissão por conta própria (`20261019120000_grants_hygiene_v2`).
+- Testes: os 81 contratos SQL passam no banco local recriado (9 desatualizados corrigidos: data de Brasília, vendedor diário por padrão, grupo obrigatório, fixtures próprias; os que precisam de migration em /tmp documentam o `docker cp`).
+
 ### Lote de pagamento: detalhes de cada contrato pago (17/10/2026)
 - Alterado (pedido do dono: detalhar os contratos pagos dentro de cada valor; escolheu a opção 1): no lote de pagamento (tela e Excel), cada contrato mostra banco, convênio, produto (tipo de contrato), valor liberado ao cliente e data em que foi pago ao cliente. O Excel ganhou essas colunas e "Pago em parte".
 - Adicionado: o pagamento do saldo ("Saque do saldo", ainda não usado em 17/10) lista os contratos que o valor pagou, dos mais antigos para os mais novos, com "pago em parte"; a soma bate com o valor pago. Só leitura, nada é gravado (ADR-0061, `20261017190216_payout_batch_contract_details_v1`).

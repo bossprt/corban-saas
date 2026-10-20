@@ -24,7 +24,7 @@ create function pg_temp.err(p_sql text) returns text language plpgsql as $$
 begin execute p_sql; return 'ok'; exception when others then return sqlerrm; end $$;
 grant execute on function pg_temp.err(text) to authenticated;
 create function pg_temp.pay(p_label text, p_ref text) returns text language sql as $$
-  select pg_temp.err(format('select public.pay_account_now(%L::uuid, current_date, %L)', (select id from made where label = p_label), p_ref))
+  select pg_temp.err(format('select public.pay_account_now(%L::uuid, (now() at time zone ''America/Sao_Paulo'')::date, %L)', (select id from made where label = p_label), p_ref))
 $$;
 grant execute on function pg_temp.pay(text, text) to authenticated;
 create function pg_temp.balance(p_label text) returns numeric language sql as $$
@@ -43,7 +43,7 @@ reset role;
 select set_config('corban.payout_rpc', 'on', true);
 update public.payout_accounts set model = 'account' where id = (select id from made where label = 'withdrawal');
 insert into public.payout_entries (organization_id, account_id, kind, amount, effective_on, description, status)
-select (select org from ids), (select id from made where label = x.l), 'bonus', x.v, current_date - 1, 'crédito de teste', 'approved'
+select (select org from ids), (select id from made where label = x.l), 'bonus', x.v, (now() at time zone 'America/Sao_Paulo')::date - 1, 'crédito de teste', 'approved'
 from (values ('closing', 309.83), ('withdrawal', 150.00)) as x(l, v);
 select set_config('corban.payout_rpc', 'off', true);
 create temp table before as select (select count(*) from public.fin_entries) fin;
@@ -56,7 +56,7 @@ reset role;
 select pg_temp.act_as((select admin_user from ids));
 set local role authenticated;
 insert into results select 'future date refused',
-  pg_temp.err(format('select public.pay_account_now(%L::uuid, current_date + 2, %L)', (select id from made where label = 'closing'), 'PIX-TESTE-1')) like '%invalid_paid_on%';
+  pg_temp.err(format('select public.pay_account_now(%L::uuid, (now() at time zone ''America/Sao_Paulo'')::date + 2, %L)', (select id from made where label = 'closing'), 'PIX-TESTE-1')) like '%invalid_paid_on%';
 insert into results select 'closing account paid in one action', pg_temp.pay('closing', 'PIX-TESTE-1') = 'ok';
 -- Proof optional (20260930160301_pay_now_optional_proof_v1): blank is recorded as not informed.
 insert into results select 'withdrawal account paid without proof', pg_temp.pay('withdrawal', '') = 'ok';
@@ -79,11 +79,11 @@ insert into results select 'statement entries closed by the payment',
 -- An open statement made by the old flow is paid as it is (no second one).
 select set_config('corban.payout_rpc', 'on', true);
 insert into public.payout_entries (organization_id, account_id, kind, amount, effective_on, description, status)
-values ((select org from ids), (select id from made where label = 'closing'), 'bonus', 50.00, current_date, 'crédito de teste 2', 'approved');
+values ((select org from ids), (select id from made where label = 'closing'), 'bonus', 50.00, (now() at time zone 'America/Sao_Paulo')::date, 'crédito de teste 2', 'approved');
 select set_config('corban.payout_rpc', 'off', true);
 select pg_temp.act_as((select admin_user from ids));
 set local role authenticated;
-select public.close_payout_period((select org from ids), current_date, null);
+select public.close_payout_period((select org from ids), (now() at time zone 'America/Sao_Paulo')::date, null);
 insert into results select 'open statement paid instead of a new one', pg_temp.pay('closing', 'PIX-TESTE-5') = 'ok';
 reset role;
 insert into results select 'still one payout per statement',
@@ -93,7 +93,7 @@ insert into results select 'still one payout per statement',
 -- Nobody pays themselves: the supervisor holds the withdrawal account.
 select set_config('corban.payout_rpc', 'on', true);
 insert into public.payout_entries (organization_id, account_id, kind, amount, effective_on, description, status)
-values ((select org from ids), (select id from made where label = 'withdrawal'), 'bonus', 10.00, current_date, 'crédito de teste 3', 'approved');
+values ((select org from ids), (select id from made where label = 'withdrawal'), 'bonus', 10.00, (now() at time zone 'America/Sao_Paulo')::date, 'crédito de teste 3', 'approved');
 select set_config('corban.payout_rpc', 'off', true);
 select pg_temp.act_as((select sup_user from ids));
 set local role authenticated;

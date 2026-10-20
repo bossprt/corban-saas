@@ -2,6 +2,9 @@
 -- FGTS, INSS and CLT Privado, the migration publishes 35 tables and 61 lines with the export's ranges, base and payout;
 -- a second run does nothing; a contract on BFFUNDO takes the line of its amount. One transaction, rolled back.
 --   psql -v ON_ERROR_STOP=1 -v mig=supabase/migrations/20261007170241_fintech_corban_tables_v1.sql -f tests/security/fintech-corban-tables-contract.sql
+-- Against the local Docker database, \i runs inside the container, so copy the migration there first:
+--   docker cp supabase/migrations/20261007170241_fintech_corban_tables_v1.sql <db>:/tmp/fintech_corban_tables.sql
+--   docker exec -i <db> psql -U postgres -v ON_ERROR_STOP=1 -v mig=/tmp/fintech_corban_tables.sql -q < tests/security/fintech-corban-tables-contract.sql
 
 begin;
 
@@ -11,6 +14,10 @@ create temp table ids as select '00000000-0000-4000-8000-00000000c0b1'::uuid as 
 -- Fixture: the bank and the three agreements in the test company.
 insert into public.organization_banks (organization_id, name, is_active) select org, 'FINTECH CORBAN', true from ids;
 insert into public.organization_agreements (organization_id, name, is_active) select org, x, true from ids, unnest(array['FGTS', 'INSS', 'CLT Privado']) x;
+-- The five payout groups of the company (production has them; a fresh local seed may not).
+insert into public.commission_groups (organization_id, name)
+select org, g from ids, unnest(array['Corretor', 'Parceiro', 'Balcão', 'Call Center', 'Afiliado']) g
+on conflict do nothing;
 
 \i :mig
 

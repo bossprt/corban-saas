@@ -41,17 +41,17 @@ set constraints all immediate; set constraints all deferred;  -- as at commit (c
 
 select pg_temp.act_as((select admin_user from ids));
 set local role authenticated;
-insert into results select 'exact upfront registered', pg_temp.reg('p1', 'upfront', '600.00', current_date, null) = 'ok';
-insert into results select 'second upfront on the same contract refused', pg_temp.reg('p1', 'upfront', '600.00', current_date, null) like '%manual_receipt_duplicate%';
-insert into results select 'one cent off is accepted as divergent', pg_temp.reg('p2', 'upfront', '599.99', current_date, null) = 'ok';
-insert into results select 'contract without commission refused', pg_temp.reg('p3', 'upfront', '400.00', current_date, null) like '%manual_receipt_no_calc%';
-insert into results select 'chargeback within what was received registered', pg_temp.reg('p1', 'chargeback', '100.00', current_date, null) = 'ok';
+insert into results select 'exact upfront registered', pg_temp.reg('p1', 'upfront', '600.00', (now() at time zone 'America/Sao_Paulo')::date, null) = 'ok';
+insert into results select 'second upfront on the same contract refused', pg_temp.reg('p1', 'upfront', '600.00', (now() at time zone 'America/Sao_Paulo')::date, null) like '%manual_receipt_duplicate%';
+insert into results select 'one cent off is accepted as divergent', pg_temp.reg('p2', 'upfront', '599.99', (now() at time zone 'America/Sao_Paulo')::date, null) = 'ok';
+insert into results select 'contract without commission refused', pg_temp.reg('p3', 'upfront', '400.00', (now() at time zone 'America/Sao_Paulo')::date, null) like '%manual_receipt_no_calc%';
+insert into results select 'chargeback within what was received registered', pg_temp.reg('p1', 'chargeback', '100.00', (now() at time zone 'America/Sao_Paulo')::date, null) = 'ok';
 -- As with a bank file: a chargeback beyond what is left is still booked (the money left the account), flagged divergent.
-insert into results select 'chargeback beyond what is left booked as divergent', pg_temp.reg('p1', 'chargeback', '700.00', current_date, null) = 'ok';
-insert into results select 'future date refused', pg_temp.reg('p2', 'deferred', '10.00', current_date + 1, null) like '%invalid_receipt_date%';
-insert into results select 'amount with three decimals refused', pg_temp.reg('p2', 'deferred', '10.001', current_date, null) like '%invalid_receipt_amount%';
-insert into results select 'installment only for deferred', pg_temp.reg('p2', 'upfront', '10.00', current_date, 2) like '%invalid_receipt_installment%';
-insert into results select 'installment beyond the contract refused', pg_temp.reg('p2', 'deferred', '10.00', current_date, 500) like '%manual_receipt_installment_invalid%';
+insert into results select 'chargeback beyond what is left booked as divergent', pg_temp.reg('p1', 'chargeback', '700.00', (now() at time zone 'America/Sao_Paulo')::date, null) = 'ok';
+insert into results select 'future date refused', pg_temp.reg('p2', 'deferred', '10.00', (now() at time zone 'America/Sao_Paulo')::date + 1, null) like '%invalid_receipt_date%';
+insert into results select 'amount with three decimals refused', pg_temp.reg('p2', 'deferred', '10.001', (now() at time zone 'America/Sao_Paulo')::date, null) like '%invalid_receipt_amount%';
+insert into results select 'installment only for deferred', pg_temp.reg('p2', 'upfront', '10.00', (now() at time zone 'America/Sao_Paulo')::date, 2) like '%invalid_receipt_installment%';
+insert into results select 'installment beyond the contract refused', pg_temp.reg('p2', 'deferred', '10.00', (now() at time zone 'America/Sao_Paulo')::date, 500) like '%manual_receipt_installment_invalid%';
 reset role;
 
 insert into results select 'receipts in the ledger: matched, divergent, chargeback',
@@ -71,11 +71,11 @@ insert into results select 'the note travels with the line',
 
 select pg_temp.act_as((select sup_user from ids));
 set local role authenticated;
-insert into results select 'supervisor cannot register', pg_temp.reg('p2', 'deferred', '10.00', current_date, null) ~ '(not_authorized|proposal_not_found)';
+insert into results select 'supervisor cannot register', pg_temp.reg('p2', 'deferred', '10.00', (now() at time zone 'America/Sao_Paulo')::date, null) ~ '(not_authorized|proposal_not_found)';
 reset role;
 select pg_temp.act_as((select v1 from ids));
 set local role authenticated;
-insert into results select 'seller cannot register', pg_temp.reg('p2', 'deferred', '10.00', current_date, null) ~ '(not_authorized|proposal_not_found)';
+insert into results select 'seller cannot register', pg_temp.reg('p2', 'deferred', '10.00', (now() at time zone 'America/Sao_Paulo')::date, null) ~ '(not_authorized|proposal_not_found)';
 reset role;
 insert into results select 'anon cannot run it', not has_function_privilege('anon', 'public.register_manual_receipt(uuid,text,text,date,integer,text)', 'execute');
 

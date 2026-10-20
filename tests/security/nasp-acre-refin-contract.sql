@@ -1,11 +1,26 @@
 -- Contract test for 20261005235551_nasp_acre_refin_lines_v1: the four NASP Governo do Acre Temporário and Comissionado tables
 -- get a Refinanciamento line equal to the Novo line (component and payout per group), in a v2 published from
 -- 01/01/2026; v1 stays as superseded history; running it again adds nothing.
--- Needs the local NASP Acre fixture (bank, agreement, groups and 20261002122145_nasp_acre_tables_v1). Rolled back.
+-- Builds the NASP Acre fixture itself (bank, agreement, groups, then 20261002122145_nasp_acre_tables_v1) when the
+-- database does not have it yet. Rolled back. Both migration files must be reachable inside the database container:
+--   docker cp supabase/migrations/20261002122145_nasp_acre_tables_v1.sql <db>:/tmp/nasp_acre.sql
 --   docker cp supabase/migrations/20261005235551_nasp_acre_refin_lines_v1.sql <db>:/tmp/nasp_acre_refin.sql
 --   psql -v ON_ERROR_STOP=1 -f tests/security/nasp-acre-refin-contract.sql
 
 begin;
+-- The company shaped like production: bank NASP, agreement Governo do Acre and the five commission groups.
+create temp table co as
+select m.organization_id as org from public.organization_memberships m
+where m.role = 'admin' and m.status = 'active' order by m.created_at limit 1;
+insert into public.organization_banks (organization_id, tech_key, name)
+select org, 'nasp', 'NASP' from co where not exists (select 1 from public.organization_banks b where b.tech_key = 'nasp');
+insert into public.organization_agreements (organization_id, name)
+select org, 'Governo do Acre' from co where not exists (select 1 from public.organization_agreements a where a.name = 'Governo do Acre');
+insert into public.commission_groups (organization_id, name)
+select org, g from co, unnest(array['Balcão', 'Corretor', 'Parceiro', 'Call Center', 'Afiliado']) g
+on conflict do nothing;
+\i /tmp/nasp_acre.sql
+
 \i /tmp/nasp_acre_refin.sql
 \i /tmp/nasp_acre_refin.sql
 
