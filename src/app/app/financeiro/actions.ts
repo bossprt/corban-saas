@@ -20,6 +20,24 @@ const parseSource = (v: unknown): Source | null => {
 }
 const isText = (v: unknown, max: number) => typeof v === 'string' && v.length <= max
 
+export type FileCheck = { ade: string; result: 'ready' | 'no_seller' | 'no_calc' | 'received' | 'not_found' | 'ambiguous' }
+export type FileCheckResult = { ok: false; error: string } | { ok: true; lines: FileCheck[] }
+
+// Before importing (owner, 20/10/2026): each contract number of the file, ready or why not, with the same match the
+// import uses. Only the contract numbers leave the browser.
+export async function checkReceiptFile(input: { source: string; kind: string; ades: string[] }): Promise<FileCheckResult> {
+  const { supabase, organization, access } = await requireAppContext()
+  if (!can(access, 'financeiro.edit')) return { ok: false, error: 'Seu perfil não pode importar relatórios.' }
+  const source = parseSource(input?.source)
+  const kind = String(input?.kind ?? '') as ReceiptKind
+  if (!source || !KINDS.includes(kind)) return { ok: false, error: 'Escolha a fonte pagadora e o tipo do relatório.' }
+  const ades = [...new Set((Array.isArray(input?.ades) ? input.ades : []).filter(a => isText(a, 60)).map(a => a.trim()).filter(Boolean))].slice(0, MAX_ROWS)
+  if (!ades.length) return { ok: true, lines: [] }
+  const { data, error } = await supabase.rpc('receipt_file_check', { p_org: organization.id, p_source_kind: source.kind, p_source_id: source.id, p_report_kind: kind, p_ades: ades })
+  if (error) return { ok: false, error: 'Não foi possível conferir os contratos do arquivo.' }
+  return { ok: true, lines: ((data ?? []) as FileCheck[]).map(r => ({ ade: r.ade, result: r.result })) }
+}
+
 export type InspectResult = { ok: false; error: string } | { ok: true; mapping: Partial<ReceiptMapping> | null }
 
 // Step 1: the browser read the file (any size); only its column titles come here, to find the saved layout of this

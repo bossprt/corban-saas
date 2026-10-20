@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Relatório de comissão: aviso antes de importar (20/10/2026)
+- Adicionado (dono: "pq o sistema não avisou? ... o arquivo possui X contratos e os contratos não podem ser importados porque não possuem vendedor"): ao escolher a coluna do contrato, a tela confere cada número do arquivo com a mesma regra da importação e diz quantos estão prontos e, por grupo, os que têm pendência (sem vendedor, sem comissão calculada, já recebida, não encontrado, repetido), com o link para os contratos sem vendedor. O botão vira "Importar mesmo assim" quando há pendência. No relatório importado, a linha "Sem comissão calculada" diz quando o contrato está sem vendedor. `20261020200000_receipt_file_check_v1`, teste `receipt-file-check-contract.sql`.
+
 ### WorkBank: "PREF. RIO BRANCO APO" usa a tabela de Efetivo (20/10/2026)
 - Corrigido (dono: "é a mesma para efetivos"): a importação do relatório WorkBank recusava os aposentados da Prefeitura de Rio Branco ("Tabela não encontrada"); agora usam a tabela "PROSESP - Pref. Rio Branco - Efetivo".
 
