@@ -61,6 +61,9 @@ const PROSESP_TABLES: Record<string, string> = {
   'gov. ac comissionado': 'PROSESP - Governo do Acre - Comissionado',
   'pref. rio branco efe': 'PROSESP - Pref. Rio Branco - Efetivo',
   'pref. rio branco efetivo': 'PROSESP - Pref. Rio Branco - Efetivo',
+  // Aposentados of the Prefeitura de Rio Branco use the Efetivo table (same conditions, owner 20/10/2026).
+  'pref. rio branco apo': 'PROSESP - Pref. Rio Branco - Efetivo',
+  'pref. rio branco aposentado': 'PROSESP - Pref. Rio Branco - Efetivo',
 }
 
 // The FINTECH CORBAN production report ("Relatório", owner request 07/10/2026). "Id" is the bank's contract number (the

@@ -224,3 +224,9 @@ test('PROSESP: ANDAMENTO and CONFERÊNCIA are in analysis at the bank; an unknow
   assert.equal(lines[2].stageRaw, 'QUALQUER OUTRA')
   assert.ok(lines[2].issues.includes('stage_unknown'))
 })
+
+test('PROSESP: Rio Branco aposentados use the Efetivo table (owner, 20/10/2026)', () => {
+  const prosesp = CONTRACT_LAYOUTS.find(l => l.key === 'prosesp')!
+  const { lines } = parseContractSheet(prosespSheet(prosespRow({ PRODUTO: 'PREF. RIO BRANCO APO' })), TODAY, prosesp)
+  assert.equal(lines[0].table, 'PROSESP - Pref. Rio Branco - Efetivo')
+})
