@@ -43,7 +43,8 @@ export default async function PayoutAccountPage({ params }: { params: Promise<{ 
 
   return (
     <section>
-      <PageHeader title={account.holder_name} description={<>Modelo: {MODEL_LABEL[account.model]}. {finance && <Link href="/app/repasse" className="text-brand hover:underline">Voltar ao repasse</Link>}</>} />
+      <PageHeader title={account.holder_name} description={<>Modelo: {MODEL_LABEL[account.model]}. {finance && <Link href="/app/repasse" className="text-brand hover:underline">Voltar ao repasse</Link>}</>}
+        actions={<Link href={`/imprimir/pessoa/${id}`} className="inline-flex h-9 items-center rounded-[10px] border border-line bg-surface px-3 text-sm font-medium text-ink hover:bg-surface-muted">Relatório de comissões pagas</Link>} />
 
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
         <div className="rounded-[14px] border border-line bg-surface px-5 py-4"><div className="text-[13px] text-muted">Saldo da conta</div><div className={`num mt-1 text-2xl font-semibold ${String(account.balance).startsWith('-') ? 'text-[#991B1B]' : 'text-ink'}`}>{brlText(account.balance)}</div></div>
