@@ -369,6 +369,8 @@ test.describe('payout', () => {
     await expect(page.getByText('Conta aberta.')).toBeVisible({ timeout: 30_000 })
     const accountUrl = page.url().split('?')[0]
     const note = `Bônus E2E ${Date.now()}`
+    // The bonus form sits folded under "Outros lançamentos".
+    await page.getByText('Outros lançamentos: vale, bônus, desconto').click()
     await page.getByLabel('Tipo').selectOption('bonus')
     await page.getByLabel('Valor (R$)').last().fill('150,00')
     await page.getByLabel('Descrição').fill(note)
@@ -386,8 +388,12 @@ test.describe('payout', () => {
     await expect(finance.getByRole('row').filter({ hasText: note })).toContainText('Aprovado')
 
     // The administrator closes the period; finance approves the seller statement; the administrator pays it.
+    // Each seller is closed with their own frequency ("Recebe o repasse" on the seller file); read it instead of assuming one.
+    await page.goto('/app/cadastros/vendedores')
+    await page.getByRole('link', { name: /Vendedor Teste/ }).first().click()
+    const frequency = await page.locator('select[name="payment_frequency"]').inputValue()
     await page.goto('/app/repasse')
-    await page.getByLabel('Frequência do fechamento').selectOption('monthly')  // the local test seller is monthly
+    await page.getByLabel('Frequência do fechamento').selectOption(frequency)
     await page.getByRole('button', { name: 'Fechar período' }).click()
     await expect(page.getByText('Período fechado.')).toBeVisible()
     await finance.goto(accountUrl)
@@ -438,8 +444,8 @@ test.describe('broker portal', () => {
       await expect(broker.getByText('Proposta enviada. Ela aguarda a validação da empresa.')).toBeVisible()
       await expect(broker.getByText('Aguardando validação').first()).toBeVisible()
       if (name === okName) {
-        await broker.getByLabel('Documento').fill('RG')
-        await broker.getByLabel(/Arquivo/).setInputFiles({ name: 'rg.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n% e2e broker document\n%%EOF\n') })
+        await broker.getByLabel('Documento', { exact: true }).fill('RG')
+        await broker.getByLabel('Arquivo do documento').setInputFiles({ name: 'rg.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n% e2e broker document\n%%EOF\n') })
         await broker.getByRole('button', { name: 'Anexar' }).click()
         await expect(broker.getByText('Documento anexado à proposta.')).toBeVisible({ timeout: 30_000 })
         if (shots) await broker.screenshot({ path: `${shots}/${info.project.name}-portal-proposta.png`, fullPage: true })
@@ -853,8 +859,17 @@ test('commission C1: line tax, bank IR, contract commission and search, table ex
   // New vigência of the test table with 6% tax on its line, published.
   await page.goto('/app/comercial/tabelas?nome=Tabela+Teste+INSS')
   await page.getByRole('link', { name: 'Tabela Teste INSS', exact: true }).click()
-  await page.getByRole('button', { name: /Nova vigência a partir da v/ }).click()
-  await expect(page.getByText(/Rascunho da nova vigência pronto/)).toBeVisible({ timeout: 30_000 })
+  // A table has one draft at a time: the bank re-import test leaves one, and then this test continues on that draft.
+  const fresh = page.getByRole('button', { name: /Nova vigência a partir da v/ })
+  const draft = page.locator('#vigencias li').filter({ hasText: 'Rascunho' }).getByRole('link').first()
+  await expect(fresh.or(draft).first()).toBeVisible({ timeout: 30_000 })
+  if (await fresh.isVisible()) {
+    await fresh.click()
+    await expect(page.getByText(/Rascunho da nova vigência pronto/)).toBeVisible({ timeout: 30_000 })
+  } else {
+    await draft.click()
+    await expect(page.getByRole('heading', { name: /^Comissão v\d+ Rascunho/ })).toBeVisible({ timeout: 30_000 })
+  }
   await page.locator('#comissao table').getByRole('link', { name: 'Alterar comissão' }).first().click()
   await page.getByLabel('Imposto (%)').fill('6')
   await page.getByRole('button', { name: 'Salvar comissão da linha' }).click()
@@ -1195,7 +1210,7 @@ test('company finance: bank account, payable, OFX reconciliation, cash flow and 
     + `</BANKTRANLIST></STMTRS></STMTTRNRS></BANKMSGSRSV1></OFX>`
   await page.goto('/app/financeiro/empresa/extrato')
   await page.getByLabel('Conta bancária do extrato').selectOption({ label: bank })
-  await page.getByLabel('Extrato (arquivo OFX)').setInputFiles({ name: `extrato-${ts}.ofx`, mimeType: 'application/x-ofx', buffer: Buffer.from(ofx, 'utf-8') })
+  await page.getByLabel('Extrato OFX').setInputFiles({ name: `extrato-${ts}.ofx`, mimeType: 'application/x-ofx', buffer: Buffer.from(ofx, 'utf-8') })
   await page.getByRole('button', { name: 'Importar extrato' }).click()
   await expect(page.getByText('2 lançamento(s) lidos do extrato.')).toBeVisible({ timeout: 30_000 })
   const energyLine = page.locator('li').filter({ hasText: `ENERGIA ${ts}` })
@@ -1228,25 +1243,37 @@ test('simulation: pick the client by search, simulate, turn into a proposal', as
   await page.getByRole('link', { name: 'Simular' }).click()
   await expect(page.getByRole('heading', { name: 'Simulações', exact: true })).toBeVisible()
   await pickClient(page)
-  // Banco -> Tipo -> Tabela: only the vigência in force of each table, only for a contract type it has lines for.
-  await page.getByLabel('Banco', { exact: true }).selectOption({ label: 'Banco Teste' })
-  await page.getByLabel('Tipo de contrato').selectOption({ label: 'Novo (teste)' })
-  await expect(page.getByLabel('Tabela', { exact: true }).locator('option').filter({ hasText: 'Tabela Teste INSS' })).toHaveCount(1)
-  await pickTable(page)
-  await page.getByLabel('Valor solicitado (R$)').fill('10.000,00')
+  // Convênio -> Operação -> Tabela (simulator of 08/10/2026): the tables of the agreement that have a factor are offered,
+  // here the seed table by the coefficient of its line (0,02).
+  await page.locator('select[name="convenio"]').selectOption({ label: 'INSS Teste' })
+  await page.locator('select[name="tipo"]').selectOption({ label: 'Novo (teste)' })
+  await page.getByLabel('Valor ou parcela (R$)').fill('10.000,00')
   await page.getByLabel('Prazo (meses)').fill('84')
   await page.getByRole('button', { name: 'Simular' }).click()
-  await expect(page.getByText('Simulação registrada')).toBeVisible()
+  const offer = page.getByRole('row').filter({ hasText: 'Tabela Teste INSS' }).first()
+  await expect(offer).toContainText('200,00', { timeout: 20_000 })
+  await offer.getByRole('button', { name: 'Usar esta' }).click()
+  await expect(page.getByText('Simulação registrada')).toBeVisible({ timeout: 20_000 })
   const row = page.getByRole('row').filter({ hasText: 'Ana Teste Lopes' }).first()
-  await expect(row).toContainText('R$ 10.000,00')
+  await expect(row).toContainText('10.000,00')
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-simulacoes.png`, fullPage: true })
-  await row.getByRole('button', { name: 'Criar proposta' }).click()
-  await expect(page).toHaveURL(/\/app\/propostas/)
+  await row.getByRole('button', { name: 'Enviar para a esteira' }).click()
+  await expect(page).toHaveURL(/\/app\/propostas/, { timeout: 20_000 })
 })
+
+// A valid CPF from 9 digits (each run of the CRM test uses a new one, so the lead never meets a client of an earlier run).
+const makeCpf = (base9: string) => {
+  const d = base9.split('').map(Number)
+  const digit = (n: number[]) => { const r = (n.reduce((s, x, i) => s + x * (n.length + 1 - i), 0) * 10) % 11; return r === 10 ? 0 : r }
+  d.push(digit(d)); d.push(digit(d))
+  const t = d.join('')
+  return `${t.slice(0, 3)}.${t.slice(3, 6)}.${t.slice(6, 9)}-${t.slice(9)}`
+}
 
 test('sales CRM: campaign, spreadsheet, take the next lead, return, simulate, board', async ({ page, browser }, info) => {
   test.skip(info.project.name === 'mobile', 'one run is enough')
   const stamp = Date.now().toString().slice(-7)
+  const cpf = makeCpf(`31${stamp}`)
   const name = `Campanha E2E ${stamp}`
   await page.goto('/app/crm/campanhas')
   await page.getByLabel('Nome da campanha').fill(name)
@@ -1263,7 +1290,7 @@ test('sales CRM: campaign, spreadsheet, take the next lead, return, simulate, bo
   expect((template.getWorksheet('Leads')!.getRow(1).values as unknown[]).slice(1, 4)).toEqual(['Nome', 'CPF', 'Telefone'])
 
   // Spreadsheet: name, CPF, phone and a margin column; the header names are recognized.
-  const csv = ['Nome;CPF;Telefone;Margem', `Lead E2E Um;314.159.265-90;(68) 9${stamp.slice(0, 4)}-${stamp.slice(3)};350,20`, `Lead E2E Dois;;(68) 8${stamp.slice(0, 4)}-${stamp.slice(3)};120,00`, ';;;'].join('\n')
+  const csv = ['Nome;CPF;Telefone;Margem', `Lead E2E Um;${cpf};(68) 9${stamp.slice(0, 4)}-${stamp.slice(3)};350,20`, `Lead E2E Dois;;(68) 8${stamp.slice(0, 4)}-${stamp.slice(3)};120,00`, ';;;'].join('\n')
   await page.getByLabel('Planilha da campanha').setInputFiles({ name: 'campanha.csv', mimeType: 'text/csv', buffer: Buffer.from(csv, 'utf-8') })
   await expect(page.getByLabel('Coluna Nome')).toHaveValue('0')
   await expect(page.getByLabel('Coluna CPF')).toHaveValue('1')
@@ -1278,25 +1305,39 @@ test('sales CRM: campaign, spreadsheet, take the next lead, return, simulate, bo
   await page.getByRole('button', { name: /Pegar próximo lead/ }).click()
   await expect(page.getByRole('heading', { name: /Lead E2E Um/ })).toBeVisible({ timeout: 20_000 })
   await expect(page.getByText('350,20')).toBeVisible()
-  await expect(page.getByText('314.159.265-90')).toBeVisible()
-  await page.getByLabel('Quando retornar').fill('2030-01-15T10:30')
-  await page.getByLabel('Anotação (opcional)').fill('Cliente pediu retorno de manhã')
-  await page.getByRole('button', { name: 'Marcar retorno' }).click()
-  await expect(page.getByText('Retorno marcado.')).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByText(cpf)).toBeVisible()
+  const contact = page.locator('form').filter({ has: page.getByRole('button', { name: 'Registrar' }) })
+  await contact.getByLabel('Como').selectOption({ label: 'Ligação' })
+  await contact.getByLabel('Resultado').selectOption({ label: 'Pediu retorno' })
+  await contact.getByLabel('Anotação (opcional)').fill('Cliente pediu retorno de manhã')
+  await contact.getByLabel('Próximo contato (opcional)').fill('2030-01-15T10:30')
+  await contact.getByRole('button', { name: 'Registrar' }).click()
+  await expect(page.getByText('Contato registrado.').first()).toBeVisible({ timeout: 20_000 })
   await expect(page.getByText('Em contato', { exact: true }).first()).toBeVisible()
-  await expect(page.getByText('Cliente pediu retorno de manhã')).toBeVisible()
+  await expect(page.getByText(/Ligação · Retorno/).first()).toBeVisible()
+  await expect(page.getByText(/Cliente pediu retorno de manhã/).first()).toBeVisible()
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-crm-lead.png`, fullPage: true })
 
-  // Simular: the lead's CPF makes the client and the simulation opens with it chosen.
-  await page.getByRole('button', { name: 'Simular' }).click()
-  await expect(page).toHaveURL(/\/app\/simulacoes\?cliente=[0-9a-f-]{36}$/, { timeout: 20_000 })
-  await expect(page.getByText('Lead E2E Um')).toBeVisible()
+  // Simular: the lead's CPF makes the client and the simulator opens inside the lead with it chosen.
+  await page.getByRole('navigation', { name: 'Seções do lead' }).getByRole('link', { name: 'Simular', exact: true }).click()
+  // A CPF already registered (an earlier run on the same database) links the lead to that client straight away.
+  const register = page.getByRole('button', { name: 'Cadastrar cliente e continuar' })
+  await expect(register.or(page.getByText(/^Cliente:/))).toBeVisible({ timeout: 20_000 })
+  if (await register.isVisible()) await register.click()
+  await expect(page.getByText(/^Cliente:/)).toBeVisible({ timeout: 20_000 })
 
   // Board: the lead is negotiating; the second one is dragged from Novo to Em contato.
   await page.goto(`/app/crm?campanha=${campaignId}`)
   await expect(page.getByRole('region', { name: /^Negociando: 1$/ })).toContainText('Lead E2E Um')
   const second = page.getByRole('region', { name: /^Novo: 1$/ }).getByRole('link', { name: /Lead E2E Dois/ })
-  await second.dragTo(page.getByRole('region', { name: /^Em contato/ }))
+  // HTML5 drag and drop, step by step (a single dragTo sometimes fires before the board's handlers are ready).
+  await expect(second).toBeVisible()
+  await second.hover()
+  await page.mouse.down()
+  const target = page.getByRole('region', { name: /^Em contato/ })
+  const box = (await target.boundingBox())!
+  await page.mouse.move(box.x + box.width / 2, box.y + 80, { steps: 12 })
+  await page.mouse.up()
   await expect(page.getByRole('region', { name: /^Em contato: 1$/ })).toContainText('Lead E2E Dois', { timeout: 20_000 })
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-crm-quadro.png`, fullPage: true })
 
@@ -1337,18 +1378,22 @@ test('documents per bank: the list of Banco Teste becomes the checklist of a new
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-documentos-banco.png`, fullPage: true })
 
   // A proposal of that bank prepares its checklist from the list.
+  // Simulator (Convênio -> Operação, 08/10/2026): a value unique to this run finds this run's simulation again.
+  const amount = `5.${String(Date.now() % 900 + 100)},00`
   await page.goto('/app/simulacoes')
   await pickClient(page)
-  await pickTable(page)
-  await page.getByLabel('Valor solicitado (R$)').fill('5.000,00')
+  await page.locator('select[name="convenio"]').selectOption({ label: 'INSS Teste' })
+  await page.locator('select[name="tipo"]').selectOption({ label: 'Novo (teste)' })
+  await page.getByLabel('Valor ou parcela (R$)').fill(amount)
   await page.getByLabel('Prazo (meses)').fill('84')
   await page.getByRole('button', { name: 'Simular' }).click()
-  await expect(page.getByText('Simulação registrada')).toBeVisible()
-  const row = page.getByRole('row').filter({ hasText: 'Ana Teste Lopes' }).filter({ hasText: 'R$ 5.000,00' }).first()
-  await row.getByRole('button', { name: 'Criar proposta' }).click()
-  await expect(page).toHaveURL(/\/app\/propostas/)
+  await page.getByRole('row').filter({ hasText: 'Tabela Teste INSS' }).first().getByRole('button', { name: 'Usar esta' }).click()
+  await expect(page.getByText('Simulação registrada')).toBeVisible({ timeout: 20_000 })
+  const row = page.getByRole('row').filter({ hasText: 'Ana Teste Lopes' }).filter({ hasText: amount }).first()
+  await row.getByRole('button', { name: 'Enviar para a esteira' }).click()
+  await expect(page).toHaveURL(/\/app\/propostas/, { timeout: 20_000 })
   await page.goto('/app/simulacoes')
-  await page.getByRole('row').filter({ hasText: 'R$ 5.000,00' }).first().getByRole('link', { name: 'Abrir proposta' }).click()
+  await page.getByRole('row').filter({ hasText: amount }).first().getByRole('link', { name: 'Abrir proposta' }).click()
   await page.getByRole('button', { name: 'Preparar checklist' }).click()
   await expect(page.getByText('Checklist de documentos preparado.')).toBeVisible({ timeout: 20_000 })
   await expect(page.locator('main')).toContainText('RG (documento de identidade)')

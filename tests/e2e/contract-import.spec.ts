@@ -61,7 +61,7 @@ test('NASP layout: template, check, refuse errors, import, no duplicates', async
   const bad = [[...good[0]], [...good[1]]]
   bad[0][3] = 30
   bad[1][10] = 'Fulano Inexistente'
-  await page.getByLabel('Planilha (.xlsx ou .csv)').setInputFiles({ name: 'nasp-erro.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: await xlsx(bad) })
+  await page.getByLabel('Planilha de contratos').setInputFiles({ name: 'nasp-erro.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: await xlsx(bad) })
   await page.getByRole('button', { name: 'Conferir' }).click()
   await expect(page.getByText('Prazo 30 fora da tabela (8 a 18)')).toBeVisible()
   await expect(page.getByText('Vendedor "Fulano Inexistente" não encontrado')).toBeVisible()
@@ -70,7 +70,7 @@ test('NASP layout: template, check, refuse errors, import, no duplicates', async
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-importar-erros.png`, fullPage: true })
 
   // Good file: three lines checked, then imported.
-  await page.getByLabel('Planilha (.xlsx ou .csv)').setInputFiles({ name: 'nasp.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: await xlsx(good) })
+  await page.getByLabel('Planilha de contratos').setInputFiles({ name: 'nasp.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: await xlsx(good) })
   await page.getByRole('button', { name: 'Conferir' }).click()
   await expect(page.getByText('3 linha(s): 3 para cadastrar, 0 já no Corban, 0 com erro.')).toBeVisible()
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-importar-conferencia.png`, fullPage: true })
@@ -79,7 +79,7 @@ test('NASP layout: template, check, refuse errors, import, no duplicates', async
   if (shots) await page.screenshot({ path: `${shots}/${info.project.name}-importar-concluido.png`, fullPage: true })
 
   // The same file again: everything is already in Corban.
-  await page.getByLabel('Planilha (.xlsx ou .csv)').setInputFiles({ name: 'nasp.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: await xlsx(good) })
+  await page.getByLabel('Planilha de contratos').setInputFiles({ name: 'nasp.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: await xlsx(good) })
   await page.getByRole('button', { name: 'Conferir' }).click()
   await expect(page.getByText('3 linha(s): 0 para cadastrar, 3 já no Corban, 0 com erro.')).toBeVisible()
 
@@ -96,6 +96,13 @@ test('NASP layout: template, check, refuse errors, import, no duplicates', async
 test('NASP csv export: contract and client record', async ({ page }, info) => {
   test.skip(info.project.name === 'mobile', 'one run is enough')
   await login(page)
+  // Same guard as the NASP layout test: the row below needs the NASP bank and its "Temporário (8 a 18 meses)" table.
+  const template = await page.request.get('/api/propostas/importar/modelo?layout=nasp')
+  expect(template.ok()).toBeTruthy()
+  const wb = new ExcelJS.Workbook()
+  await wb.xlsx.load((await template.body()) as unknown as ExcelJS.Buffer)
+  const tables = (wb.getWorksheet('Tabelas')?.getSheetValues() ?? []).slice(2).map(r => String((r as ExcelJS.CellValue[])?.[1] ?? ''))
+  test.skip(!tables.some(t => t.includes('Temporário (8 a 18 meses)')), 'no NASP tables in this database')
   const head = ['Data do pagamento', 'Nº proposta', 'ADE', 'Tipo', 'Operação', 'Fase', 'Data da liberação', 'Qtd parcelas', 'Valor da parcela',
     'Valor final', 'Valor bruto liberado', 'Valor líquido pago', 'Saldo por dentro (refin)', 'Convênio', 'Tabela', 'Agente', 'Matrícula', 'Secretaria',
     'Cliente', 'CPF', 'Data de nascimento', 'Sexo', 'Estado civil', 'Naturalidade', 'RG', 'RG órgão emissor', 'RG UF', 'Nome da mãe',
@@ -110,7 +117,7 @@ test('NASP csv export: contract and client record', async ({ page }, info) => {
   const csv = [head, row].map(r => r.join(';')).join('\r\n')
 
   await page.goto('/app/propostas/importar')
-  await page.getByLabel('Planilha (.xlsx ou .csv)').setInputFiles({ name: 'contratos_pagos.csv', mimeType: 'text/csv', buffer: Buffer.from(csv, 'utf-8') })
+  await page.getByLabel('Planilha de contratos').setInputFiles({ name: 'contratos_pagos.csv', mimeType: 'text/csv', buffer: Buffer.from(csv, 'utf-8') })
   await page.getByRole('button', { name: 'Conferir' }).click()
   await expect(page.getByText('1 linha(s): 1 para cadastrar, 0 já no Corban, 0 com erro.')).toBeVisible()
   await expect(page.getByText(/Ficha do cliente: dados pessoais, endereço, conta bancária, matrícula/)).toBeVisible()
