@@ -15,6 +15,12 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Relatórios de pagamento de comissão profissionais (21/10/2026)
+- Alterado (dono: "relatório de comissão... muito amador"; modelos aprovados por imagem antes): impressão do lote em A4 só com o documento (sem a tela): folha 1 com o resumo do lote (beneficiário, CPF/CNPJ, PIX ou conta, contratos, valor, total por extenso, assinaturas) e uma folha de demonstrativo por pessoa (empresa pagadora com CNPJ, beneficiário, pagamento, contratos com cliente/banco/convênio/produto/liberado/pago ao cliente/comissão, total por extenso, assinaturas). Opções: lote completo, só o resumo, só os demonstrativos, ou o demonstrativo de uma pessoa.
+- Adicionado: "Relatório de comissões pagas" por pessoa e período (Repasse > pessoa), para o financeiro e para a própria pessoa.
+- Alterado: a tela do lote mostra cada pessoa num bloco com a tabela dos contratos.
+- `20261021130000_payout_reports_v1` (`payout_account_report`, `payout_batch_detail` com empresa e dados de pagamento); valor por extenso em `src/lib/money-words.ts`.
+
 ### Ranking de vendas e painel da equipe, com modo TV (21/10/2026)
 - Adicionado (plano fase 2; dono escolheu: a equipe toda vê o ranking): Vendas > Ranking. Por período (hoje, 7 dias, mês, ano) e por produção paga (valor liberado dos pagos ao cliente) ou digitada (cadastrados, sem cancelados/recusados): pódio, tabela por vendedor com contratos e % da meta do mês, total, ticket médio, meta da equipe, funil (leads → digitados → pagos) e últimos pagos ao cliente. Comissão e repasse nunca aparecem. "Modo TV" ocupa a tela e atualiza a cada minuto. Corretor externo não vê. `20261020225536_sales_ranking_v1`, teste `sales-ranking-contract.sql`.
 

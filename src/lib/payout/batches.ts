@@ -1,3 +1,4 @@
+import type { PayTarget } from '@/lib/sellers'
 // Payment batches (Repasse > Lotes de pagamento): rows from payout_batch_list / payout_batch_detail. Money comes as
 // decimal text from the database, never as a float.
 
@@ -18,10 +19,21 @@ export const batchItemLabel = (c: BatchContract) => c.proposal_id ? (c.ade ?? 's
 export type BatchLine = {
   payout_id: string; account_id: string; holder: string; kind: string; amount: string; status: string; reversal_reason: string | null
   contracts: BatchContract[]
+  // Who receives (21/10/2026): CPF/CNPJ and the primary PIX or bank account of the seller.
+  holder_document?: string | null; pay_target?: PayTarget | null
 }
+export type Company = { name: string; document: string | null }
 export type BatchDetail = {
   id: string; paid_on: string; payment_reference: string | null; origin: string; created_at: string; paid_by: string | null
   reversed_at: string | null; reversal_reason: string | null; reversed_by: string | null; bank_accounts: string | null; total: string; lines: BatchLine[]
+  company?: Company
+}
+// One person over a period (payout_account_report).
+export type AccountReport = {
+  company: Company
+  holder: { name: string; document: string | null; pay_target: PayTarget | null }
+  from: string; to: string; total: string
+  payments: { payout_id: string; paid_on: string; kind: string; amount: string; reference: string | null; contracts: BatchContract[] }[]
 }
 
 // A batch is undone when all its payments were undone, partly undone when some were.

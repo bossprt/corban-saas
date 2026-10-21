@@ -18,6 +18,9 @@ grant insert, select on made to authenticated;
 create function pg_temp.act_as(p_user uuid) returns void language sql as $$
   select set_config('request.jwt.claims', json_build_object('sub', p_user, 'role', 'authenticated')::text, true);
 $$;
+create function pg_temp.err(p_sql text) returns text language plpgsql as $$
+begin execute p_sql; return 'ok'; exception when others then return sqlerrm; end $$;
+grant execute on function pg_temp.err(text) to authenticated;
 
 select pg_temp.act_as((select admin_user from ids));
 set local role authenticated;
@@ -81,6 +84,21 @@ insert into results select 'the client name comes along',
 insert into results select 'each contract brings bank, agreement, product and the amount released',
   (select bool_and(value->>'bank' is not null and value->>'agreement' is not null and value->>'product' is not null
                    and (value->>'released')::numeric = 9500.00 and value ? 'paid_to_client_on') from c1);
+insert into results select 'the batch brings the paying company and the holder fields',
+  (select j ? 'company' and (j->'company') ? 'name' and (j->'lines'->0) ? 'holder_document' and (j->'lines'->0) ? 'pay_target' from d1);
+select pg_temp.act_as((select admin_user from ids));
+set local role authenticated;
+create temp table rep as select public.payout_account_report((select id from made where label = 'acct'),
+  (now() at time zone 'America/Sao_Paulo')::date - 10, (now() at time zone 'America/Sao_Paulo')::date) j;
+reset role;
+insert into results select 'the person report lists both payments, total 170,00, with contracts',
+  (select jsonb_array_length(j->'payments') = 2 and (j->>'total')::numeric = 170.00
+          and jsonb_array_length(j->'payments'->0->'contracts') = 2 from rep);
+select pg_temp.act_as((select id from auth.users where email = 'vendedor@corban-teste.local'));
+set local role authenticated;
+insert into results select 'another seller cannot read this person report',
+  pg_temp.err(format('select public.payout_account_report(%L::uuid, current_date - 10, current_date)', (select id from made where label = 'acct'))) like '%not_authorized%';
+reset role;
 insert into results select 'the allocation is not callable by users',
   not has_function_privilege('authenticated', 'private.withdrawal_allocation(uuid)', 'execute');
 

@@ -7,7 +7,9 @@ import { isUuid } from '@/lib/team'
 import { brlText } from '@/lib/receipts/format'
 import { dateBr, PAYOUT_STATUS_LABEL, PAYOUT_STATUS_TONE } from '@/lib/payout/format'
 import { batchItemLabel, batchStatus, type BatchDetail } from '@/lib/payout/batches'
-import { PrintButton } from '@/components/PrintButton'
+import { Printer } from 'lucide-react'
+import { formatTaxId } from '@/lib/sellers'
+import { payTo } from '@/app/imprimir/sheets'
 import { reverseBatch } from '../../actions'
 
 const box = 'rounded-[14px] border border-line bg-surface px-4 py-3'
@@ -33,7 +35,7 @@ export default async function PayoutBatchPage({ params }: { params: Promise<{ id
         actions={<>
           <Link href="/app/repasse/lotes" className={btn}>Voltar</Link>
           <a href={`/api/repasse/lotes/${b.id}`} download className={btn}>Excel</a>
-          <PrintButton className={btn} />
+          <Link href={`/imprimir/lote/${b.id}`} className={`${btn} border-brand font-semibold text-brand`}><Printer size={15} className="mr-1.5" aria-hidden />Imprimir lote</Link>
         </>} />
 
       <div className="mb-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -46,30 +48,46 @@ export default async function PayoutBatchPage({ params }: { params: Promise<{ id
       </div>
       {b.reversed_at && <p className="mb-4 rounded-[10px] bg-surface-muted px-4 py-2 text-sm text-ink-soft">Desfeito por {b.reversed_by ?? '—'} em {dateBr(b.reversed_at.slice(0, 10))}. Motivo: {b.reversal_reason}</p>}
 
-      <Card className="mb-4 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="bg-surface-muted text-xs font-semibold text-muted">
-              <tr><th className="px-4 py-2.5">Pessoa</th><th className="px-4 py-2.5">Contratos</th><th className="px-4 py-2.5 text-right">Valor pago</th><th className="px-4 py-2.5">Situação</th></tr>
-            </thead>
-            <tbody>
-              {b.lines.map(l => (
-                <tr key={l.payout_id} className="border-t border-line align-top">
-                  <td className="px-4 py-2.5"><Link href={`/app/repasse/${l.account_id}`} className="font-medium text-ink hover:underline print:no-underline">{l.holder}</Link></td>
-                  <td className="px-4 py-2.5 text-[13px] text-ink-soft">
-                    {l.contracts.length ? l.contracts.map(c => (
-                      <div key={c.proposal_id ?? c.kind ?? ''}>{c.proposal_id ? <Link href={`/app/propostas/${c.proposal_id}`} className="hover:underline">{batchItemLabel(c)}</Link> : batchItemLabel(c)}{c.client ? ` · ${c.client}` : ''} · {brlText(c.amount)}{c.partial && <span className="ml-1 text-xs text-[#92400E]">(pago em parte)</span>}
-                        {c.proposal_id && <div className="mb-1 text-xs text-muted">{[c.bank, c.agreement, c.product, c.released ? `liberado ${brlText(c.released)}` : null, c.paid_to_client_on ? `pago ao cliente em ${dateBr(c.paid_to_client_on)}` : null].filter(Boolean).join(' · ')}</div>}</div>
-                    )) : <span className="text-muted">{l.kind === 'withdrawal' ? 'Saque do saldo' : l.status === 'reversed' ? 'Contratos voltaram para o próximo pagamento' : '—'}</span>}
-                  </td>
-                  <td className="num px-4 py-2.5 text-right font-semibold text-ink">{brlText(l.amount)}</td>
-                  <td className="px-4 py-2.5"><Badge tone={PAYOUT_STATUS_TONE[l.status]}>{PAYOUT_STATUS_LABEL[l.status]}</Badge>{l.reversal_reason && <div className="text-xs text-muted">Motivo: {l.reversal_reason}</div>}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      {/* One block per person (owner, 21/10/2026: the contracts as a table, not loose text). */}
+      <div className="mb-4 grid gap-3">
+        {b.lines.map(l => (
+          <Card key={l.payout_id} className="overflow-hidden">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-4 py-3">
+              <div className="min-w-0">
+                <Link href={`/app/repasse/${l.account_id}`} className="font-semibold text-ink hover:underline">{l.holder}</Link>
+                <div className="text-xs text-muted">{[l.holder_document ? formatTaxId(l.holder_document) : 'CPF/CNPJ não cadastrado', payTo(l.pay_target)].join(' · ')}</div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Badge tone={PAYOUT_STATUS_TONE[l.status]}>{PAYOUT_STATUS_LABEL[l.status]}</Badge>
+                <span className="num text-base font-semibold text-ink">{brlText(l.amount)}</span>
+                {l.status === 'paid' && <Link href={`/imprimir/lote/${b.id}?pessoa=${l.payout_id}`} className="text-sm text-brand hover:underline">Demonstrativo</Link>}
+              </div>
+            </div>
+            {l.reversal_reason && <p className="px-4 pt-2 text-xs text-muted">Motivo: {l.reversal_reason}</p>}
+            {l.contracts.length ? (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[720px] text-left text-[13px]">
+                  <thead className="bg-surface-muted text-xs font-semibold text-muted">
+                    <tr><th className="px-4 py-2">Contrato</th><th className="px-4 py-2">Cliente</th><th className="px-4 py-2">Banco · convênio · produto</th><th className="px-4 py-2 text-right">Liberado</th><th className="px-4 py-2">Pago ao cliente</th><th className="px-4 py-2 text-right">Comissão</th></tr>
+                  </thead>
+                  <tbody>
+                    {l.contracts.map((c, k) => (
+                      <tr key={`${c.proposal_id ?? c.kind}-${k}`} className="border-t border-line">
+                        <td className="px-4 py-2">{c.proposal_id ? <Link href={`/app/propostas/${c.proposal_id}`} className="hover:underline">{batchItemLabel(c)}</Link> : batchItemLabel(c)}</td>
+                        <td className="px-4 py-2 text-ink-soft">{c.client ?? ''}</td>
+                        <td className="px-4 py-2 text-ink-soft">{[c.bank, c.agreement, c.product].filter(Boolean).join(' · ')}</td>
+                        <td className="num px-4 py-2 text-right text-ink-soft">{c.released ? brlText(c.released) : '—'}</td>
+                        <td className="px-4 py-2 text-ink-soft">{c.paid_to_client_on ? dateBr(c.paid_to_client_on) : '—'}</td>
+                        <td className="num px-4 py-2 text-right font-medium text-ink">{brlText(c.amount)}{c.partial && <span className="ml-1 text-xs text-[#92400E]">(em parte)</span>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : <p className="px-4 py-3 text-sm text-muted">{l.kind === 'withdrawal' ? 'Saque do saldo' : l.status === 'reversed' ? 'Contratos voltaram para o próximo pagamento' : 'Sem contratos'}</p>}
+          </Card>
+        ))}
+      </div>
 
       {membership.role === 'admin' && stillPaid && (
         <Card className="p-5 print:hidden">
