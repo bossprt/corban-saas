@@ -4,13 +4,13 @@ import { add, fromDecimalString, toDecimalString } from '@/lib/commission/money'
 import { batchItemLabel, type BatchContract, type Company } from '@/lib/payout/batches'
 import { formatTaxId, payToText, type PayTarget } from '@/lib/sellers'
 
-// Printed payout documents (owner, 21/10/2026): A4 sheets, black on white, one per page. Shared by the batch print and
+// Printed payout documents (owner, 21/10/2026): A4 landscape sheets, black on white, one per page. Shared by the batch print and
 // the per-person report. Money arrives as decimal text and is added as exact decimals.
 
 export const PRINT_CSS = `
-@page { size: A4; margin: 12mm; }
+@page { size: A4 landscape; margin: 10mm; }
 .sheets { background: #e9e7e2; padding: 16px 8px 32px; min-height: 100vh; }
-.sheet { background: #fff; color: #111; width: 210mm; max-width: 100%; min-height: 270mm; margin: 0 auto 16px; padding: 14mm 14mm 12mm;
+.sheet { background: #fff; color: #111; width: 297mm; max-width: 100%; min-height: 190mm; margin: 0 auto 16px; padding: 10mm 12mm 9mm;
   box-sizing: border-box; font-size: 11px; line-height: 1.45; display: flex; flex-direction: column; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
 .sheet table { width: 100%; border-collapse: collapse; }
 .sheet th { text-align: left; font-weight: 600; background: #f2f1ee; border-bottom: 1px solid #999; padding: 5px 6px; }
