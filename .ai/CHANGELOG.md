@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Impressão por vendedor (21/10/2026)
+- Adicionado (dono: "falta uma opção de impressão por vendedor"; escolheu as duas): na impressão do lote, o campo "Vendedor" imprime só a folha de uma pessoa; em Relatórios > "Comissões pagas por vendedor", um vendedor ou "Todos os vendedores" no período (uma folha por vendedor). Só tela, sem migration.
+
 ### Testes de tela em dia (21/10/2026)
 - Corrigido (pedido do dono): os testes automáticos de tela do CRM e do simulador e mais 6 testes antigos seguem as telas atuais (simulador por convênio/operação, tarefas do lead, arquivos por área de arrastar, bônus dobrado, frequência diária do vendedor). Local: 59 passam; os 2 da NASP pulam onde o banco NASP não existe.
 

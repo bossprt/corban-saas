@@ -2,12 +2,14 @@ import Link from 'next/link'
 import { Card, PageHeader } from '@/components/ui'
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
+import { can } from '@/lib/access'
 
 export default async function ReportsHubPage() {
-  const { membership } = await requireAppContext()
+  const { membership, access } = await requireAppContext()
   const supervisor = atLeast(membership.role, 'supervisor')
   const items = [
     ['Visão geral', 'Indicadores atuais de leads, clientes, propostas e operação.', '/app', true],
+    ['Comissões pagas por vendedor', 'Pagamentos de comissão de um vendedor ou de todos no período, contrato por contrato, pronto para imprimir.', '/app/relatorios/comissoes-vendedor', can(access, 'repasse.view')],
     ['Ranking de vendas', 'Produção paga e digitada por vendedor, meta da equipe e funil; modo TV.', '/app/ranking', true],
     ['Operacional', 'Fila e situação atual da operação.', '/app/operacao', true],
     ['Central de atenção', 'Pendências e sinais objetivos da organização.', '/app/atencao', supervisor],
