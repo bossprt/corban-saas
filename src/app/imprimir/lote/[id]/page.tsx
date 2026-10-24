@@ -46,7 +46,7 @@ export default async function PrintBatchPage({ params, searchParams }: { params:
         {/* One seller of the batch (owner, 21/10/2026). */}
         <form method="get" className="flex items-center gap-1.5 text-sm">
           <label className="flex items-center gap-1.5">Vendedor
-            <select name="pessoa" defaultValue={only?.[0]?.payout_id ?? ''} className="field h-9 min-w-[200px]">
+            <select name="pessoa" defaultValue={only?.[0]?.payout_id ?? ''} className="h-9 rounded-[10px] border border-line bg-surface px-2.5 text-sm text-ink w-56">
               <option value="">Todos</option>
               {paid.map(l => <option key={l.payout_id} value={l.payout_id}>{l.holder}</option>)}
             </select>

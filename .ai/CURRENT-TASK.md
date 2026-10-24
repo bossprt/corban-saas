@@ -67,6 +67,7 @@
 - 20/10: relatório de comissão confere o arquivo antes de importar (prontos x sem vendedor/sem comissão/já recebido/não encontrado).
 - 21/10: ranking de vendas e painel da equipe com modo TV (plano fase 2). Próximas fases do plano: WhatsApp oficial, oportunidades de refin/portabilidade, discadora, bancos; Lemit aguarda documentação.
 - 21/10: relatórios de pagamento de comissão em A4 (resumo do lote, demonstrativo por pessoa, relatório por pessoa e período).
+- 24/10: lista "Não Perturbe SP" do Lemit (só DDD 68, importada pela tela, substitui a anterior). Consulta por CPF do Lemit (completar cadastro) aguarda o dono gerar a chave; a chave é digitada só na tela.
 
 ## Validado com o dono
 - 06/10: contrato real do início ao fim; 2 contas bancárias no Financeiro; pagamento em lote de 9 vendedores (R$ 1.610,10) por QR Code PIX; contrato 131259 concluído.

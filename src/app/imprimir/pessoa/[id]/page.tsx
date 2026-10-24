@@ -28,8 +28,8 @@ export default async function PrintPersonReport({ params, searchParams }: { para
       <style>{PRINT_CSS}</style>
       <PrintBar back={`/app/repasse/${id}`}>
         <form className="flex flex-wrap items-center gap-2 text-sm">
-          <label className="flex items-center gap-1.5">De<input type="date" name="de" defaultValue={from} className="field h-9" /></label>
-          <label className="flex items-center gap-1.5">até<input type="date" name="ate" defaultValue={to} className="field h-9" /></label>
+          <label className="flex items-center gap-1.5">De<input type="date" name="de" defaultValue={from} className="h-9 rounded-[10px] border border-line bg-surface px-2.5 text-sm text-ink w-40" /></label>
+          <label className="flex items-center gap-1.5">até<input type="date" name="ate" defaultValue={to} className="h-9 rounded-[10px] border border-line bg-surface px-2.5 text-sm text-ink w-40" /></label>
           <button className="inline-flex h-9 items-center rounded-[10px] border border-line bg-surface px-3 hover:bg-surface-muted">Ver período</button>
         </form>
       </PrintBar>
