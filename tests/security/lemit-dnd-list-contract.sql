@@ -1,4 +1,4 @@
--- Contract test for 20261024120000_lemit_dnd_list_v1: the Lemit "Não Perturbe SP" list is imported in chunks by the
+-- Contract test for 20261024203819_lemit_dnd_list_v1: the Lemit "Não Perturbe SP" list is imported in chunks by the
 -- administrator; importing again replaces the previous Lemit list; phones marked by hand stay; a phone counts only from its
 -- validity date. One transaction, rolled back. Fictitious phones only.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/lemit-dnd-list-contract.sql

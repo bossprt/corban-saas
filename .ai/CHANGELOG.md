@@ -16,7 +16,7 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 ## [Unreleased]
 
 ### Lista "Não Perturbe SP" do Lemit e barra de impressão alinhada (24/10/2026)
-- Adicionado (dono: o Lemit publica o "Não Perturbe SP" como arquivo de ~16 milhões de telefones; escolheu guardar só o DDD 68): Vendas > Não perturbe > "Importar lista do Lemit" (administrador). O arquivo (.zip como vem do Lemit, ou .csv) é lido no computador e só os telefones dos DDDs escolhidos são enviados, com a data de validade; importar de novo substitui a lista anterior do Lemit; marcações à mão e listas de banco não mudam; o número só conta a partir da validade. No lead: "Não Perturbe SP (lista do Lemit de dd/mm)" ou "entra no Não Perturbe SP em dd/mm". Banco: ~2 MB para o DDD 68. `20261024120000_lemit_dnd_list_v1`, testes `lemit-dnd-list-contract.sql` (13) e `lemit-list.test.ts`.
+- Adicionado (dono: o Lemit publica o "Não Perturbe SP" como arquivo de ~16 milhões de telefones; escolheu guardar só o DDD 68): Vendas > Não perturbe > "Importar lista do Lemit" (administrador). O arquivo (.zip como vem do Lemit, ou .csv) é lido no computador e só os telefones dos DDDs escolhidos são enviados, com a data de validade; importar de novo substitui a lista anterior do Lemit; marcações à mão e listas de banco não mudam; o número só conta a partir da validade. No lead: "Não Perturbe SP (lista do Lemit de dd/mm)" ou "entra no Não Perturbe SP em dd/mm". Banco: ~2 MB para o DDD 68. `20261024203819_lemit_dnd_list_v1`, testes `lemit-dnd-list-contract.sql` (13) e `lemit-list.test.ts`.
 - Corrigido (dono: "esteticamente fora da centralização"): a barra da impressão fica numa linha, com controles da mesma altura.
 
 ### Impressão por vendedor (21/10/2026)
