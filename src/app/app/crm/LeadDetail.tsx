@@ -68,11 +68,17 @@ export async function LeadDetail({ id, tab, sp, href, keep, close }: {
   const tasks = taskRows ?? []
   const stages = (stageRows ?? []) as { id: string; name: string; base_status: string }[]
   const leadPhones = [lead.phone, ((lead.metadata ?? {}) as { phone2?: string }).phone2].map(normalizePhone).filter(Boolean) as string[]
-  const [{ data: dndRows, error: dndError }, owners] = await Promise.all([
+  const [{ data: dndRows, error: dndError }, owners, { data: dndInfo }] = await Promise.all([
     leadPhones.length ? supabase.rpc('dnd_phones_in', { p_org: lead.organization_id, p_phones: leadPhones }) : Promise.resolve({ data: [] as string[], error: null }),
     supervisor ? leadOwners(supabase) : Promise.resolve([] as { id: string; name: string }[]),
+    // Where each phone came from (Lemit list, bank list, by hand) and from when it counts.
+    leadPhones.length ? supabase.from('do_not_disturb_phones').select('phone,source,valid_from,created_at').in('phone', leadPhones).is('removed_at', null)
+      : Promise.resolve({ data: [] as { phone: string; source: string; valid_from: string | null; created_at: string }[] }),
   ])
   const dndPhones = new Set((dndRows ?? []) as string[])
+  const dndSources = (dndInfo ?? []).filter(d => dndPhones.has(d.phone))
+  const dndSoon = (dndInfo ?? []).find(d => !dndPhones.has(d.phone) && d.valid_from)
+  const fromLemit = dndSources.find(d => d.source === 'lemit')
   const mainPhone = normalizePhone(lead.phone)
   const emails = await memberEmails([lead.owner_user_id, ...(events ?? []).map(e => e.actor_user_id), ...(members ?? []).map(m => m.user_id), ...tasks.map(t => t.assigned_to)].filter(Boolean) as string[])
   const who = (u: string | null) => (!u ? 'Sistema' : u === user.id ? 'Você' : emails.get(u) ?? 'Usuário')
@@ -126,8 +132,14 @@ export async function LeadDetail({ id, tab, sp, href, keep, close }: {
       {dndError && <p role="alert" className="mb-4 rounded-[10px] bg-[#FDF3DC] px-4 py-2 text-sm text-[#92400E]">Não foi possível conferir a lista &quot;Não perturbe&quot; agora.</p>}
       {dndPhones.size > 0 && (
         <div role="alert" className="mb-4 flex items-center gap-2 rounded-[10px] border border-[#F5C2C0] bg-[#FDE2E1] px-4 py-3 text-sm text-[#991B1B]">
-          <PhoneOff size={16} aria-hidden />Telefone no &quot;Não perturbe&quot;: o cliente pediu para não ser contatado neste número. Confirme antes de ligar ou mandar mensagem.
+          <PhoneOff size={16} aria-hidden />
+          {fromLemit
+            ? <>Telefone no &quot;Não Perturbe SP&quot; (lista do Lemit de {dateTime(fromLemit.created_at).slice(0, 10)}). Confirme antes de ligar ou mandar mensagem.</>
+            : <>Telefone no &quot;Não perturbe&quot;{dndSources.some(d => d.source === 'import') ? ' (lista do banco)' : ''}: o cliente pediu para não ser contatado neste número. Confirme antes de ligar ou mandar mensagem.</>}
         </div>
+      )}
+      {dndPhones.size === 0 && dndSoon?.valid_from && (
+        <p className="mb-4 rounded-[10px] bg-[#FDF3DC] px-4 py-2 text-sm text-[#92400E]">Este telefone entra no &quot;Não Perturbe SP&quot; em {dndSoon.valid_from.split('-').reverse().join('/')}.</p>
       )}
 
       {lead.owner_user_id === null && !closed && (

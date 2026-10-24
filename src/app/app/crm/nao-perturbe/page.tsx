@@ -10,9 +10,10 @@ import { isPortalUser } from '@/lib/portal'
 import { addDndPhone, removeDndPhone } from '../actions'
 import { DndImport } from './DndImport'
 import { DndSearch } from './DndSearch'
+import { LemitImport } from './LemitImport'
 
 const label = 'text-[13px] font-medium text-ink-soft'
-const SOURCE_LABEL: Record<string, string> = { manual: 'Marcado à mão', import: 'Lista importada', lemit: 'Lemit' }
+const SOURCE_LABEL: Record<string, string> = { manual: 'Marcado à mão', import: 'Lista importada', lemit: 'Não Perturbe SP (Lemit)' }
 const day = (iso: string) => new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
 
 // "Não perturbe" (owner, 20/10/2026): phones whose owner asked not to be contacted. Marked on the lead, added here or
@@ -21,11 +22,15 @@ export default async function DoNotDisturbPage() {
   const ctx = await requireAppContext()
   if (isPortalUser(ctx.access?.roleKey, ctx.modules)) redirect('/app/portal')
   if (!can(ctx.access, 'leads.view')) redirect('/app/hoje')
-  const { supabase, access } = ctx
+  const { supabase, access, membership } = ctx
   const supervisor = can(access, 'leads.approve')
-  const [{ data: rows }, { count }] = await Promise.all([
-    supabase.from('do_not_disturb_phones').select('id,phone,source,note,file_name,created_at').is('removed_at', null).order('created_at', { ascending: false }).limit(50),
+  const admin = membership.role === 'admin'
+  // The Lemit list (thousands of phones) is summed up apart; "Últimos marcados" shows the ones marked here or from banks.
+  const [{ data: rows }, { count }, { count: lemitCount }, { data: lemitLast }] = await Promise.all([
+    supabase.from('do_not_disturb_phones').select('id,phone,source,note,file_name,created_at').is('removed_at', null).neq('source', 'lemit').order('created_at', { ascending: false }).limit(50),
     supabase.from('do_not_disturb_phones').select('id', { count: 'exact', head: true }).is('removed_at', null),
+    supabase.from('do_not_disturb_phones').select('id', { count: 'exact', head: true }).is('removed_at', null).eq('source', 'lemit'),
+    supabase.from('do_not_disturb_phones').select('file_name,created_at').is('removed_at', null).eq('source', 'lemit').order('created_at', { ascending: false }).limit(1).maybeSingle(),
   ])
 
   return (
@@ -67,6 +72,13 @@ export default async function DoNotDisturbPage() {
               </form>
             </Card>
           )}
+          <Card>
+            <CardHeader title="Lista do Lemit (Não Perturbe SP)" />
+            <p className="px-5 pt-3 text-sm text-ink-soft">
+              {lemitCount ? `${(lemitCount ?? 0).toLocaleString('pt-BR')} telefones · ${[lemitLast?.file_name, lemitLast?.created_at ? `importada em ${day(lemitLast.created_at)}` : null].filter(Boolean).join(' · ')}` : 'Ainda não importada.'}
+            </p>
+            {admin ? <LemitImport /> : <p className="px-5 pb-5 pt-2 text-xs text-muted">Só o administrador importa a lista do Lemit.</p>}
+          </Card>
           {supervisor && (
             <Card>
               <CardHeader title="Importar lista do banco" />

@@ -398,3 +398,24 @@ export async function importDndChunk(input: { fileName: string; phones: string[]
   const r = data as { added: number; already: number; invalid: number }
   return { ok: true, added: r.added, already: r.already, invalid: r.invalid }
 }
+
+// Lemit "Não Perturbe SP" list (24/10/2026, administrator): parts of the chosen area codes, then the end of the import.
+export async function importLemitChunk(input: { batch: string; fileName: string; rows: { phone: string; valid_from: string | null }[] }): Promise<{ ok: true } | { ok: false; message: string }> {
+  const { supabase, organization } = await requireAppContext()
+  const { batch, fileName, rows } = input ?? {}
+  if (!UUID.test(String(batch)) || typeof fileName !== 'string' || !Array.isArray(rows) || rows.length === 0 || rows.length > 10000) return { ok: false, message: 'Parte do arquivo inválida.' }
+  const clean = rows.map(r => ({ phone: String(r?.phone ?? '').replace(/\D/g, '').slice(0, 13), valid_from: /^\d{4}-\d{2}-\d{2}$/.test(String(r?.valid_from ?? '')) ? r.valid_from : null }))
+  const { error } = await supabase.rpc('import_lemit_dnd_chunk', { p_org: organization.id, p_batch: batch, p_file_name: fileName.trim().slice(0, 255), p_rows: clean })
+  if (error) return { ok: false, message: crmError(error) === 'erro:sem_permissao' ? 'Só o administrador importa a lista do Lemit.' : 'Não foi possível enviar uma parte do arquivo.' }
+  return { ok: true }
+}
+
+export async function finishLemitImport(input: { batch: string }): Promise<{ ok: true; total: number; validNow: number; removed: number } | { ok: false; message: string }> {
+  const { supabase, organization } = await requireAppContext()
+  if (!UUID.test(String(input?.batch))) return { ok: false, message: 'Importação inválida.' }
+  const { data, error } = await supabase.rpc('finish_lemit_dnd_import', { p_org: organization.id, p_batch: input.batch })
+  if (error) return { ok: false, message: 'Não foi possível concluir a importação. A lista anterior do Lemit continua valendo.' }
+  const r = data as { total: number; valid_now: number; removed: number }
+  revalidatePath('/app/crm/nao-perturbe'); revalidatePath('/app/crm')
+  return { ok: true, total: r.total, validNow: r.valid_now, removed: r.removed }
+}
