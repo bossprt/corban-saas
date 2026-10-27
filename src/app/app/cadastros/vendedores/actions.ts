@@ -20,6 +20,7 @@ const SELLER_ERRORS:[RegExp,FeedbackCode][]=[
   [/seller_name_required/,'erro:vendedor_nome'],
   [/seller_tax_id_invalid/,'erro:vendedor_documento'],
   [/seller_tax_id_exists/,'erro:vendedor_documento_repetido'],
+  [/seller_internal_no_tax_id/,'erro:vendedor_documento'],
   [/seller_mobile_required|seller_phone_invalid/,'erro:vendedor_celular'],
   [/seller_email_required/,'erro:vendedor_email'],
   [/seller_group_invalid|seller_category_invalid|seller_branch_invalid/,'erro:vendedor_invalido'],
@@ -54,7 +55,7 @@ export async function saveSeller(f:FormData):Promise<{error:string}>{
 
   const data:Record<string,unknown>={
     name:text(f,'name'),tax_id:text(f,'tax_id'),category:text(f,'seller_category'),group_id:text(f,'commission_group_id'),
-    branch_id:text(f,'branch_id'),profile,
+    branch_id:text(f,'branch_id'),profile,internal:f.get('internal')==='on',
     // Part C3: how often the seller is paid and whether they receive the deferred.
     payment_frequency:text(f,'payment_frequency')||'daily',receives_deferred:f.get('receives_deferred')==='on',
     contacts:rows(f,['contact_name','contact_cpf','contact_role','contact_mobile','contact_email'])

@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Vendedor interno (27/10/2026)
+- Adicionado (dono: "vendedor Trafego Pago - Smart Promotora, a comissão fica toda para a Smart"): no cadastro de vendedor, "Vendedor interno (da própria empresa, ex.: tráfego pago)". Não tem CPF/CNPJ próprio (o CNPJ da empresa já é de outro vendedor e documento não repete); celular e e-mail ficam opcionais; não aparece como "Cadastro incompleto"; selo "Interno" na ficha. Vendedor comum continua exigindo CPF/CNPJ, celular e e-mail. `20261027120000_internal_seller_v1`, teste `internal-seller-contract.sql` (7).
+
 ### Lista "Não Perturbe SP" do Lemit e barra de impressão alinhada (24/10/2026)
 - Adicionado (dono: o Lemit publica o "Não Perturbe SP" como arquivo de ~16 milhões de telefones; escolheu guardar só o DDD 68): Vendas > Não perturbe > "Importar lista do Lemit" (administrador). O arquivo (.zip como vem do Lemit, ou .csv) é lido no computador e só os telefones dos DDDs escolhidos são enviados, com a data de validade; importar de novo substitui a lista anterior do Lemit; marcações à mão e listas de banco não mudam; o número só conta a partir da validade. No lead: "Não Perturbe SP (lista do Lemit de dd/mm)" ou "entra no Não Perturbe SP em dd/mm". Banco: ~2 MB para o DDD 68. `20261024203819_lemit_dnd_list_v1`, testes `lemit-dnd-list-contract.sql` (13) e `lemit-list.test.ts`.
 - Corrigido (dono: "esteticamente fora da centralização"): a barra da impressão fica numa linha, com controles da mesma altura.

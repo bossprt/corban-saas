@@ -13,7 +13,7 @@ export default async function SellersPage() {
   const canEdit = atLeast(membership.role, 'manager')
   const [groups, sellers, profiles] = await Promise.all([
     supabase.from('commission_groups').select('id,name'),
-    supabase.from('commercial_sellers').select('id,code,name,seller_category,commission_group_id,is_active,user_id,origin').order('code'),
+    supabase.from('commercial_sellers').select('id,code,name,seller_category,commission_group_id,is_active,user_id,origin,is_internal').order('code'),
     supabase.from('seller_profiles').select('seller_id,phone,email'),
   ])
   const groupName = new Map((groups.data ?? []).map(x => [x.id, x.name]))
@@ -32,7 +32,7 @@ export default async function SellersPage() {
           {!(sellers.data ?? []).length && <li className="border-t border-line px-5 py-4 text-sm text-muted">Nenhum vendedor cadastrado.</li>}
           {(sellers.data ?? []).map(s => {
             const p = profile.get(s.id)
-            const incomplete = !p?.phone || !p?.email
+            const incomplete = !s.is_internal && (!p?.phone || !p?.email)
             return (
               <li key={s.id}>
                 <Link href={`/app/cadastros/vendedores/${s.id}`} className="group flex flex-wrap items-center gap-3 border-t border-line px-5 py-3 hover:bg-surface-muted">
