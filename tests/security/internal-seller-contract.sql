@@ -1,4 +1,4 @@
--- Contract test for 20261027120000_internal_seller_v1: an internal seller (a channel of the company itself, such as paid
+-- Contract test for 20261027054411_internal_seller_v1: an internal seller (a channel of the company itself, such as paid
 -- traffic) is saved without CPF/CNPJ, mobile or e-mail; a regular seller still needs all three. One transaction, rolled back.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/internal-seller-contract.sql
 
