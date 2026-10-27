@@ -29,7 +29,7 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
   const [{ data: groups }, { data: branches }, seller, profile, accounts, contacts] = await Promise.all([
     supabase.from('commission_groups').select('id,name,is_active').order('sort_order').order('name'),
     supabase.from('organization_branches').select('id,name,is_active').eq('is_active', true).order('name'),
-    isNew ? Promise.resolve({ data: null }) : supabase.from('commercial_sellers').select('id,code,name,tax_id,seller_category,commission_group_id,branch_id,is_active,user_id,origin,imported_at,commission_payment_frequency,receives_deferred').eq('id', id).maybeSingle(),
+    isNew ? Promise.resolve({ data: null }) : supabase.from('commercial_sellers').select('id,code,name,tax_id,seller_category,commission_group_id,branch_id,is_active,user_id,origin,imported_at,commission_payment_frequency,receives_deferred,is_internal').eq('id', id).maybeSingle(),
     isNew ? Promise.resolve({ data: null }) : supabase.from('seller_profiles').select('*').eq('seller_id', id).maybeSingle(),
     isNew || !canSeeBank ? Promise.resolve({ data: [] }) : supabase.from('seller_bank_accounts')
       .select('id,transfer_method,account_type,bank_code,bank_name,branch,account_number,account_digit,pix_key_type,pix_key,holder_name,holder_document,note,is_primary')
@@ -40,7 +40,7 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
   if (!isNew && !s) notFound()
   const p = (profile.data ?? {}) as Record<string, string | null>
   const values: SellerValues | undefined = s ? {
-    id: s.id, code: s.code, name: s.name, tax_id: s.tax_id, seller_category: s.seller_category, commission_group_id: s.commission_group_id, branch_id: s.branch_id,
+    id: s.id, code: s.code, name: s.name, tax_id: s.tax_id, is_internal: s.is_internal, seller_category: s.seller_category, commission_group_id: s.commission_group_id, branch_id: s.branch_id,
     commission_payment_frequency: s.commission_payment_frequency, receives_deferred: s.receives_deferred,
     trade_name: p.trade_name ?? null, birth_or_opening_date: p.birth_or_opening_date ?? null, identity_or_registration_number: p.identity_or_registration_number ?? null,
     identity_issuer: p.identity_issuer ?? null, rg_issued_on: p.rg_issued_on ?? null, mother_name: p.mother_name ?? null, father_name: p.father_name ?? null,
@@ -66,7 +66,7 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
   const linked = s?.user_id ? members.find(m => m.id === s.user_id) : undefined
   const free = members.filter(m => !m.portal && (!takenBy.has(m.id) || takenBy.get(m.id) === s?.id))
   const sameEmail = p.email ? free.find(m => (emailOf.get(m.id) ?? '').toLowerCase() === (p.email ?? '').toLowerCase()) : undefined
-  const missing = s ? [!p.phone && 'celular', !p.email && 'e-mail', !(accounts.data ?? []).length && canSeeBank && 'dados para pagamento'].filter(Boolean) : []
+  const missing = s && !s.is_internal ? [!p.phone && 'celular', !p.email && 'e-mail', !(accounts.data ?? []).length && canSeeBank && 'dados para pagamento'].filter(Boolean) : []
 
   return (
     <section>
@@ -80,6 +80,7 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
             <Badge tone={s.is_active ? 'received' : 'neutral'}>{s.is_active ? 'Ativo' : 'Inativo'}</Badge>
             {s.user_id && <Badge tone="brand">{linked && !linked.portal ? `Usuário da equipe · ${linked.role}` : 'Com acesso ao portal'}</Badge>}
             {originText(s.origin, s.imported_at) && <span className="text-xs">{originText(s.origin, s.imported_at)}</span>}
+            {s.is_internal && <Badge tone="neutral">Interno</Badge>}
             {missing.length > 0 && <><Badge tone="pending">Cadastro incompleto</Badge><span className="text-xs">Falta: {missing.join(', ')}.</span></>}
           </span>
         ) : 'O código do vendedor é gerado automaticamente ao cadastrar.'}
