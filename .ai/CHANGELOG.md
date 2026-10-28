@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Filtro de data de Contratos no horário de Brasília (28/10/2026)
+- Corrigido (dono: filtro de 01/10 a 27/10 "não bateu"): o "De/Até" de Contratos comparava o dia de cadastro em UTC; contrato cadastrado depois das 21h caía no dia seguinte. Agora usa o dia em Brasília. O filtro continua sendo por data de cadastro (a Visão geral conta por "pago ao cliente"; clicar no número dela abre Contratos filtrado por essa data).
+
 ### Publicar tabelas de uma vez (27/10/2026)
 - Adicionado (dono: "outra pessoa que não tiver uma IA vai clicar 16x?"): na importação de planilha, "Publicar já ao importar" com o início da vigência (vem da coluna Vigência Inicial; desmarcado = rascunho, como antes); em Cadastros > Tabelas, com rascunhos nos filtros, faixa "Publicar todas (N)" com uma data e confirmação. Tudo ou nada: cada tabela passa pelas mesmas regras de publicar uma (administrador/gerente, só rascunho, data obrigatória e perto de hoje). A importação devolve os rascunhos que tocou (`version_ids`). `20261028011018_bulk_publish_tables_v1`, teste `bulk-publish-tables-contract.sql` (12).
 
