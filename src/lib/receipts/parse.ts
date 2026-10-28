@@ -68,6 +68,8 @@ export function installmentText(raw: unknown): string | 'invalid' | null {
   return String(Number(m[1]))
 }
 
+const isZero = (raw: unknown) => /^(R\$)?\s*0+([.,]0+)?$/.test(String(raw ?? '').trim())
+
 // Applies the column layout. Rows with neither contract nor amount are skipped (blank or title lines); a row with an
 // amount but no contract (e.g. a "Total" line) is reported so the operator sees it, never imported silently.
 export function buildReceiptRows(sheet: ReceiptSheet, mapping: ReceiptMapping, kind: ReceiptKind): { rows: ReceiptRow[]; issues: ReceiptIssue[]; skipped: number } {
@@ -82,6 +84,8 @@ export function buildReceiptRows(sheet: ReceiptSheet, mapping: ReceiptMapping, k
     const ade = cell(c.ade)
     const amountRaw = cell(c.amount)
     if (!ade && !amountRaw) { skipped++; return }
+    // "0,00": nothing was paid on this line (Valor lists every contract in the bonus report, most with zero).
+    if (ade && isZero(amountRaw)) { skipped++; return }
     if (!ade) { issues.push({ row: line, code: 'ade_missing' }); return }
     const amount = amountText(amountRaw, kind === 'chargeback')
     if (amount === null || amount === 'invalid') { issues.push({ row: line, code: 'amount_invalid' }); return }
@@ -99,6 +103,30 @@ export function buildReceiptRows(sheet: ReceiptSheet, mapping: ReceiptMapping, k
     rows.push(row)
   })
   return { rows, issues, skipped }
+}
+
+// Two files of the same payment (Banco Valor sends "à vista" and "bônus" in separate PDFs, 28/10/2026): the commission
+// of a contract is the sum of its lines in the different files, added in cents (never floating point). Lines of one
+// file are never added to each other, so a contract repeated in the same report still shows as a duplicate.
+export function mergeReportFiles(body: string[][], fileOf: number[], adeCol: number, amountCol: number): string[][] {
+  const out: string[][] = []
+  const first = new Map<string, { row: string[]; files: Set<number> }>()
+  body.forEach((r, i) => {
+    const ade = String(r[adeCol] ?? '').trim()
+    const amount = amountText(r[amountCol], false)
+    const at = ade ? first.get(ade) : undefined
+    if (at && !at.files.has(fileOf[i]) && /^\d+\.\d{2}$/.test(amount ?? '')) {
+      const prev = amountText(at.row[amountCol], false)
+      const cents = (v: string) => BigInt(v.replace('.', ''))
+      const sum = /^\d+\.\d{2}$/.test(prev ?? '') ? cents(prev as string) + cents(amount as string) : null
+      if (sum !== null) { const t = sum.toString().padStart(3, '0'); at.row[amountCol] = `${t.slice(0, -2)},${t.slice(-2)}`; at.files.add(fileOf[i]); return }
+    }
+    if (ade && isZero(r[amountCol])) return // a zero line adds nothing (and is skipped on import anyway)
+    const row = [...r]
+    out.push(row)
+    if (ade && !at) first.set(ade, { row, files: new Set([fileOf[i]]) })
+  })
+  return out
 }
 
 export const RECEIPT_ISSUE_LABEL: Record<ReceiptIssue['code'], string> = {

@@ -29,10 +29,29 @@ function toLines(items: readonly PdfItem[]): Cell[][] {
     return cells
   })
 }
-const isHeaderLine = (cells: readonly Cell[]) => cells.filter(c => KNOWN.has(normalizeHeader(c.text))).length >= 4
+// Which line is the header, and (optional) which line closes the table on its page, e.g. a bank report's "TOTAL" block.
+// The default header is the commercial one; the receipt import passes its own (lib/receipts/pdf).
+// align 'order': bank reports right-align numbers and left-align names under centred titles, so a cell often does not
+// touch its title. The cells of a line keep the order of the titles: each goes to one column, left to right, with the
+// smallest total distance to the titles (a full line maps one to one). A cell far from every title refuses the file.
+export type PdfTableRules = { isHeader: (cells: readonly string[]) => boolean; isEnd?: (cells: readonly string[]) => boolean; align?: 'overlap' | 'order' }
+const MAX_GAP = 60
+const gap = (c: Cell, h: Cell) => Math.max(0, h.x0 - c.x1, c.x0 - h.x1)
+function orderedColumns(cells: readonly Cell[], cols: readonly Cell[]): number[] | null {
+  const n = cells.length, m = cols.length
+  if (n > m) return null
+  // best[i][j]: cheapest way to place the first i cells in the first j columns
+  const best = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(Infinity))
+  for (let j = 0; j <= m; j++) best[0][j] = 0
+  for (let i = 1; i <= n; i++) for (let j = i; j <= m; j++) best[i][j] = Math.min(best[i][j - 1], best[i - 1][j - 1] + gap(cells[i - 1], cols[j - 1]))
+  const at = new Array<number>(n)
+  for (let i = n, j = m; i > 0; j--) if (best[i][j] !== best[i][j - 1]) { at[i - 1] = j - 1; i-- }
+  return at.every((j, k) => gap(cells[k], cols[j]) <= MAX_GAP) ? at : null
+}
+const COMMERCIAL: PdfTableRules = { isHeader: cells => cells.filter(c => KNOWN.has(normalizeHeader(c))).length >= 4 }
 const overlap = (a0: number, a1: number, b0: number, b1: number) => Math.max(0, Math.min(a1, b1) - Math.max(a0, b0))
 
-export function pdfItemsToRows(pages: readonly (readonly PdfItem[])[]): PdfGridResult {
+export function pdfItemsToRows(pages: readonly (readonly PdfItem[])[], rules: PdfTableRules = COMMERCIAL): PdfGridResult {
   const fail = (code: string, detail?: string): PdfGridResult => ({ rows: [], issues: [{ code, detail }] })
   if (!pages.some(p => p.some(i => i.str.trim()))) return fail('pdf_no_text') // scanned/image PDF: OCR is a separate, explicit future step
   let header: Cell[] | null = null
@@ -44,7 +63,7 @@ export function pdfItemsToRows(pages: readonly (readonly PdfItem[])[]): PdfGridR
     let lastY: number | null = null, pitch = Infinity // vertical distance between table lines: a footer is detached from the table, an overflowing last row is not
     const detached = (y: number) => lastY !== null && Number.isFinite(pitch) && lastY - y > 1.8 * pitch
     for (const cells of lines) {
-      if (isHeaderLine(cells)) {
+      if (rules.isHeader(cells.map(c => c.text))) {
         const key = cells.map(c => normalizeHeader(c.text)).join('|')
         if (header && header.map(c => normalizeHeader(c.text)).join('|') !== key) return fail('pdf_ambiguous_layout', `A tabela muda de colunas na página ${pi + 1}.`)
         if (!header) { header = cells; rows.push(cells.map(c => c.text)) }
@@ -52,7 +71,21 @@ export function pdfItemsToRows(pages: readonly (readonly PdfItem[])[]): PdfGridR
         continue
       }
       if (!cols) continue // text before the header (titles, notes) is never data
+      if (rules.isEnd?.(cells.map(c => c.text))) { cols = null; continue } // everything after the closing line of this page is not data
       const out: string[] = cols.map(() => '')
+      if (rules.align === 'order') {
+        const at = orderedColumns(cells, cols)
+        if (!at) return fail('pdf_ambiguous_layout', `Linha da página ${pi + 1} não se alinha às colunas: "${cells.map(c => c.text).join(' ').slice(0, 80)}".`)
+        // one cell right under a line of the table: the rest of a wrapped cell (a long name), joined to that line
+        if (cells.length === 1 && rows.length > 1 && !detached(cells[0].y)) { const prev = rows[rows.length - 1]; prev[at[0]] = `${prev[at[0]]} ${cells[0].text}`.trim(); continue }
+        if (cells.length < 2) { proseAt ??= cells[0].text; continue }
+        if (proseAt) return fail('pdf_ambiguous_layout', `Uma linha de texto solto ("${proseAt.slice(0, 50)}") aparece no meio da tabela, página ${pi + 1}.`)
+        at.forEach((i, k) => { out[i] = cells[k].text })
+        if (lastY !== null && lastY - cells[0].y > 0) pitch = Math.min(pitch, lastY - cells[0].y)
+        lastY = cells[0].y
+        rows.push(out)
+        continue
+      }
       const hit = cells.map(c => cols!.map((h, i) => ({ i, o: overlap(c.x0 - COL_TOL, c.x1 + COL_TOL, h.x0, h.x1) })).filter(x => x.o > 0))
       const aligned = hit.filter(h => h.length > 0).length
       if (aligned === 0) { if (!detached(cells[0].y)) return fail('pdf_ambiguous_layout', `Texto solto colado à tabela, página ${pi + 1}: "${cells[0].text.slice(0, 50)}".`); proseAt ??= cells[0].text; continue }
@@ -98,8 +131,8 @@ export async function extractPdfItems(bytes: Uint8Array): Promise<{ pages: PdfIt
   } catch { return { error: 'pdf_unreadable' } }
 }
 
-export async function pdfRows(bytes: Uint8Array): Promise<PdfGridResult> {
+export async function pdfRows(bytes: Uint8Array, rules?: PdfTableRules): Promise<PdfGridResult> {
   const r = await extractPdfItems(bytes)
   if ('error' in r) return { rows: [], issues: [{ code: r.error }] }
-  return pdfItemsToRows(r.pages)
+  return pdfItemsToRows(r.pages, rules)
 }
