@@ -5,6 +5,12 @@ import { parseBaseChoice, parseRepassMap, parseSmartCommercialFile, SMART_IMPORT
 
 export const dynamic='force-dynamic'
 const BLOCK=500
+const PUBLISH_ERRORS:[RegExp,string][]=[
+ [/effective_from_out_of_range|effective_from_required/,'Data de início inválida: use uma data a partir de 2000 e até um ano à frente.'],
+ [/future_published_version_exists/,'Já existe vigência publicada que começa depois dessa data. Escolha uma data posterior.'],
+ [/rate_or_coefficient_required/,'Há tabela sem linhas, taxa ou coeficiente.'],
+ [/not_authorized/,'Seu perfil não publica tabelas.'],
+]
 const uuid=(v:string)=>/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v)
 
 export async function POST(req:Request){
@@ -19,6 +25,9 @@ export async function POST(req:Request){
   if(!['own','third_party'].includes(origin))return Response.json({error:'Escolha a origem da produção.'},{status:400})
   if(origin==='third_party'&&!uuid(provider))return Response.json({error:'Escolha a empresa de origem.'},{status:400})
   if(origin==='own'&&provider)return Response.json({error:'Produção própria não usa empresa de origem.'},{status:400})
+  // Optional: publish the imported drafts right away from this day (YYYY-MM-DD). Empty = they stay drafts, as before.
+  const publishFrom=String(fd.get('publish_from')??'').trim()
+  if(publishFrom&&!/^\d{4}-\d{2}-\d{2}$/.test(publishFrom))return Response.json({error:'Data de início inválida.'},{status:400})
 
   // Every "Repasse N" must have an answer (a group or "Não usar"): nothing is imported by guess.
   const parsed=await parseSmartCommercialFile(ctx,file,parseRepassMap(fd.get('repass_map')),parseBaseChoice(fd.get('calculation_base')))
@@ -38,6 +47,7 @@ export async function POST(req:Request){
   // The database takes up to 1.000 rows per call: big files (a whole bank, or every table) go in blocks. Each block is
   // all or nothing; a later block that fails leaves only drafts, and importing the file again reuses those drafts.
   const total:Record<string,number>={}
+  const versionIds=new Set<string>()
   for(let i=0;i<payload.length;i+=BLOCK){
    const {data,error}=await ctx.supabase.rpc('import_smart_commercial_rows',{
     p_organization:ctx.membership.organization_id,
@@ -47,9 +57,16 @@ export async function POST(req:Request){
     p_rows:payload.slice(i,i+BLOCK)
    })
    if(error)return Response.json({error:`${i>0?`As primeiras ${i} linhas já entraram como rascunho. `:''}${error.message||'Importação recusada pelo banco de dados.'}`},{status:400})
-   for(const [k,v] of Object.entries((data??{}) as Record<string,number>))total[k]=(total[k]??0)+Number(v)
+   for(const [k,v] of Object.entries((data??{}) as Record<string,unknown>)){
+    if(Array.isArray(v))v.forEach(id=>versionIds.add(String(id)))
+    else total[k]=(total[k]??0)+Number(v)
+   }
   }
-  return Response.json({ok:true,result:total,summary:parsed.summary})
+  if(!publishFrom||!versionIds.size)return Response.json({ok:true,result:total,summary:parsed.summary})
+  // All drafts of this file in one call: either all are published or none is (they stay drafts and the reason is shown).
+  const {data:published,error:pubError}=await ctx.supabase.rpc('publish_product_table_versions',{p_version_ids:[...versionIds],p_effective_from:publishFrom})
+  const publishError=pubError?PUBLISH_ERRORS.find(([re])=>re.test(pubError.message??''))?.[1]??'Não foi possível publicar.':null
+  return Response.json({ok:true,result:total,summary:parsed.summary,published:pubError?0:Number(published??0),publishFrom,publishError})
  }catch{
   return Response.json({error:'Não foi possível concluir a importação.'},{status:500})
  }

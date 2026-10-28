@@ -5,6 +5,7 @@ import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
 import { PAGE_SIZES, pageSize } from '@/lib/commission/tableValues'
 import { readTableFilters, searchTables } from '@/lib/commission/tableSearch'
+import { PublishDraftsForm } from './PublishDraftsForm'
 
 type SP = Record<string, string | string[] | undefined>
 const one = (v: string | string[] | undefined) => (typeof v === 'string' ? v : '')
@@ -34,6 +35,11 @@ export default async function TablesSearchPage({ searchParams }: { searchParams:
   }
 
   const exportQs = new URLSearchParams(Object.entries(f).filter(([, v]) => v !== '')).toString()
+  // Drafts of every table found by the filters (all pages): published together by "Publicar todas". The suggested
+  // start is the drafts' own start (an import fills it from the file) when they all share one; otherwise it is asked.
+  const drafts = rows.filter(x => x.draft).map(x => x.draft!)
+  const starts = [...new Set(drafts.map(d => d.effective_from?.slice(0, 10) ?? ''))]
+  const draftStart = starts.length === 1 ? starts[0] : ''
 
   return (
     <section>
@@ -61,6 +67,15 @@ export default async function TablesSearchPage({ searchParams }: { searchParams:
           </div>
         </form>
       </Card>
+
+      {canEdit && drafts.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3 rounded-[12px] border border-[#FDE68A] bg-[#FFFBEB] px-5 py-3">
+          <p className="text-[13px] text-[#92400E]"><strong>{drafts.length} tabela(s) em rascunho</strong> nestes filtros. Publique todas de uma vez com a mesma data de início.</p>
+          {drafts.length <= 500
+            ? <PublishDraftsForm ids={drafts.map(d => d.id)} defaultDate={draftStart} back={qs({})} />
+            : <p className="text-[13px] text-[#92400E]">Mais de 500: filtre por banco ou convênio para publicar em partes.</p>}
+        </div>
+      )}
 
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4 text-sm text-ink-soft">

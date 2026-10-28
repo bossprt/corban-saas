@@ -21,6 +21,8 @@ export async function POST(req:Request){
    format:parsed.format,
    needsReview:parsed.issues.some(x=>x.code.startsWith('pdf_')),
    summary:parsed.summary,
+   // Earliest "Vigência Inicial" of the file: suggested start when publishing right after the import.
+   validFrom:parsed.rows.reduce<string|null>((m,r)=>{const d=r.effective_from?.slice(0,10)??null;return d&&(!m||d<m)?d:m},null),
    groupOptions:parsed.groupOptions,
    issues:parsed.issues.map(x=>({...x,message:SMART_IMPORT_ISSUES[x.code]??x.code})),
    sample:parsed.rows.slice(0,8).map(r=>({

@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Publicar tabelas de uma vez (27/10/2026)
+- Adicionado (dono: "outra pessoa que não tiver uma IA vai clicar 16x?"): na importação de planilha, "Publicar já ao importar" com o início da vigência (vem da coluna Vigência Inicial; desmarcado = rascunho, como antes); em Cadastros > Tabelas, com rascunhos nos filtros, faixa "Publicar todas (N)" com uma data e confirmação. Tudo ou nada: cada tabela passa pelas mesmas regras de publicar uma (administrador/gerente, só rascunho, data obrigatória e perto de hoje). A importação devolve os rascunhos que tocou (`version_ids`). `20261028011018_bulk_publish_tables_v1`, teste `bulk-publish-tables-contract.sql` (12).
+
 ### Vendedor interno (27/10/2026)
 - Adicionado (dono: "vendedor Trafego Pago - Smart Promotora, a comissão fica toda para a Smart"): no cadastro de vendedor, "Vendedor interno (da própria empresa, ex.: tráfego pago)". Não tem CPF/CNPJ próprio (o CNPJ da empresa já é de outro vendedor e documento não repete); celular e e-mail ficam opcionais; não aparece como "Cadastro incompleto"; selo "Interno" na ficha. Vendedor comum continua exigindo CPF/CNPJ, celular e e-mail. `20261027054411_internal_seller_v1`, teste `internal-seller-contract.sql` (7).
 
