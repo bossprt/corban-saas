@@ -15,6 +15,12 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Importar relatório de comissão em PDF (28/10/2026)
+- **Adicionado:** Financeiro > Importar relatório lê PDF com texto (relatórios do Banco Valor), no navegador, com o mesmo leitor de tabela da importação de tabelas (sem OCR, sem adivinhar). Título com coluna de contrato e de valor; o bloco "TOTAL..." do banco fecha a tabela; cada célula vai para a coluna na ordem dos títulos (números alinhados à direita), célula longe de todo título recusa o arquivo.
+- **Adicionado:** vários arquivos do mesmo pagamento de uma vez (Valor: à vista + bônus): mesmas colunas exigidas; o valor de um contrato é somado entre arquivos, em centavos; linhas do mesmo arquivo nunca se somam (duplicidade continua aparecendo). Impressão digital do lote = hash dos arquivos.
+- **Alterado:** linha com valor 0,00 é pulada (não pagou nada), em vez de travar o arquivo.
+- Testes: `tests/unit/receipt-pdf.test.ts` (5). Conferido com os 16 PDFs do Valor de ago–out: totais iguais aos do banco (outubro: 842,95 à vista + 682,36 bônus; o PDF do bônus diz 682,37, 1 centavo de arredondamento do banco).
+
 ### Filtro de data de Contratos no horário de Brasília (28/10/2026)
 - Corrigido (dono: filtro de 01/10 a 27/10 "não bateu"): o "De/Até" de Contratos comparava o dia de cadastro em UTC; contrato cadastrado depois das 21h caía no dia seguinte. Agora usa o dia em Brasília. O filtro continua sendo por data de cadastro (a Visão geral conta por "pago ao cliente"; clicar no número dela abre Contratos filtrado por essa data).
 
