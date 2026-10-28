@@ -1,4 +1,4 @@
--- Contract test for 20261027230000_bulk_publish_tables_v1: many drafts published with one start date, all or nothing,
+-- Contract test for 20261028011018_bulk_publish_tables_v1: many drafts published with one start date, all or nothing,
 -- through the same checks as publishing one; the import reports the drafts it touched.
 -- One transaction, rolled back.  psql -v ON_ERROR_STOP=1 -f tests/security/bulk-publish-tables-contract.sql
 
