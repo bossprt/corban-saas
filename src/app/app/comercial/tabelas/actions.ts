@@ -75,6 +75,31 @@ export async function publishVersion(f: FormData) {
   return go(tablePage(id, version), 'ok:vigencia_publicada')
 }
 
+// Publish every draft listed on the search screen with one start date (owner decision 27/10/2026), all or nothing:
+// the database runs the same checks as publishing one table, for each of them.
+export async function publishDrafts(f: FormData) {
+  const back = text(f, 'back')
+  const list = back.startsWith(`${LIST}?`) || back === LIST ? back : LIST
+  const ids = [...new Set(f.getAll('version_id').map(v => String(v)))]
+  if (!ids.length) return go(list, 'erro:vigencia_lote_vazio')
+  if (ids.length > 500) return go(list, 'erro:vigencia_lote_grande')
+  if (!ids.every(isUuid)) return go(list, 'erro:requisicao_invalida')
+  const start = text(f, 'effective_from')
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) return go(list, 'erro:vigencia_data')
+  const ctx = await manager(); if (!ctx) return go(list, 'erro:sem_permissao')
+  const { error } = await ctx.supabase.rpc('publish_product_table_versions', { p_version_ids: ids, p_effective_from: start })
+  if (error) {
+    const msg = error.message ?? ''
+    const code: FeedbackCode = /rate_or_coefficient_required/.test(msg) ? 'erro:vigencia_sem_taxa'
+      : /effective_from_out_of_range|effective_from_required/.test(msg) ? 'erro:vigencia_data'
+      : /future_published_version_exists/.test(msg) ? 'erro:vigencia_data_anterior'
+      : /too_many_versions/.test(msg) ? 'erro:vigencia_lote_grande'
+      : classifyDbFeedback(error)
+    return go(list, code)
+  }
+  return go(list, 'ok:vigencias_publicadas')
+}
+
 // $ Save what the company receives and what each group gets on one draft line (one database call, all or nothing).
 export async function saveLineValues(f: FormData) {
   const id = text(f, 'table_id'), version = text(f, 'version_id'), condition = text(f, 'condition_id')

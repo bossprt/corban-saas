@@ -8,6 +8,7 @@ type Provider={id:string;name:string;provider_type:string}
 type Preview={
  ok:boolean
  fileName:string
+ validFrom?:string|null
  summary:{sourceRows:number;expandedRows:number;tables:string[];components:string[];hasDeferred:boolean;hasPlastic:boolean;hasBonus:boolean;hasGenericRepasseColumns:boolean;genericRepasseSlots:string[];hasUnmappedRepassValues?:boolean;groups?:string[];hasOriginColumn?:boolean}
  groupOptions:{id:string;name:string}[]
  issues:{line:number;code:string;detail?:string;message:string}[]
@@ -17,6 +18,8 @@ const lbl='text-[13px] font-medium text-ink-soft'
 const primary='h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50'
 const ghost='h-10 rounded-[10px] border border-line bg-surface px-4 text-sm text-ink hover:bg-surface-muted disabled:opacity-50'
 const IGNORE='__ignore__'
+// YYYY-MM-DD shown as DD/MM/YYYY (a calendar day: no time zone conversion).
+const dateBr=(d:string)=>d.split('-').reverse().join('/')
 
 // Smart import: preview, then map each "Repasse N" column of the file to a seller group (or "Não usar"), then import
 // as drafts. The map goes with the preview and with the import, so what is imported is exactly what was previewed.
@@ -30,6 +33,8 @@ export function SmartImportClient({providers}:{providers:Provider[]}){
  const [slots,setSlots]=useState<Record<string,string>>({})
  const [base,setBase]=useState('')
  const [answers,setAnswers]=useState({deferred:false,plastic:false,bonus:false})
+ const [publish,setPublish]=useState(true)
+ const [publishFrom,setPublishFrom]=useState('')
 
  const optionalQuestions=useMemo(()=>preview?[
   preview.summary.hasDeferred&&['deferred','Diferido'],
@@ -49,6 +54,7 @@ export function SmartImportClient({providers}:{providers:Provider[]}){
    const body=await res.json()
    if(!res.ok){setMessage(body.error??'Não foi possível analisar.');setPreview(null);return}
    setPreview(body)
+   setPublishFrom(body.validFrom??'')
   }finally{setBusy(false)}
  }
 
@@ -56,15 +62,19 @@ export function SmartImportClient({providers}:{providers:Provider[]}){
   if(!file||!preview)return
   if(!preview.summary.hasOriginColumn&&origin==='third_party'&&!provider){setMessage('Escolha a promotora parceira.');return}
   if(optionalQuestions.some(([k])=>!answers[k])){setMessage('Confirme os tipos de comissão detectados antes de importar.');return}
+  if(publish&&!publishFrom){setMessage('Informe o início da vigência para publicar, ou desmarque "Publicar já".');return}
   setBusy(true);setMessage('')
   try{
    const fd=new FormData()
-   fd.set('file',file);fd.set('production_origin',preview.summary.hasOriginColumn?'own':origin);fd.set('provider_id',!preview.summary.hasOriginColumn&&origin==='third_party'?provider:'');fd.set('repass_map',repassMap());fd.set('calculation_base',base)
+   fd.set('file',file);fd.set('production_origin',preview.summary.hasOriginColumn?'own':origin);fd.set('provider_id',!preview.summary.hasOriginColumn&&origin==='third_party'?provider:'');fd.set('repass_map',repassMap());fd.set('calculation_base',base);fd.set('publish_from',publish?publishFrom:'')
    const res=await fetch('/api/comercial/importacao-inteligente/apply',{method:'POST',body:fd})
    const body=await res.json()
    if(!res.ok){setMessage(body.error??'Importação recusada.');return}
    const r=body.result??{}
-   setMessage(`Importação concluída: ${r.created_tables??0} tabela(s) nova(s), ${r.upserted_conditions??0} linha(s), ${r.components??0} valor(es) da empresa e ${r.factors??0} fator(es). As tabelas ficaram em rascunho para você conferir e publicar.`)
+   const done=`Importação concluída: ${r.created_tables??0} tabela(s) nova(s), ${r.upserted_conditions??0} linha(s), ${r.components??0} valor(es) da empresa e ${r.factors??0} fator(es).`
+   setMessage(body.published?`${done} ${body.published} tabela(s) publicada(s) a partir de ${dateBr(body.publishFrom)}.`
+    :body.publishError?`${done} As tabelas ficaram em rascunho e não foram publicadas: ${body.publishError}`
+    :`${done} As tabelas ficaram em rascunho para você conferir e publicar.`)
   }finally{setBusy(false)}
  }
 
@@ -135,8 +145,14 @@ export function SmartImportClient({providers}:{providers:Provider[]}){
      <strong className="text-ink">Confirme os tipos de comissão encontrados</strong>
      <div className="mt-2 grid gap-1.5">{optionalQuestions.map(([k,label])=><label key={k} className="flex items-center gap-2 text-ink-soft"><input type="checkbox" checked={answers[k]} onChange={e=>setAnswers(a=>({...a,[k]:e.target.checked}))} className="accent-[var(--brand)]" />Confirmo que o <b className="text-ink">{label}</b> desta planilha deve entrar nas tabelas.</label>)}</div>
     </div>}
-    <p className="text-xs text-muted">Nada é publicado automaticamente: as tabelas ficam em rascunho para você conferir e publicar.</p>
-    <div>{preview.issues.length>0&&<p className="mb-2 text-[13px] text-[#92400E]">Responda o que está em amarelo acima e clique em “Aplicar e ver a prévia de novo”.</p>}<button disabled={busy||preview.issues.length>0} onClick={apply} className={primary}>{busy?'Importando...':'Importar como rascunho'}</button></div>
+    <div className="rounded-[12px] border border-line p-4">
+     <label className="flex items-center gap-2 text-sm font-medium text-ink"><input type="checkbox" checked={publish} onChange={e=>setPublish(e.target.checked)} className="accent-[var(--brand)]" />Publicar já ao importar</label>
+     {publish?<div className="mt-3 flex flex-wrap items-end gap-3">
+      <label className={lbl}>Início da vigência<input type="date" min="2000-01-01" value={publishFrom} onChange={e=>setPublishFrom(e.target.value)} className="field mt-1.5 block w-44" /></label>
+      <p className="max-w-md text-xs text-muted">{preview.validFrom?'Veio da coluna Vigência Inicial da planilha. ':''}Contratos antes dessa data não usam estas tabelas.</p>
+     </div>:<p className="mt-2 text-xs text-muted">As tabelas ficam em rascunho para você conferir e publicar depois.</p>}
+    </div>
+    <div>{preview.issues.length>0&&<p className="mb-2 text-[13px] text-[#92400E]">Responda o que está em amarelo acima e clique em “Aplicar e ver a prévia de novo”.</p>}<button disabled={busy||preview.issues.length>0} onClick={apply} className={primary}>{busy?'Importando...':publish?`Importar e publicar ${preview.summary.tables.length} tabela(s)`:'Importar como rascunho'}</button></div>
    </div>
   </Card>}
 
