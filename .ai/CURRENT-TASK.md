@@ -71,6 +71,8 @@
 - 27/10: vendedor interno (sem CPF/CNPJ próprio, celular e e-mail opcionais) para canais da própria empresa; criar "TRAFEGO PAGO - SMART PROMOTORA" no grupo Smart Promotora (produção própria, comissão toda da Smart) depois do merge.
 - 27/10: tabelas do Banco Valor (Valor Financiamento) importadas em rascunho: 16 tabelas (8 em Prefeitura de Rio Branco, 8 em Governo do Acre), À Vista até 6% e o resto Bônus, imposto 6%, vendedores após o imposto (Parceiro/Corretor 55%, Balcão 50%, Call Center 25%, Afiliado 10%). Publicar com início 01/01/2026 pelo novo "Publicar todas" depois do merge. Depois: lançar os contratos do Valor de set/out; relatórios do Valor vêm em PDF (importação de relatório só lê XLSX/CSV).
 - 27/10: publicar tabelas em lote (na importação e na lista de Tabelas).
+- 27/10: Banco Valor: 16 tabelas publicadas (início 01/01/2026). Relatórios do Valor conferidos: agosto (11) e setembro (8) estão no legado 2tech e já foram pagos aos vendedores (não viram proposta); lançadas como propostas pagas as que faltavam: 4 de setembro e 6 de outubro (5 sem vendedor; 519709 com vendedor pela "Associar proposta"). Pendente: o dono definir o vendedor das 9 sem vendedor; registrar o recebimento do Valor (relatório vem em PDF; importação de relatório só lê XLSX/CSV).
+- 28/10: filtro De/Até de Contratos no dia de Brasília.
 
 ## Validado com o dono
 - 06/10: contrato real do início ao fim; 2 contas bancárias no Financeiro; pagamento em lote de 9 vendedores (R$ 1.610,10) por QR Code PIX; contrato 131259 concluído.

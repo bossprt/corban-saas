@@ -125,10 +125,13 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
     return { table: t?.name ?? '—', bank: r?.org_bank_id ?? '', agreement: r?.org_agreement_id ?? '' }
   }
 
+  // Day the contract was registered, in Brasília: a contract typed after 21h is still that day, not the next (UTC).
+  const brDayFmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' })
+  const brDay = (iso: string) => brDayFmt.format(new Date(iso))
   const CLOSED_STATUSES = ['cancelled', 'rejected']
   const showClosed = !!f.encerradas || CLOSED_STATUSES.includes(f.situacao)
   const matching = contracts.map(c => ({ c, w: where(c), s: c.seller_id ? sellerOf.get(c.seller_id) : undefined })).filter(({ c, w, s }) =>
-    (!f.de || c.created_at.slice(0, 10) >= f.de) && (!f.ate || c.created_at.slice(0, 10) <= f.ate)
+    (!f.de || brDay(c.created_at) >= f.de) && (!f.ate || brDay(c.created_at) <= f.ate)
     && (!f.banco || w.bank === (f.banco === 'none' ? '' : f.banco)) && (!f.convenio || w.agreement === f.convenio)
     && (!f.vendedor || (f.vendedor === 'none' ? !c.seller_id : c.seller_id === f.vendedor)) && (!f.grupo || s?.commission_group_id === f.grupo)
     && (!f.situacao || c.status === f.situacao) && (!f.cliente || c.customer_id === f.cliente)
