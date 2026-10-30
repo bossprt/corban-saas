@@ -5,6 +5,7 @@ import { Upload } from 'lucide-react'
 import { Badge, Card, CardHeader } from '@/components/ui'
 
 type Provider={id:string;name:string;provider_type:string}
+type Bank={id:string;name:string}
 type Preview={
  ok:boolean
  fileName:string
@@ -12,7 +13,7 @@ type Preview={
  summary:{sourceRows:number;expandedRows:number;tables:string[];components:string[];hasDeferred:boolean;hasPlastic:boolean;hasBonus:boolean;hasGenericRepasseColumns:boolean;genericRepasseSlots:string[];hasUnmappedRepassValues?:boolean;groups?:string[];hasOriginColumn?:boolean}
  groupOptions:{id:string;name:string}[]
  issues:{line:number;code:string;detail?:string;message:string}[]
- sample:{bank:string;agreement:string;table:string;contract:string;term:number;rate:string|null;factor:string|null;components:number;groupValues:number}[]
+ sample:{bank:string;agreement:string;table:string;contract:string;term:number;rate:string|null;factor:string|null;components:number;values?:string;groupValues:number}[]
 }
 const lbl='text-[13px] font-medium text-ink-soft'
 const primary='h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50'
@@ -23,7 +24,7 @@ const dateBr=(d:string)=>d.split('-').reverse().join('/')
 
 // Smart import: preview, then map each "Repasse N" column of the file to a seller group (or "Não usar"), then import
 // as drafts. The map goes with the preview and with the import, so what is imported is exactly what was previewed.
-export function SmartImportClient({providers}:{providers:Provider[]}){
+export function SmartImportClient({providers,banks}:{providers:Provider[];banks:Bank[]}){
  const [file,setFile]=useState<File|null>(null)
  const [origin,setOrigin]=useState<'own'|'third_party'>('own')
  const [provider,setProvider]=useState('')
@@ -32,6 +33,7 @@ export function SmartImportClient({providers}:{providers:Provider[]}){
  const [message,setMessage]=useState('')
  const [slots,setSlots]=useState<Record<string,string>>({})
  const [base,setBase]=useState('')
+ const [bankId,setBankId]=useState('')
  const [answers,setAnswers]=useState({deferred:false,plastic:false,bonus:false})
  const [publish,setPublish]=useState(true)
  const [publishFrom,setPublishFrom]=useState('')
@@ -45,11 +47,11 @@ export function SmartImportClient({providers}:{providers:Provider[]}){
  const repassMap=()=>JSON.stringify(Object.fromEntries(slotNames.map(s=>{const k=s.replace(/\D/g,'');const v=slots[k];return [k,v===IGNORE?null:v]}).filter(([,v])=>v!==undefined)))
  const allMapped=slotNames.every(s=>!!slots[s.replace(/\D/g,'')])
 
- async function runPreview(map=repassMap(),chosenBase=base){
+ async function runPreview(map=repassMap(),chosenBase=base,chosenBank=bankId){
   if(!file)return
   setBusy(true);setMessage('')
   try{
-   const fd=new FormData();fd.set('file',file);fd.set('repass_map',map);fd.set('calculation_base',chosenBase)
+   const fd=new FormData();fd.set('file',file);fd.set('repass_map',map);fd.set('calculation_base',chosenBase);fd.set('bank_id',chosenBank)
    const res=await fetch('/api/comercial/importacao-inteligente/preview',{method:'POST',body:fd})
    const body=await res.json()
    if(!res.ok){setMessage(body.error??'Não foi possível analisar.');setPreview(null);return}
@@ -66,7 +68,7 @@ export function SmartImportClient({providers}:{providers:Provider[]}){
   setBusy(true);setMessage('')
   try{
    const fd=new FormData()
-   fd.set('file',file);fd.set('production_origin',preview.summary.hasOriginColumn?'own':origin);fd.set('provider_id',!preview.summary.hasOriginColumn&&origin==='third_party'?provider:'');fd.set('repass_map',repassMap());fd.set('calculation_base',base);fd.set('publish_from',publish?publishFrom:'')
+   fd.set('file',file);fd.set('production_origin',preview.summary.hasOriginColumn?'own':origin);fd.set('provider_id',!preview.summary.hasOriginColumn&&origin==='third_party'?provider:'');fd.set('repass_map',repassMap());fd.set('calculation_base',base);fd.set('bank_id',bankId);fd.set('publish_from',publish?publishFrom:'')
    const res=await fetch('/api/comercial/importacao-inteligente/apply',{method:'POST',body:fd})
    const body=await res.json()
    if(!res.ok){setMessage(body.error??'Importação recusada.');return}
@@ -78,17 +80,18 @@ export function SmartImportClient({providers}:{providers:Provider[]}){
   }finally{setBusy(false)}
  }
 
- const PENDING=['generic_repass_requires_mapping','calculation_base_required']
+ const PENDING=['generic_repass_requires_mapping','calculation_base_required','bank_choice_required']
  const blocking=preview?.issues.filter(x=>!PENDING.includes(x.code))??[]
  const needsBase=!!base||!!preview?.issues.some(x=>x.code==='calculation_base_required')
+ const needsBank=!!bankId||!!preview?.issues.some(x=>x.code==='bank_choice_required')
  return <div className="grid gap-4">
   <Card>
    <CardHeader title="1. Envie a planilha" />
    <div className="px-5 pb-5 pt-2">
-    <p className="text-[13px] text-ink-soft">CSV, XLSX ou XLS. No modelo do Corban ou no da 2tech (Empresa + Repasse 1…5).</p>
+    <p className="text-[13px] text-ink-soft">CSV, XLSX ou XLS. No modelo do Corban, no da 2tech (Empresa + Repasse 1…5) ou a tabela de comissão da Bevicred do jeito que vem do portal.</p>
     <div className="mt-3 flex flex-wrap items-center gap-2">
-     <div className="min-w-64 flex-1"><FileDrop accept=".csv,.xlsx,.xls,.pdf,text/csv" ariaLabel="Planilha" hint="CSV, XLSX ou XLS" onChange={fs=>{setFile(fs[0]??null);setPreview(null);setSlots({});setBase('');setMessage('')}} /></div>
-     <button disabled={!file||busy} onClick={()=>{setSlots({});setBase('');void runPreview('{}','')}} className={primary}><Upload size={15} className="mr-1.5 inline" aria-hidden />{busy?'Lendo...':'Ler planilha'}</button>
+     <div className="min-w-64 flex-1"><FileDrop accept=".csv,.xlsx,.xls,.pdf,text/csv" ariaLabel="Planilha" hint="CSV, XLSX ou XLS" onChange={fs=>{setFile(fs[0]??null);setPreview(null);setSlots({});setBase('');setBankId('');setMessage('')}} /></div>
+     <button disabled={!file||busy} onClick={()=>{setSlots({});setBase('');setBankId('');void runPreview('{}','','')}} className={primary}><Upload size={15} className="mr-1.5 inline" aria-hidden />{busy?'Lendo...':'Ler planilha'}</button>
     </div>
    </div>
   </Card>
@@ -116,6 +119,15 @@ export function SmartImportClient({providers}:{providers:Provider[]}){
     <button disabled={!allMapped||busy} onClick={()=>void runPreview()} className={`${ghost} mt-3`}>Aplicar e ver a prévia de novo</button>
    </div>}
 
+   {needsBank&&<div className="mx-5 mt-4 rounded-[12px] border border-[#FDE68A] bg-[#FFFBEB] p-4">
+    <strong className="text-sm text-[#92400E]">A tabela da Bevicred não diz o banco. De qual banco são estas tabelas?</strong>
+    <div className="mt-3 flex flex-wrap items-end gap-3">
+     <label className={lbl}>Banco<select aria-label="Banco" value={bankId} onChange={e=>setBankId(e.target.value)} className="field mt-1.5"><option value="" disabled>Escolha</option>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
+     <button disabled={!bankId||busy} onClick={()=>void runPreview()} className={ghost}>Aplicar e ver a prévia de novo</button>
+    </div>
+    {!banks.length&&<p className="mt-2 text-xs text-[#92400E]">Nenhum banco cadastrado: cadastre o banco em Cadastros antes.</p>}
+   </div>}
+
    {needsBase&&<div className="mx-5 mt-4 rounded-[12px] border border-[#FDE68A] bg-[#FFFBEB] p-4">
     <strong className="text-sm text-[#92400E]">A planilha não diz a base de cálculo. As comissões em % desta planilha são sobre qual valor?</strong>
     <div className="mt-3 flex flex-wrap items-end gap-3">
@@ -128,7 +140,7 @@ export function SmartImportClient({providers}:{providers:Provider[]}){
 
    {!!preview.sample.length&&<div className="mt-4 overflow-x-auto px-2 pb-2"><table className="w-full min-w-[720px] text-left text-[13px]">
     <thead className="text-xs text-muted"><tr>{['Banco','Convênio','Tabela','Tipo','Prazo','Taxa','Fator','Valores empresa','Valores grupos'].map(h=><th key={h} className="px-3 py-2 font-medium">{h}</th>)}</tr></thead>
-    <tbody>{preview.sample.map((r,i)=><tr key={i} className="border-t border-line"><td className="px-3 py-2">{r.bank}</td><td className="px-3 py-2">{r.agreement}</td><td className="px-3 py-2">{r.table}</td><td className="px-3 py-2">{r.contract}</td><td className="num px-3 py-2">{r.term}x</td><td className="num px-3 py-2">{r.rate??'—'}</td><td className="num px-3 py-2">{r.factor??'—'}</td><td className="num px-3 py-2">{r.components}</td><td className="num px-3 py-2">{r.groupValues}</td></tr>)}</tbody>
+    <tbody>{preview.sample.map((r,i)=><tr key={i} className="border-t border-line"><td className="px-3 py-2">{r.bank}</td><td className="px-3 py-2">{r.agreement}</td><td className="px-3 py-2">{r.table}</td><td className="px-3 py-2">{r.contract}</td><td className="num px-3 py-2">{r.term}x</td><td className="num px-3 py-2">{r.rate??'—'}</td><td className="num px-3 py-2">{r.factor??'—'}</td><td className="num px-3 py-2">{r.values||r.components}</td><td className="num px-3 py-2">{r.groupValues}</td></tr>)}</tbody>
    </table></div>}
    <div className="h-3" />
   </Card>}

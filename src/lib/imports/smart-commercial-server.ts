@@ -26,7 +26,10 @@ type Ctx={supabase:{from:(table:string)=>any}}
 // "calculation_base" form field: the base chosen for a file that does not carry one (Bruto or Líquido).
 export const parseBaseChoice=(raw:unknown):CalculationBase|undefined=>typeof raw==='string'&&raw?parseCalculationBase(raw)??undefined:undefined
 
-export async function parseSmartCommercialFile(ctx:Ctx,file:File,repassMap:RepassMap={},defaultBase?:CalculationBase):Promise<SmartParsed>{
+// "bank_id" form field: the bank chosen for a file without a bank column (Bevicred table). Only a uuid is accepted.
+export const parseBankChoice=(raw:unknown):string|undefined=>typeof raw==='string'&&/^[0-9a-f-]{36}$/i.test(raw)?raw:undefined
+
+export async function parseSmartCommercialFile(ctx:Ctx,file:File,repassMap:RepassMap={},defaultBase?:CalculationBase,bankId?:string):Promise<SmartParsed>{
  // size is checked BEFORE reading the body into memory (arrayBuffer would allocate it all)
  if(file.size===0||file.size>5_000_000)throw new Error('invalid_file')
  const read=await readSmartFile(new Uint8Array(await file.arrayBuffer()),file.name)
@@ -35,7 +38,15 @@ export async function parseSmartCommercialFile(ctx:Ctx,file:File,repassMap:Repas
   const issues=read.issues.length?read.issues:[{line:1,code:'file_without_rows'}]
   return {format:read.format,groupOptions:[],rows:[],issues,summary:{sourceRows:0,expandedRows:0,tables:[],components:[],hasDeferred:false,hasPlastic:false,hasBonus:false,hasGenericRepasseColumns:false,genericRepasseSlots:[]}}
  }
- const raw=read.rows
+ let raw=read.rows
+ // The Bevicred table has no bank column: the bank chosen on screen goes into every line. Until it is chosen the
+ // preview runs with a placeholder and the import stays blocked (bank_choice_required).
+ let bankPending=false
+ if(read.format==='bevicred'){
+  const bank=bankId?(await ctx.supabase.from('organization_banks').select('name').eq('id',bankId).maybeSingle()).data as {name:string}|null:null
+  bankPending=!bank
+  raw=raw.map((r,i)=>[i===0?'Banco':bank?.name??'(escolha o banco)',...r])
+ }
 
  const [types,settings,groups,components,rules,providers]=await Promise.all([
   ctx.supabase.from('contract_types').select('id,name,tech_key,is_active,organization_id').order('sort_order').order('name'),
@@ -54,18 +65,28 @@ export async function parseSmartCommercialFile(ctx:Ctx,file:File,repassMap:Repas
   (settings.data??[]) as {contract_type_id:string;is_enabled:boolean;use_in_pipeline:boolean;use_in_commission:boolean}[],
   'commission',
  )
- return {format:read.format,groupOptions:payable,...mapSmartCommercialRows(raw,{
+ const mapped=mapSmartCommercialRows(raw,{
   contractTypes:enabled,
   groups:payable,
   components:(components.data??[]) as {id:string;tech_key:string;name:string}[],
   repassMap,
   defaultBase,
   providers:(providers.data??[]) as {id:string;name:string}[],
- })}
+ })
+ if(bankPending)mapped.issues.unshift({line:1,code:'bank_choice_required'})
+ return {format:read.format,groupOptions:payable,...mapped}
 }
 
 export const SMART_IMPORT_ISSUES:Record<string,string>={
  file_without_rows:'O arquivo não contém linhas de dados.',
+ bank_choice_required:'A tabela da Bevicred não diz o banco. Escolha o banco abaixo para continuar.',
+ bevicred_layout_changed:'A tabela da Bevicred mudou de formato (colunas diferentes do esperado). Nada foi importado: avise o suporte.',
+ bevicred_unknown_contract_type:'Tabela da Bevicred sem tipo de contrato reconhecível no nome (Novo, Refin, Portabilidade ou Refin da Portabilidade).',
+ bevicred_unknown_agreement:'Tabela da Bevicred sem convênio reconhecível no nome (ex.: INSS).',
+ bevicred_contract_form:'A coluna "Forma Contrato" da Bevicred veio preenchida e o sistema ainda não a lê. Nada foi importado: avise o suporte.',
+ bevicred_monthly_deferred:'A tabela tem "Diferido Mensal" da Bevicred, que o sistema ainda não lê. Nada foi importado: avise o suporte.',
+ bevicred_total_mismatch:'"Comissão Total" diferente da soma das comissões Bevicred (Vista + Diferido) nesta tabela.',
+ bevicred_invalid_number:'Número inválido na tabela da Bevicred.',
  missing_bank:'Não encontrei a coluna Banco / Instituição.',
  missing_agreement:'Não encontrei a coluna Convênio.',
  missing_table:'Não encontrei a coluna Produto / Tabela.',
@@ -94,7 +115,7 @@ export const SMART_IMPORT_ISSUES:Record<string,string>={
  formalization_conflict:'A mesma tabela veio com linhas digitais e físicas: uma tabela tem um só tipo de formalização.',
  invalid_tax:'Imposto inválido: use um percentual de 0 a 100 (vazio = não paga imposto).',
  empty_file:'Arquivo vazio.',
- unsupported_file:'Formato não suportado. Use CSV, XLSX, XLS ou PDF com texto.',
+ unsupported_file:'Formato não suportado. Use CSV, XLSX, XLS, PDF com texto ou a tabela da Bevicred.',
  file_too_large:'Arquivo maior que o limite (2 MB para planilhas, 5 MB para PDF).',
  file_too_large_for_import:'Planilha grande demais (máximo de 5.000 linhas / 20.000 condições por importação). Divida em partes.',
  too_many_columns:'Planilha com colunas demais.',

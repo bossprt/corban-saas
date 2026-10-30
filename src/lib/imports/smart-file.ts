@@ -3,12 +3,13 @@ import { xlsxRows } from '../commercial-xlsx'
 import { fileExtension, inspectZip, sniffFormat } from './file-guards'
 import { xlsRows } from './legacy-xls'
 import { pdfRows, PDF_LIMITS } from './smart-pdf'
+import { bevicredTableRows, decodeHtmlBytes, isBevicredTable } from './bevicred-table'
 import { SMART_LIMITS, type SmartImportIssue } from './smart-commercial'
 
 // ONE entry point that turns any supported upload into string[][]. The reader is chosen from the CONTENT (magic bytes), never from the name or MIME type.
-// Supported: CSV/TXT, XLSX, legacy XLS (BIFF), PDF with a text layer. Everything else is refused. No format has its own commercial rules: they all feed mapSmartCommercialRows.
+// Supported: CSV/TXT, XLSX, legacy XLS (BIFF), PDF with a text layer, the Bevicred commission table (HTML named .xls). Everything else is refused. No format has its own commercial rules: they all feed mapSmartCommercialRows.
 export const SMART_FILE_LIMITS = { bytes: 2_000_000, pdfBytes: PDF_LIMITS.bytes } as const
-export type SmartFormat = 'csv' | 'xlsx' | 'xls' | 'pdf'
+export type SmartFormat = 'csv' | 'xlsx' | 'xls' | 'pdf' | 'bevicred'
 export type SmartFileRead = { format: SmartFormat | null; rows: string[][]; issues: SmartImportIssue[] }
 const ALLOWED_EXT = new Set(['csv', 'txt', 'xlsx', 'xls', 'pdf'])
 const fail = (code: string, format: SmartFormat | null = null, detail?: string): SmartFileRead => ({ format, rows: [], issues: [{ line: 1, code, detail }] })
@@ -32,7 +33,13 @@ export async function readSmartFile(bytes: Uint8Array, fileName: string): Promis
     const r = xlsRows(bytes)
     return { format: 'xls', rows: r.rows, issues: r.issues.map(i => ({ line: 1, code: i.code, detail: i.detail })) }
   }
-  if (kind === 'html') return fail('html_disguised_as_excel')
+  if (kind === 'html') {
+    // The only HTML accepted is the Bevicred table (no bank column: the bank is chosen on screen); any other is refused.
+    const html = decodeHtmlBytes(bytes)
+    if (!isBevicredTable(html)) return fail('html_disguised_as_excel')
+    const r = bevicredTableRows(html)
+    return 'error' in r ? fail(r.error, 'bevicred', r.detail) : { format: 'bevicred', rows: r.rows, issues: [] }
+  }
   if (kind === 'binary') return fail('unsupported_file')
   return { format: 'csv', rows: parseDelimited(Buffer.from(bytes).toString('utf-8')), issues: [] }
 }
