@@ -15,6 +15,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Tabela mostra o repasse dos grupos pela regra do grupo (30/10/2026)
+- **Corrigido:** o dono abriu uma tabela da MAIS VALOR e só aparecia a Empresa. As abas dos grupos e o "Resumo (À Vista)" mostravam apenas o valor gravado na planilha para cada grupo, e a planilha da Bevicred não tem coluna de grupo. Agora cada grupo mostra a coluna de referência dele × o "% distribuído", como o cálculo da proposta já fazia. Exemplo: Afiliado com "Coluna Empresa, 20%" numa tabela de 10,05% mostra 2,01%.
+- Na Smart nada muda, porque os grupos usam "Coluna do próprio grupo, 100%". Um grupo sem regra continua mostrando a coluna como foi digitada. A conta é feita em decimal exato, sem ponto flutuante.
+- Testes: `tests/unit/table-values.test.ts` (+1). Conferido localmente: Empresa 10,05% e grupo com Coluna Empresa 20% resulta em 2,01%.
+
 ### Importar a tabela de comissão da Bevicred (30/10/2026)
 - **Adicionado:** a importação de tabelas aceita a tabela de comissão do portal da Bevicred do jeito que ela é baixada: uma página HTML salva com extensão .xls, em ISO-8859-1, com duas linhas de título. O sub (ex.: MAIS VALOR no C6) não precisa converter o arquivo. Qualquer outro HTML com nome .xls continua recusado.
 - **O que entra:** só o que a Bevicred paga ao sub: "Comissão Bevicred Vista" vira À vista e "Diferido Total" vira Diferido. As colunas "Comissão Banco" são o dinheiro da Bevicred e ficam de fora.

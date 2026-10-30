@@ -46,3 +46,32 @@ export const pageSize = (raw: unknown, fallback: number) => {
   const n = Number(raw)
   return (PAGE_SIZES as readonly number[]).includes(n) ? n : fallback
 }
+
+// "a" × "pct" / 100 in exact decimal text: 10.05 × 20 % = "2.01" (never floating point; trailing zeros dropped).
+// numeric columns may reach the page as text or as a JS number: both are read through their decimal text.
+export function percentOf(a: string | number, pct: string | number): string {
+  const parse = (s: string | number) => { const [i, d = ''] = String(s).trim().split('.'); return { n: BigInt(`${i}${d}` || '0'), scale: d.length } }
+  const x = parse(a), y = parse(pct)
+  const scale = x.scale + y.scale + 2
+  const digits = (x.n * y.n).toString().padStart(scale + 1, '0')
+  const int = digits.slice(0, digits.length - scale), dec = digits.slice(digits.length - scale).replace(/0+$/, '')
+  return dec ? `${int}.${dec}` : int
+}
+
+// What a seller group gets on one table line for one commission type, the way the proposal calculation pays it: the
+// group's reference column (the company's value, its own column or another group's) × the % the group distributes.
+// No rule item or 0 % = nothing. A group with no rule at all shows its own column as typed.
+export type GroupRuleItem = { reference_kind: string; reference_group_id: string | null; distributed_pct: string | number }
+export function groupPayout(
+  item: GroupRuleItem | null | undefined,
+  hasRule: boolean,
+  company: { value_kind: string; value: string | number } | undefined,
+  groupValue: (groupId: string) => { value_kind: string; value: string | number } | undefined,
+  groupId: string,
+): { value_kind: string; value: string | number } | undefined {
+  if (!hasRule) return groupValue(groupId)
+  if (!item || !(Number(item.distributed_pct) > 0)) return undefined
+  const ref = item.reference_kind === 'company' ? company : groupValue(item.reference_kind === 'own' ? groupId : item.reference_group_id ?? '')
+  if (!ref) return undefined
+  return { value_kind: ref.value_kind, value: percentOf(ref.value, item.distributed_pct) }
+}

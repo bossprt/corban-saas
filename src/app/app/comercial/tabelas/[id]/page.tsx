@@ -6,7 +6,7 @@ import { SubmitButton } from '@/components/SubmitButton'
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast, canViewCommission } from '@/lib/rbac'
 import { isUuid } from '@/lib/team'
-import { decimalBr, PAGE_SIZES, pageSize, termText, valueText, VERSION_STATUS } from '@/lib/commission/tableValues'
+import { decimalBr, groupPayout, PAGE_SIZES, pageSize, termText, valueText, VERSION_STATUS, type GroupRuleItem } from '@/lib/commission/tableValues'
 import { fetchAll } from '@/lib/fetchAll'
 import { cloneVersion, publishVersion, renameTable, setTableBankCode, setTableFormalization } from '../actions'
 import { NewSearchLink } from '../NewSearchLink'
@@ -35,7 +35,7 @@ export default async function TablePage({ params, searchParams }: { params: Prom
     supabase.from('contract_types').select('id,name'),
     supabase.from('commission_component_types').select('id,tech_key,name,sort_order').eq('is_active', true).order('sort_order'),
     supabase.from('commission_groups').select('id,name,is_active').order('sort_order').order('name'),
-    supabase.from('commission_group_rules').select('group_id,version,own_production').order('version', { ascending: false }),
+    supabase.from('commission_group_rules').select('id,group_id,version,own_production').order('version', { ascending: false }),
   ])
   if (!table) notFound()
   const { data: route } = await supabase.from('organization_product_routes').select('org_bank_id,org_agreement_id,org_provider_id,production_origin').eq('id', table.route_id).maybeSingle()
@@ -49,7 +49,14 @@ export default async function TablePage({ params, searchParams }: { params: Prom
   const draft = vs.find(v => v.status === 'draft')
   const selected = vs.find(v => v.id === one(sp.v)) ?? vs.find(v => v.status === 'published') ?? vs[0]
   const own = new Map<string, boolean>()
-  for (const r of rules ?? []) if (!own.has(r.group_id)) own.set(r.group_id, r.own_production)
+  const currentRule = new Map<string, string>()
+  for (const r of rules ?? []) if (!own.has(r.group_id)) { own.set(r.group_id, r.own_production); currentRule.set(r.group_id, r.id) }
+  // The rule of each group (current version): what each group gets is computed from it, as in the proposal calculation.
+  const { data: ruleItems } = currentRule.size
+    ? await supabase.from('commission_group_rule_items').select('rule_id,component_type_id,reference_kind,reference_group_id,distributed_pct').in('rule_id', [...currentRule.values()])
+    : { data: [] as (GroupRuleItem & { rule_id: string; component_type_id: string })[] }
+  const itemOf = new Map<string, GroupRuleItem>()
+  for (const it of ruleItems ?? []) itemOf.set(`${it.rule_id}:${it.component_type_id}`, it)
   const payGroups = (groups ?? []).filter(g => g.is_active && !own.get(g.id))
   const view = one(sp.ver) || 'empresa'
   const typeName = new Map((types ?? []).map(t => [t.id, t.name]))
@@ -89,7 +96,11 @@ export default async function TablePage({ params, searchParams }: { params: Prom
   const upfront = (components ?? []).find(t => t.tech_key === 'upfront')
   const cell = (conditionId: string, party: string, typeId: string) => {
     if (party === 'empresa') { const c = companyOf.get(`${conditionId}:${typeId}`); return c ? valueText(c.value_kind, c.received_value) : '' }
-    const g = groupOf.get(`${conditionId}:${party}:${typeId}`); return g ? valueText(g.value_kind, g.value) : ''
+    const rule = currentRule.get(party)
+    const c = companyOf.get(`${conditionId}:${typeId}`)
+    const g = groupPayout(rule ? itemOf.get(`${rule}:${typeId}`) : undefined, !!rule, c && { value_kind: c.value_kind, value: c.received_value },
+      groupId => groupOf.get(`${conditionId}:${groupId}:${typeId}`), party)
+    return g ? valueText(g.value_kind, g.value) : ''
   }
 
   return (
@@ -161,6 +172,7 @@ export default async function TablePage({ params, searchParams }: { params: Prom
           {views.map(x => <Link key={x.key} href={qs({ ver: x.key, p: 1 })} role="tab" aria-selected={view === x.key}
             className={`rounded-full border px-3 py-1 text-[13px] ${view === x.key ? 'border-brand bg-brand text-white' : 'border-line text-ink-soft hover:bg-surface-muted'}`}>{x.label}</Link>)}
         </div>
+        {view !== 'empresa' && <p className="px-5 pt-2 text-xs text-muted">Valor de cada grupo = a coluna de referência do grupo × o “% distribuído” dele (Cadastros › Grupos de vendedores), igual ao cálculo da proposta.</p>}
         <form className="flex flex-wrap items-end gap-2 px-5 pt-3">
           {selected && <input type="hidden" name="v" value={selected.id} />}<input type="hidden" name="ver" value={view} /><input type="hidden" name="n" value={size} />
           <label className={lbl}>Tipo de contrato<select name="tipo" defaultValue={tipo} className="field mt-1.5 min-w-44"><option value="">Todos</option>{[...usedTypeIds].map(t => <option key={t} value={t}>{typeName.get(t) ?? 'Tipo'}</option>)}</select></label>
