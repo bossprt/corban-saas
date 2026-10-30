@@ -15,6 +15,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Toda empresa tem a unidade Matriz (30/10/2026)
+- **Corrigido:** a MAIS VALOR não conseguia cadastrar vendedor. A tela mostrava "Não foi possível concluir… avise o supervisor" e o banco recusava com `active_matrix_required`. O vendedor sem filial vai para a Matriz da empresa, mas a Matriz só tinha sido criada para as empresas existentes em 21/09, e a MAIS VALOR é de 08/10.
+- Migration `20261030203710_org_matrix_branch_v1`: cria a Matriz das empresas que ainda não têm (repete o preenchimento de 21/09) e faz toda empresa nova nascer com a Matriz. Só acrescenta; nada é alterado.
+- A tela de vendedor passa a explicar o motivo se ainda faltar Matriz, em vez do erro genérico.
+
 ### Tabela da Bevicred do Daycoval Gov. Acre e arquivo salvo de novo no Excel (30/10/2026)
 - **Adicionado:** a importação de tabelas lê também o layout da Bevicred do Daycoval Gov. Acre. Nesse layout as colunas são só "Comissão" (Total, Vista) e "Diferido" (Total, Mensal), e o tipo vem escrito em "Forma Contrato": Novo, Refin, Portabilidade, Refin da Portabilidade e Transferência. Por decisão do dono, Transferência entra como Compra de dívida. O convênio entra como "GOV ACRE".
 - **Corrigido:** a MAIS VALOR abriu a tabela no Excel e salvou como .xlsx/.csv. O sistema tratava o arquivo como planilha comum, cobrava a coluna Banco e não mostrava onde escolher o banco. Agora a tabela é reconhecida pelo cabeçalho, em qualquer formato (HTML do portal, .xlsx, .xls ou .csv do Excel), e o seletor de banco aparece.

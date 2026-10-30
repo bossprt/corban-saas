@@ -28,6 +28,7 @@ const SELLER_ERRORS:[RegExp,FeedbackCode][]=[
   [/seller_holder_invalid/,'erro:vendedor_favorecido'],
   [/seller_account_invalid|seller_account_not_found/,'erro:vendedor_conta'],
   [/seller_contact_invalid/,'erro:vendedor_contato'],
+  [/active_matrix_required/,'erro:sem_matriz'],
 ]
 
 // The rows of a repeated block, read in order: every row posts the same names.
