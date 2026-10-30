@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readSmartFile } from '../../src/lib/imports/smart-file'
-import { bevicredTableRows } from '../../src/lib/imports/bevicred-table'
+import { bevicredGridRows, bevicredTableRows } from '../../src/lib/imports/bevicred-table'
 import { mapSmartCommercialRows } from '../../src/lib/imports/smart-commercial'
 
 // Layout of the Bevicred portal commission table (30/10/2026): HTML saved as .xls, ISO-8859-1, two header rows.
@@ -58,7 +58,7 @@ test('bevicred table: anything it cannot read safely refuses the whole file', ()
   assert.equal(err({ ...REFIN, name: 'C6 BANK NOVO SIAPE WEB 96X' }), 'bevicred_unknown_agreement')
   assert.equal(err({ ...REFIN, total: '11.05' }), 'bevicred_total_mismatch')
   assert.equal(err({ ...REFIN, monthly: '0.10' }), 'bevicred_monthly_deferred')
-  assert.equal(err({ ...REFIN, form: 'Físico' }), 'bevicred_contract_form')
+  assert.equal(err({ ...REFIN, form: 'Físico' }), 'bevicred_contract_form') // a type it does not know
   assert.equal(err({ ...REFIN, total: '10.05', vista: '9.05', deferred: '1.00' }), 'ok') // deferred counts in the total
   const noBevicred = page([REFIN]).replace(/Comiss&atilde;o Bevicred/, 'Outra')
   assert.equal(('error' in bevicredTableRows(noBevicred)), true)
@@ -67,4 +67,46 @@ test('bevicred table: anything it cannot read safely refuses the whole file', ()
 test('any other HTML named .xls is still refused', async () => {
   const r = await readSmartFile(new TextEncoder().encode('<table><tr><td>Banco</td><td>Taxa</td></tr><tr><td>X</td><td>1</td></tr></table>'), 'x.xls')
   assert.equal(r.issues[0].code, 'html_disguised_as_excel')
+})
+
+// Daycoval Gov. Acre layout (30/10/2026), as Excel shows it after "save as .xlsx": a title row, merged headers repeated,
+// the contract type in "Forma Contrato", dates as timestamps. Fictitious partner, codes and values.
+const DAY_TOP = ['Código', 'Descrição Banco', 'Data de Alteração', 'Convênio', 'Forma Contrato', 'Taxa', 'Taxa', 'Prazo', 'Comissão', 'Comissão', 'Diferido', 'Diferido']
+const DAY_SUB = ['Código', 'Descrição Banco', 'Data de Alteração', 'Convênio', 'Forma Contrato', 'Total', 'Vista', 'Prazo', 'Total', 'Vista', 'Total', 'Mensal']
+const day = (name: string, form: string, rate: [string, string], term: string, total: string, vista: string, monthly = '0.00') =>
+  ['900100', '760001', '2026-10-22T00:00:00.000Z', name, form, rate[0], rate[1], term, total, vista, '0.00', monthly]
+const DAY = [
+  ['Código Parceiro: SUB00-000000 - PARCEIRO FICTICIO'], DAY_TOP, DAY_SUB,
+  day('DAYCOVAL GOV ACRE NOVO TAB 1 DIG 96X', 'NOVO', ['2.40', '2.40'], '96', '7.00', '7.00'),
+  day('DAYCOVAL GOVERNO ACRE TRANSFERENCIA TAB 1 DIG 120X', 'TRANSFERENCIA', ['2.30', '2.30'], '120', '6.50', '6.50'),
+  day('DAYCOVAL GOV ACRE REFIN PORT TAB 1 LIQ DIG 84X', 'REFIN DA PORTABILIDADE', ['2.20', '2.20'], '84', '5.40', '5.40'),
+  day('DAYCOVAL GOV ACRE PORTABILIDADE TABELAO 1 DIG 1 A 120X', 'PORTABILIDADE', ['1.43', '2.50'], '1 a 120', '0.00', '0.00'),
+]
+
+test('bevicred Daycoval table saved as xlsx: type from "Forma Contrato", Transferência is debt purchase, date is the day', () => {
+  const r = bevicredGridRows(DAY)
+  assert.ok(!('error' in r))
+  assert.deepEqual(r.rows[1], ['GOV ACRE', 'DAYCOVAL GOV ACRE NOVO TAB 1 DIG', '760001', '2026-10-22', 'novo', '96', '96', '2.40', '7.00', ''])
+  assert.deepEqual(r.rows[2].slice(0, 5), ['GOV ACRE', 'DAYCOVAL GOVERNO ACRE TRANSFERENCIA TAB 1 DIG', '760001', '2026-10-22', 'compra_de_divida'])
+  assert.equal(r.rows[3][4], 'refin_portabilidade') // the form wins over "REFIN" in the name
+  assert.deepEqual(r.rows[4].slice(4), ['portabilidade', '1', '120', '', '0.00', ''])
+})
+
+test('bevicred Daycoval table: the same file as an Excel CSV (Windows-1252, merged cells empty) is recognised and gives the same lines', async () => {
+  const blank = (row: string[], keep: (c: string, i: number) => boolean) => row.map((c, i) => keep(c, i) ? c : '')
+  const csv = [[DAY[0][0], ...DAY_TOP.slice(1).map(() => '')], blank(DAY_TOP, (c, i) => DAY_TOP[i - 1] !== c), blank(DAY_SUB, (c, i) => DAY_TOP[i] !== c), ...DAY.slice(3)]
+    .map(r => r.join(';')).join('\n')
+  const r = await readSmartFile(latin1(csv), 'tabela.csv') // Excel writes CSV in Windows-1252
+  assert.equal(r.format, 'bevicred')
+  assert.deepEqual(r.issues, [])
+  assert.deepEqual(r.rows, (bevicredGridRows(DAY) as { rows: string[][] }).rows)
+})
+
+test('bevicred Daycoval table: an unknown form, a monthly deferred or a missing column refuses the file', () => {
+  const err = (g: string[][]) => { const r = bevicredGridRows(g); return 'error' in r ? r.error : 'ok' }
+  assert.equal(err([...DAY.slice(0, 3), day('DAYCOVAL GOV ACRE NOVO TAB 1 DIG 96X', 'CARTAO', ['2.40', '2.40'], '96', '7.00', '7.00')]), 'bevicred_contract_form')
+  assert.equal(err([...DAY.slice(0, 3), day('DAYCOVAL GOV ACRE NOVO TAB 1 DIG 96X', 'NOVO', ['2.40', '2.40'], '96', '7.00', '7.00', '0.10')]), 'bevicred_monthly_deferred')
+  assert.equal(err([...DAY.slice(0, 3), day('DAYCOVAL SIAPE NOVO TAB 1 DIG 96X', 'NOVO', ['2.40', '2.40'], '96', '7.00', '7.00')]), 'bevicred_unknown_agreement')
+  assert.equal(err([...DAY.slice(0, 3), day('DAYCOVAL GOV ACRE NOVO TAB 1 DIG 96X', 'NOVO', ['2.40', '2.40'], '96', '7.50', '7.00')]), 'bevicred_total_mismatch')
+  assert.equal(err([DAY[0], DAY_TOP.slice(0, 10), DAY_SUB.slice(0, 10), ...DAY.slice(3)]), 'bevicred_layout_changed')
 })
