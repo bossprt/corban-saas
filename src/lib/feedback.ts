@@ -274,6 +274,7 @@ export const FEEDBACK = {
   'erro:origem_invalida': 'Informe a origem da produção: Própria, ou Terceiro com a empresa de origem.',
   'erro:com_national_template_not_available': 'Este convênio nacional não está disponível.',
   'erro:vendedor_invalido': 'Confira nome, categoria, CPF/CNPJ e grupo.',
+  'erro:sem_matriz': 'A empresa ainda não tem a unidade Matriz, onde o vendedor fica quando não escolhe filial. Nada foi salvo: avise o suporte.',
   'erro:vendedor_nome': 'Informe o nome ou a razão social do vendedor.',
   'ok:tabela_renomeada': 'Nome da tabela salvo.',
   'ok:vigencia_rascunho': 'Rascunho da nova vigência pronto: altere o que precisar e publique.',
