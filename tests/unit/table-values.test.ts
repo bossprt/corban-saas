@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import { feedbackUrl } from '../../src/lib/feedback'
 import { fetchAll } from '../../src/lib/fetchAll'
 import assert from 'node:assert/strict'
-import { decimalBr, pageSize, parseValueInput, rangeText, termText, valueText } from '../../src/lib/commission/tableValues'
+import { decimalBr, groupPayout, pageSize, parseValueInput, percentOf, rangeText, termText, valueText } from '../../src/lib/commission/tableValues'
 
 test('table values: shown in pt-BR, % trimmed, money with two decimals', () => {
   assert.equal(decimalBr('2.50000000'), '2,5')
@@ -44,4 +44,22 @@ test('fetchAll: reads page by page until a short page, and stops on error', asyn
   const exact = await fetchAll(async (a, b) => ({ data: rows.slice(0, 2000).slice(a, b + 1), error: null }))
   assert.equal(exact.length, 2000)
   await assert.rejects(fetchAll(async () => ({ data: null, error: new Error('boom') })))
+})
+
+test('group payout on the table follows the group rule, like the proposal calculation', () => {
+  assert.equal(percentOf('10.05', '20.000000'), '2.01')
+  assert.equal(percentOf('10.05', '50'), '5.025')
+  assert.equal(percentOf('5.75', '100.000000'), '5.75')
+  const company = { value_kind: 'percentage', value: '10.05' }
+  const stored = (g: string) => (g === 'g-cor' ? { value_kind: 'percentage', value: '3.7375' } : g === 'g-par' ? { value_kind: 'fixed_brl', value: '25.00' } : undefined)
+  // MAIS VALOR: 20 % of what the company receives
+  assert.deepEqual(groupPayout({ reference_kind: 'company', reference_group_id: null, distributed_pct: '20.000000' }, true, company, stored, 'g-afi'), { value_kind: 'percentage', value: '2.01' })
+  // Smart: the group's own column, 100 %
+  assert.deepEqual(groupPayout({ reference_kind: 'own', reference_group_id: null, distributed_pct: '100' }, true, company, stored, 'g-cor'), { value_kind: 'percentage', value: '3.7375' })
+  // another group's column, fixed R$
+  assert.deepEqual(groupPayout({ reference_kind: 'group', reference_group_id: 'g-par', distributed_pct: '50' }, true, company, stored, 'g-x'), { value_kind: 'fixed_brl', value: '12.5' })
+  // 0 % or no item = nothing; no rule at all = the column as typed
+  assert.equal(groupPayout({ reference_kind: 'company', reference_group_id: null, distributed_pct: '0.000000' }, true, company, stored, 'g-afi'), undefined)
+  assert.equal(groupPayout(undefined, true, company, stored, 'g-cor'), undefined)
+  assert.deepEqual(groupPayout(undefined, false, company, stored, 'g-cor'), { value_kind: 'percentage', value: '3.7375' })
 })
