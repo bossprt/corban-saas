@@ -15,6 +15,20 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Importar a tabela de comissão da Bevicred (30/10/2026)
+- **Adicionado:** a importação de tabelas aceita a tabela de comissão do portal da Bevicred do jeito que ela é baixada: uma página HTML salva com extensão .xls, em ISO-8859-1, com duas linhas de título. O sub (ex.: MAIS VALOR no C6) não precisa converter o arquivo. Qualquer outro HTML com nome .xls continua recusado.
+- **O que entra:** só o que a Bevicred paga ao sub: "Comissão Bevicred Vista" vira À vista e "Diferido Total" vira Diferido. As colunas "Comissão Banco" são o dinheiro da Bevicred e ficam de fora.
+  - Conferência: "Comissão Total" precisa ser igual a Vista + Diferido, senão o arquivo é recusado.
+  - Se vier "Diferido Mensal" diferente de zero ou "Forma Contrato" preenchida, o arquivo é recusado e nada se perde em silêncio.
+- **De onde vem cada campo:**
+  - O prazo no fim do nome (ex.: "108X") sai do nome da tabela. Prazo "1 a 108" vira faixa.
+  - Uma faixa de taxa (portabilidade) fica sem taxa única.
+  - "Descrição Banco" vira o código no banco, e "Data de Alteração" vira a vigência inicial.
+  - Convênio e tipo de contrato saem de palavras fixas do nome: INSS; REFIN DA PORTABILIDADE, PORTABILIDADE, REFIN ou NOVO. Um nome fora dessas regras recusa o arquivo.
+- **Adicionado:** o arquivo não traz o banco, então a prévia pede para escolher um banco já cadastrado. A escolha vai pelo id, lido com o acesso da empresa.
+- **Alterado:** a prévia mostra os valores da empresa (ex.: 10,05%) em vez de só a contagem.
+- Testes: `tests/unit/bevicred-table.test.ts` (4), com dados fictícios. Conferido com a tabela real da MAIS VALOR, só local e não versionada: 268 linhas viram 92 tabelas e 1.124 linhas de prazo, sem duplicidade e com um código de banco por tabela. Importação local de ponta a ponta em rascunho deu certo.
+
 ### Importar relatório de comissão em PDF (28/10/2026)
 - **Adicionado:** Financeiro > Importar relatório lê PDF com texto (relatórios do Banco Valor), no navegador, com o mesmo leitor de tabela da importação de tabelas (sem OCR, sem adivinhar). Título com coluna de contrato e de valor; o bloco "TOTAL..." do banco fecha a tabela; cada célula vai para a coluna na ordem dos títulos (números alinhados à direita), célula longe de todo título recusa o arquivo.
 - **Adicionado:** vários arquivos do mesmo pagamento de uma vez (Valor: à vista + bônus): mesmas colunas exigidas; o valor de um contrato é somado entre arquivos, em centavos; linhas do mesmo arquivo nunca se somam (duplicidade continua aparecendo). Impressão digital do lote = hash dos arquivos.

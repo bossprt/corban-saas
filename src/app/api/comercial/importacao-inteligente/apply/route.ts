@@ -1,7 +1,7 @@
 
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
-import { parseBaseChoice, parseRepassMap, parseSmartCommercialFile, SMART_IMPORT_ISSUES } from '@/lib/imports/smart-commercial-server'
+import { parseBankChoice, parseBaseChoice, parseRepassMap, parseSmartCommercialFile, SMART_IMPORT_ISSUES } from '@/lib/imports/smart-commercial-server'
 
 export const dynamic='force-dynamic'
 const BLOCK=500
@@ -30,7 +30,7 @@ export async function POST(req:Request){
   if(publishFrom&&!/^\d{4}-\d{2}-\d{2}$/.test(publishFrom))return Response.json({error:'Data de início inválida.'},{status:400})
 
   // Every "Repasse N" must have an answer (a group or "Não usar"): nothing is imported by guess.
-  const parsed=await parseSmartCommercialFile(ctx,file,parseRepassMap(fd.get('repass_map')),parseBaseChoice(fd.get('calculation_base')))
+  const parsed=await parseSmartCommercialFile(ctx,file,parseRepassMap(fd.get('repass_map')),parseBaseChoice(fd.get('calculation_base')),parseBankChoice(fd.get('bank_id')))
   const hard=parsed.issues
   if(hard.length)return Response.json({error:'O arquivo ainda possui erros.',issues:hard.map(x=>({...x,message:SMART_IMPORT_ISSUES[x.code]??x.code}))},{status:400})
   if(!parsed.rows.length)return Response.json({error:'Nenhuma linha válida para importar.'},{status:400})
