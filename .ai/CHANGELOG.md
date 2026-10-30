@@ -15,6 +15,13 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Tabela da Bevicred do Daycoval Gov. Acre e arquivo salvo de novo no Excel (30/10/2026)
+- **Adicionado:** a importação de tabelas lê também o layout da Bevicred do Daycoval Gov. Acre. Nesse layout as colunas são só "Comissão" (Total, Vista) e "Diferido" (Total, Mensal), e o tipo vem escrito em "Forma Contrato": Novo, Refin, Portabilidade, Refin da Portabilidade e Transferência. Por decisão do dono, Transferência entra como Compra de dívida. O convênio entra como "GOV ACRE".
+- **Corrigido:** a MAIS VALOR abriu a tabela no Excel e salvou como .xlsx/.csv. O sistema tratava o arquivo como planilha comum, cobrava a coluna Banco e não mostrava onde escolher o banco. Agora a tabela é reconhecida pelo cabeçalho, em qualquer formato (HTML do portal, .xlsx, .xls ou .csv do Excel), e o seletor de banco aparece.
+- Um CSV salvo pelo Excel em Windows-1252 passa a ler os acentos certos. Datas que viram horário no Excel ("2026-06-16T00:00") entram como o dia.
+- Conferido com o arquivo real, que não foi gravado: 43 tabelas e 1.325 linhas, com 3 tabelas a 0%. A tabela do C6 continua dando 92 tabelas.
+- Qualquer linha fora do padrão continua recusando o arquivo inteiro.
+
 ### Tabela mostra o repasse dos grupos pela regra do grupo (30/10/2026)
 - **Corrigido:** o dono abriu uma tabela da MAIS VALOR e só aparecia a Empresa. As abas dos grupos e o "Resumo (À Vista)" mostravam apenas o valor gravado na planilha para cada grupo, e a planilha da Bevicred não tem coluna de grupo. Agora cada grupo mostra a coluna de referência dele × o "% distribuído", como o cálculo da proposta já fazia. Exemplo: Afiliado com "Coluna Empresa, 20%" numa tabela de 10,05% mostra 2,01%.
 - Na Smart nada muda, porque os grupos usam "Coluna do próprio grupo, 100%". Um grupo sem regra continua mostrando a coluna como foi digitada. A conta é feita em decimal exato, sem ponto flutuante.
