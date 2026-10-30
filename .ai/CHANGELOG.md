@@ -15,6 +15,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Simulador: escolher o banco e o prazo numa lista (30/10/2026)
+- **Adicionado:** campo Banco no simulador, entre Convênio e Operação. A lista de tabelas mostra só as do banco escolhido, e "Todos os bancos" continua comparando entre bancos. O resultado também é filtrado pelo banco.
+- **Alterado:** o prazo deixou de ser digitado. Agora é uma lista só com os prazos que as tabelas escolhidas têm na operação (uma linha "1 a 120" oferece todos esses meses).
+- Vale também no painel de simulação do lead (Vendas). Não há mudança no banco de dados.
+
 ### Toda empresa tem a unidade Matriz (30/10/2026)
 - **Corrigido:** a MAIS VALOR não conseguia cadastrar vendedor. A tela mostrava "Não foi possível concluir… avise o supervisor" e o banco recusava com `active_matrix_required`. O vendedor sem filial vai para a Matriz da empresa, mas a Matriz só tinha sido criada para as empresas existentes em 21/09, e a MAIS VALOR é de 08/10.
 - Migration `20261030203710_org_matrix_branch_v1`: cria a Matriz das empresas que ainda não têm (repete o preenchimento de 21/09) e faz toda empresa nova nascer com a Matriz. Só acrescenta; nada é alterado.

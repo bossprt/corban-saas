@@ -6,7 +6,7 @@ export default async function SimulationsPage({ searchParams }: { searchParams: 
   const sp = await searchParams
   return (
     <section>
-      <PageHeader title="Simulações" description="Escolha o convênio e simule por valor ou por parcela: o Corban compara todas as tabelas que têm fator e mostra a melhor primeiro." />
+      <PageHeader title="Simulações" description="Escolha o convênio, o banco (ou todos) e o prazo, e simule por valor ou por parcela: o Corban compara as tabelas que têm fator e mostra a melhor primeiro." />
       <SimulatorPanel sp={sp} />
       <SavedSimulations />
     </section>
