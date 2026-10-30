@@ -17,7 +17,7 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ### Toda empresa tem a unidade Matriz (30/10/2026)
 - **Corrigido:** a MAIS VALOR não conseguia cadastrar vendedor. A tela mostrava "Não foi possível concluir… avise o supervisor" e o banco recusava com `active_matrix_required`. O vendedor sem filial vai para a Matriz da empresa, mas a Matriz só tinha sido criada para as empresas existentes em 21/09, e a MAIS VALOR é de 08/10.
-- Migration `20261030210000_org_matrix_branch_v1`: cria a Matriz das empresas que ainda não têm (repete o preenchimento de 21/09) e faz toda empresa nova nascer com a Matriz. Só acrescenta; nada é alterado.
+- Migration `20261030203710_org_matrix_branch_v1`: cria a Matriz das empresas que ainda não têm (repete o preenchimento de 21/09) e faz toda empresa nova nascer com a Matriz. Só acrescenta; nada é alterado.
 - A tela de vendedor passa a explicar o motivo se ainda faltar Matriz, em vez do erro genérico.
 
 ### Tabela da Bevicred do Daycoval Gov. Acre e arquivo salvo de novo no Excel (30/10/2026)
