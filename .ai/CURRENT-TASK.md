@@ -78,6 +78,7 @@
 - 30/10: #171 em produção. A MAIS VALOR importou 92 tabelas Bevicred (C6 Bank) e os grupos dela estão com "Coluna Empresa" (Afiliado 20% à vista, Parceiro 50% à vista, Corretor 47,5% gratificação, Balcão 0%, por decisão dela). Ainda não tem vendedores nem propostas. Correção: a tela da tabela passa a mostrar o repasse de cada grupo pela regra do grupo.
 - 30/10: #172 em produção. A MAIS VALOR mandou a tabela Bevicred do Daycoval Gov. Acre, salva como .xlsx. Construído: o leitor reconhece a tabela da Bevicred em qualquer formato e lê o layout do Daycoval. Transferência entra como Compra de dívida, por decisão do dono. Depois do merge, ela escolhe o banco Daycoval na tela e importa (43 tabelas).
 - 30/10: #173 em produção. A MAIS VALOR não salvava vendedor porque a empresa não tem Matriz (criada só no preenchimento de 21/09). Correção #174: migration `20261030203710_org_matrix_branch_v1` aplicada em produção em 30/10. A MAIS VALOR agora tem a Matriz e toda empresa nova nasce com ela. Ela pode cadastrar os vendedores.
+- 30/10: #174 em produção (Matriz). Pedido do dono: o simulador ganha o campo Banco e o prazo passa a ser uma lista com os prazos que as tabelas têm. Construído e conferido na tela local.
 
 ## Validado com o dono
 - 06/10: contrato real do início ao fim; 2 contas bancárias no Financeiro; pagamento em lote de 9 vendedores (R$ 1.610,10) por QR Code PIX; contrato 131259 concluído.

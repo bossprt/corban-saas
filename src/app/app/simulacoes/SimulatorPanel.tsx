@@ -23,7 +23,7 @@ type Offer = {
   factor: number | string; factor_source: string; factor_date: string | null; term: number
   amount: number | string; installment: number | string; outstanding: number | string | null; change: number | string | null
 }
-export type SimulatorSp = { cliente?: string; convenio?: string; tipo?: string; tabela?: string; modo?: string; valor?: string; prazo?: string; saldo?: string }
+export type SimulatorSp = { cliente?: string; convenio?: string; banco?: string; tipo?: string; tabela?: string; modo?: string; valor?: string; prazo?: string; saldo?: string }
 
 // Simulator (08/10/2026): agreement first, then the contract type, by amount OR by installment, with the term; every
 // table of the agreement that has a factor is compared, best first. installment = amount x factor; amount =
@@ -38,9 +38,9 @@ export async function SimulatorPanel({ sp, keep = {}, client, back }: {
   const clienteId = client ? client.id : UUID.test(sp.cliente ?? '') ? sp.cliente! : null
   // Table lines (contract types per published version), read in pages: a company can have more than one page of lines.
   const conditionPages = async () => {
-    const out: { product_table_version_id: string; contract_type_id: string; coefficient: number | string | null }[] = []
+    const out: { product_table_version_id: string; contract_type_id: string; coefficient: number | string | null; term_min: number | null; term_max: number | null }[] = []
     for (let from = 0; from < 20000; from += 1000) {
-      const { data } = await supabase.from('commercial_conditions').select('product_table_version_id,contract_type_id,coefficient').order('id').range(from, from + 999)
+      const { data } = await supabase.from('commercial_conditions').select('product_table_version_id,contract_type_id,coefficient,term_min,term_max').order('id').range(from, from + 999)
       out.push(...((data ?? []) as typeof out))
       if (!data || data.length < 1000) break
     }
@@ -78,12 +78,21 @@ export async function SimulatorPanel({ sp, keep = {}, client, back }: {
   const profiles = (profilesResult.data ?? []) as { org_bank_id: string; org_agreement_id: string | null; product_table_id: string | null; bank_table_code: string | null }[]
   const withCoefficient = new Set<string>()
   const tableKey = new Map<string, string>()
+  const tableBank = new Map<string, string>()
   const optionByKey = new Map<string, TableOption>()
   const versionTable = new Map((versionsResult.data ?? []).map(v => [v.id, v.product_table_id]))
   const typesByTable = new Map<string, Set<string>>()
+  // Months each table offers per operation, from its lines (a range line "1 a 120" offers every month in it).
+  const termsByTable = new Map<string, Map<string, Set<number>>>()
   for (const c of conditions) {
     const t = versionTable.get(c.product_table_version_id)
     if (t) typesByTable.set(t, (typesByTable.get(t) ?? new Set()).add(c.contract_type_id))
+    if (t && c.term_min !== null && c.term_max !== null) {
+      const byType = termsByTable.get(t) ?? new Map<string, Set<number>>()
+      const set = byType.get(c.contract_type_id) ?? new Set<number>()
+      for (let n = Math.max(1, Number(c.term_min)); n <= Math.min(420, Number(c.term_max)); n++) set.add(n)
+      termsByTable.set(t, byType.set(c.contract_type_id, set))
+    }
     if (t && c.coefficient !== null && Number(c.coefficient) > 0) withCoefficient.add(t)
   }
   for (const t of (tablesResult.data ?? []) as TableRow[]) {
@@ -96,18 +105,23 @@ export async function SimulatorPanel({ sp, keep = {}, client, back }: {
     const bankName = (Array.isArray(route.organization_banks) ? route.organization_banks[0] : route.organization_banks)?.name ?? ''
     const key = t.bank_table_code ? `c:${route.org_bank_id}:${t.bank_table_code}` : `t:${t.id}`
     tableKey.set(t.id, key)
+    tableBank.set(t.id, route.org_bank_id)
+    const terms: Record<string, number[]> = {}
+    for (const [typeId, set] of termsByTable.get(t.id) ?? []) terms[typeId] = [...set]
     const name = t.name || t.code
     const prev = optionByKey.get(key)
     const plain = t.bank_table_code && !name.startsWith(t.bank_table_code) ? `${t.bank_table_code} · ${name}` : name
     const label = bankName && !plain.toLowerCase().startsWith(bankName.toLowerCase()) ? `${bankName} · ${plain}` : plain
-    if (!prev) optionByKey.set(key, { key, label, agreementId: route.org_agreement_id, typeIds: [...typesByTable.get(t.id)!] })
+    if (!prev) optionByKey.set(key, { key, label, agreementId: route.org_agreement_id, bankId: route.org_bank_id, bankName, typeIds: [...typesByTable.get(t.id)!], terms })
     else {
       prev.typeIds = [...new Set([...prev.typeIds, ...typesByTable.get(t.id)!])]
+      for (const [typeId, list] of Object.entries(terms)) prev.terms[typeId] = [...new Set([...(prev.terms[typeId] ?? []), ...list])]
       if (label.length < prev.label.length) prev.label = label
     }
   }
   const tableOptions = [...optionByKey.values()].sort((a, b) => a.label.localeCompare(b.label, 'pt-BR', { numeric: true }))
-  const tableChoice = optionByKey.has(sp.tabela ?? '') ? sp.tabela! : ''
+  const bankChoice = tableOptions.find(o => o.bankId === sp.banco && o.agreementId === agreement?.id) ?? null
+  const tableChoice = optionByKey.has(sp.tabela ?? '') && (!bankChoice || optionByKey.get(sp.tabela!)!.bankId === bankChoice.bankId) ? sp.tabela! : ''
   let offers: Offer[] = []
   let searchError: string | null = null
   // Banks do not work on weekends: daily factors exist only for business days (owner, 08/10/2026).
@@ -118,7 +132,10 @@ export async function SimulatorPanel({ sp, keep = {}, client, back }: {
       p_org: organization.id, p_agreement: agreement.id, p_contract_type: type.id, p_term: term, p_mode: mode, p_value: value, p_outstanding: balance,
     })
     if (error) searchError = 'Não foi possível simular agora. Confira os valores e tente de novo.'
-    else offers = ((data ?? []) as Offer[]).filter(o => !tableChoice || tableKey.get(versionTable.get(o.table_version_id) ?? '') === tableChoice)
+    else offers = ((data ?? []) as Offer[]).filter(o => {
+      const t = versionTable.get(o.table_version_id) ?? ''
+      return (!tableChoice || tableKey.get(t) === tableChoice) && (!bankChoice || tableBank.get(t) === bankChoice.bankId)
+    })
   }
   const withBalance = !!type && WITH_BALANCE.has(type.tech_key)
 
@@ -131,19 +148,18 @@ export async function SimulatorPanel({ sp, keep = {}, client, back }: {
           {Object.entries(keep).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
           {client
             ? <p className={`${label} sm:col-span-2 lg:col-span-6`}>Cliente: <span className="font-semibold text-ink">{client.full_name}</span> <span className="num text-muted">CPF {formatCpf(client.cpf)}</span></p>
-            : <div className={`${label} sm:col-span-2 lg:col-span-3`}>Cliente <span className="font-normal text-muted">(para gravar a simulação)</span>
+            : <div className={`${label} sm:col-span-2 lg:col-span-6`}>Cliente <span className="font-normal text-muted">(para gravar a simulação)</span>
                 <ClientPicker optional name="cliente" initial={initialClient.data ? { id: initialClient.data.id, name: initialClient.data.full_name, cpf: formatCpf(initialClient.data.cpf) } : null} />
               </div>}
           <SimulatorFilters agreements={agreements} types={types.map(t => ({ id: t.id, name: t.name }))} tables={tableOptions}
-            initial={{ agreement: agreement?.id ?? '', type: type?.id ?? '', table: tableChoice }} />
+            initial={{ agreement: agreement?.id ?? '', bank: bankChoice?.bankId ?? '', type: type?.id ?? '', table: tableChoice, term: term ? String(term) : '' }} />
           <fieldset className={`${label} lg:col-span-2`}>Simular por
             <div className="mt-1.5 flex h-10 items-center gap-4">
               <label className="flex items-center gap-1.5 text-sm text-ink"><input type="radio" name="modo" value="amount" defaultChecked={mode === 'amount'} className="accent-[var(--brand)]" />Valor</label>
               <label className="flex items-center gap-1.5 text-sm text-ink"><input type="radio" name="modo" value="installment" defaultChecked={mode === 'installment'} className="accent-[var(--brand)]" />Parcela</label>
             </div>
           </fieldset>
-          <label className={label}>Valor ou parcela (R$)<input required name="valor" defaultValue={sp.valor ?? ''} inputMode="decimal" placeholder="10.000,00" className="field mt-1.5" /></label>
-          <label className={label}>Prazo (meses)<input required name="prazo" defaultValue={sp.prazo ?? ''} inputMode="numeric" placeholder="84" className="field mt-1.5" /></label>
+          <label className={`${label} lg:col-span-2`}>Valor ou parcela (R$)<input required name="valor" defaultValue={sp.valor ?? ''} inputMode="decimal" placeholder="10.000,00" className="field mt-1.5" /></label>
           <label className={`${label} lg:col-span-2`}>Saldo devedor (R$) <span className="font-normal text-muted">refin e portabilidade</span>
             <input name="saldo" defaultValue={sp.saldo ?? ''} inputMode="decimal" placeholder="0,00" className="field mt-1.5" /></label>
           <div className="flex items-end sm:col-span-2 lg:col-span-6">
@@ -154,7 +170,7 @@ export async function SimulatorPanel({ sp, keep = {}, client, back }: {
 
       {ready && (
         <Card className="mb-6 overflow-hidden">
-          <CardHeader title={<span className="flex items-center gap-2">{tableChoice ? optionByKey.get(tableChoice)!.label : `Tabelas para ${agreement!.name}`} · {type!.name} · {term}x <Badge tone="neutral">{offers.length}</Badge></span>} />
+          <CardHeader title={<span className="flex items-center gap-2">{tableChoice ? optionByKey.get(tableChoice)!.label : `Tabelas para ${agreement!.name}${bankChoice ? ` · ${bankChoice.bankName}` : ''}`} · {type!.name} · {term}x <Badge tone="neutral">{offers.length}</Badge></span>} />
           {searchError ? <p role="alert" className="px-5 pb-5 pt-2 text-sm text-[#991B1B]">{searchError}</p> : !offers.length ? (
             <p className="px-5 pb-5 pt-2 text-sm text-muted">{bankHoliday ? 'Hoje é sábado ou domingo: banco sem expediente, sem fator do dia. Simule em dia útil. ' : ''}Nenhuma tabela deste convênio tem fator para {term}x {mode === 'amount' ? 'neste valor' : 'nesta parcela'} hoje{bankHoliday ? '' : ' (em feriado bancário também não há fator)'}. Os fatores ficam em Cadastros &gt; Fatores.</p>
           ) : (
