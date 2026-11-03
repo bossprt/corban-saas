@@ -1,4 +1,4 @@
--- Contract test for 20261103155956_gratification_receipt_apart_v1 and 20261103170000_gratification_pending_v1: the Gratificação is received apart from the
+-- Contract test for 20261103155956_gratification_receipt_apart_v1 and 20261103161732_gratification_pending_v1: the Gratificação is received apart from the
 -- commission. The à vista receipt expects the commission without the Gratificação; the Gratificação is registered on its
 -- own and only then credits the seller's share; contracts credited the old way keep it in the contract credit. Until it is
 -- received the contract shows "aguardando Gratificação" (gratification_pending).
