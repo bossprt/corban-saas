@@ -66,7 +66,9 @@ export async function CommissionCard({ supabase, access, proposalId, closed, can
   const received = payouts.some(p => p.locked)
   // Where the seller's payout stands (part C3): waiting, credited, paid.
   const { data: creditRows } = finance && calc ? await supabase.rpc('contract_credit', { p_proposal: proposalId }) : { data: [] }
-  const credit = ((creditRows ?? []) as { waiting: string | null; credited: string; paid_on: string | null; reference: string | null }[])[0]
+  const credit = ((creditRows ?? []) as { waiting: string | null; credited: string; paid_on: string | null; reference: string | null; gratification_pending: boolean }[])[0]
+  // The Gratificação is paid apart (03/11/2026): until it is received, the contract is not concluded.
+  const gratPending = !!credit?.gratification_pending && (!credit.waiting || credit.waiting === 'no_payout')
   // The last automatic calculation that failed, when there is no calculation.
   const { data: failure } = !calc ? await supabase.from('contract_events').select('detail').eq('proposal_id', proposalId).eq('kind', 'calc_failed').order('created_at', { ascending: false }).limit(1).maybeSingle() : { data: null }
   const failureCode = String((failure?.detail as { code?: string } | null)?.code ?? '')
@@ -161,8 +163,9 @@ export async function CommissionCard({ supabase, access, proposalId, closed, can
                     : credit.waiting === 'bank' ? <Badge tone="pending">Aguardando comissão do banco</Badge>
                     : credit.waiting === 'divergent' ? <Badge tone="pending">Comissão do banco divergente · aguardando financeiro</Badge>
                     : credit.waiting === 'calculation' ? <Badge tone="neutral">Aguardando cálculo</Badge>
-                    : credit.waiting === 'no_payout' ? <Badge tone="received">Concluído · sem repasse (o vendedor recebe R$ 0,00)</Badge>
+                    : credit.waiting === 'no_payout' ? (gratPending ? <Badge tone="pending">Aguardando Gratificação (o vendedor recebe R$ 0,00)</Badge> : <Badge tone="received">Concluído · sem repasse (o vendedor recebe R$ 0,00)</Badge>)
                     : <Badge tone="brand">Liberado {brlText(String(credit.credited))} · a pagar no fechamento</Badge>}
+                  {gratPending && credit.waiting !== 'no_payout' && <Badge tone="pending">Aguardando Gratificação</Badge>}
                   {credit.reference && <span className="text-xs text-muted">({credit.reference})</span>}
                 </span>
                 {owner && !credit.paid_on && credit.waiting !== 'client' && credit.waiting !== 'calculation' && credit.waiting !== 'no_payout' && (

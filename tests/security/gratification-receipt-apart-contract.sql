@@ -1,6 +1,7 @@
--- Contract test for 20261103155956_gratification_receipt_apart_v1: the Gratificação is received apart from the
+-- Contract test for 20261103155956_gratification_receipt_apart_v1 and 20261103170000_gratification_pending_v1: the Gratificação is received apart from the
 -- commission. The à vista receipt expects the commission without the Gratificação; the Gratificação is registered on its
--- own and only then credits the seller's share; contracts credited the old way keep it in the contract credit.
+-- own and only then credits the seller's share; contracts credited the old way keep it in the contract credit. Until it is
+-- received the contract shows "aguardando Gratificação" (gratification_pending).
 -- One transaction, rolled back.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/gratification-receipt-apart-contract.sql
 
@@ -82,6 +83,8 @@ insert into results select 'the à vista receipt matches (expected without the G
 insert into results select 'the contract credit is released by the à vista receipt', private.contract_bank_receipt(pg_temp.pid('p')) = 'reconciled' and private.contract_credit_released(pg_temp.pid('p'));
 insert into results select 'the contract credit leaves the Gratificação out', pg_temp.credit('p', 'contract', null) = pg_temp.payable('p', false);
 insert into results select 'nothing of the Gratificação is credited before it is received', pg_temp.credit('p', 'receipt', 'gratification') = 0;
+insert into results select 'pending: the contract waits for the Gratificação', private.contract_gratification_pending(pg_temp.pid('p'));
+insert into results select 'pending: a contract without Gratificação does not wait', not private.contract_gratification_pending(pg_temp.pid('none'));
 insert into results select 'the seller has a share of the Gratificação in this test', pg_temp.payable('p', true) = 50.00;
 
 select pg_temp.act_as((select v1 from ids));
@@ -99,6 +102,7 @@ reset role;
 insert into results select 'the Gratificação receipt matches the value typed',
   exists (select 1 from public.commission_receipts x where x.proposal_id = pg_temp.pid('p') and x.component_key = 'gratification' and x.reconciliation = 'matched' and x.amount = 150.00);
 insert into results select 'the seller share of the Gratificação is credited when it is received', pg_temp.credit('p', 'receipt', 'gratification') = pg_temp.payable('p', true);
+insert into results select 'pending: no longer waits once the Gratificação is received', not private.contract_gratification_pending(pg_temp.pid('p'));
 insert into results select 'the contract credit did not change', pg_temp.credit('p', 'contract', null) = pg_temp.payable('p', false);
 insert into results select 'the company finance entry names the Gratificação',
   exists (select 1 from public.fin_entries e join public.commission_receipts x on x.id = e.source_ref
@@ -112,10 +116,15 @@ insert into results select 'legacy: Gratificação registered', pg_temp.receive(
 reset role;
 insert into results select 'legacy: the contract credit keeps the Gratificação', pg_temp.credit('old', 'contract', null) = pg_temp.payable('old', false) + pg_temp.payable('old', true);
 insert into results select 'legacy: the Gratificação receipt credits nothing more', pg_temp.credit('old', 'receipt', null) = 0;
+insert into results select 'pending: a legacy contract does not wait', not private.contract_gratification_pending(pg_temp.pid('old'));
 
--- The legacy list is not reachable by users.
+-- The legacy list is not reachable by users; the finance screens read the pending flag.
 select pg_temp.act_as((select admin_user from ids));
 set local role authenticated;
+insert into results select 'pending: contract_credit returns the flag', (select gratification_pending is false from public.contract_credit(pg_temp.pid('p')));
+insert into results select 'pending: contract_payout_totals returns the flag',
+  (select bool_and(t.gratification_pending is not null) from public.contract_payout_totals((select org from ids)) t where t.proposal_id in (pg_temp.pid('p'), pg_temp.pid('none')));
+insert into results select 'pending: users cannot call the private function', pg_temp.err(format('select private.contract_gratification_pending(%L)', pg_temp.pid('p'))) like '%permission denied%';
 insert into results select 'the legacy list is not readable by users', pg_temp.err('select count(*) from private.gratification_credit_legacy') like '%permission denied%';
 reset role;
 
