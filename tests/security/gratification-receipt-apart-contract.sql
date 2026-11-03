@@ -1,7 +1,8 @@
 -- Contract test for 20261103155956_gratification_receipt_apart_v1 and 20261103161732_gratification_pending_v1: the Gratificação is received apart from the
 -- commission. The à vista receipt expects the commission without the Gratificação; the Gratificação is registered on its
 -- own and only then credits the seller's share; contracts credited the old way keep it in the contract credit. Until it is
--- received the contract shows "aguardando Gratificação" (gratification_pending).
+-- received the contract shows "aguardando Gratificação" (gratification_pending). 20261103180000: a divergent receipt
+-- is accepted by the system when the contract is corrected to the amount received.
 -- One transaction, rolled back.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/gratification-receipt-apart-contract.sql
 
@@ -117,6 +118,49 @@ reset role;
 insert into results select 'legacy: the contract credit keeps the Gratificação', pg_temp.credit('old', 'contract', null) = pg_temp.payable('old', false) + pg_temp.payable('old', true);
 insert into results select 'legacy: the Gratificação receipt credits nothing more', pg_temp.credit('old', 'receipt', null) = 0;
 insert into results select 'pending: a legacy contract does not wait', not private.contract_gratification_pending(pg_temp.pid('old'));
+
+-- Corrected after the receipt (contract 15178): 6% expected R$ 570,00, R$ 80,00 received, then the Gratificação typed
+-- as R$ 75,00 (still divergent) and finally R$ 80,00 (accepted by the system). The acceptance runs at commit, as in
+-- the app, so the deferred triggers are fired by "set constraints all immediate" after each change.
+set constraints all deferred;
+select pg_temp.act_as((select admin_user from ids));
+set local role authenticated;
+insert into made select 'fix', d.proposal_id from public.create_direct_proposal((select org from ids), pg_temp.pid('client'),
+  (select tv from ids), (select seller from ids), 10000, 9500, 250, 120, 'ADE-GRAT-A4', 'submitted',
+  (select ct.id from public.contract_types ct join public.commercial_conditions cc on cc.contract_type_id = ct.id where cc.product_table_version_id = (select tv from ids) limit 1)) d;
+set constraints all immediate;
+select public.set_contract_manual_commission(pg_temp.pid('fix'), 'gratification', 'pct_liquido', '6', 'Tac 6%');
+select public.set_payout_override(pg_temp.pid('fix'), 'gratification', 'fixed_brl', '20.00', 'parte do vendedor');
+set constraints all immediate;
+set constraints all deferred;
+insert into results select 'fix: à vista registered', pg_temp.receive('fix', 'upfront', pg_temp.expected('fix', false)) = 'ok';
+insert into results select 'fix: R$ 80,00 received against 6%', pg_temp.receive('fix', 'gratification', '80.00') = 'ok';
+reset role;
+insert into results select 'fix: the receipt is divergent and the contract still waits',
+  exists (select 1 from public.commission_receipts x where x.proposal_id = pg_temp.pid('fix') and x.component_key = 'gratification' and x.reconciliation = 'divergent')
+  and private.contract_gratification_pending(pg_temp.pid('fix')) and pg_temp.credit('fix', 'receipt', 'gratification') = 0;
+select pg_temp.act_as((select admin_user from ids));
+set local role authenticated;
+select public.set_contract_manual_commission(pg_temp.pid('fix'), 'gratification', 'brl', '75.00', 'Correção');
+set constraints all immediate;
+set constraints all deferred;
+reset role;
+insert into results select 'fix: corrected to another value, still divergent',
+  not exists (select 1 from public.commission_receipt_resolutions z join public.commission_receipts x on x.id = z.receipt_id where x.proposal_id = pg_temp.pid('fix'))
+  and private.contract_gratification_pending(pg_temp.pid('fix'));
+select pg_temp.act_as((select admin_user from ids));
+set local role authenticated;
+select public.set_contract_manual_commission(pg_temp.pid('fix'), 'gratification', 'brl', '80.00', 'Correção');
+set constraints all immediate;
+set constraints all deferred;
+reset role;
+insert into results select 'fix: corrected to the amount received, accepted by the system with the user who corrected',
+  exists (select 1 from public.commission_receipt_resolutions z join public.commission_receipts x on x.id = z.receipt_id
+          where x.proposal_id = pg_temp.pid('fix') and x.component_key = 'gratification' and z.note like 'Aceito pelo sistema%' and z.decided_by = (select admin_user from ids));
+insert into results select 'fix: the receipt itself is unchanged', exists (select 1 from public.commission_receipts x where x.proposal_id = pg_temp.pid('fix') and x.component_key = 'gratification' and x.reconciliation = 'divergent' and x.expected_amount = 570.00);
+insert into results select 'fix: no longer waits for the Gratificação', not private.contract_gratification_pending(pg_temp.pid('fix'));
+insert into results select 'fix: the seller share of the Gratificação is credited', pg_temp.credit('fix', 'receipt', 'gratification') = 20.00;
+insert into results select 'fix: the system functions are not callable by users', has_function_privilege('authenticated', 'private.accept_corrected_receipts(uuid)', 'execute') is false;
 
 -- The legacy list is not reachable by users; the finance screens read the pending flag.
 select pg_temp.act_as((select admin_user from ids));
