@@ -7,7 +7,7 @@ export function brlText(v: string | number | null | undefined): string {
   return `${m[1]}R$ ${int},${(m[3] ?? '').padEnd(2, '0').slice(0, 2)}`
 }
 
-export const REPORT_KIND_LABEL: Record<string, string> = { upfront: 'À vista', deferred: 'Diferido', chargeback: 'Estorno' }
+export const REPORT_KIND_LABEL: Record<string, string> = { upfront: 'À vista', deferred: 'Diferido', chargeback: 'Estorno', gratification: 'Gratificação' }
 export const REPORT_STATUS_LABEL: Record<string, string> = { draft: 'Em conferência', confirmed: 'Confirmado', discarded: 'Descartado' }
 export const LINE_STATUS_LABEL: Record<string, string> = {
   ok: 'Confere', divergent: 'Diverge', not_found: 'Não encontrado', ambiguous: 'Mais de uma proposta', duplicate: 'Já recebido',

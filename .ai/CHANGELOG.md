@@ -15,6 +15,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Gratificação recebida à parte (03/11/2026)
+- **Corrigido:** contratos com Gratificação não dão mais divergência no relatório de comissão do banco: o à vista esperado não inclui a Gratificação.
+- **Adicionado:** "Registrar recebimento" do contrato tem o tipo Gratificação, comparado com o valor em vigor no contrato; Conciliação mostra a coluna Gratificação.
+- **Alterado:** a parte do vendedor (e do supervisor e gerente) na Gratificação é creditada quando a Gratificação é recebida, mesmo depois de o vendedor já ter recebido a comissão. Contratos já creditados com a Gratificação junto continuam como estavam.
+
 ### Cobrança da mensalidade por Pix (03/11/2026)
 - **Adicionado:** /platform > Cobrança: recebedor do Pix (chave, nome, cidade), assinatura por empresa (valor, dia de vencimento, carência, primeiro mês, ligada) e lista das mensalidades com "Recebido" (data) e "Estornar" (motivo). Tudo auditado.
 - **Adicionado:** a mensalidade de cada mês é criada no dia do vencimento. O administrador da empresa vê o aviso no app e paga em /mensalidade com QR Code e Pix copia e cola gerados pelo Corban (sem intermediário).

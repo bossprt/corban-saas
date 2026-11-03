@@ -29,12 +29,13 @@ export default async function ReconciliationPage({ searchParams }: { searchParam
   const { data: proposals } = proposalIds.length ? await supabase.from('proposals_v2').select('id,external_proposal_id,customer_snapshot,term').in('id', proposalIds) : { data: [] }
   const byId = new Map((proposals ?? []).map(p => [p.id, p]))
 
-  type Row = { id: string; upfront: Rational; deferred: Rational; deferredCount: number; chargeback: Rational; open: Entry[] }
+  type Row = { id: string; upfront: Rational; deferred: Rational; deferredCount: number; gratification: Rational; chargeback: Rational; open: Entry[] }
   const rows = new Map<string, Row>()
   for (const e of entries) {
-    const r = rows.get(e.proposal_id) ?? { id: e.proposal_id, upfront: ZERO, deferred: ZERO, deferredCount: 0, chargeback: ZERO, open: [] }
+    const r = rows.get(e.proposal_id) ?? { id: e.proposal_id, upfront: ZERO, deferred: ZERO, deferredCount: 0, gratification: ZERO, chargeback: ZERO, open: [] }
     if (e.entry_kind === 'chargeback') r.chargeback = add(r.chargeback, dec(e.amount))
     else if (e.component_key === 'deferred') { r.deferred = add(r.deferred, dec(e.amount)); r.deferredCount++ }
+    else if (e.component_key === 'gratification') r.gratification = add(r.gratification, dec(e.amount))
     else r.upfront = add(r.upfront, dec(e.amount))
     if (e.reconciliation === 'divergent' && !accepted.has(e.id)) r.open.push(e)
     rows.set(e.proposal_id, r)
@@ -58,23 +59,24 @@ export default async function ReconciliationPage({ searchParams }: { searchParam
         <div className="overflow-x-auto">
           <table className="w-full text-left text-[13px]">
             <thead className="bg-surface-muted text-xs font-semibold text-muted"><tr>
-              <th className="px-3 py-2">Contrato</th><th className="px-3 py-2 text-right">À vista</th><th className="px-3 py-2 text-right">Diferido</th><th className="px-3 py-2 text-right">Estornos</th><th className="px-3 py-2 text-right">Líquido recebido</th><th className="px-3 py-2">Divergências</th>
+              <th className="px-3 py-2">Contrato</th><th className="px-3 py-2 text-right">À vista</th><th className="px-3 py-2 text-right">Diferido</th><th className="px-3 py-2 text-right">Gratificação</th><th className="px-3 py-2 text-right">Estornos</th><th className="px-3 py-2 text-right">Líquido recebido</th><th className="px-3 py-2">Divergências</th>
             </tr></thead>
             <tbody>
               {list.map(r => {
                 const p = byId.get(r.id)
-                const net = sub(add(r.upfront, r.deferred), r.chargeback)
+                const net = sub(add(add(r.upfront, r.deferred), r.gratification), r.chargeback)
                 return (
                   <tr key={r.id} className="border-t border-line align-top">
                     <td className="px-3 py-2"><Link href={`/app/propostas/${r.id}`} className="font-medium text-ink hover:underline">{p?.external_proposal_id ?? 'Proposta'}</Link><div className="text-xs text-muted">{(p?.customer_snapshot as { full_name?: string } | null)?.full_name ?? ''}</div></td>
                     <td className="num px-3 py-2 text-right">{brlText(toDecimalString(r.upfront, 2))}</td>
                     <td className="num px-3 py-2 text-right">{brlText(toDecimalString(r.deferred, 2))}<div className="text-xs text-muted">{r.deferredCount}{p?.term ? ` de ${p.term}` : ''} parcela(s)</div></td>
+                    <td className="num px-3 py-2 text-right">{brlText(toDecimalString(r.gratification, 2))}</td>
                     <td className="num px-3 py-2 text-right">{brlText(toDecimalString(r.chargeback, 2))}</td>
                     <td className="num px-3 py-2 text-right font-semibold">{brlText(toDecimalString(net, 2))}</td>
                     <td className="px-3 py-2">
                       {r.open.length === 0 ? <Badge tone="received">Nenhuma</Badge> : r.open.map(e => (
                         <div key={e.id} className="mb-2">
-                          <div><Badge tone="diverged">{e.entry_kind === 'chargeback' ? 'Estorno' : e.component_key === 'deferred' ? `Parcela ${e.installment_number}` : 'À vista'}</Badge>
+                          <div><Badge tone="diverged">{e.entry_kind === 'chargeback' ? 'Estorno' : e.component_key === 'deferred' ? `Parcela ${e.installment_number}` : e.component_key === 'gratification' ? 'Gratificação' : 'À vista'}</Badge>
                             <span className="num ml-2">recebido {brlText(e.amount)} · esperado {brlText(e.expected_amount)}</span></div>
                           {canAccept && (
                             <form action={acceptDivergence} className="mt-1 flex gap-1"><input type="hidden" name="receipt_id" value={e.id} />
