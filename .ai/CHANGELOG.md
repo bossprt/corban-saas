@@ -16,7 +16,7 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 ## [Unreleased]
 
 ### Credenciais da Bevicred por empresa (03/11/2026)
-- Adicionado: Configuração > Bevicred para o administrador de qualquer empresa cadastrar uma ou mais credenciais (código de parceiro e chave da API), guardadas criptografadas no Vault; Salvar e testar, Testar e Trocar chave. Migration `20261103200000_bevicred_credentials_v1`.
+- Adicionado: Configuração > Bevicred para o administrador de qualquer empresa cadastrar uma ou mais credenciais (código de parceiro e chave da API), guardadas criptografadas no Vault; Salvar e testar, Testar e Trocar chave. Migration `20261103235839_bevicred_credentials_v1`.
 - Removido: o teste de conexão só da Smart com o segredo na Vercel (`BEVICRED_PARTNER_CODE`, `BEVICRED_API_KEY`).
 
 ### Contratos do Valor Financiamento pelo PDF (03/11/2026)

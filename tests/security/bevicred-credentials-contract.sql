@@ -1,4 +1,4 @@
--- Contract test for 20261103200000_bevicred_credentials_v1: the table, the secret and the functions are closed to tenants;
+-- Contract test for 20261103235839_bevicred_credentials_v1: the table, the secret and the functions are closed to tenants;
 -- the key is stored only in Vault (encrypted); a company never reaches another company's credential; changing the key
 -- replaces the secret and clears the last test. Fictitious credentials. One transaction, rolled back.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/bevicred-credentials-contract.sql
