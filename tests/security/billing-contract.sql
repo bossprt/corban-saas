@@ -1,4 +1,4 @@
--- Contract test for 20261103120000_billing_v1: the tables are closed to tenants; charges are created from the due day;
+-- Contract test for 20261103054431_billing_v1: the tables are closed to tenants; charges are created from the due day;
 -- grace then block; another company or a seller cannot read the payment screen; paid/reversal rules; immutability;
 -- an inactive subscription never blocks. Fictitious receiver. One transaction, rolled back.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/billing-contract.sql
