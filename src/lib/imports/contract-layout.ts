@@ -23,6 +23,9 @@ export type ContractLayout = {
   columns?: Record<string, ContractField | 'ignore'>
   // The bank's own product names (after normalize) for the company's table names, when the export shortens them.
   tables?: Record<string, string>
+  // The file is the bank's PDF report (lib/imports/valor-pdf), not a spreadsheet; it names no table, so the owner
+  // picks the table (and the seller) on each line.
+  pdf?: 'valor'
 }
 
 // The NASP contract export ("contratos pagos"), as the bank sends it (owner request 03/10/2026).
@@ -146,11 +149,19 @@ const HOPE_COLUMNS: Record<string, ContractField | 'ignore'> = {
   ...Object.fromEntries([1, 2, 3, 4, 5].flatMap(n => [`empresavalorfixo${n}`, `repassevalorfixo${n}`].map(k => [k, 'ignore' as const]))),
 }
 
+// Banco Valor commission report (PDF), owner request 03/11/2026. "Codigo" and "Contrato" carry the same number; the
+// commission columns belong to the receipt import.
+const VALOR_COLUMNS: Record<string, ContractField | 'ignore'> = {
+  creditado: 'paidOn', codigo: 'ade', contrato: 'ignore', 'vlr bruto': 'requested', 'vlr liquido': 'released', 'tit.': 'term',
+  '% com.': 'ignore', comissao: 'ignore', aceite: 'ignore', 'tp contrato': 'type',
+}
+
 export const CONTRACT_LAYOUTS: ContractLayout[] = [
   { key: 'nasp', label: 'NASP', bankName: 'NASP', columns: NASP_COLUMNS },
   { key: 'prosesp', label: 'PROSESP (WorkBank)', bankName: 'PROSESP', columns: PROSESP_COLUMNS, tables: PROSESP_TABLES },
   { key: 'fintech', label: 'FINTECH CORBAN', bankName: 'FINTECH CORBAN', columns: FINTECH_COLUMNS, tables: FINTECH_TABLES },
   { key: 'hope', label: 'Hope', bankName: 'Hope', columns: HOPE_COLUMNS },
+  { key: 'valor', label: 'Valor Financiamento (PDF)', bankName: 'Valor Financiamento', columns: VALOR_COLUMNS, pdf: 'valor' },
 ]
 export const MAX_CONTRACT_LINES = 500
 
@@ -246,7 +257,7 @@ export function mapContractHeader(header: string[], layout?: ContractLayout): He
   const columns: Columns = {}
   for (const [f, list] of Object.entries(found) as [ContractField, { i: number; rank: number }[]][])
     columns[f] = list.sort((a, b) => a.rank - b.rank || a.i - b.i).map(x => x.i)
-  for (const f of ['cpf', 'table', 'term'] as const) if (!columns[f]) issues.push({ code: 'missing_column', column: FIELD_LABEL[f] })
+  for (const f of layout?.pdf ? ['cpf', 'term'] as const : ['cpf', 'table', 'term'] as const) if (!columns[f]) issues.push({ code: 'missing_column', column: FIELD_LABEL[f] })
   if (!columns.released && !columns.requested) issues.push({ code: 'missing_column', column: 'Valor liberado ou Valor solicitado' })
   return { columns, ignored, issues }
 }
@@ -478,6 +489,8 @@ export function parseContractSheet(rows: string[][], today: string, layout?: Con
   const tooMany = body.length > MAX_CONTRACT_LINES
   const lines = body.slice(0, MAX_CONTRACT_LINES).map((r, i) => {
     const line = parseContractLine(r, map.columns, at + i + 2, today)
+    // A PDF layout names no table: the owner picks it on the line.
+    if (layout?.pdf) return { ...line, issues: line.issues.filter(x => x !== 'table_required') }
     const table = layout?.tables?.[normalize(line.table)]
     return table ? { ...line, table } : line
   })

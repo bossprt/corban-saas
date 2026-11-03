@@ -11,8 +11,8 @@ export default async function ImportContractsPage() {
   return (
     <section>
       <PageHeader title="Importar contratos"
-        description="Suba a planilha de contratos do banco. Cada linha é conferida contra as tabelas, a equipe e os clientes; nada é gravado até você confirmar." />
-      <Card className="p-5"><ContractImportClient layouts={CONTRACT_LAYOUTS.map(l => ({ key: l.key, label: l.label }))} /></Card>
+        description="Suba a planilha (ou o relatório em PDF) de contratos do banco. Cada linha é conferida contra as tabelas, a equipe e os clientes; nada é gravado até você confirmar." />
+      <Card className="p-5"><ContractImportClient layouts={CONTRACT_LAYOUTS.map(l => ({ key: l.key, label: l.label, pdf: !!l.pdf }))} /></Card>
     </section>
   )
 }

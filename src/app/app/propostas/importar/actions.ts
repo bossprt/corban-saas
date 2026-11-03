@@ -8,6 +8,8 @@ import { csvRows } from '@/lib/imports/csv'
 import { enrichClient } from '@/lib/imports/client-enrich'
 import { parseMoneyInput } from '@/lib/money-input'
 import { reportMove } from '@/lib/imports/report-move'
+import { extractPdfItems } from '@/lib/imports/smart-pdf'
+import { PDF_ERRORS, valorPdfSheet, type ValorProduct } from '@/lib/imports/valor-pdf'
 import {
   CONTRACT_LAYOUTS, MAX_CONTRACT_LINES, matchTable, normalize, parseContractSheet,
   type ContractLine, type HeaderIssue, type LineIssue,
@@ -18,12 +20,17 @@ type Ctx = Awaited<ReturnType<typeof requireAppContext>>
 export type PreviewLine = {
   line: number; cpf: string; name: string; table: string; term: number | null; amount: string | null
   ade: string; stage: string | null; seller: string
-  status: 'ok' | 'exists' | 'error'; messages: string[]
+  // 'choose': a PDF line waiting for the owner to pick its table.
+  status: 'ok' | 'exists' | 'error' | 'choose'; messages: string[]
+  // PDF layouts: the tables that fit the line (agreement, product, type, term) and what was picked.
+  tableOptions?: { id: string; name: string }[]; tableId?: string; sellerId?: string
 }
 export type ImportResult = {
   error?: string
   fileIssues: string[]; ignored: string[]; tooMany: boolean
   lines: PreviewLine[]
+  // PDF layouts: the report's product line and the team, for the seller of each line.
+  product?: string; sellers?: { id: string; name: string }[]
   done?: { created: number; existed: number; failed: number; updated?: number }
 }
 
@@ -58,6 +65,7 @@ type Resolved = {
   line: ContractLine
   versionId?: string; tableName?: string; typeId?: string; sellerId?: string | null; stageId?: string; clientId?: string; agreementId?: string | null
   status: PreviewLine['status']; messages: string[]
+  tableOptions?: { id: string; name: string }[]
   // Contract already in Corban that the report moves: its pipeline case and the stage it goes to.
   move?: { caseId: string; stageId: string; from: string; to: string }
   existingId?: string
@@ -96,15 +104,25 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
   const layout = CONTRACT_LAYOUTS.find(l => l.key === String(formData.get('layout') ?? ''))
   const file = formData.get('file')
   if (!layout) return { result: { ...empty, error: 'Escolha o layout.' }, resolved: [] }
-  if (!(file instanceof File) || file.size === 0) return { result: { ...empty, error: 'Escolha a planilha (.xlsx ou .csv).' }, resolved: [] }
-  const isCsv = /\.csv$/i.test(file.name)
-  if (!isCsv && !/\.xlsx$/i.test(file.name)) return { result: { ...empty, error: 'A planilha precisa ser .xlsx (Excel) ou .csv.' }, resolved: [] }
+  if (!(file instanceof File) || file.size === 0) return { result: { ...empty, error: layout.pdf ? 'Escolha o relatório em PDF.' : 'Escolha a planilha (.xlsx ou .csv).' }, resolved: [] }
 
   let rows: string[][]
-  try {
-    const bytes = Buffer.from(await file.arrayBuffer())
-    rows = isCsv ? csvRows(bytes, MAX_CONTRACT_LINES + 2) : await xlsxRows(bytes, MAX_CONTRACT_LINES + 2)
-  } catch { return { result: { ...empty, error: 'Não consegui ler a planilha. Salve como .xlsx ou .csv e tente de novo.' }, resolved: [] } }
+  let product: ValorProduct | null = null
+  if (layout.pdf) {
+    if (!/\.pdf$/i.test(file.name)) return { result: { ...empty, error: 'Este layout lê o relatório do banco em PDF.' }, resolved: [] }
+    const items = await extractPdfItems(new Uint8Array(await file.arrayBuffer()))
+    if ('error' in items) return { result: { ...empty, error: PDF_ERRORS[items.error] ?? PDF_ERRORS.pdf_unreadable }, resolved: [] }
+    const sheet = valorPdfSheet(items.pages)
+    if ('error' in sheet) return { result: { ...empty, error: sheet.error }, resolved: [] }
+    rows = sheet.rows; product = sheet.product
+  } else {
+    const isCsv = /\.csv$/i.test(file.name)
+    if (!isCsv && !/\.xlsx$/i.test(file.name)) return { result: { ...empty, error: 'A planilha precisa ser .xlsx (Excel) ou .csv.' }, resolved: [] }
+    try {
+      const bytes = Buffer.from(await file.arrayBuffer())
+      rows = isCsv ? csvRows(bytes, MAX_CONTRACT_LINES + 2) : await xlsxRows(bytes, MAX_CONTRACT_LINES + 2)
+    } catch { return { result: { ...empty, error: 'Não consegui ler a planilha. Salve como .xlsx ou .csv e tente de novo.' }, resolved: [] } }
+  }
   const today = todayBr()
   const sheet = parseContractSheet(rows, today, layout)
   const result: ImportResult = {
@@ -147,6 +165,12 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
   const routeOfTable = new Map(((tableRows ?? []) as { id: string; route_id: string }[]).map(t => [t.id, t.route_id]))
   const agreementOfVersion = new Map(((versionRows ?? []) as { id: string; product_table_id: string }[])
     .map(v => [v.id, agreementOfRoute.get(routeOfTable.get(v.product_table_id) ?? '') ?? null]))
+  // PDF layouts pick the table among those of the report's agreement.
+  const agreementIds = [...new Set([...agreementOfVersion.values()].filter((a): a is string => !!a))]
+  const { data: agreementRows } = layout.pdf && agreementIds.length
+    ? await supabase.from('organization_agreements').select('id,name').in('id', agreementIds)
+    : { data: [] }
+  const agreementName = new Map(((agreementRows ?? []) as { id: string; name: string }[]).map(a => [a.id, a.name]))
   // Term ranges of each line of those tables, when this user can read them; otherwise the bank's own check applies.
   const { data: conds } = tableList.length
     ? await supabase.from('commercial_conditions').select('product_table_version_id,contract_type_id,term_min,term_max').in('product_table_version_id', tableList.map(t => t.versionId))
@@ -183,12 +207,44 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
   const proposalByKey = new Map(existingRows.map(p => [sameKey(p.customer_id, p.product_table_version_id, p.term, exact(p.released_amount), exact(p.requested_amount)), p.id]))
   const existingKeys = new Set(proposalByKey.keys())
 
+  type Cond = { product_table_version_id: string; contract_type_id: string; term_min: number; term_max: number }
+  const condRows = (conds ?? []) as Cond[]
+  const termFits = (versionId: string, typeId: string, term: number) => {
+    const ls = condRows.filter(c => c.product_table_version_id === versionId && c.contract_type_id === typeId)
+    return !ls.length || ls.some(c => term >= c.term_min && term <= c.term_max)
+  }
+  const sellerList = ((sellers ?? []) as { id: string; name: string }[]).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+
   const seenInFile = new Set<string>()
   const resolved: Resolved[] = sheet.lines.map(line => {
     const messages = line.issues.map(i => LINE_MESSAGE[i])
     const r: Resolved = { line, status: 'ok', messages }
     if (line.cpf && !clientByCpf.has(line.cpf) && line.name.trim().length < 3) messages.push('Cliente novo sem Nome')
-    if (line.table) {
+    let mustChoose = false
+    if (layout.pdf && product) {
+      // A contract already in Corban (same ADE) needs no table; the others list the tables that fit and wait for the pick.
+      if (!(line.ade && knownAde.has(line.ade))) {
+        const typeId = line.typeKey ? typeByKey.get(line.typeKey) : undefined
+        const options = tableList.filter(t => agreementName.get(agreementOfVersion.get(t.versionId) ?? '') === product!.agreement
+          && normalize(t.name).startsWith(product!.tablePrefix)
+          && (!line.typeKey || (!!typeId && t.types.includes(typeId)))
+          && (!line.term || !typeId || termFits(t.versionId, typeId, line.term)))
+          .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+        r.tableOptions = options.map(t => ({ id: t.versionId, name: t.name }))
+        const picked = String(formData.get(`table:${line.line}`) ?? '') || (options.length === 1 ? options[0].versionId : '')
+        const t = options.find(o => o.versionId === picked)
+        if (!options.length) messages.push(`Nenhuma tabela de ${product.agreement} serve para este contrato (tipo e prazo ${line.term ?? '—'})`)
+        else if (!t) mustChoose = true
+        else {
+          r.versionId = t.versionId; r.tableName = t.name; r.agreementId = agreementOfVersion.get(t.versionId) ?? null
+          if (typeId) r.typeId = typeId
+          else if (t.types.length === 1) r.typeId = t.types[0]
+          else messages.push('Informe o Tipo (a tabela tem mais de um tipo de contrato)')
+        }
+      }
+      const seller = String(formData.get(`seller:${line.line}`) ?? '')
+      if (seller) { if (sellerList.some(s => s.id === seller)) r.sellerId = seller; else messages.push('Vendedor não encontrado na equipe') }
+    } else if (line.table) {
       const t = matchTable(line.table, tableList)
       if (t === 'none') messages.push(`Tabela "${line.table}" não encontrada no ${bank.name}`)
       else if (t === 'ambiguous') messages.push(`Tabela "${line.table}" bate com mais de uma tabela do ${bank.name}`)
@@ -219,6 +275,7 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
     }
     r.clientId = clientByCpf.get(line.cpf)
     if (messages.length) { r.status = 'error'; return r }
+    if (mustChoose) { r.status = 'choose'; messages.push('Escolha a tabela'); return r }
     const fileKey = line.ade ? `ade:${line.ade}` : `k:${line.cpf}|${r.versionId}|${line.term}|${line.released ?? ''}|${line.requested ?? ''}`
     if (seenInFile.has(fileKey)) { r.status = 'error'; messages.push('Linha repetida na planilha'); return r }
     seenInFile.add(fileKey)
@@ -233,10 +290,12 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
     return r
   })
   await planMoves(ctx, resolved, stageByState)
-  result.lines = resolved.map(({ line: l, tableName, status, messages }) => ({
+  if (layout.pdf && product) { result.product = product.label; result.sellers = sellerList }
+  result.lines = resolved.map(({ line: l, tableName, status, messages, tableOptions, versionId, sellerId }) => ({
     line: l.line, cpf: l.cpf, name: l.name, table: tableName ?? l.table, term: l.term, amount: l.released ?? l.requested,
     // An unknown stage shows the sheet's own text (it used to read "Automática", the label for no stage at all).
     ade: l.ade, stage: l.stage ? STAGE_LABEL[l.stage] ?? l.stage : l.stageRaw || null, seller: l.seller, status, messages,
+    ...(tableOptions ? { tableOptions, tableId: versionId } : {}), ...(layout.pdf ? { sellerId: sellerId ?? undefined } : {}),
   }))
   return { result, resolved }
 }
@@ -265,6 +324,7 @@ export async function importContracts(formData: FormData): Promise<ImportResult>
   const { result, resolved } = await resolve(ctx, formData)
   if (result.error || result.fileIssues.length) return result
   if (resolved.some(r => r.status === 'error')) return { ...result, error: 'Corrija as linhas com erro antes de importar.' }
+  if (resolved.some(r => r.status === 'choose')) return { ...result, error: 'Escolha a tabela de cada contrato antes de importar.' }
   const { supabase, organization } = ctx
   const done: { created: number; existed: number; failed: number; updated?: number } = { created: 0, existed: 0, failed: 0, updated: 0 }
   for (const [i, r] of resolved.entries()) {

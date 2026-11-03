@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Contratos do Valor Financiamento pelo PDF (03/11/2026)
+- **Adicionado:** layout "Valor Financiamento (PDF)" na importação de contratos: lê o relatório de comissão do banco em PDF; em cada linha o dono escolhe a tabela (entre as que servem para o convênio, o tipo e o prazo) e o vendedor; os contratos entram como pagos na data do crédito ao cliente, sem duplicar o mesmo nº.
+
 ### Gratificação recebida à parte (03/11/2026)
 - **Corrigido:** contratos com Gratificação não dão mais divergência no relatório de comissão do banco: o à vista esperado não inclui a Gratificação.
 - **Adicionado:** "Registrar recebimento" do contrato tem o tipo Gratificação, comparado com o valor em vigor no contrato; Conciliação mostra a coluna Gratificação.
