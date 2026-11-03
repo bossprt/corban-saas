@@ -7,13 +7,17 @@ import { ACTIVE_ORG_COOKIE,resolveActiveMembership,scopeToOrganization,type Memb
 import { isScope, type Access, type Tier } from '@/lib/access'
 
 // `allowPendingTerms`: only the terms page itself, which must open while the company has not accepted them yet.
+// `allowBillingBlocked`: only the monthly fee page, which must open while the company is blocked for an unpaid fee.
 // Speed (09/10/2026): one screen calls this from the layout, the page and its parts; React's cache makes it run once
 // per request (in a server action it simply runs), and the checks that do not depend on each other run together.
-export function requireAppContext(opts?: { allowPendingTerms?: boolean }) {
-  return loadAppContext(!!opts?.allowPendingTerms)
+export function requireAppContext(opts?: { allowPendingTerms?: boolean; allowBillingBlocked?: boolean }) {
+  return loadAppContext(!!opts?.allowPendingTerms, !!opts?.allowBillingBlocked)
 }
 
-const loadAppContext = cache(async (allowPendingTerms: boolean) => {
+// Monthly fee of the company (03/11/2026): `overdue` shows the notice, `blocked` sends every screen to /mensalidade.
+export type BillingStatus = { blocked: boolean; overdue: boolean; period?: string; due_on?: string; block_on?: string; amount?: string }
+
+const loadAppContext = cache(async (allowPendingTerms: boolean, allowBillingBlocked: boolean) => {
   const rawClient = await createClient()
   const { data: { user }, error: userError } = await rawClient.auth.getUser()
   if (userError || !user) redirect('/login')
@@ -47,11 +51,12 @@ const loadAppContext = cache(async (allowPendingTerms: boolean) => {
   const membership = { organization_id: resolution.membership.organization_id, role: resolution.membership.role, status: 'active' }
   const org = membership.organization_id
   // The company, the terms, the caller's access and the company's modules do not depend on each other: asked together.
-  const [{ data: organization, error: organizationError }, termsResult, { data: accessRows }, { data: moduleRows }] = await Promise.all([
+  const [{ data: organization, error: organizationError }, termsResult, { data: accessRows }, { data: moduleRows }, { data: billingRow }] = await Promise.all([
     rawClient.from('organizations').select('id, name').eq('id', org).single(),
     allowPendingTerms ? Promise.resolve({ data: false }) : rawClient.rpc('terms_pending', { p_org: org }),
     rawClient.rpc('my_access', { p_org: org }),
     rawClient.rpc('my_modules', { p_org: org }),
+    rawClient.rpc('billing_status', { p_org: org }),
   ])
 
   if (organizationError || !organization) redirect('/access-pending')
@@ -59,6 +64,9 @@ const loadAppContext = cache(async (allowPendingTerms: boolean) => {
   // Terms of use (08/10/2026): while the company has not accepted the version in force, every screen goes to the terms
   // page. A failure to check never blocks (the database refuses nothing on its own because of the terms).
   if (!allowPendingTerms && termsResult.data === true) redirect('/termos')
+  // Unpaid fee after the grace days: only the fee page opens. A failure to check never blocks.
+  const billing = billingRow && typeof billingRow === 'object' ? billingRow as BillingStatus : null
+  if (!allowBillingBlocked && billing?.blocked === true) redirect('/mensalidade')
 
   const supabase = scopeToOrganization(rawClient, organization.id)
   // Role, scope and permissions of the caller in this company. A failure leaves `access` null, which denies every permission.
@@ -68,5 +76,5 @@ const loadAppContext = cache(async (allowPendingTerms: boolean) => {
     : null
   // Modules switched on for this company (plan). A failure leaves the set empty, which hides every module.
   const modules = new Set<string>(Array.isArray(moduleRows) ? (moduleRows as string[]) : [])
-  return { supabase, user, membership, organization, access, modules, membershipCount: (rows ?? []).length }
+  return { supabase, user, membership, organization, access, modules, billing, membershipCount: (rows ?? []).length }
 })

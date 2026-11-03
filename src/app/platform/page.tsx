@@ -9,6 +9,7 @@ import { PasswordPair } from '@/components/PasswordPair'
 import { SubmitButton } from '@/components/SubmitButton'
 import { PLAN_MODULE_LABEL, PLAN_MODULES } from '@/lib/access'
 import { Badge, Card } from '@/components/ui'
+import { BillingSection } from './BillingSection'
 
 const button='inline-flex h-10 items-center justify-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong'
 
@@ -16,13 +17,17 @@ export default async function PlatformPage({searchParams}:{searchParams:Promise<
   const gate=await requirePlatformAdmin()
   if(!gate.ok) redirect('/login')
   const admin=createAdminClient()
-  const [docs,orgs,orgModules,terms,improvements]=await Promise.all([
+  const [docs,orgs,orgModules,terms,improvements,billingSettings,subscriptions,charges]=await Promise.all([
     admin.from('document_types').select('id,code,name,is_active').order('name'),
     admin.from('organizations').select('id,name,document,is_active').order('name'),
     admin.from('organization_modules').select('organization_id,module_key,enabled'),
     admin.from('terms_versions').select('id,version,published_at').order('published_at',{ascending:false}).limit(1).maybeSingle(),
     admin.from('improvement_requests').select('id,organization_id,protocol,kind,title,body,page_path,status,response,created_at').order('created_at',{ascending:false}).limit(300),
+    admin.from('platform_billing_settings').select('pix_key,pix_key_type,merchant_name,merchant_city').maybeSingle(),
+    admin.from('organization_subscriptions').select('organization_id,amount::text,due_day,grace_days,starts_on,is_active'),
+    admin.rpc('platform_billing_overview'),
   ])
+  const today=new Date().toLocaleDateString('sv-SE',{timeZone:'America/Sao_Paulo'})
   // Terms of use (08/10/2026): the version in force and which companies accepted it.
   const currentTerms=terms.data as {id:string;version:string;published_at:string}|null
   const { data: acceptances }=currentTerms?await admin.from('organization_terms_acceptances').select('organization_id,accepted_at').eq('terms_version_id',currentTerms.id):{data:[]}
@@ -68,6 +73,10 @@ export default async function PlatformPage({searchParams}:{searchParams:Promise<
         {!reqs.length&&<Card className="p-4"><p className="text-sm text-muted">Nenhuma solicitação {showAll?'':'aberta '}.</p></Card>}
         </div>
       </section>
+
+      <BillingSection settings={billingSettings.data} today={today} orgs={(orgs.data??[]).map(o=>({id:o.id,name:o.name}))}
+        subs={(subscriptions.data??[]) as {organization_id:string;amount:string;due_day:number;grace_days:number;starts_on:string;is_active:boolean}[]}
+        charges={Array.isArray(charges.data)?charges.data:[]}/>
 
       <section className="mt-8">
         <h2 className="text-xl font-semibold text-ink">Tipos de documento</h2>

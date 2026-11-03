@@ -12,6 +12,7 @@ import { CommandPalette } from '@/components/shell/CommandPalette'
 import { isPortalUser } from '@/lib/portal'
 import { REGISTRATIONS, REGISTRATION_SECTIONS } from '@/lib/registrations'
 import { signOut } from './actions'
+import { BillingNotice } from '@/components/shell/BillingNotice'
 
 // `show` only decides what the menu offers; every page, action and RPC enforces the role again (a hidden link is not authorization).
 // `module`: the item appears only while that module is on for the company (plan).
@@ -57,7 +58,7 @@ const PORTAL_NAV: NavItem[] = [
 ]
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const { organization, membership, membershipCount, modules, access } = await requireAppContext()
+  const { organization, membership, membershipCount, modules, access, billing } = await requireAppContext()
   const portal = isPortalUser(access?.roleKey, modules)
   const items: NavItem[] = portal ? PORTAL_NAV : NAV.filter(n => (!n.show || n.show(membership.role)) && (!n.module || modules.has(n.module)) && (!n.perm || can(access, n.perm))).map(({ key, href, label, sections }) => ({
     key, href, label, sections,
@@ -97,6 +98,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </header>
         <main className="min-w-0 flex-1 px-4 pb-24 pt-6 md:px-8 md:pb-10">
           <Suspense fallback={null}><FlashBanner /></Suspense>
+          {membership.role === 'admin' && billing?.period && <BillingNotice billing={billing} />}
           {children}
         </main>
       </div>

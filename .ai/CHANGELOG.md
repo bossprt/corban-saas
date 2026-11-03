@@ -15,6 +15,12 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Cobrança da mensalidade por Pix (03/11/2026)
+- **Adicionado:** /platform > Cobrança: recebedor do Pix (chave, nome, cidade), assinatura por empresa (valor, dia de vencimento, carência, primeiro mês, ligada) e lista das mensalidades com "Recebido" (data) e "Estornar" (motivo). Tudo auditado.
+- **Adicionado:** a mensalidade de cada mês é criada no dia do vencimento. O administrador da empresa vê o aviso no app e paga em /mensalidade com QR Code e Pix copia e cola gerados pelo Corban (sem intermediário).
+- **Adicionado:** depois da carência sem pagamento, todas as telas, ações e a API (HTTP 402 `billing_blocked`) da empresa ficam bloqueadas até a confirmação. Falha na consulta nunca bloqueia; assinatura desligada não bloqueia.
+- **Segurança:** tabelas fechadas para as empresas; mensalidades e recebimentos imutáveis (correção só por estorno com motivo); dados do recebedor só no banco, nunca no código.
+
 ### Simulador: escolher o banco e o prazo numa lista (30/10/2026)
 - **Adicionado:** campo Banco no simulador, entre Convênio e Operação. A lista de tabelas mostra só as do banco escolhido, e "Todos os bancos" continua comparando entre bancos. O resultado também é filtrado pelo banco.
 - **Alterado:** o prazo deixou de ser digitado. Agora é uma lista só com os prazos que as tabelas escolhidas têm na operação (uma linha "1 a 120" oferece todos esses meses).

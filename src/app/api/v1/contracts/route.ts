@@ -30,6 +30,9 @@ export async function POST(request: Request) {
   const raw = await request.text()
   if (raw.length > MAX_BYTES) return fail('payload_too_large', 413)
 
+  // Company blocked for an unpaid monthly fee (03/11/2026). A failure to check never blocks.
+  const { data: blocked } = await createAdminClient().rpc('api_billing_blocked', { p_key: key })
+  if (blocked === true) return fail('billing_blocked', 402)
   const { data, error } = await createAdminClient().rpc('api_ingest_contract', { p_key: key, p_payload: raw })
   if (error || !data || typeof data !== 'object') return fail('unavailable', 503)
   const result = data as { error?: string; id?: string; created?: boolean; duplicate?: boolean; stale?: boolean; stage?: string; warnings?: string[] }

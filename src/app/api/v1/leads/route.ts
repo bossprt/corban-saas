@@ -38,6 +38,9 @@ export async function POST(request: Request) {
   }
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return fail('invalid_json', 400)
 
+  // Company blocked for an unpaid monthly fee (03/11/2026). A failure to check never blocks.
+  const { data: blocked } = await createAdminClient().rpc('api_billing_blocked', { p_key: key })
+  if (blocked === true) return fail('billing_blocked', 402)
   const { data, error } = await createAdminClient().rpc('api_ingest_lead_distributed', { p_key: key, p_payload: payload })
   if (error || !data || typeof data !== 'object') return fail('unavailable', 503)
   const result = data as { error?: string; id?: string; status?: string; duplicate?: boolean; matched_client?: boolean }
