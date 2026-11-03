@@ -19,6 +19,7 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 - **Corrigido:** contratos com Gratificação não dão mais divergência no relatório de comissão do banco: o à vista esperado não inclui a Gratificação.
 - **Adicionado:** "Registrar recebimento" do contrato tem o tipo Gratificação, comparado com o valor em vigor no contrato; Conciliação mostra a coluna Gratificação.
 - **Corrigido:** contrato com Gratificação ainda não recebida não aparece mais como "concluído · sem repasse": mostra "aguardando Gratificação" na lista de contratos e na ficha; filtro "Aguardando Gratificação" em Repasse ao vendedor.
+- **Adicionado:** recebimento divergente é aceito sozinho quando o valor do contrato é corrigido para o valor recebido (a aceitação fica registrada como "Aceito pelo sistema"; o recebimento não muda).
 - **Alterado:** a parte do vendedor (e do supervisor e gerente) na Gratificação é creditada quando a Gratificação é recebida, mesmo depois de o vendedor já ter recebido a comissão. Contratos já creditados com a Gratificação junto continuam como estavam.
 
 ### Cobrança da mensalidade por Pix (03/11/2026)
