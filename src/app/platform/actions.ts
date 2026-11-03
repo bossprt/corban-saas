@@ -137,3 +137,65 @@ export async function answerImprovement(f: FormData) {
   if (error) go('erro', 'Não foi possível salvar a resposta.')
   go('ok', 'Resposta salva. A empresa vê na tela Sugerir melhoria.')
 }
+
+// Monthly fee (03/11/2026): the Pix receiver, each company's subscription, and the payments confirmed by hand. The
+// database checks the rules (two decimals, paid once, reversal with a reason, nothing changed or deleted); every
+// change is audited. The receiver's key is never written to the audit or to a log.
+const BILLING_ERRORS: Record<string, string> = {
+  billing_invalid_amount: 'Valor inválido: use até duas casas decimais.',
+  billing_charge_already_paid: 'Esta mensalidade já está paga.',
+  billing_charge_not_paid: 'Só se estorna uma mensalidade paga.',
+  billing_reversal_note_required: 'Escreva o motivo do estorno.',
+  billing_invalid_paid_on: 'Data de recebimento inválida (não pode ser futura).',
+  billing_charge_not_found: 'Mensalidade não encontrada.',
+}
+const billingFail = (e: { message?: string }, fallback: string): never => go('erro', Object.entries(BILLING_ERRORS).find(([k]) => (e.message ?? '').includes(k))?.[1] ?? fallback)
+const isUuid = (v: string) => /^[0-9a-f-]{36}$/i.test(v)
+const isDay = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v)
+
+export async function saveBillingSettings(f: FormData) {
+  const g = await gate()
+  const key = clean(f.get('pix_key')), type = clean(f.get('pix_key_type')), name = clean(f.get('merchant_name')), city = clean(f.get('merchant_city'))
+  if (!key || key.length > 77 || !['cpf','cnpj','email','phone','random'].includes(type) || !name || name.length > 25 || !city || city.length > 15) go('erro', 'Confira chave, tipo, nome (até 25) e cidade (até 15).')
+  const pixKey = type === 'cpf' || type === 'cnpj' ? digitsOnly(key) : key
+  const admin = createAdminClient()
+  const { error } = await admin.rpc('platform_set_billing_settings', { p_actor: g.userId, p_key: pixKey, p_key_type: type, p_name: name, p_city: city })
+  if (error) billingFail(error, 'Não foi possível salvar o recebedor.')
+  await admin.from('platform_admin_audit_events').insert({ actor_user_id: g.userId, action: 'billing.settings.set', metadata: { pix_key_type: type } })
+  go('ok', 'Recebedor do Pix salvo.')
+}
+
+export async function saveSubscription(f: FormData) {
+  const g = await gate()
+  const org = clean(f.get('organization_id')), amount = clean(f.get('amount')).replace(/\./g, '').replace(',', '.')
+  const dueDay = Number(clean(f.get('due_day'))), grace = Number(clean(f.get('grace_days'))), starts = clean(f.get('starts_on'))
+  if (!isUuid(org) || !/^\d{1,8}(\.\d{1,2})?$/.test(amount) || !Number.isInteger(dueDay) || dueDay < 1 || dueDay > 28 || !Number.isInteger(grace) || grace < 0 || grace > 30 || !/^\d{4}-\d{2}$/.test(starts)) go('erro', 'Confira valor, dia (1 a 28), carência (0 a 30) e mês de início.')
+  const admin = createAdminClient()
+  // amount travels as text, the database turns it into numeric(14,2)
+  const { error } = await admin.rpc('platform_set_subscription', { p_actor: g.userId, p_org: org, p_amount: amount, p_due_day: dueDay, p_grace_days: grace, p_starts_on: `${starts}-01`, p_active: f.get('is_active') === 'on' })
+  if (error) billingFail(error, 'Não foi possível salvar a assinatura.')
+  await admin.from('platform_admin_audit_events').insert({ actor_user_id: g.userId, organization_id: org, action: 'billing.subscription.set', metadata: { amount, due_day: dueDay, grace_days: grace, starts_on: starts, active: f.get('is_active') === 'on' } })
+  go('ok', 'Assinatura salva.')
+}
+
+export async function markChargePaid(f: FormData) {
+  const g = await gate()
+  const charge = clean(f.get('charge_id')), paidOn = clean(f.get('paid_on')), org = clean(f.get('organization_id'))
+  if (!isUuid(charge) || !isDay(paidOn)) go('erro', 'Dados inválidos.')
+  const admin = createAdminClient()
+  const { error } = await admin.rpc('platform_mark_charge_paid', { p_actor: g.userId, p_charge: charge, p_paid_on: paidOn })
+  if (error) billingFail(error, 'Não foi possível confirmar o recebimento.')
+  await admin.from('platform_admin_audit_events').insert({ actor_user_id: g.userId, organization_id: isUuid(org) ? org : null, action: 'billing.charge.paid', metadata: { charge_id: charge, paid_on: paidOn } })
+  go('ok', 'Recebimento confirmado. O acesso da empresa está liberado.')
+}
+
+export async function reverseCharge(f: FormData) {
+  const g = await gate()
+  const charge = clean(f.get('charge_id')), note = clean(f.get('note')), org = clean(f.get('organization_id'))
+  if (!isUuid(charge)) go('erro', 'Dados inválidos.')
+  const admin = createAdminClient()
+  const { error } = await admin.rpc('platform_reverse_charge', { p_actor: g.userId, p_charge: charge, p_note: note })
+  if (error) billingFail(error, 'Não foi possível estornar.')
+  await admin.from('platform_admin_audit_events').insert({ actor_user_id: g.userId, organization_id: isUuid(org) ? org : null, action: 'billing.charge.reversed', metadata: { charge_id: charge } })
+  go('ok', 'Recebimento estornado.')
+}
