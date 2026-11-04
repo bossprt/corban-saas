@@ -1,8 +1,9 @@
 import Link from 'next/link'
-import { FilePlus2, Calculator, FileSpreadsheet } from 'lucide-react'
+import { FilePlus2, Calculator, FileSpreadsheet, RefreshCw } from 'lucide-react'
 import { Badge, ButtonLink, Card, PageHeader, type Tone } from '@/components/ui'
 import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
+import { listBevicredCredentials } from '@/lib/bevicred.server'
 import { formatCpf } from '@/lib/cpf'
 import { PipelineBoard, type BoardCard } from './PipelineBoard'
 import { StageSelect } from './StageMove'
@@ -24,7 +25,7 @@ const days = (iso: string) => Math.max(0, Math.floor((Date.now() - new Date(iso)
 // Esteira: every proposal in the pipeline with its stage, how long it is there and the alerts that need action.
 // Stages are the company's own (names and order); visibility follows the caller's scope (RLS).
 export default async function PipelinePage({ searchParams }: { searchParams: Promise<{ etapa?: string; visao?: string; estado?: string; atrasado?: string }> }) {
-  const { supabase, access } = await requireAppContext()
+  const { supabase, access, organization } = await requireAppContext()
   const sp = await searchParams
 
   const [{ data: stages }, { data: allCases }, { count: portalPending }] = await Promise.all([
@@ -69,6 +70,9 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
     return ''
   }
   const alerts = shown.filter(c => alertOf(c)).length
+  // A company with a Bevicred credential gets the shortcut that opens the contract import already searching Bevicred.
+  const canImport = can(access, 'propostas.create') && can(access, 'clientes.create')
+  const bevicred = canImport && (await listBevicredCredentials(organization.id).catch(() => [])).length > 0
 
   return (
     <section>
@@ -78,7 +82,8 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
         actions={<>
           {can(access, 'esteira.edit') && (portalPending ?? 0) > 0 && <ButtonLink href="/app/propostas/validacao" variant="secondary">Aguardando validação <span className="num">{portalPending}</span></ButtonLink>}
           {can(access, 'propostas.create') && <ButtonLink href="/app/simulacoes" variant="secondary"><Calculator size={16} aria-hidden />Simular</ButtonLink>}
-          {can(access, 'propostas.create') && can(access, 'clientes.create') && <ButtonLink href="/app/propostas/importar" variant="secondary"><FileSpreadsheet size={16} aria-hidden />Importar planilha</ButtonLink>}
+          {bevicred && <ButtonLink href="/app/propostas/importar?bevicred=1" variant="secondary"><RefreshCw size={16} aria-hidden />Buscar na Bevicred</ButtonLink>}
+          {canImport && <ButtonLink href="/app/propostas/importar" variant="secondary"><FileSpreadsheet size={16} aria-hidden />Importar contratos</ButtonLink>}
           {can(access, 'propostas.create') && <ButtonLink href="/app/propostas/nova"><FilePlus2 size={16} aria-hidden />Nova proposta</ButtonLink>}
         </>}
       />

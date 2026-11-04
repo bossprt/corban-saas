@@ -1,7 +1,7 @@
 'use client'
 import { FileDrop } from '@/components/FileDrop'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { Download, Upload } from 'lucide-react'
 import { Badge, Button } from '@/components/ui'
@@ -17,8 +17,9 @@ type Pick = { table?: string; seller?: string }
 // A PDF layout names no table: each line lists the tables that fit and the owner picks one (and the seller).
 // The Bevicred layout has no file: "Buscar na Bevicred" reads the company's contracts of the chosen period; a table or
 // seller picked there is remembered, and a line can be left out ("Não importar").
-export function ContractImportClient({ layouts }: { layouts: { key: string; label: string; pdf: boolean; api: boolean }[] }) {
-  const [layout, setLayout] = useState(layouts[0]?.key ?? '')
+// "Buscar na Bevicred" on the Esteira opens it with autoBevicred: the Bevicred layout, already searching.
+export function ContractImportClient({ layouts, autoBevicred = false }: { layouts: { key: string; label: string; pdf: boolean; api: boolean }[]; autoBevicred?: boolean }) {
+  const [layout, setLayout] = useState((autoBevicred && layouts.find(l => l.api)?.key) || (layouts[0]?.key ?? ''))
   const [file, setFile] = useState<File | null>(null)
   const [result, setResult] = useState<ImportResult | null>(null)
   const [picks, setPicks] = useState<Record<number, Pick>>({})
@@ -48,6 +49,10 @@ export function ContractImportClient({ layouts }: { layouts: { key: string; labe
     setPicks(Object.fromEntries(r.lines.map(l => [l.line, {
       table: l.tableId ?? (l.status === 'skip' && skippedAde.has(l.ade) ? 'skip' : undefined), seller: l.sellerId,
     }])))
+  })
+  const started = useRef(false)
+  useEffect(() => {
+    if (autoBevicred && api && !started.current) { started.current = true; send(previewContracts) }
   })
   const pick = (line: number, p: Pick) => setPicks(prev => ({ ...prev, [line]: { ...prev[line], ...p } }))
   const reset = () => { setResult(null); setPicks({}) }

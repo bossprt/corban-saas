@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Atalho Buscar na Bevicred (03/11/2026)
+- Adicionado: botão "Buscar na Bevicred" na Esteira, para empresa com credencial, que abre a importação já buscando.
+- Alterado: "Importar planilha" passa a se chamar "Importar contratos".
+
 ### Contratos da Bevicred pela API (03/11/2026)
 - Adicionado: layout "Bevicred (API)" em Propostas > Importar contratos: busca os contratos da empresa na Bevicred (7, 15 ou 30 dias), confere linha a linha e importa; tabela e vendedor escolhidos ficam lembrados; Configuração > Bevicred lista as escolhas (Esquecer). Migration `20261104013646_bevicred_links_v1`.
 
