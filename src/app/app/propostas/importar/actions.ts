@@ -10,6 +10,9 @@ import { parseMoneyInput } from '@/lib/money-input'
 import { reportMove } from '@/lib/imports/report-move'
 import { extractPdfItems } from '@/lib/imports/smart-pdf'
 import { PDF_ERRORS, valorPdfSheet, type ValorProduct } from '@/lib/imports/valor-pdf'
+import { bevicredSheet, sameBank, type BevicredMeta, type BevicredRow } from '@/lib/imports/bevicred-production'
+import { fetchBevicredProduction } from '@/lib/bevicred.server'
+import { createAdminClient } from '@/lib/supabaseAdmin'
 import {
   CONTRACT_LAYOUTS, MAX_CONTRACT_LINES, matchTable, normalize, parseContractSheet,
   type ContractLine, type HeaderIssue, type LineIssue,
@@ -20,10 +23,12 @@ type Ctx = Awaited<ReturnType<typeof requireAppContext>>
 export type PreviewLine = {
   line: number; cpf: string; name: string; table: string; term: number | null; amount: string | null
   ade: string; stage: string | null; seller: string
-  // 'choose': a PDF line waiting for the owner to pick its table.
-  status: 'ok' | 'exists' | 'error' | 'choose'; messages: string[]
-  // PDF layouts: the tables that fit the line (agreement, product, type, term) and what was picked.
+  // 'choose': a PDF or webservice line waiting for the owner to pick its table. 'skip': a webservice line left out.
+  status: 'ok' | 'exists' | 'error' | 'choose' | 'skip'; messages: string[]
+  // PDF and webservice layouts: the tables that fit the line (agreement, product, type, term) and what was picked.
   tableOptions?: { id: string; name: string }[]; tableId?: string; sellerId?: string
+  // Webservice layout: the credential the line came from, the partner's table and the partner's seller.
+  origin?: string; hint?: string; partner?: string
 }
 export type ImportResult = {
   error?: string
@@ -31,6 +36,8 @@ export type ImportResult = {
   lines: PreviewLine[]
   // PDF layouts: the report's product line and the team, for the seller of each line.
   product?: string; sellers?: { id: string; name: string }[]
+  // Webservice layout: what the search said besides the lines (a credential that failed, the period).
+  api?: boolean; notices?: string[]
   done?: { created: number; existed: number; failed: number; updated?: number }
 }
 
@@ -66,6 +73,9 @@ type Resolved = {
   versionId?: string; tableName?: string; typeId?: string; sellerId?: string | null; stageId?: string; clientId?: string; agreementId?: string | null
   status: PreviewLine['status']; messages: string[]
   tableOptions?: { id: string; name: string }[]
+  meta?: BevicredMeta
+  // Webservice layout: the table or seller the owner picked (remembered at import) and the line left out on purpose.
+  learnTable?: string; learnSeller?: string; skip?: boolean
   // Contract already in Corban that the report moves: its pipeline case and the stage it goes to.
   move?: { caseId: string; stageId: string; from: string; to: string }
   existingId?: string
@@ -104,11 +114,23 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
   const layout = CONTRACT_LAYOUTS.find(l => l.key === String(formData.get('layout') ?? ''))
   const file = formData.get('file')
   if (!layout) return { result: { ...empty, error: 'Escolha o layout.' }, resolved: [] }
-  if (!(file instanceof File) || file.size === 0) return { result: { ...empty, error: layout.pdf ? 'Escolha o relatório em PDF.' : 'Escolha a planilha (.xlsx ou .csv).' }, resolved: [] }
+  if (!layout.api && (!(file instanceof File) || file.size === 0)) return { result: { ...empty, error: layout.pdf ? 'Escolha o relatório em PDF.' : 'Escolha a planilha (.xlsx ou .csv).' }, resolved: [] }
 
   let rows: string[][]
   let product: ValorProduct | null = null
-  if (layout.pdf) {
+  let meta: BevicredMeta[] = []
+  const notices: string[] = []
+  if (layout.api) {
+    const days = [7, 15, 30].includes(Number(formData.get('days'))) ? Number(formData.get('days')) : 7
+    const got = await fetchBevicredProduction(organization.id, days)
+    if (!got.credentials) return { result: { ...empty, api: true, error: 'Cadastre a credencial da Bevicred em Configuração > Bevicred.' }, resolved: [] }
+    notices.push(...got.errors)
+    const sheet = bevicredSheet(got.rows.map(r => ({ credential: r.credential, row: r.row as BevicredRow })))
+    if (sheet.meta.length === 0) return { result: { ...empty, api: true, notices, error: `A Bevicred não trouxe contratos nos últimos ${days} dias.` }, resolved: [] }
+    rows = sheet.rows; meta = sheet.meta
+  } else if (!(file instanceof File)) {
+    return { result: empty, resolved: [] }
+  } else if (layout.pdf) {
     if (!/\.pdf$/i.test(file.name)) return { result: { ...empty, error: 'Este layout lê o relatório do banco em PDF.' }, resolved: [] }
     const items = await extractPdfItems(new Uint8Array(await file.arrayBuffer()))
     if ('error' in items) return { result: { ...empty, error: PDF_ERRORS[items.error] ?? PDF_ERRORS.pdf_unreadable }, resolved: [] }
@@ -138,17 +160,21 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
     supabase.from('contract_types').select('id,tech_key,organization_id').eq('is_active', true),
     supabase.from('commercial_sellers').select('id,name').eq('is_active', true),
     supabase.from('operational_stages').select('id,canonical_state,sort_order').eq('is_active', true).order('sort_order'),
-    supabase.from('organization_banks').select('id,name,tech_key').eq('name', layout.bankName),
+    layout.api ? supabase.from('organization_banks').select('id,name,tech_key').eq('is_active', true) : supabase.from('organization_banks').select('id,name,tech_key').eq('name', layout.bankName),
     supabase.from('clients').select('id,cpf').in('cpf', cpfs).is('deleted_at', null),
   ])
-  const bank = (banks ?? [])[0] as { id: string; name: string; tech_key: string | null } | undefined
-  if (!bank) return { result: { ...result, error: `O banco ${layout.bankName} não está cadastrado.` }, resolved: [] }
+  type Bank = { id: string; name: string; tech_key: string | null }
+  const bankList = (banks ?? []) as Bank[]
+  const bank = bankList[0]
+  if (!bank) return { result: { ...result, error: layout.api ? 'A empresa não tem bancos cadastrados.' : `O banco ${layout.bankName} não está cadastrado.` }, resolved: [] }
+  const bankById = new Map(bankList.map(b => [b.id, b]))
+  const keyOfBank = (b: Bank) => (b.tech_key ?? b.name).toLowerCase()
 
   type CatRow = { version_id: string; table_name: string; bank_id: string; contract_type_id: string | null }
-  const tables = new Map<string, { versionId: string; name: string; types: string[] }>()
+  const tables = new Map<string, { versionId: string; name: string; types: string[]; bankId: string }>()
   for (const r of (catalog ?? []) as CatRow[]) {
-    if (r.bank_id !== bank.id) continue
-    const t = tables.get(r.version_id) ?? { versionId: r.version_id, name: r.table_name, types: [] }
+    if (layout.api ? !bankById.has(r.bank_id) : r.bank_id !== bank.id) continue
+    const t = tables.get(r.version_id) ?? { versionId: r.version_id, name: r.table_name, types: [], bankId: r.bank_id }
     if (r.contract_type_id && !t.types.includes(r.contract_type_id)) t.types.push(r.contract_type_id)
     tables.set(r.version_id, t)
   }
@@ -189,9 +215,10 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
   const { data: known } = ades.length
     ? await supabase.from('proposal_external_identities').select('external_proposal_number,institution_key,proposal_id').in('external_proposal_number', ades)
     : { data: [] }
-  const bankKey = (bank.tech_key ?? bank.name).toLowerCase()
+  const bankKey = keyOfBank(bank)
+  const bankKeys = new Set(bankList.map(keyOfBank))
   const knownRows = ((known ?? []) as { external_proposal_number: string; institution_key: string; proposal_id: string }[])
-    .filter(k => k.institution_key.toLowerCase() === bankKey)
+    .filter(k => layout.api ? bankKeys.has(k.institution_key.toLowerCase()) : k.institution_key.toLowerCase() === bankKey)
   const knownAde = new Set(knownRows.map(k => k.external_proposal_number))
   const proposalByAde = new Map(knownRows.map(k => [k.external_proposal_number, k.proposal_id]))
   // Without ADE: the same client, table, term and amount already registered counts as the same contract.
@@ -214,6 +241,14 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
     return !ls.length || ls.some(c => term >= c.term_min && term <= c.term_max)
   }
   const sellerList = ((sellers ?? []) as { id: string; name: string }[]).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+  // Webservice layout: the company's table of each version and what the owner taught before (Bevicred table -> table,
+  // partner code -> seller). Read by the server for this company only.
+  const productTableOf = new Map(((versionRows ?? []) as { id: string; product_table_id: string }[]).map(v => [v.id, v.product_table_id]))
+  const links = { table: new Map<string, string>(), seller: new Map<string, string>() }
+  if (layout.api) {
+    const { data: linkRows } = await createAdminClient().from('bevicred_links').select('kind,external_key,target_id').eq('organization_id', organization.id)
+    for (const l of (linkRows ?? []) as { kind: 'table' | 'seller'; external_key: string; target_id: string }[]) links[l.kind]?.set(l.external_key, l.target_id)
+  }
 
   const seenInFile = new Set<string>()
   const resolved: Resolved[] = sheet.lines.map(line => {
@@ -221,7 +256,58 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
     const r: Resolved = { line, status: 'ok', messages }
     if (line.cpf && !clientByCpf.has(line.cpf) && line.name.trim().length < 3) messages.push('Cliente novo sem Nome')
     let mustChoose = false
-    if (layout.pdf && product) {
+    if (layout.api) {
+      const m = meta[line.line - 2]
+      r.meta = m
+      const instBanks = bankList.filter(b => sameBank(m.institution, b.name))
+      // Already in Corban: the same ADE in the line's bank (any bank when the bank is not registered).
+      const hit = line.ade ? knownRows.find(k => k.external_proposal_number === line.ade
+        && (!instBanks.length || instBanks.some(b => keyOfBank(b) === k.institution_key.toLowerCase()))) : undefined
+      if (hit) r.existingId = hit.proposal_id
+      // Webservice picks are keyed by ADE: a new contract between the search and the import shifts the line numbers.
+      const picked = String(formData.get(`table:${line.ade}`) ?? '')
+      if (!hit && (line.stage === 'cancelled' || line.stage === 'rejected')) {
+        r.skip = true; r.messages = [`${m.status} na Bevicred e não está no Corban: não será cadastrado`]
+      } else if (!hit && picked === 'skip') {
+        r.skip = true; r.messages = ['Você escolheu não importar esta linha']
+      } else if (!hit) {
+        if (!instBanks.length) messages.push(`Banco "${m.institution || 'sem nome'}" não está cadastrado no Corban`)
+        else {
+          const typeId = line.typeKey ? typeByKey.get(line.typeKey) : undefined
+          const bankTables = tableList.filter(t => instBanks.some(b => b.id === t.bankId))
+          const linked = m.operationKey ? links.table.get(m.operationKey) : undefined
+          const byLink = linked ? bankTables.find(t => productTableOf.get(t.versionId) === linked) : undefined
+          const byName = !byLink && m.tableName ? matchTable(m.tableName, bankTables) : 'none'
+          let t = byLink ?? (typeof byName === 'object' ? byName : undefined)
+          const options = bankTables.filter(o => (!line.typeKey || (!!typeId && o.types.includes(typeId)))
+            && (!line.term || !typeId || termFits(o.versionId, typeId, line.term)))
+          if (t && !options.includes(t)) options.push(t)
+          options.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+          r.tableOptions = options.map(o => ({ id: o.versionId, name: o.name }))
+          if (picked) {
+            const o = options.find(x => x.versionId === picked)
+            if (o) t = o; else messages.push('A tabela escolhida não serve para este contrato')
+          }
+          if (t && t !== byLink && m.operationKey) r.learnTable = productTableOf.get(t.versionId)
+          if (!t) {
+            if (!options.length) messages.push(`Nenhuma tabela do ${instBanks[0].name} serve para este contrato (tipo e prazo ${line.term ?? '—'}): importe a tabela da Bevicred "${m.operation || m.tableName}"`)
+            else mustChoose = true
+          } else {
+            r.versionId = t.versionId; r.tableName = t.name; r.agreementId = agreementOfVersion.get(t.versionId) ?? null
+            if (typeId) { if (t.types.includes(typeId)) r.typeId = typeId; else messages.push('Tipo de contrato não existe nessa tabela') }
+            else if (t.types.length === 1) r.typeId = t.types[0]
+            else messages.push('Informe o Tipo (a tabela tem mais de um tipo de contrato)')
+          }
+        }
+      }
+      const linkedSeller = m.partnerCode ? links.seller.get(m.partnerCode) : undefined
+      const seller = String(formData.get(`seller:${line.ade}`) ?? '')
+      if (seller) {
+        if (!sellerList.some(s => s.id === seller)) messages.push('Vendedor não encontrado na equipe')
+        else { r.sellerId = seller; if (m.partnerCode && seller !== linkedSeller) r.learnSeller = seller }
+      } else if (linkedSeller && sellerList.some(s => s.id === linkedSeller)) r.sellerId = linkedSeller
+      if (r.skip) { r.status = 'skip'; return r }
+    } else if (layout.pdf && product) {
       // A contract already in Corban (same ADE) needs no table; the others list the tables that fit and wait for the pick.
       if (!(line.ade && knownAde.has(line.ade))) {
         const typeId = line.typeKey ? typeByKey.get(line.typeKey) : undefined
@@ -279,9 +365,9 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
     const fileKey = line.ade ? `ade:${line.ade}` : `k:${line.cpf}|${r.versionId}|${line.term}|${line.released ?? ''}|${line.requested ?? ''}`
     if (seenInFile.has(fileKey)) { r.status = 'error'; messages.push('Linha repetida na planilha'); return r }
     seenInFile.add(fileKey)
-    if ((line.ade && knownAde.has(line.ade)) || (!line.ade && r.clientId && existingKeys.has(sameKey(r.clientId, r.versionId!, line.term, line.released, line.requested)))) {
+    if ((layout.api ? !!r.existingId : line.ade && knownAde.has(line.ade)) || (!line.ade && r.clientId && existingKeys.has(sameKey(r.clientId, r.versionId!, line.term, line.released, line.requested)))) {
       r.status = 'exists'
-      r.existingId = line.ade ? proposalByAde.get(line.ade) : proposalByKey.get(sameKey(r.clientId!, r.versionId!, line.term, line.released, line.requested))
+      r.existingId = layout.api && r.existingId ? r.existingId : line.ade ? proposalByAde.get(line.ade) : proposalByKey.get(sameKey(r.clientId!, r.versionId!, line.term, line.released, line.requested))
       messages.push('Já cadastrado no Corban')
     } else if (!r.sellerId) messages.push(NO_SELLER)
     const parts = clientParts(line)
@@ -291,11 +377,13 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
   })
   await planMoves(ctx, resolved, stageByState)
   if (layout.pdf && product) { result.product = product.label; result.sellers = sellerList }
-  result.lines = resolved.map(({ line: l, tableName, status, messages, tableOptions, versionId, sellerId }) => ({
+  if (layout.api) { result.api = true; result.sellers = sellerList; result.notices = notices }
+  result.lines = resolved.map(({ line: l, tableName, status, messages, tableOptions, versionId, sellerId, meta: m }) => ({
     line: l.line, cpf: l.cpf, name: l.name, table: tableName ?? l.table, term: l.term, amount: l.released ?? l.requested,
     // An unknown stage shows the sheet's own text (it used to read "Automática", the label for no stage at all).
     ade: l.ade, stage: l.stage ? STAGE_LABEL[l.stage] ?? l.stage : l.stageRaw || null, seller: l.seller, status, messages,
-    ...(tableOptions ? { tableOptions, tableId: versionId } : {}), ...(layout.pdf ? { sellerId: sellerId ?? undefined } : {}),
+    ...(tableOptions ? { tableOptions, tableId: versionId } : {}), ...(layout.pdf || layout.api ? { sellerId: sellerId ?? undefined } : {}),
+    ...(m ? { origin: m.credential, hint: m.operation || m.tableName, partner: m.partnerName || m.partnerCode } : {}),
   }))
   return { result, resolved }
 }
@@ -323,13 +411,24 @@ export async function importContracts(formData: FormData): Promise<ImportResult>
     return { error: 'Sem permissão para cadastrar contratos e clientes.', fileIssues: [], ignored: [], tooMany: false, lines: [] }
   const { result, resolved } = await resolve(ctx, formData)
   if (result.error || result.fileIssues.length) return result
-  if (resolved.some(r => r.status === 'error')) return { ...result, error: 'Corrija as linhas com erro antes de importar.' }
+  // A webservice line with an error cannot be fixed in a file: it is left out and the others are imported.
+  const api = !!result.api
+  if (!api && resolved.some(r => r.status === 'error')) return { ...result, error: 'Corrija as linhas com erro antes de importar.' }
   if (resolved.some(r => r.status === 'choose')) return { ...result, error: 'Escolha a tabela de cada contrato antes de importar.' }
   const { supabase, organization } = ctx
   const done: { created: number; existed: number; failed: number; updated?: number } = { created: 0, existed: 0, failed: 0, updated: 0 }
+  const learned: { kind: 'table' | 'seller'; external_key: string; external_label: string; target_id: string }[] = []
   for (const [i, r] of resolved.entries()) {
     const out = result.lines[i]
     const l = r.line
+    if (r.status === 'error' || r.status === 'skip') { if (r.status === 'error') out.messages = ['Não importado', ...out.messages]; continue }
+    // What the owner picked for this line is remembered for the next searches (only for a line that was written).
+    const learn = () => {
+      const m = r.meta
+      if (!m) return
+      if (r.learnTable && m.operationKey) learned.push({ kind: 'table', external_key: m.operationKey.slice(0, 200), external_label: (m.operation || m.tableName).slice(0, 200), target_id: r.learnTable })
+      if (r.learnSeller && m.partnerCode) learned.push({ kind: 'seller', external_key: m.partnerCode.slice(0, 200), external_label: (m.partnerName ? `${m.partnerName} (${m.partnerCode})` : m.partnerCode).slice(0, 200), target_id: r.learnSeller })
+    }
     // A contract already in Corban is not changed; its client record still gets the empty fields filled.
     const enrich = async (clientId: string) => {
       const { filled, warnings } = await enrichClient(supabase, organization.id, clientId, l.client, r.agreementId ?? null)
@@ -337,6 +436,7 @@ export async function importContracts(formData: FormData): Promise<ImportResult>
     }
     if (r.status === 'exists') {
       done.existed++
+      learn()
       const head = out.messages.find(m => m.startsWith('Já cadastrado')) ?? 'Já cadastrado no Corban (contrato não alterado)'
       let moved: string[] = []
       if (r.move) {
@@ -370,6 +470,7 @@ export async function importContracts(formData: FormData): Promise<ImportResult>
     if (error || !row) { done.failed++; out.status = 'error'; out.messages = [rpcMessage(error?.message)]; continue }
     if (row.duplicate) { done.existed++; out.status = 'exists'; out.messages = ['Já cadastrado no Corban (contrato não alterado)', ...(await enrich(clientId))]; continue }
     done.created++
+    learn()
     // "Associar proposta": the associated seller replaced the spreadsheet's (owner decision, 08/10/2026).
     const { data: link } = await supabase.from('proposal_seller_links').select('matched_by').eq('proposal_id', row.proposal_id).maybeSingle()
     const tail = [...(link ? [`Vendedor da proposta associada (achada pelo ${link.matched_by === 'ade' ? 'nº' : 'CPF'})`] : r.sellerId ? [] : [NO_SELLER]), ...(await enrich(clientId))]
@@ -382,6 +483,13 @@ export async function importContracts(formData: FormData): Promise<ImportResult>
         : { error: { message: 'case_not_found' } }
       out.messages = moveError ? [`Cadastrado, mas a etapa não mudou (${rpcMessage(moveError.message)})`, ...tail] : ['Cadastrado', ...tail]
     }
+  }
+  if (learned.length) {
+    const seen = new Set<string>()
+    const rows = learned.filter(x => { const k = `${x.kind}|${x.external_key}`; if (seen.has(k)) return false; seen.add(k); return true })
+      .map(x => ({ ...x, organization_id: organization.id, updated_by: ctx.user.id, updated_at: new Date().toISOString() }))
+    const { error: learnError } = await createAdminClient().from('bevicred_links').upsert(rows, { onConflict: 'organization_id,kind,external_key' })
+    if (learnError) result.notices = [...(result.notices ?? []), 'As escolhas de tabela e vendedor não foram guardadas para a próxima busca.']
   }
   revalidatePath('/app/propostas')
   return { ...result, done }

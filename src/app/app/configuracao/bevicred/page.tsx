@@ -1,9 +1,9 @@
 import { Badge, Card, CardHeader, PageHeader } from '@/components/ui'
 import { SubmitButton } from '@/components/SubmitButton'
 import { requireAppContext } from '@/lib/appContext'
-import { listBevicredCredentials } from '@/lib/bevicred.server'
+import { listBevicredCredentials, listBevicredLinks } from '@/lib/bevicred.server'
 import { CredentialForm } from './CredentialForm'
-import { testBevicred } from './actions'
+import { forgetBevicredLink, testBevicred } from './actions'
 
 const when = (iso: string) => new Date(iso).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' })
 
@@ -17,7 +17,7 @@ export default async function BevicredPage() {
       <Card role="alert" className="p-5 text-sm text-ink-soft">Somente o administrador da empresa acessa as credenciais da Bevicred.</Card>
     </section>
   )
-  const credentials = await listBevicredCredentials(organization.id)
+  const [credentials, links] = await Promise.all([listBevicredCredentials(organization.id), listBevicredLinks(organization.id)])
   return (
     <section className="space-y-4">
       <PageHeader title="Bevicred" description="Credenciais desta empresa no webservice da Bevicred. A chave fica guardada criptografada e nunca aparece de novo." />
@@ -55,6 +55,25 @@ export default async function BevicredPage() {
           <CredentialForm />
           <p className="mt-3 text-xs text-muted">Ao salvar, o Corban testa a conexão. Nada é lido nem gravado nos contratos ou no financeiro.</p>
         </div>
+      </Card>
+      <Card>
+        <CardHeader title="Escolhas lembradas na importação" />
+        <p className="px-5 pt-2 text-[13px] text-ink-soft">A tabela e o vendedor escolhidos em Propostas &gt; Importar contratos &gt; Bevicred (API) valem para as próximas buscas. Esqueça uma escolha errada e a próxima busca pergunta de novo.</p>
+        {links.length === 0 ? <p className="px-5 pb-5 pt-3 text-sm text-ink-soft">Nenhuma escolha lembrada ainda.</p> : (
+          <ul className="mt-3">
+            {links.map(l => (
+              <li key={`${l.kind}|${l.external_key}`} className="flex flex-wrap items-center gap-3 border-t border-line px-5 py-2.5 text-sm">
+                <Badge tone="neutral">{l.kind === 'table' ? 'Tabela' : 'Vendedor'}</Badge>
+                <span className="min-w-48 flex-1 text-ink-soft">{l.external_label}</span>
+                <span className="min-w-48 flex-1 font-medium text-ink">→ {l.target}</span>
+                <form action={forgetBevicredLink}>
+                  <input type="hidden" name="kind" value={l.kind} /><input type="hidden" name="key" value={l.external_key} />
+                  <SubmitButton pendingText="..." className="text-[13px] font-medium text-diverged hover:underline">Esquecer</SubmitButton>
+                </form>
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
     </section>
   )

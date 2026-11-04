@@ -26,6 +26,9 @@ export type ContractLayout = {
   // The file is the bank's PDF report (lib/imports/valor-pdf), not a spreadsheet; it names no table, so the owner
   // picks the table (and the seller) on each line.
   pdf?: 'valor'
+  // The contracts come from a partner's webservice (lib/imports/bevicred-production), not a file; each line names its
+  // own bank, and a line without a known table waits for the owner's pick, which is remembered.
+  api?: 'bevicred'
 }
 
 // The NASP contract export ("contratos pagos"), as the bank sends it (owner request 03/10/2026).
@@ -162,6 +165,7 @@ export const CONTRACT_LAYOUTS: ContractLayout[] = [
   { key: 'fintech', label: 'FINTECH CORBAN', bankName: 'FINTECH CORBAN', columns: FINTECH_COLUMNS, tables: FINTECH_TABLES },
   { key: 'hope', label: 'Hope', bankName: 'Hope', columns: HOPE_COLUMNS },
   { key: 'valor', label: 'Valor Financiamento (PDF)', bankName: 'Valor Financiamento', columns: VALOR_COLUMNS, pdf: 'valor' },
+  { key: 'bevicred', label: 'Bevicred (API)', bankName: '', api: 'bevicred' },
 ]
 export const MAX_CONTRACT_LINES = 500
 
@@ -257,7 +261,7 @@ export function mapContractHeader(header: string[], layout?: ContractLayout): He
   const columns: Columns = {}
   for (const [f, list] of Object.entries(found) as [ContractField, { i: number; rank: number }[]][])
     columns[f] = list.sort((a, b) => a.rank - b.rank || a.i - b.i).map(x => x.i)
-  for (const f of layout?.pdf ? ['cpf', 'term'] as const : ['cpf', 'table', 'term'] as const) if (!columns[f]) issues.push({ code: 'missing_column', column: FIELD_LABEL[f] })
+  for (const f of layout?.pdf || layout?.api ? ['cpf', 'term'] as const : ['cpf', 'table', 'term'] as const) if (!columns[f]) issues.push({ code: 'missing_column', column: FIELD_LABEL[f] })
   if (!columns.released && !columns.requested) issues.push({ code: 'missing_column', column: 'Valor liberado ou Valor solicitado' })
   return { columns, ignored, issues }
 }
@@ -489,8 +493,8 @@ export function parseContractSheet(rows: string[][], today: string, layout?: Con
   const tooMany = body.length > MAX_CONTRACT_LINES
   const lines = body.slice(0, MAX_CONTRACT_LINES).map((r, i) => {
     const line = parseContractLine(r, map.columns, at + i + 2, today)
-    // A PDF layout names no table: the owner picks it on the line.
-    if (layout?.pdf) return { ...line, issues: line.issues.filter(x => x !== 'table_required') }
+    // A PDF layout names no table, and a webservice line may not: the owner picks it on the line.
+    if (layout?.pdf || layout?.api) return { ...line, issues: line.issues.filter(x => x !== 'table_required') }
     const table = layout?.tables?.[normalize(line.table)]
     return table ? { ...line, table } : line
   })
