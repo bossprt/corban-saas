@@ -178,6 +178,30 @@ insert into results select 'an ignored line comes back to pending, both steps re
 insert into results select 'a pending line cannot be restored', pg_temp.err(format('select public.fin_restore_line(%L)', (select id from public.fin_statement_lines where fitid = 'F1'))) = 'fin_line_not_ignored';
 insert into results select 'line events cannot be written directly',
   pg_temp.err(format('insert into public.fin_statement_line_events (organization_id, line_id, kind) values (%L, %L, %L)', (select org from ids), (select id from public.fin_statement_lines where fitid = 'F1'), 'restored')) like 'permission denied%';
+
+-- Bank account history and chart accounts in use (20261104204438).
+insert into results select 'a new bank account starts its history',
+  exists (select 1 from public.fin_bank_account_events where bank_account_id = (select id from made where label = 'bank') and kind = 'created' and (detail->>'opening_balance')::numeric = 1000);
+insert into results select 'changing the opening balance needs a reason',
+  pg_temp.err(format('select public.fin_save_bank_account(%L, %L, %L, %L, %L, %L, 1500, %L, true)', (select org from ids), (select id from made where label = 'bank'), 'C6 Bank', 'C6 Smart', '0001', '12345-6', current_date - 60)) = 'reason_required';
+select public.fin_save_bank_account((select org from ids), (select id from made where label = 'bank'), 'C6 Bank', 'C6 Smart', '0001', '12345-6', 1500, current_date - 60, true, 'Saldo do extrato errado');
+insert into results select 'the opening change is recorded with before, after and reason',
+  exists (select 1 from public.fin_bank_account_events where bank_account_id = (select id from made where label = 'bank') and kind = 'opening_changed'
+          and (detail->'opening_balance'->>'from')::numeric = 1000 and (detail->'opening_balance'->>'to')::numeric = 1500 and reason = 'Saldo do extrato errado');
+select public.fin_save_bank_account((select org from ids), (select id from made where label = 'bank'), 'C6 Bank', 'C6 Principal', '0001', '12345-6', 1500, current_date - 60, false);
+insert into results select 'renaming needs no reason; deactivating is recorded',
+  (select label = 'C6 Principal' and not is_active from public.fin_bank_accounts where id = (select id from made where label = 'bank'))
+  and (select count(*) = 1 from public.fin_bank_account_events where bank_account_id = (select id from made where label = 'bank') and kind = 'opening_changed')
+  and exists (select 1 from public.fin_bank_account_events where bank_account_id = (select id from made where label = 'bank') and kind = 'deactivated');
+insert into results select 'bank account events cannot be written directly',
+  pg_temp.err(format('insert into public.fin_bank_account_events (organization_id, bank_account_id, kind) values (%L, %L, %L)', (select org from ids), (select id from made where label = 'bank'), 'created')) like 'permission denied%';
+insert into made select 'acc99', public.fin_save_chart_account((select org from ids), null, '4.99', 'Conta de teste', 'expense', false, true);
+insert into made select 'e99', public.fin_create_entry((select org from ids), 'out', 'Despesa teste', (select id from made where label = 'acc99'), null, null, null, 10.00, current_date, null, 1, null, null);
+insert into results select 'a chart account with open entries is not deactivated',
+  pg_temp.err(format('select public.fin_save_chart_account(%L, %L, %L, %L, %L, false, false)', (select org from ids), (select id from made where label = 'acc99'), '4.99', 'Conta de teste', 'expense')) = 'fin_account_open_entries';
+select public.fin_settle_entry((select id from made where label = 'e99'), current_date, null);
+insert into results select 'with only settled entries it can be deactivated',
+  pg_temp.err(format('select public.fin_save_chart_account(%L, %L, %L, %L, %L, false, false)', (select org from ids), (select id from made where label = 'acc99'), '4.99', 'Conta de teste', 'expense')) = 'ok';
 reset role;
 
 select pg_temp.act_as((select v1 from ids));
@@ -187,6 +211,7 @@ insert into results select 'a seller cannot undo a reconciliation or restore a l
   pg_temp.err(format('select public.fin_unmatch_line(%L, %L)', (select l.id from public.fin_statement_lines l limit 1), 'Teste')) = 'not_authorized'
   and pg_temp.err(format('select public.fin_restore_line(%L)', (select l.id from public.fin_statement_lines l limit 1))) = 'not_authorized';
 insert into results select 'a seller reads no statement line event', not exists (select 1 from public.fin_statement_line_events);
+insert into results select 'a seller reads no bank account event', not exists (select 1 from public.fin_bank_account_events);
 insert into results select 'a seller cannot turn automatic posting off', pg_temp.err(format('select public.fin_set_auto_post(%L, true)', (select org from ids))) = 'not_authorized';
 reset role;
 insert into results select 'anon has nothing',

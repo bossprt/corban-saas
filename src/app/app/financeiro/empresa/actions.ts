@@ -22,7 +22,7 @@ const finError = (e: { message?: string; code?: string }): FeedbackCode => {
     ['invalid_amount', 'erro:fin_valor'], ['fin_installments_invalid', 'erro:fin_parcelas'], ['fin_due_required', 'erro:fin_vencimento'],
     ['fin_settle_invalid', 'erro:fin_baixa'], ['fin_entry_not_open', 'erro:fin_nao_aberto'], ['fin_entry_not_settled', 'erro:fin_nao_baixado'],
     ['fin_entry_automatic', 'erro:fin_automatico'], ['fin_entry_reconciled', 'erro:fin_conciliado'], ['reason_required', 'erro:fin_motivo'],
-    ['fin_account_code_exists', 'erro:fin_codigo_repetido'], ['fin_account_in_use', 'erro:fin_conta_em_uso'], ['fin_account_system', 'erro:fin_conta_sistema'],
+    ['fin_account_code_exists', 'erro:fin_codigo_repetido'], ['fin_account_in_use', 'erro:fin_conta_em_uso'], ['fin_account_open_entries', 'erro:fin_conta_com_abertos'], ['fin_account_system', 'erro:fin_conta_sistema'],
     ['fin_match_amount', 'erro:fin_valor_diferente'], ['fin_match_other_account', 'erro:fin_outra_conta'], ['fin_line_not_pending', 'erro:fin_linha_tratada'],
     ['fin_already_posted', 'erro:fin_ja_lancado'], ['fin_line_not_matched', 'erro:fin_linha_tratada'], ['fin_line_not_ignored', 'erro:fin_linha_tratada'], ['fin_statement_already_imported', 'erro:fin_extrato_repetido'],
   ] as const) if (m.includes(k)) return c
@@ -111,7 +111,7 @@ export async function saveBankAccount(f: FormData) {
   if (opening === 'invalid') return back(`${BASE}/contas`, 'erro:fin_valor')
   const { error } = await ctx.supabase.rpc('fin_save_bank_account', {
     p_org: ctx.organization.id, p_id: uuidOrNull(f, 'id'), p_bank_name: text(f, 'bank_name'), p_label: text(f, 'label'), p_agency: text(f, 'agency'),
-    p_account_number: text(f, 'account_number'), p_opening_balance: opening ?? '0', p_opening_on: dateOrNull(f, 'opening_on'), p_active: f.get('is_active') !== 'false',
+    p_account_number: text(f, 'account_number'), p_opening_balance: opening ?? '0', p_opening_on: dateOrNull(f, 'opening_on'), p_active: f.get('is_active') !== 'false', p_reason: text(f, 'reason') || null,
   })
   return back(`${BASE}/contas`, error ? finError(error) : 'ok:fin_conta_salva')
 }
