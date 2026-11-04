@@ -24,7 +24,7 @@ const finError = (e: { message?: string; code?: string }): FeedbackCode => {
     ['fin_entry_automatic', 'erro:fin_automatico'], ['fin_entry_reconciled', 'erro:fin_conciliado'], ['reason_required', 'erro:fin_motivo'],
     ['fin_account_code_exists', 'erro:fin_codigo_repetido'], ['fin_account_in_use', 'erro:fin_conta_em_uso'], ['fin_account_system', 'erro:fin_conta_sistema'],
     ['fin_match_amount', 'erro:fin_valor_diferente'], ['fin_match_other_account', 'erro:fin_outra_conta'], ['fin_line_not_pending', 'erro:fin_linha_tratada'],
-    ['fin_already_posted', 'erro:fin_ja_lancado'], ['fin_statement_already_imported', 'erro:fin_extrato_repetido'],
+    ['fin_already_posted', 'erro:fin_ja_lancado'], ['fin_line_not_matched', 'erro:fin_linha_tratada'], ['fin_line_not_ignored', 'erro:fin_linha_tratada'], ['fin_statement_already_imported', 'erro:fin_extrato_repetido'],
   ] as const) if (m.includes(k)) return c
   return classifyDbFeedback(e)
 }
@@ -167,4 +167,17 @@ export async function ignoreLine(f: FormData) {
   const ctx = await editor(); if (!ctx) return back(`${BASE}/extrato`, 'erro:sem_permissao')
   const { error } = await ctx.supabase.rpc('fin_ignore_line', { p_line: uuidOrNull(f, 'line_id') })
   return back(`${BASE}/extrato`, error ? finError(error) : 'ok:fin_linha_ignorada')
+}
+
+// Undo a reconciliation (04/11/2026): the line goes back to pending and the entry to what it was, with the reason.
+export async function unmatchLine(f: FormData) {
+  const ctx = await editor(); if (!ctx) return back(`${BASE}/extrato`, 'erro:sem_permissao')
+  const { error } = await ctx.supabase.rpc('fin_unmatch_line', { p_line: uuidOrNull(f, 'line_id'), p_reason: text(f, 'reason') })
+  return back(`${BASE}/extrato`, error ? finError(error) : 'ok:fin_conciliacao_desfeita')
+}
+
+export async function restoreLine(f: FormData) {
+  const ctx = await editor(); if (!ctx) return back(`${BASE}/extrato`, 'erro:sem_permissao')
+  const { error } = await ctx.supabase.rpc('fin_restore_line', { p_line: uuidOrNull(f, 'line_id') })
+  return back(`${BASE}/extrato`, error ? finError(error) : 'ok:fin_linha_voltou')
 }

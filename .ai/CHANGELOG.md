@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Desfazer conciliação do extrato (04/11/2026)
+- Adicionado: no Extrato bancário, a seção "Já tratadas" (últimas 100, filtro conciliadas ou ignoradas) com "Desfazer conciliação" (com motivo) e "Voltar para a conciliar".
+- Ao desfazer, a linha volta para a conciliar e o lançamento volta como estava: em aberto se a conciliação o pagou, pago com a conta anterior se já estava pago, cancelado se foi criado a partir da linha. O histórico do lançamento mostra "Conciliação desfeita" com o motivo. Migration `20261104202734_fin_undo_reconciliation_v1` (ADR-0068).
+
 ### Contas a pagar e receber: alterar e nova ordem (04/11/2026)
 - Adicionado: "Alterar" lançamento em aberto (valor, vencimento, descrição, fornecedor, conta do plano, filial, competência, documento) com motivo; o histórico mostra o antes e depois. Lançamento automático não muda o valor.
 - Adicionado: histórico do lançamento na lista; pagar ou receber várias contas de uma vez, com o total marcado.

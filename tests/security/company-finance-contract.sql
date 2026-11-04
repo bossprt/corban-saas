@@ -151,11 +151,42 @@ insert into results select 'income statement: commission +1.200,00, payout -300,
   (select coalesce(sum(total) filter (where account_code = '1.1'), 0) = 1200.00 and coalesce(sum(total) filter (where account_code = '3.1'), 0) = -300.00
           and coalesce(sum(total) filter (where account_code = '4.4'), 0) = -250.40 and coalesce(sum(total) filter (where account_code = '5.2'), 0) = -12.90
    from public.fin_income_statement((select org from ids), date_trunc('month', current_date)::date, current_date));
+
+-- Undo a reconciliation and bring an ignored line back (20261104202734): the entry returns to what it was, nothing deleted.
+insert into results select 'undoing a reconciliation needs a reason',
+  pg_temp.err(format('select public.fin_unmatch_line(%L, %L)', (select id from public.fin_statement_lines where fitid = 'F1'), '')) = 'reason_required';
+select public.fin_unmatch_line((select id from public.fin_statement_lines where fitid = 'F1'), 'Conta errada');
+insert into results select 'a bill settled by the reconciliation goes back to open, the line to pending',
+  (select status = 'open' and settled_on is null and bank_account_id is null from public.fin_entries where id = (select id from made where label = 'bill'))
+  and (select status = 'pending' and entry_id is null from public.fin_statement_lines where fitid = 'F1');
+insert into results select 'the bill history says the reconciliation was undone, with the reason',
+  exists (select 1 from public.fin_entry_events where entry_id = (select id from made where label = 'bill') and kind = 'reconciliation_undone' and reason = 'Conta errada' and detail->>'outcome' = 'reopened');
+select public.fin_unmatch_line((select id from public.fin_statement_lines where fitid = 'F2'), 'Outro recebimento');
+insert into results select 'an entry settled before stays settled and gets back the account it had (none)',
+  (select status = 'settled' and bank_account_id is null from public.fin_entries where source = 'commission_receipt' and proposal_id = (select id from made where label = 'p1'));
+select public.fin_unmatch_line((select id from public.fin_statement_lines where fitid = 'F3'), 'Tarifa duplicada');
+insert into results select 'an entry created from the line is cancelled, not deleted',
+  (select status = 'cancelled' and settled_on is null from public.fin_entries where id = (select id from made where label = 'fee'));
+insert into results select 'the line can be reconciled again after the undo',
+  pg_temp.err(format('select public.fin_entry_from_line(%L, %L, null, null)', (select id from public.fin_statement_lines where fitid = 'F3'), pg_temp.acc('5.2'))) = 'ok';
+insert into results select 'a pending line cannot be undone', pg_temp.err(format('select public.fin_unmatch_line(%L, %L)', (select id from public.fin_statement_lines where fitid = 'F1'), 'Teste')) = 'fin_line_not_matched';
+select public.fin_ignore_line((select id from public.fin_statement_lines where fitid = 'F1'));
+select public.fin_restore_line((select id from public.fin_statement_lines where fitid = 'F1'));
+insert into results select 'an ignored line comes back to pending, both steps recorded',
+  (select status = 'pending' from public.fin_statement_lines where fitid = 'F1')
+  and (select count(*) = 2 from public.fin_statement_line_events where line_id = (select id from public.fin_statement_lines where fitid = 'F1') and kind in ('ignored', 'restored'));
+insert into results select 'a pending line cannot be restored', pg_temp.err(format('select public.fin_restore_line(%L)', (select id from public.fin_statement_lines where fitid = 'F1'))) = 'fin_line_not_ignored';
+insert into results select 'line events cannot be written directly',
+  pg_temp.err(format('insert into public.fin_statement_line_events (organization_id, line_id, kind) values (%L, %L, %L)', (select org from ids), (select id from public.fin_statement_lines where fitid = 'F1'), 'restored')) like 'permission denied%';
 reset role;
 
 select pg_temp.act_as((select v1 from ids));
 set local role authenticated;
 insert into results select 'a seller reads no entry', not exists (select 1 from public.fin_entries);
+insert into results select 'a seller cannot undo a reconciliation or restore a line',
+  pg_temp.err(format('select public.fin_unmatch_line(%L, %L)', (select l.id from public.fin_statement_lines l limit 1), 'Teste')) = 'not_authorized'
+  and pg_temp.err(format('select public.fin_restore_line(%L)', (select l.id from public.fin_statement_lines l limit 1))) = 'not_authorized';
+insert into results select 'a seller reads no statement line event', not exists (select 1 from public.fin_statement_line_events);
 insert into results select 'a seller cannot turn automatic posting off', pg_temp.err(format('select public.fin_set_auto_post(%L, true)', (select org from ids))) = 'not_authorized';
 reset role;
 insert into results select 'anon has nothing',
