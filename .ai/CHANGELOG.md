@@ -19,6 +19,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 - Adicionado: botão "Buscar na Bevicred" na Esteira, para empresa com credencial, que abre a importação já buscando.
 - Alterado: "Importar planilha" passa a se chamar "Importar contratos".
 
+### Layout Efetiva Mais (04/11/2026)
+- Adicionado: layout "Efetiva Mais" em Importar contratos (relatório BuscaContrato): cada linha usa o seu banco e só as tabelas da promotora Efetivamais, pelo nome ou pelo código da tabela; aparece só para empresa com a promotora cadastrada.
+- Adicionado: contrato da base antiga da 2tech (já pago ao vendedor) fica de fora em qualquer layout de planilha ou PDF ("Já pago na base antiga").
+- Corrigido: Hope lê a situação de "StatusProposta" (PAGO, ANDAMENTO, CANCELADO); "NÃO PAGO AO CLIENTE" não dá mais erro, e a data de pagamento só fica no contrato pago.
+
 ### Layouts de importação por empresa (04/11/2026)
 - Corrigido: Importar contratos mostra só os layouts dos bancos que a empresa tem cadastrados, e o da Bevicred só com credencial; os layouts dos bancos da Smart não aparecem mais para a MAIS VALOR.
 

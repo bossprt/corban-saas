@@ -18,7 +18,7 @@ type Pick = { table?: string; seller?: string }
 // The Bevicred layout has no file: "Buscar na Bevicred" reads the company's contracts of the chosen period; a table or
 // seller picked there is remembered, and a line can be left out ("Não importar").
 // "Buscar na Bevicred" on the Esteira opens it with autoBevicred: the Bevicred layout, already searching.
-export function ContractImportClient({ layouts, autoBevicred = false }: { layouts: { key: string; label: string; pdf: boolean; api: boolean }[]; autoBevicred?: boolean }) {
+export function ContractImportClient({ layouts, autoBevicred = false }: { layouts: { key: string; label: string; pdf: boolean; api: boolean; model?: boolean }[]; autoBevicred?: boolean }) {
   const [layout, setLayout] = useState((autoBevicred && layouts.find(l => l.api)?.key) || (layouts[0]?.key ?? ''))
   const [file, setFile] = useState<File | null>(null)
   const [result, setResult] = useState<ImportResult | null>(null)
@@ -26,6 +26,8 @@ export function ContractImportClient({ layouts, autoBevicred = false }: { layout
   const [busy, start] = useTransition()
   const pdf = layouts.find(l => l.key === layout)?.pdf ?? false
   const api = layouts.find(l => l.key === layout)?.api ?? false
+  // A promoter's report has its own columns: the Corban template does not apply.
+  const model = layouts.find(l => l.key === layout)?.model ?? true
   const [days, setDays] = useState('7')
 
   const send = (action: typeof previewContracts) => start(async () => {
@@ -86,7 +88,7 @@ export function ContractImportClient({ layouts, autoBevicred = false }: { layout
             <div className="mt-1.5"><FileDrop key={pdf ? 'pdf' : 'sheet'} compact accept={pdf ? '.pdf' : '.xlsx,.csv'} ariaLabel={pdf ? 'Relatório de contratos em PDF' : 'Planilha de contratos'} onChange={fs => { setFile(fs[0] ?? null); reset() }} /></div>
           </div>
         )}
-        {!pdf && !api && (
+        {!pdf && !api && model && (
           <a href={`/api/propostas/importar/modelo?layout=${layout}`} className="inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-line px-4 font-medium text-ink-soft hover:bg-surface-muted">
             <Download size={16} aria-hidden />Baixar modelo
           </a>
