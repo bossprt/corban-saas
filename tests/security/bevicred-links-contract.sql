@@ -1,4 +1,4 @@
--- Contract test for 20261104010000_bevicred_links_v1: the table is closed to tenants; a link points only to a table or
+-- Contract test for 20261104013646_bevicred_links_v1: the table is closed to tenants; a link points only to a table or
 -- seller of the same company; one link per company, kind and Bevicred key. One transaction, rolled back.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/bevicred-links-contract.sql
 
