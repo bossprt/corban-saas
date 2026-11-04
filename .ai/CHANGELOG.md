@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Credenciais da Bevicred por empresa (03/11/2026)
+- Adicionado: Configuração > Bevicred para o administrador de qualquer empresa cadastrar uma ou mais credenciais (código de parceiro e chave da API), guardadas criptografadas no Vault; Salvar e testar, Testar e Trocar chave. Migration `20261103235839_bevicred_credentials_v1`.
+- Removido: o teste de conexão só da Smart com o segredo na Vercel (`BEVICRED_PARTNER_CODE`, `BEVICRED_API_KEY`).
+
 ### Contratos do Valor Financiamento pelo PDF (03/11/2026)
 - **Adicionado:** layout "Valor Financiamento (PDF)" na importação de contratos: lê o relatório de comissão do banco em PDF; em cada linha o dono escolhe a tabela (entre as que servem para o convênio, o tipo e o prazo) e o vendedor; os contratos entram como pagos na data do crédito ao cliente, sem duplicar o mesmo nº.
 

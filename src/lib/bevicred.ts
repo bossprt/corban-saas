@@ -1,12 +1,8 @@
-// Bevicred webservice (manual "Documentação WEBSERVICE Bevi", 2021). Phase 1, 07/10/2026: only the connection test.
-// The partner code and the API key live in the server environment (BEVICRED_PARTNER_CODE, BEVICRED_API_KEY), typed by
-// the owner in Vercel; they never reach the browser, a URL, a log or the repository.
+// Bevicred webservice (manual "Documentação WEBSERVICE Bevi", 2021). Each company keeps its own credentials (partner code
+// and API key) in Supabase Vault, typed by its administrator on screen (03/11/2026); they never reach the browser after
+// being typed, a URL, a log or the repository.
 
 export const BEVICRED_URL = 'https://sistema.bevicred.com.br/webserviceApi/service.php?modulo=AGENTE'
-
-// The credentials in the environment belong to Smart Promotora. Until each company keeps its own credentials, only
-// this company may use them.
-export const BEVICRED_ORGANIZATION_ID = '62405e20-af29-4359-b39c-79c206146b6c'
 
 export type BevicredProbe =
   | { ok: true; ms: number }
@@ -29,7 +25,7 @@ export function classifyTokenResponse(status: number, body: string, ms: number):
 }
 
 export const PROBE_TEXT: Record<Exclude<BevicredProbe, { ok: true }>['reason'], string> = {
-  not_configured: 'O código de parceiro ou a chave da API não estão nas configurações do servidor.',
+  not_configured: 'Não foi possível ler o código de parceiro e a chave desta credencial.',
   rejected: 'A Bevicred recusou o acesso. Confira o código de parceiro e a chave; se estiverem certos, a Bevicred pode estar bloqueando o IP do servidor.',
   http: 'A Bevicred respondeu com erro.',
   network: 'Não foi possível falar com a Bevicred.',
