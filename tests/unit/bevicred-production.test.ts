@@ -64,4 +64,6 @@ test('import layouts: only the banks the company has, Bevicred only with a crede
   assert.deepEqual(keys(['C6 Bank', 'Daycoval'], true), ['bevicred'])
   assert.deepEqual(keys(['C6 Bank'], false), [])
   assert.deepEqual(keys(['NASP', 'Hope', 'Valor Financiamento'], false), ['nasp', 'hope', 'valor'])
+  assert.deepEqual(layoutsFor(['Daycoval'], true, ['Bevicred', 'Efetivamais']).map(l => l.key), ['efetivamais', 'bevicred'])
+  assert.deepEqual(layoutsFor(['Daycoval'], false, ['Efetiva Kessy']).map(l => l.key), [])
 })

@@ -16,6 +16,8 @@ export type ContractField =
   | 'birthDate' | 'gender' | 'maritalStatus' | 'birthplace' | 'motherName' | 'fatherName' | 'rgNumber' | 'rgIssuer' | 'rgState'
   | 'rgIssuedOn' | 'whatsapp' | 'zip' | 'street' | 'number' | 'complement' | 'district' | 'city' | 'state'
   | 'bankCode' | 'bankName' | 'branch' | 'account' | 'accountDigit' | 'accountType' | 'registration' | 'agency'
+  // The contract's bank, on a layout whose lines name it (lineBank); bankName is the client's account bank.
+  | 'lineBank'
 
 export type ContractLayout = {
   key: string; label: string; bankName: string
@@ -29,6 +31,9 @@ export type ContractLayout = {
   // The contracts come from a partner's webservice (lib/imports/bevicred-production), not a file; each line names its
   // own bank, and a line without a known table waits for the owner's pick, which is remembered.
   api?: 'bevicred'
+  // The file is a promoter's report (Efetiva Mais): each line names its bank ("Banco") and only the company's tables of
+  // this promoter (provider name) are matched, so the same bank code under another promoter is never picked.
+  provider?: string
 }
 
 // The NASP contract export ("contratos pagos"), as the bank sends it (owner request 03/10/2026).
@@ -127,8 +132,9 @@ const FINTECH_TABLES: Record<string, string> = {
 }
 
 // The Hope contract report ("BuscaContrato", owner request 08/10/2026). "NumeroContrato" is the ADE; "Tabela" carries
-// the bank's full table name, the same as the company's Hope tables. "StatusBancoCliente" is the bank's status for the
-// client ("PAGO AO CLIENTE") and "DataStatusBancoCliente" its date: "Pago ao cliente em". "Banco" is the bank itself, not
+// the bank's full table name, the same as the company's Hope tables. "StatusProposta" (PAGO, ANDAMENTO, CANCELADO) is
+// the stage (owner, 04/11/2026: "StatusBancoCliente" has "NÃO PAGO AO CLIENTE", which is no stage) and
+// "DataStatusBancoCliente" the date it was paid to the client: "Pago ao cliente em", kept only on a paid line. "Banco" is the bank itself, not
 // the client's account, and "NomeCorretor" is the company itself: both are left out, and the seller is set in the
 // contract. The commission, bonus and deferred columns are the promoter system's own numbers: the company's commission
 // comes from its tables, so they are ignored. "TelefoneCliente" comes masked ("Dados não disponíveis").
@@ -143,14 +149,21 @@ const HOPE_COLUMNS: Record<string, ContractField | 'ignore'> = {
   diferidorepassevalor: 'ignore', basecalculocomissao: 'ignore', basecalculobonus: 'ignore', filial: 'ignore', codigocorretor: 'ignore',
   nomecorretor: 'ignore', statusbloqueiocorretor: 'ignore', situacaovendedor: 'ignore', fisicoempresa: 'ignore', datafisico: 'ignore',
   horafisico: 'ignore', usuariofisicoempresa: 'ignore', fisicobanco: 'ignore', datafisicobanco: 'ignore', horafisicobanco: 'ignore',
-  usuariofisicobanco: 'ignore', statusbancocliente: 'stage', datastatusbancocliente: 'paidOn', statusempresavendedor: 'ignore',
-  datastatusempresavendedor: 'ignore', statuspendencia: 'ignore', colecaotags: 'ignore', statusproposta: 'ignore',
+  usuariofisicobanco: 'ignore', statusbancocliente: 'ignore', datastatusbancocliente: 'paidOn', statusempresavendedor: 'ignore',
+  datastatusempresavendedor: 'ignore', statuspendencia: 'ignore', colecaotags: 'ignore', statusproposta: 'stage',
   statusfisicounico: 'ignore', clientepossuianexo: 'ignore', qtdanexocliente: 'ignore', nomegrupovendedor: 'ignore',
   telefonecliente: 'ignore', descricaocomissionamento: 'ignore', vigenciaid: 'ignore', correspondenteid: 'ignore',
   nomecorrespondente: 'ignore', inclusao: 'ignore', operador: 'ignore',
+  // Newer exports (Efetiva Mais, 04/11/2026) add a second and third company bonus.
+  bonusempresaperc2: 'ignore', bonusempresavalor2: 'ignore', bonusempresaperc3: 'ignore', bonusempresavalor3: 'ignore',
   ...Object.fromEntries([1, 2, 3, 4].flatMap(n => [`percbonusempresa${n}`, `valorbonusempresa${n}`, `percbonusrepasse${n}`, `valorbonusrepasse${n}`].map(k => [k, 'ignore' as const]))),
   ...Object.fromEntries([1, 2, 3, 4, 5].flatMap(n => [`empresavalorfixo${n}`, `repassevalorfixo${n}`].map(k => [k, 'ignore' as const]))),
 }
+
+// The Efetiva Mais contract report (owner request 04/11/2026) is the same "BuscaContrato" export, for every bank the
+// promoter serves: "Banco" names the contract's bank and "Tabela" starts with the bank's table code ("831124 - GOV.
+// ACRE 5 DIG - AOL"), the name the company's Efetivamais tables carry.
+const EFETIVA_COLUMNS: Record<string, ContractField | 'ignore'> = { ...HOPE_COLUMNS, banco: 'lineBank' }
 
 // Banco Valor commission report (PDF), owner request 03/11/2026. "Codigo" and "Contrato" carry the same number; the
 // commission columns belong to the receipt import.
@@ -165,12 +178,14 @@ export const CONTRACT_LAYOUTS: ContractLayout[] = [
   { key: 'fintech', label: 'FINTECH CORBAN', bankName: 'FINTECH CORBAN', columns: FINTECH_COLUMNS, tables: FINTECH_TABLES },
   { key: 'hope', label: 'Hope', bankName: 'Hope', columns: HOPE_COLUMNS },
   { key: 'valor', label: 'Valor Financiamento (PDF)', bankName: 'Valor Financiamento', columns: VALOR_COLUMNS, pdf: 'valor' },
+  { key: 'efetivamais', label: 'Efetiva Mais', bankName: '', provider: 'Efetivamais', columns: EFETIVA_COLUMNS },
   { key: 'bevicred', label: 'Bevicred (API)', bankName: '', api: 'bevicred' },
 ]
 // The layouts a company can use: a bank layout only when the company has that bank (the import looks the bank up by
-// this exact name), the Bevicred layout only when it has a Bevicred credential. Smart's banks stay out of MAIS VALOR.
-export const layoutsFor = (bankNames: string[], bevicred: boolean) =>
-  CONTRACT_LAYOUTS.filter(l => (l.api ? bevicred : bankNames.includes(l.bankName)))
+// this exact name), a promoter layout only when it has that promoter, the Bevicred layout only when it has a Bevicred
+// credential. Smart's banks stay out of MAIS VALOR.
+export const layoutsFor = (bankNames: string[], bevicred: boolean, providers: string[] = []) =>
+  CONTRACT_LAYOUTS.filter(l => (l.api ? bevicred : l.provider ? providers.some(p => normalize(p) === normalize(l.provider!)) : bankNames.includes(l.bankName)))
 export const MAX_CONTRACT_LINES = 500
 
 // Header aliases, compared after normalize(). When several columns feed one field (Telefone and Celular), the first
@@ -222,6 +237,7 @@ const ALIASES: Record<ContractField, string[]> = {
   accountType: ['tipo de conta'],
   registration: ['matricula'],
   agency: ['orgao', 'secretaria'],
+  lineBank: [],
 }
 
 // Contract columns: one column each, a second one is refused (two "CPF" columns cannot be guessed).
@@ -277,7 +293,7 @@ export const FIELD_LABEL: Record<ContractField, string> = {
   phone: 'Telefone', email: 'E-mail', note: 'Observação', agreement: 'Convênio', category: 'Categoria',
   birthDate: 'Data de nascimento', gender: 'Sexo', maritalStatus: 'Estado civil', birthplace: 'Naturalidade', motherName: 'Nome da mãe',
   fatherName: 'Nome do pai', rgNumber: 'RG', rgIssuer: 'Órgão emissor do RG', rgState: 'UF do RG', rgIssuedOn: 'Data de expedição do RG',
-  whatsapp: 'WhatsApp', zip: 'CEP', street: 'Logradouro', number: 'Número', complement: 'Complemento', district: 'Bairro', city: 'Cidade',
+  lineBank: 'Banco', whatsapp: 'WhatsApp', zip: 'CEP', street: 'Logradouro', number: 'Número', complement: 'Complemento', district: 'Bairro', city: 'Cidade',
   state: 'UF', bankCode: 'Código do banco', bankName: 'Banco', branch: 'Agência', account: 'Conta', accountDigit: 'Dígito da conta',
   accountType: 'Tipo de conta', registration: 'Matrícula', agency: 'Órgão / secretaria',
 }
@@ -328,7 +344,7 @@ export type ContractLine = {
   cpf: string; name: string; table: string; term: number | null
   released: string | null; requested: string | null; installment: string | null; outstanding: string | null
   ade: string; typeKey: string | null; stage: string | null; stageRaw: string; paidOn: string | null
-  seller: string; originBank: string; originContract: string; phone: string; email: string; note: string
+  seller: string; lineBank: string; originBank: string; originContract: string; phone: string; email: string; note: string
   client: ClientExtra
   issues: LineIssue[]
   warnings: string[]
@@ -471,7 +487,8 @@ export function parseContractLine(row: string[], columns: Columns, line: number,
   const stage = stageText ? STAGE_KEYS[stageText] ?? null : null
   if (stageText && !stage) issues.push('stage_unknown')
   const paid = isoDate(get('paidOn'))
-  const paidOn = paid === 'invalid' ? null : paid
+  // A paid date belongs to a paid contract: a report that dates every status (BuscaContrato) does not date the others.
+  const paidOn = paid === 'invalid' || (stage && stage !== 'paid') ? null : paid
   if (paid === 'invalid' || (paidOn && paidOn > today)) issues.push('paid_on_invalid')
   if (stage === 'paid' && !paidOn && paid !== 'invalid') issues.push('paid_on_required')
   const email = get('email').toLowerCase()
@@ -479,7 +496,7 @@ export function parseContractLine(row: string[], columns: Columns, line: number,
   if (!validEmail) warnings.push('E-mail inválido: não gravado na ficha')
   return {
     line, cpf, name: get('name'), table, term, released, requested, installment, outstanding,
-    ade: get('ade'), typeKey, stage, stageRaw: get('stage'), paidOn, seller: get('seller'), originBank: get('originBank'), originContract: get('originContract'),
+    ade: get('ade'), typeKey, stage, stageRaw: get('stage'), paidOn, seller: get('seller'), lineBank: get('lineBank'), originBank: get('originBank'), originContract: get('originContract'),
     phone: get('phone'), email: validEmail ? email : '', note: get('note').slice(0, 500),
     client: clientExtra(get, today, warnings), issues, warnings,
   }
@@ -522,4 +539,14 @@ export function matchTable<T extends { name: string }>(sheetName: string, tables
     if (found.length > 1) return 'ambiguous'
   }
   return 'none'
+}
+
+// A promoter's table name starts with the bank's table code ("761118 GOV ACRE ESPECIAL DIG - AOL"): when the name does
+// not match, the one table whose name starts with the same code.
+export function matchTableByCode<T extends { name: string }>(sheetName: string, tables: T[]): T | 'none' | 'ambiguous' {
+  const codeOf = (s: string) => s.trim().match(/^(\d{5,})\b/)?.[1]
+  const code = codeOf(sheetName)
+  if (!code) return 'none'
+  const found = tables.filter(t => codeOf(t.name) === code)
+  return found.length === 1 ? found[0] : found.length > 1 ? 'ambiguous' : 'none'
 }

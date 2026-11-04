@@ -14,7 +14,7 @@ import { bevicredSheet, sameBank, type BevicredMeta, type BevicredRow } from '@/
 import { fetchBevicredProduction } from '@/lib/bevicred.server'
 import { createAdminClient } from '@/lib/supabaseAdmin'
 import {
-  CONTRACT_LAYOUTS, MAX_CONTRACT_LINES, matchTable, normalize, parseContractSheet,
+  CONTRACT_LAYOUTS, MAX_CONTRACT_LINES, matchTable, matchTableByCode, normalize, parseContractSheet,
   type ContractLine, type HeaderIssue, type LineIssue,
 } from '@/lib/imports/contract-layout'
 
@@ -160,20 +160,20 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
     supabase.from('contract_types').select('id,tech_key,organization_id').eq('is_active', true),
     supabase.from('commercial_sellers').select('id,name').eq('is_active', true),
     supabase.from('operational_stages').select('id,canonical_state,sort_order').eq('is_active', true).order('sort_order'),
-    layout.api ? supabase.from('organization_banks').select('id,name,tech_key').eq('is_active', true) : supabase.from('organization_banks').select('id,name,tech_key').eq('name', layout.bankName),
+    layout.api || layout.provider ? supabase.from('organization_banks').select('id,name,tech_key').eq('is_active', true) : supabase.from('organization_banks').select('id,name,tech_key').eq('name', layout.bankName),
     supabase.from('clients').select('id,cpf').in('cpf', cpfs).is('deleted_at', null),
   ])
   type Bank = { id: string; name: string; tech_key: string | null }
   const bankList = (banks ?? []) as Bank[]
   const bank = bankList[0]
-  if (!bank) return { result: { ...result, error: layout.api ? 'A empresa não tem bancos cadastrados.' : `O banco ${layout.bankName} não está cadastrado.` }, resolved: [] }
+  if (!bank) return { result: { ...result, error: layout.api || layout.provider ? 'A empresa não tem bancos cadastrados.' : `O banco ${layout.bankName} não está cadastrado.` }, resolved: [] }
   const bankById = new Map(bankList.map(b => [b.id, b]))
   const keyOfBank = (b: Bank) => (b.tech_key ?? b.name).toLowerCase()
 
-  type CatRow = { version_id: string; table_name: string; bank_id: string; contract_type_id: string | null }
+  type CatRow = { version_id: string; table_name: string; bank_id: string; provider_name: string | null; contract_type_id: string | null }
   const tables = new Map<string, { versionId: string; name: string; types: string[]; bankId: string }>()
   for (const r of (catalog ?? []) as CatRow[]) {
-    if (layout.api ? !bankById.has(r.bank_id) : r.bank_id !== bank.id) continue
+    if (layout.api ? !bankById.has(r.bank_id) : layout.provider ? !bankById.has(r.bank_id) || normalize(r.provider_name ?? '') !== normalize(layout.provider) : r.bank_id !== bank.id) continue
     const t = tables.get(r.version_id) ?? { versionId: r.version_id, name: r.table_name, types: [], bankId: r.bank_id }
     if (r.contract_type_id && !t.types.includes(r.contract_type_id)) t.types.push(r.contract_type_id)
     tables.set(r.version_id, t)
@@ -218,8 +218,21 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
   const bankKey = keyOfBank(bank)
   const bankKeys = new Set(bankList.map(keyOfBank))
   const knownRows = ((known ?? []) as { external_proposal_number: string; institution_key: string; proposal_id: string }[])
-    .filter(k => layout.api ? bankKeys.has(k.institution_key.toLowerCase()) : k.institution_key.toLowerCase() === bankKey)
+    .filter(k => layout.api || layout.provider ? bankKeys.has(k.institution_key.toLowerCase()) : k.institution_key.toLowerCase() === bankKey)
   const knownAde = new Set(knownRows.map(k => k.external_proposal_number))
+  // Promoter layout: the ADE counts as known only in the line's own bank.
+  const knownIn = (ade: string, inBanks: Bank[]) => knownRows.find(k => k.external_proposal_number === ade && inBanks.some(b => keyOfBank(b) === k.institution_key.toLowerCase()))
+  // The 2tech legacy base holds contracts whose seller payout was already made outside Corban (owner, 27/10/2026): a
+  // file line with one of those numbers is left out, so its commission is never calculated again.
+  const legacyAde = new Set<string>()
+  if (!layout.api && ades.length) {
+    const [{ data: byAde }, { data: byNumber }] = await Promise.all([
+      supabase.from('legacy_contracts').select('ade').in('ade', ades),
+      supabase.from('legacy_contracts').select('contract_number').in('contract_number', ades),
+    ])
+    for (const l of (byAde ?? []) as { ade: string | null }[]) if (l.ade) legacyAde.add(l.ade)
+    for (const l of (byNumber ?? []) as { contract_number: string | null }[]) if (l.contract_number) legacyAde.add(l.contract_number)
+  }
   const proposalByAde = new Map(knownRows.map(k => [k.external_proposal_number, k.proposal_id]))
   // Without ADE: the same client, table, term and amount already registered counts as the same contract.
   const clientIds = [...clientByCpf.values()]
@@ -330,10 +343,20 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
       }
       const seller = String(formData.get(`seller:${line.line}`) ?? '')
       if (seller) { if (sellerList.some(s => s.id === seller)) r.sellerId = seller; else messages.push('Vendedor não encontrado na equipe') }
+    } else if (layout.provider && !line.lineBank) {
+      messages.push('Linha sem Banco')
+    } else if (layout.provider && !bankList.some(b => sameBank(line.lineBank, b.name))) {
+      messages.push(`Banco "${line.lineBank}" não está cadastrado no Corban`)
     } else if (line.table) {
-      const t = matchTable(line.table, tableList)
-      if (t === 'none') messages.push(`Tabela "${line.table}" não encontrada no ${bank.name}`)
-      else if (t === 'ambiguous') messages.push(`Tabela "${line.table}" bate com mais de uma tabela do ${bank.name}`)
+      // A promoter layout matches only the line's bank tables of that promoter, by name and then by the table code.
+      const lineBanks = layout.provider ? bankList.filter(b => sameBank(line.lineBank, b.name)) : [bank]
+      const pool = layout.provider ? tableList.filter(t => lineBanks.some(b => b.id === t.bankId)) : tableList
+      let t = matchTable(line.table, pool)
+      if (layout.provider && t === 'none') t = matchTableByCode(line.table, pool)
+      const where = layout.provider ? `${lineBanks[0].name} (${layout.provider})` : bank.name
+      if (layout.provider && line.ade) { const hit = knownIn(line.ade, lineBanks); if (hit) r.existingId = hit.proposal_id }
+      if (t === 'none') messages.push(`Tabela "${line.table}" não encontrada no ${where}`)
+      else if (t === 'ambiguous') messages.push(`Tabela "${line.table}" bate com mais de uma tabela do ${where}`)
       else {
         r.versionId = t.versionId; r.tableName = t.name; r.agreementId = agreementOfVersion.get(t.versionId) ?? null
         if (line.typeKey) {
@@ -360,14 +383,18 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
       if (!r.stageId) messages.push('Etapa não existe na esteira')
     }
     r.clientId = clientByCpf.get(line.cpf)
+    const known = layout.provider ? !!r.existingId : !!line.ade && knownAde.has(line.ade)
+    if (!known && line.ade && legacyAde.has(line.ade)) {
+      r.status = 'skip'; r.messages = ['Já pago na base antiga (2tech): não será cadastrado']; return r
+    }
     if (messages.length) { r.status = 'error'; return r }
     if (mustChoose) { r.status = 'choose'; messages.push('Escolha a tabela'); return r }
     const fileKey = line.ade ? `ade:${line.ade}` : `k:${line.cpf}|${r.versionId}|${line.term}|${line.released ?? ''}|${line.requested ?? ''}`
     if (seenInFile.has(fileKey)) { r.status = 'error'; messages.push('Linha repetida na planilha'); return r }
     seenInFile.add(fileKey)
-    if ((layout.api ? !!r.existingId : line.ade && knownAde.has(line.ade)) || (!line.ade && r.clientId && existingKeys.has(sameKey(r.clientId, r.versionId!, line.term, line.released, line.requested)))) {
+    if ((layout.api || layout.provider ? !!r.existingId : line.ade && knownAde.has(line.ade)) || (!line.ade && r.clientId && existingKeys.has(sameKey(r.clientId, r.versionId!, line.term, line.released, line.requested)))) {
       r.status = 'exists'
-      r.existingId = layout.api && r.existingId ? r.existingId : line.ade ? proposalByAde.get(line.ade) : proposalByKey.get(sameKey(r.clientId!, r.versionId!, line.term, line.released, line.requested))
+      r.existingId = (layout.api || layout.provider) && r.existingId ? r.existingId : line.ade ? proposalByAde.get(line.ade) : proposalByKey.get(sameKey(r.clientId!, r.versionId!, line.term, line.released, line.requested))
       messages.push('Já cadastrado no Corban')
     } else if (!r.sellerId) messages.push(NO_SELLER)
     const parts = clientParts(line)
