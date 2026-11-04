@@ -152,7 +152,7 @@ insert into results select 'income statement: commission +1.200,00, payout -300,
           and coalesce(sum(total) filter (where account_code = '4.4'), 0) = -250.40 and coalesce(sum(total) filter (where account_code = '5.2'), 0) = -12.90
    from public.fin_income_statement((select org from ids), date_trunc('month', current_date)::date, current_date));
 
--- Undo a reconciliation and bring an ignored line back (20261104180000): the entry returns to what it was, nothing deleted.
+-- Undo a reconciliation and bring an ignored line back (20261104202734): the entry returns to what it was, nothing deleted.
 insert into results select 'undoing a reconciliation needs a reason',
   pg_temp.err(format('select public.fin_unmatch_line(%L, %L)', (select id from public.fin_statement_lines where fitid = 'F1'), '')) = 'reason_required';
 select public.fin_unmatch_line((select id from public.fin_statement_lines where fitid = 'F1'), 'Conta errada');
