@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Avisos ao importar extrato (04/11/2026)
+- Adicionado: antes de importar o OFX, aviso quando o número da conta do arquivo é diferente do cadastrado na conta escolhida e lista dos lançamentos que não puderam ser lidos (antes sumiam sem aviso); "Trocar arquivo ou conta" ou "Importar mesmo assim".
+- Adicionado: depois de importar, quantos foram lidos, novos e já importados. Valor no formato "1,234.56" passa a ser lido; "1.234" continua de fora por ser ambíguo.
+
 ### Plano de contas e histórico das contas bancárias (04/11/2026)
 - Corrigido: conta do plano com lançamentos em aberto não pode ser desativada (antes travava o pagamento deles).
 - Adicionado: mudar o saldo inicial ou a data dele numa conta bancária pede motivo; cada conta tem "Histórico da conta" (criada, saldo inicial alterado com antes e depois, ativada ou desativada). Migration `20261104204438_fin_account_history_v1` (ADR-0069).
