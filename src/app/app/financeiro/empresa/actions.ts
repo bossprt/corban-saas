@@ -65,6 +65,34 @@ export async function settleEntry(f: FormData) {
   return back(safePath(f), error ? finError(error) : 'ok:fin_baixado')
 }
 
+// Edit an open entry (owner request 04/11/2026): the database keeps the before/after of each field in the history;
+// the reason is asked here so every change says why.
+export async function updateEntry(f: FormData) {
+  const ctx = await editor(); if (!ctx) return back(safePath(f), 'erro:sem_permissao')
+  const amount = parseMoneyInput(f.get('amount'))
+  if (amount === null || amount === 'invalid') return back(safePath(f), 'erro:fin_valor')
+  if (text(f, 'reason').length < 3) return back(safePath(f), 'erro:fin_motivo')
+  const { error } = await ctx.supabase.rpc('fin_update_entry', {
+    p_entry: uuidOrNull(f, 'entry_id'), p_description: text(f, 'description'), p_account: uuidOrNull(f, 'account_id'), p_branch: uuidOrNull(f, 'branch_id'),
+    p_counterpart: text(f, 'counterpart'), p_document: text(f, 'document'), p_amount: amount, p_due_on: dateOrNull(f, 'due_on'),
+    p_competence_on: dateOrNull(f, 'competence_on'), p_reason: text(f, 'reason'),
+  })
+  return back(safePath(f), error ? finError(error) : 'ok:fin_alterado')
+}
+
+// Pay or receive the entries ticked in the list, one settlement each (same rules as the single one).
+export async function settleMany(f: FormData) {
+  const ctx = await editor(); if (!ctx) return back(safePath(f), 'erro:sem_permissao')
+  const ids = [...new Set(f.getAll('entry_ids').map(String).filter(isUuid))].slice(0, 300)
+  if (!ids.length) return back(safePath(f), 'erro:fin_nada_marcado')
+  let failed = 0
+  for (const id of ids) {
+    const { error } = await ctx.supabase.rpc('fin_settle_entry', { p_entry: id, p_settled_on: dateOrNull(f, 'settled_on'), p_bank_account: uuidOrNull(f, 'bank_account_id') })
+    if (error) failed++
+  }
+  return back(safePath(f), failed ? 'erro:fin_baixa_parcial' : 'ok:fin_varios_baixados')
+}
+
 export async function undoSettlement(f: FormData) {
   const ctx = await editor(); if (!ctx) return back(safePath(f), 'erro:sem_permissao')
   const { error } = await ctx.supabase.rpc('fin_undo_settlement', { p_entry: uuidOrNull(f, 'entry_id'), p_reason: text(f, 'reason') })

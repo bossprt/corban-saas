@@ -2,14 +2,14 @@ import Link from 'next/link'
 
 const TABS = [
   { href: '/app/financeiro/empresa', label: 'Contas a pagar e receber' },
-  { href: '/app/financeiro/empresa/extrato', label: 'Extrato bancário' },
-  { href: '/app/financeiro/empresa/relatorios', label: 'Fluxo de caixa e DRE' },
   { href: '/app/financeiro/empresa/a-lancar', label: 'Comissões e repasses a lançar' },
+  { href: '/app/financeiro/empresa/extrato', label: 'Extrato bancário' },
   { href: '/app/financeiro/empresa/contas', label: 'Contas bancárias' },
+  { href: '/app/financeiro/empresa/relatorios', label: 'Fluxo de caixa e DRE' },
   { href: '/app/financeiro/empresa/plano', label: 'Plano de contas' },
 ]
 
-// The company finance pages share this row of tabs.
+// The company finance pages share this row of tabs: daily use first, setup last (04/11/2026).
 export function FinanceTabs({ current }: { current: string }) {
   return (
     <nav aria-label="Financeiro da empresa" className="mb-5 flex flex-wrap gap-1.5">
