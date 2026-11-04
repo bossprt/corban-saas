@@ -154,6 +154,8 @@ const HOPE_COLUMNS: Record<string, ContractField | 'ignore'> = {
   statusfisicounico: 'ignore', clientepossuianexo: 'ignore', qtdanexocliente: 'ignore', nomegrupovendedor: 'ignore',
   telefonecliente: 'ignore', descricaocomissionamento: 'ignore', vigenciaid: 'ignore', correspondenteid: 'ignore',
   nomecorrespondente: 'ignore', inclusao: 'ignore', operador: 'ignore',
+  // Newer exports (Efetiva Mais, 04/11/2026) add a second and third company bonus.
+  bonusempresaperc2: 'ignore', bonusempresavalor2: 'ignore', bonusempresaperc3: 'ignore', bonusempresavalor3: 'ignore',
   ...Object.fromEntries([1, 2, 3, 4].flatMap(n => [`percbonusempresa${n}`, `valorbonusempresa${n}`, `percbonusrepasse${n}`, `valorbonusrepasse${n}`].map(k => [k, 'ignore' as const]))),
   ...Object.fromEntries([1, 2, 3, 4, 5].flatMap(n => [`empresavalorfixo${n}`, `repassevalorfixo${n}`].map(k => [k, 'ignore' as const]))),
 }

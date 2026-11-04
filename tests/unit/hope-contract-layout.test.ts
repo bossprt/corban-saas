@@ -12,7 +12,7 @@ const HEADER = ['ContratoId', 'NumeroProposta', 'NumeroContrato', 'UsuarioDigita
   'StatusBloqueioCorretor', 'SituacaoVendedor', 'FisicoEmpresa', 'DataFisico', 'HoraFisico', 'UsuarioFisicoEmpresa', 'FisicoBanco', 'DataFisicoBanco',
   'HoraFisicoBanco', 'UsuarioFisicoBanco', 'StatusBancoCliente', 'DataStatusBancoCliente', 'StatusEmpresaVendedor', 'DataStatusEmpresaVendedor',
   'StatusPendencia', 'ColecaoTags', 'StatusProposta', 'StatusFisicoUnico', 'ClientePossuiAnexo', 'QtdAnexoCliente', 'NomeGrupoVendedor',
-  'TelefoneCliente', 'DescricaoComissionamento', 'VigenciaId', 'CorrespondenteId', 'NomeCorrespondente', 'Inclusão', 'Operador',
+  'TelefoneCliente', 'DescricaoComissionamento', 'VigenciaId', 'CorrespondenteId', 'NomeCorrespondente', 'BonusEmpresaPerc2', 'BonusEmpresaValor2', 'BonusEmpresaPerc3', 'BonusEmpresaValor3', 'Inclusão', 'Operador',
   ...[1, 2, 3, 4].flatMap(n => [`PercBonusEmpresa${n}`, `ValorBonusEmpresa${n}`]), ...[1, 2, 3, 4, 5].map(n => `EmpresaValorFixo${n}`),
   ...[1, 2, 3, 4].flatMap(n => [`PercBonusRepasse${n}`, `ValorBonusRepasse${n}`]), ...[1, 2, 3, 4, 5].map(n => `RepasseValorFixo${n}`)]
 const row = (status: string, type = 'Contrato Novo', installment = '0', extra: Record<string, string> = {}) => {
