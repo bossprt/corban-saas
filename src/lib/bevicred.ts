@@ -2,7 +2,8 @@
 // and API key) in Supabase Vault, typed by its administrator on screen (03/11/2026); they never reach the browser after
 // being typed, a URL, a log or the repository.
 
-export const BEVICRED_URL = 'https://sistema.bevicred.com.br/webserviceApi/service.php?modulo=AGENTE'
+// Local tests may point at a fake Bevicred (BEVICRED_URL_DEV); never in production.
+export const BEVICRED_URL = (process.env.NODE_ENV !== 'production' && process.env.BEVICRED_URL_DEV) || 'https://sistema.bevicred.com.br/webserviceApi/service.php?modulo=AGENTE'
 
 export type BevicredProbe =
   | { ok: true; ms: number }

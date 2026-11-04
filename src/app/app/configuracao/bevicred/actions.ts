@@ -42,3 +42,13 @@ export async function testBevicred(formData: FormData) {
   await testBevicredCredential(organization.id, id)
   revalidatePath('/app/configuracao/bevicred')
 }
+
+// Forgets a remembered choice of the Bevicred contract import (a wrong table or seller); the next search asks again.
+export async function forgetBevicredLink(formData: FormData) {
+  const { organization, membership } = await requireAppContext()
+  const kind = String(formData.get('kind') ?? '')
+  const key = String(formData.get('key') ?? '')
+  if (membership.role !== 'admin' || !['table', 'seller'].includes(kind) || !key) return
+  await createAdminClient().from('bevicred_links').delete().eq('organization_id', organization.id).eq('kind', kind).eq('external_key', key)
+  revalidatePath('/app/configuracao/bevicred')
+}

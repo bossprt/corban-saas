@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Contratos da Bevicred pela API (03/11/2026)
+- Adicionado: layout "Bevicred (API)" em Propostas > Importar contratos: busca os contratos da empresa na Bevicred (7, 15 ou 30 dias), confere linha a linha e importa; tabela e vendedor escolhidos ficam lembrados; Configuração > Bevicred lista as escolhas (Esquecer). Migration `20261104013646_bevicred_links_v1`.
+
 ### Credenciais da Bevicred por empresa (03/11/2026)
 - Adicionado: Configuração > Bevicred para o administrador de qualquer empresa cadastrar uma ou mais credenciais (código de parceiro e chave da API), guardadas criptografadas no Vault; Salvar e testar, Testar e Trocar chave. Migration `20261103235839_bevicred_credentials_v1`.
 - Removido: o teste de conexão só da Smart com o segredo na Vercel (`BEVICRED_PARTNER_CODE`, `BEVICRED_API_KEY`).
