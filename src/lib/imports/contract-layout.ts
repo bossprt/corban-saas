@@ -167,6 +167,10 @@ export const CONTRACT_LAYOUTS: ContractLayout[] = [
   { key: 'valor', label: 'Valor Financiamento (PDF)', bankName: 'Valor Financiamento', columns: VALOR_COLUMNS, pdf: 'valor' },
   { key: 'bevicred', label: 'Bevicred (API)', bankName: '', api: 'bevicred' },
 ]
+// The layouts a company can use: a bank layout only when the company has that bank (the import looks the bank up by
+// this exact name), the Bevicred layout only when it has a Bevicred credential. Smart's banks stay out of MAIS VALOR.
+export const layoutsFor = (bankNames: string[], bevicred: boolean) =>
+  CONTRACT_LAYOUTS.filter(l => (l.api ? bevicred : bankNames.includes(l.bankName)))
 export const MAX_CONTRACT_LINES = 500
 
 // Header aliases, compared after normalize(). When several columns feed one field (Telefone and Celular), the first

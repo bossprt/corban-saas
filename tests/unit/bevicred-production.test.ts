@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { bevicredSheet, bevicredStage, bevicredTableName, latestByAde, sameBank, type BevicredRow } from '../../src/lib/imports/bevicred-production'
-import { CONTRACT_LAYOUTS, parseContractSheet } from '../../src/lib/imports/contract-layout'
+import { CONTRACT_LAYOUTS, layoutsFor, parseContractSheet } from '../../src/lib/imports/contract-layout'
 
 // Bevicred "produção sintética" as contract lines (owner request 03/11/2026). Fictitious data in the shape of the probe.
 const row = (o: Partial<BevicredRow>): BevicredRow => ({
@@ -57,4 +57,11 @@ test('Bevicred: lines read by the contract import, with client data and the meta
     ['Sub', 'C6 BANK', 'inss ml dweb tkt ate 6k inval-dweb-ml', 'SP18-000001'],
     ['Mais Valor', 'C6 BANK', 'inss ml dweb tkt ate 6k inval-dweb-ml', 'SP18-000001'],
   ])
+})
+
+test('import layouts: only the banks the company has, Bevicred only with a credential', () => {
+  const keys = (banks: string[], bevicred: boolean) => layoutsFor(banks, bevicred).map(l => l.key)
+  assert.deepEqual(keys(['C6 Bank', 'Daycoval'], true), ['bevicred'])
+  assert.deepEqual(keys(['C6 Bank'], false), [])
+  assert.deepEqual(keys(['NASP', 'Hope', 'Valor Financiamento'], false), ['nasp', 'hope', 'valor'])
 })
