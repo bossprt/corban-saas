@@ -15,6 +15,13 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Contas a pagar e receber: alterar e nova ordem (04/11/2026)
+- Adicionado: "Alterar" lançamento em aberto (valor, vencimento, descrição, fornecedor, conta do plano, filial, competência, documento) com motivo; o histórico mostra o antes e depois. Lançamento automático não muda o valor.
+- Adicionado: histórico do lançamento na lista; pagar ou receber várias contas de uma vez, com o total marcado.
+- Alterado: totais de vencidos e "vence hoje e em 7 dias" no topo, clicáveis; visões A pagar, A receber, Pagos e recebidos e Todos como botões com a quantidade; filtros em "Mais filtros"; na visão Todos os cancelados ficam escondidos.
+- Alterado: novo lançamento começa por valor, vencimento, descrição e fornecedor (repetir, parcelar, filial, competência e documento em "Mais opções"); cada linha tem "Pagar" (data de hoje e a última conta bancária usada) e o menu "⋯".
+- Alterado: abas do financeiro com o uso do dia primeiro e a configuração por último; aviso quando a lista passa de 300 linhas.
+
 ### Atalho Buscar na Bevicred (03/11/2026)
 - Adicionado: botão "Buscar na Bevicred" na Esteira, para empresa com credencial, que abre a importação já buscando.
 - Alterado: "Importar planilha" passa a se chamar "Importar contratos".
