@@ -17,7 +17,7 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ### Plano de contas e histórico das contas bancárias (04/11/2026)
 - Corrigido: conta do plano com lançamentos em aberto não pode ser desativada (antes travava o pagamento deles).
-- Adicionado: mudar o saldo inicial ou a data dele numa conta bancária pede motivo; cada conta tem "Histórico da conta" (criada, saldo inicial alterado com antes e depois, ativada ou desativada). Migration `20261104230000_fin_account_history_v1` (ADR-0069).
+- Adicionado: mudar o saldo inicial ou a data dele numa conta bancária pede motivo; cada conta tem "Histórico da conta" (criada, saldo inicial alterado com antes e depois, ativada ou desativada). Migration `20261104204438_fin_account_history_v1` (ADR-0069).
 
 ### Desfazer conciliação do extrato (04/11/2026)
 - Adicionado: no Extrato bancário, a seção "Já tratadas" (últimas 100, filtro conciliadas ou ignoradas) com "Desfazer conciliação" (com motivo) e "Voltar para a conciliar".

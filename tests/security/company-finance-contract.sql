@@ -179,7 +179,7 @@ insert into results select 'a pending line cannot be restored', pg_temp.err(form
 insert into results select 'line events cannot be written directly',
   pg_temp.err(format('insert into public.fin_statement_line_events (organization_id, line_id, kind) values (%L, %L, %L)', (select org from ids), (select id from public.fin_statement_lines where fitid = 'F1'), 'restored')) like 'permission denied%';
 
--- Bank account history and chart accounts in use (20261104230000).
+-- Bank account history and chart accounts in use (20261104204438).
 insert into results select 'a new bank account starts its history',
   exists (select 1 from public.fin_bank_account_events where bank_account_id = (select id from made where label = 'bank') and kind = 'created' and (detail->>'opening_balance')::numeric = 1000);
 insert into results select 'changing the opening balance needs a reason',
