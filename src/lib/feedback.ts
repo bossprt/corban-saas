@@ -32,6 +32,8 @@ export const FEEDBACK = {
   'ok:fin_modo_salvo': 'Forma de lançamento salva.',
   'ok:fin_conciliado': 'Linha do extrato conciliada.',
   'ok:fin_linha_ignorada': 'Linha do extrato ignorada.',
+  'ok:fin_conciliacao_desfeita': 'Conciliação desfeita. A linha voltou para a conciliar.',
+  'ok:fin_linha_voltou': 'A linha voltou para a conciliar.',
   'erro:fin_conta_contabil': 'Escolha uma conta do plano de contas (não um grupo) que esteja ativa.',
   'erro:fin_filial': 'Filial inválida.',
   'erro:fin_valor': 'Valor inválido. Use o formato 1.234,56 (até 2 casas).',
