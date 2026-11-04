@@ -48,6 +48,7 @@ export const FEEDBACK = {
   'erro:fin_motivo': 'Informe o motivo (pelo menos 3 letras).',
   'erro:fin_codigo_repetido': 'Já existe uma conta com esse código.',
   'erro:fin_conta_em_uso': 'Conta com lançamentos: o tipo não muda.',
+  'erro:fin_conta_com_abertos': 'Esta conta tem lançamentos em aberto. Troque a conta deles (Alterar), pague ou cancele antes de desativar.',
   'erro:fin_conta_sistema': 'Conta usada nos lançamentos automáticos: não pode ser desativada.',
   'erro:fin_valor_diferente': 'O lançamento não tem o mesmo valor e sentido da linha do extrato.',
   'erro:fin_outra_conta': 'O lançamento já foi baixado em outra conta bancária.',
