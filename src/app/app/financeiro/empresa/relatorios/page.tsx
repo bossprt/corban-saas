@@ -17,11 +17,16 @@ export default async function FinanceReportsPage({ searchParams }: { searchParam
   const year = /^\d{4}$/.test(sp.ano ?? '') ? Number(sp.ano) : new Date().getFullYear()
   const branch = /^[0-9a-f-]{36}$/.test(sp.filial ?? '') ? sp.filial! : null
   const from = `${year}-01-01`, to = `${year}-12-31`
-  const [{ data: flow }, { data: dre }, { data: branches }] = await Promise.all([
+  const [{ data: flow }, { data: dre }, { data: branches }, { data: start }] = await Promise.all([
     supabase.rpc('fin_cash_flow', { p_org: organization.id, p_from: from, p_to: to, p_branch: branch }),
     supabase.rpc('fin_income_statement', { p_org: organization.id, p_from: from, p_to: to, p_branch: branch }),
     supabase.from('organization_branches').select('id,name').eq('is_active', true).order('name'),
+    supabase.rpc('fin_cash_flow_opening', { p_org: organization.id, p_from: from, p_branch: branch }),
   ])
+  // Starting point (04/11/2026): bank balance on 01/01 (company-wide only) and entries still open from earlier years.
+  const s0 = ((start ?? []) as { opening: string | null; overdue_in: string; overdue_out: string }[])[0]
+  const opening = s0?.opening != null ? cents(s0.opening) : null
+  const overdueIn = cents(s0?.overdue_in ?? 0), overdueOut = cents(s0?.overdue_out ?? 0)
   const months = ((flow ?? []) as Flow[]).map(f => f.month)
   const lines = (dre ?? []) as Dre[]
   // DRE: per kind and month (in cents), plus the accounts under each kind.
@@ -35,11 +40,14 @@ export default async function FinanceReportsPage({ searchParams }: { searchParam
   }
   const kindAt = (k: string, m: string) => byKind.get(k)?.get(m) ?? 0
   const running = new Map<string, number>()
-  // Realized balance accumulated month by month (computed before rendering).
-  const flowRows = ((flow ?? []) as Flow[]).reduce<{ f: Flow; net: number; acc: number }[]>((out, f) => {
+  // Realized balance accumulated month by month from the opening; forecast balance adds what is still to receive and pay.
+  const base = opening ?? 0, afterOverdue = base + overdueIn - overdueOut
+  const flowRows = ((flow ?? []) as Flow[]).reduce<{ f: Flow; net: number; acc: number; forecast: number }[]>((out, f) => {
     const net = cents(f.realized_in) - cents(f.realized_out)
-    return [...out, { f, net, acc: (out.at(-1)?.acc ?? 0) + net }]
+    const prev = out.at(-1)
+    return [...out, { f, net, acc: (prev?.acc ?? base) + net, forecast: (prev?.forecast ?? afterOverdue) + net + cents(f.forecast_in) - cents(f.forecast_out) }]
   }, [])
+  const tone = (c: number) => (c < 0 ? 'text-[#B91C1C]' : 'text-ink')
 
   return (
     <section>
@@ -53,11 +61,24 @@ export default async function FinanceReportsPage({ searchParams }: { searchParam
 
       <Card className="mb-4 overflow-hidden">
         <CardHeader title={`Fluxo de caixa ${year}`} />
+        <p className="px-5 pb-3 text-xs text-muted">{branch ? 'Com uma filial escolhida não há saldo inicial: o saldo do banco é da empresa toda.' : 'Saldo previsto = saldo inicial + o que entrou e saiu + o que falta receber e pagar (inclusive vencidos de anos anteriores).'}</p>
         <div className="overflow-x-auto">
           <table className="w-full text-right text-sm">
-            <thead className="bg-surface-muted text-xs text-muted"><tr><th className="px-3 py-2 text-left">Mês</th><th className="px-3 py-2">Entrou</th><th className="px-3 py-2">Saiu</th><th className="px-3 py-2">Saldo do mês</th><th className="px-3 py-2">A receber</th><th className="px-3 py-2">A pagar</th><th className="px-3 py-2">Acumulado realizado</th></tr></thead>
+            <thead className="bg-surface-muted text-xs text-muted"><tr><th className="px-3 py-2 text-left">Mês</th><th className="px-3 py-2">Entrou</th><th className="px-3 py-2">Saiu</th><th className="px-3 py-2">Saldo do mês</th><th className="px-3 py-2">A receber</th><th className="px-3 py-2">A pagar</th><th className="px-3 py-2">Acumulado realizado</th><th className="bg-[#E6F1FB] px-3 py-2 text-[#0C447C]">Saldo previsto</th></tr></thead>
             <tbody>
-              {flowRows.map(({ f, net, acc: balance }) => {
+              {opening !== null && (
+                <tr className="bg-[#E6F1FB] text-[#0C447C]">
+                  <td className="px-3 py-1.5 text-left">Saldo em 01/01<span className="block text-xs">saldo das contas bancárias</span></td>
+                  <td colSpan={5} /><td className="num px-3 py-1.5">{money(opening)}</td><td className="num px-3 py-1.5">{money(opening)}</td>
+                </tr>
+              )}
+              {(overdueIn > 0 || overdueOut > 0) && (
+                <tr className="bg-[#FAEEDA] text-[#854F0B]">
+                  <td className="px-3 py-1.5 text-left">Vencidos antes de {year}<span className="block text-xs">ainda em aberto</span></td>
+                  <td colSpan={3} /><td className="num px-3 py-1.5">{money(overdueIn)}</td><td className="num px-3 py-1.5">{money(overdueOut)}</td><td /><td className="num px-3 py-1.5">{money(afterOverdue)}</td>
+                </tr>
+              )}
+              {flowRows.map(({ f, net, acc: balance, forecast }) => {
                 return (
                   <tr key={f.month} className="border-t border-line">
                     <td className="px-3 py-1.5 text-left capitalize">{monthLabel(f.month)}</td>
@@ -66,7 +87,8 @@ export default async function FinanceReportsPage({ searchParams }: { searchParam
                     <td className={`num px-3 py-1.5 font-medium ${net < 0 ? 'text-[#B91C1C]' : 'text-ink'}`}>{money(net)}</td>
                     <td className="num px-3 py-1.5 text-muted">{money(cents(f.forecast_in))}</td>
                     <td className="num px-3 py-1.5 text-muted">{money(cents(f.forecast_out))}</td>
-                    <td className={`num px-3 py-1.5 ${balance < 0 ? 'text-[#B91C1C]' : 'text-ink'}`}>{money(balance)}</td>
+                    <td className={`num px-3 py-1.5 ${tone(balance)}`}>{money(balance)}</td>
+                    <td className={`num px-3 py-1.5 font-medium ${tone(forecast)}`}>{money(forecast)}</td>
                   </tr>
                 )
               })}
