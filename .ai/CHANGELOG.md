@@ -15,6 +15,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Fluxo de caixa com saldo inicial e vencidos antigos (04/11/2026)
+- Corrigido: o "Acumulado realizado" começava em zero; agora parte do saldo das contas bancárias em 01/01 (linha "Saldo em 01/01", só com todas as filiais).
+- Corrigido: contas em aberto vencidas em anos anteriores sumiam da previsão; agora aparecem na linha "Vencidos antes de AAAA".
+- Adicionado: coluna "Saldo previsto" (saldo inicial + realizado + o que falta receber e pagar). Migration `20261105030043_fin_cash_flow_opening_v1` (ADR-0071), só leitura.
+
 ### Juros, desconto, pagamento parcial e comprovante (04/11/2026)
 - Adicionado: em "Pagar"/"Receber", valor pago, juros e multa, desconto e comprovante (PDF ou imagem, opcional). O total que sai ou entra na conta é valor + juros − desconto, em centavos.
 - Adicionado: pagamento parcial em lançamento manual baixa o que foi pago e deixa o restante em aberto como novo lançamento ligado, com o mesmo vencimento. Desfazer a baixa devolve o valor original e cancela o restante ainda em aberto (com o restante já pago, desfazer pede para desfazer o restante primeiro).

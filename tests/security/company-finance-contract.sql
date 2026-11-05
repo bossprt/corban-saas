@@ -252,11 +252,23 @@ insert into results select 'receipts cannot be written directly',
     (select org from ids), (select id from made where label = 'late'), 'x', 'x.pdf', 'application/pdf', repeat('a', 64))) like 'new row violates%'
   or pg_temp.err(format('insert into public.fin_entry_receipts (organization_id, entry_id, storage_path, file_name, mime_type, file_size_bytes, sha256) values (%L, %L, %L, %L, %L, 1, %L)',
     (select org from ids), (select id from made where label = 'late'), 'x', 'x.pdf', 'application/pdf', repeat('a', 64))) like 'permission denied%';
+
+-- Cash flow opening balance and old overdue entries (20261105030043).
+insert into results select 'the opening for tomorrow equals the bank balances today',
+  (select opening from public.fin_cash_flow_opening((select org from ids), current_date + 1)) = (select sum(balance) from public.fin_bank_balances((select org from ids)));
+insert into made select 'old', public.fin_create_entry((select org from ids), 'out', 'Conta antiga', pg_temp.acc('4.3'), null, null, null, 321.00, current_date - 400, null, 1, null, null);
+insert into results select 'an open entry due before the year shows as overdue',
+  (select overdue_out >= 321 from public.fin_cash_flow_opening((select org from ids), current_date - 399))
+  and (select overdue_out = 0 from public.fin_cash_flow_opening((select org from ids), current_date - 401));
+insert into results select 'with a branch there is no opening balance',
+  (select opening is null from public.fin_cash_flow_opening((select org from ids), current_date, (select id from public.organization_branches where organization_id = (select org from ids) limit 1)))
+  or not exists (select 1 from public.organization_branches where organization_id = (select org from ids));
 reset role;
 
 select pg_temp.act_as((select v1 from ids));
 set local role authenticated;
 insert into results select 'a seller reads no entry', not exists (select 1 from public.fin_entries);
+insert into results select 'a seller cannot read the cash flow opening', pg_temp.err(format('select public.fin_cash_flow_opening(%L, current_date)', (select org from ids))) = 'not_authorized';
 insert into results select 'a seller cannot undo a reconciliation or restore a line',
   pg_temp.err(format('select public.fin_unmatch_line(%L, %L)', (select l.id from public.fin_statement_lines l limit 1), 'Teste')) = 'not_authorized'
   and pg_temp.err(format('select public.fin_restore_line(%L)', (select l.id from public.fin_statement_lines l limit 1))) = 'not_authorized';
