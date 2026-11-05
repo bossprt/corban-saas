@@ -139,16 +139,18 @@ export async function postPending(f: FormData) {
 }
 
 // Statement lines come already read by the browser (the OFX never travels whole).
-export async function importStatement(input: { bankAccount: string; fileName: string; sha: string; lines: OfxLine[] }): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function importStatement(input: { bankAccount: string; fileName: string; sha: string; lines: OfxLine[] }): Promise<{ ok: true; added: number } | { ok: false; error: string }> {
   const ctx = await editor(); if (!ctx) return { ok: false, error: 'Seu perfil não importa extratos.' }
   if (!isUuid(input?.bankAccount) || !/^[0-9a-f]{64}$/.test(String(input?.sha)) || !Array.isArray(input?.lines) || input.lines.length < 1 || input.lines.length > 5000) {
     return { ok: false, error: 'Extrato inválido.' }
   }
   const lines = input.lines.map(l => ({ fitid: String(l.fitid).slice(0, 80), posted_on: String(l.posted_on), amount: String(l.amount), memo: String(l.memo ?? '').slice(0, 200) }))
-  const { error } = await ctx.supabase.rpc('fin_import_statement', { p_bank_account: input.bankAccount, p_file_name: String(input.fileName).slice(0, 200), p_file_sha256: input.sha, p_lines: lines })
+  const { data: importId, error } = await ctx.supabase.rpc('fin_import_statement', { p_bank_account: input.bankAccount, p_file_name: String(input.fileName).slice(0, 200), p_file_sha256: input.sha, p_lines: lines })
   if (error) return { ok: false, error: /fin_statement_already_imported/.test(error.message ?? '') ? 'Este extrato já foi importado.' : 'Não foi possível importar o extrato.' }
+  // New lines only: a line already imported from another file is skipped by the database.
+  const { data: imp } = await ctx.supabase.from('fin_statement_imports').select('line_count').eq('id', importId as string).maybeSingle()
   revalidatePath(`${BASE}/extrato`)
-  return { ok: true }
+  return { ok: true, added: Number(imp?.line_count ?? 0) }
 }
 
 export async function matchLine(f: FormData) {

@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { ofxAmount, ofxDate, parseOfx } from '../../src/lib/finance/ofx'
+import { ofxAmount, ofxDate, parseOfx, sameAccount } from '../../src/lib/finance/ofx'
 import { DRE_ORDER, FIN_KIND_LABEL } from '../../src/lib/finance/labels'
 
 const read = (p: string) => readFileSync(join(process.cwd(), p), 'utf8')
@@ -43,6 +43,24 @@ test('OFX: anything else is refused, never guessed', () => {
   assert.equal(ofxAmount('12,345'), null)
   assert.equal(ofxAmount('1e3'), null)
   assert.equal(ofxAmount('-0,5'), '-0.50')
+})
+
+test('OFX: lines with an unreadable date or amount are reported, not dropped; a zero line is not one of them', () => {
+  const tx = (d: string, v: string, id: string) => `<STMTTRN><DTPOSTED>${d}<TRNAMT>${v}<FITID>${id}<MEMO>X</STMTTRN>`
+  const r = parseOfx(`<OFX><BANKACCTFROM><ACCTID>12345-6</BANKACCTFROM><BANKTRANLIST>${tx('20261112', '1.234', 'A')}${tx('2026xx', '-50.00', 'B')}${tx('20261113', '0.00', 'C')}${tx('20261114', '1,234.56', 'D')}</BANKTRANLIST></OFX>`)
+  assert.deepEqual(r.lines.map(l => l.amount), ['1234.56'])
+  assert.deepEqual(r.skipped, [{ date: '2026-11-12', amount: '1.234', reason: 'amount' }, { date: '2026xx', amount: '-50.00', reason: 'date' }])
+  assert.equal(parseOfx(`<OFX><BANKTRANLIST>${tx('20261112', '1.234', 'A')}</BANKTRANLIST></OFX>`).error, 'unreadable')
+})
+
+test('OFX: the account of the file is compared by digits, with or without the check digit', () => {
+  assert.equal(sameAccount('000123456', '12345-6'), true)
+  assert.equal(sameAccount('12345', '12345-6'), true)
+  assert.equal(sameAccount('98765-4', '12345-6'), false)
+  assert.equal(sameAccount(null, '12345-6'), null)
+  assert.equal(sameAccount('123456', null), null)
+  assert.equal(ofxAmount('1,234.56'), '1234.56')
+  assert.equal(ofxAmount('1.234'), null)
 })
 
 test('income statement order covers every kind but transfers, which stay out of it', () => {

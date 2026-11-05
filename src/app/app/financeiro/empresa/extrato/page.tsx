@@ -30,7 +30,7 @@ export default async function StatementPage({ searchParams }: { searchParams: Pr
   doneQ = doneView === 'conciliadas' ? doneQ.eq('status', 'matched') : doneView === 'ignoradas' ? doneQ.eq('status', 'ignored') : doneQ.in('status', ['matched', 'ignored'])
   const [{ data: doneRows }, { data: banks }, { data: lines }, { data: candidates }, { data: accounts }, { data: branches }] = await Promise.all([
     doneQ,
-    supabase.from('fin_bank_accounts').select('id,label').eq('is_active', true).order('label'),
+    supabase.from('fin_bank_accounts').select('id,label,account_number').eq('is_active', true).order('label'),
     supabase.from('fin_statement_lines').select('id,bank_account_id,posted_on,amount,memo').eq('status', 'pending').order('posted_on').limit(300),
     supabase.from('fin_entries').select('id,direction,status,description,amount,due_on,settled_on,bank_account_id').or('status.eq.open,and(status.eq.settled,bank_account_id.is.null)').limit(2000),
     supabase.from('fin_chart_accounts').select('id,code,name,kind,is_group,is_active').order('code'),
