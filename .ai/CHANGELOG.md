@@ -15,6 +15,12 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Juros, desconto, pagamento parcial e comprovante (04/11/2026)
+- Adicionado: em "Pagar"/"Receber", valor pago, juros e multa, desconto e comprovante (PDF ou imagem, opcional). O total que sai ou entra na conta é valor + juros − desconto, em centavos.
+- Adicionado: pagamento parcial em lançamento manual baixa o que foi pago e deixa o restante em aberto como novo lançamento ligado, com o mesmo vencimento. Desfazer a baixa devolve o valor original e cancela o restante ainda em aberto (com o restante já pago, desfazer pede para desfazer o restante primeiro).
+- Adicionado: anexar comprovante depois pelo menu "⋯"; o comprovante aparece na linha e no histórico. Arquivos em pasta privada da empresa (`fin-receipts`), sem apagar ou trocar.
+- Alterado: saldo das contas, fluxo de caixa realizado, DRE e conciliação do extrato usam o valor movimentado (com juros e desconto). Migration `20261104230000_fin_settle_adjustments_v1` (ADR-0070).
+
 ### Avisos ao importar extrato (04/11/2026)
 - Adicionado: antes de importar o OFX, aviso quando o número da conta do arquivo é diferente do cadastrado na conta escolhida e lista dos lançamentos que não puderam ser lidos (antes sumiam sem aviso); "Trocar arquivo ou conta" ou "Importar mesmo assim".
 - Adicionado: depois de importar, quantos foram lidos, novos e já importados. Valor no formato "1,234.56" passa a ser lido; "1.234" continua de fora por ser ambíguo.

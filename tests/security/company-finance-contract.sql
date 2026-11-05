@@ -202,6 +202,56 @@ insert into results select 'a chart account with open entries is not deactivated
 select public.fin_settle_entry((select id from made where label = 'e99'), current_date, null);
 insert into results select 'with only settled entries it can be deactivated',
   pg_temp.err(format('select public.fin_save_chart_account(%L, %L, %L, %L, %L, false, false)', (select org from ids), (select id from made where label = 'acc99'), '4.99', 'Conta de teste', 'expense')) = 'ok';
+
+-- Interest, discount, partial payment and receipts (20261104230000).
+insert into made select 'bank2', public.fin_save_bank_account((select org from ids), null, 'Itaú', 'Itaú Teste', '0002', '777-1', 0, current_date - 10, true);
+insert into made select 'late', public.fin_create_entry((select org from ids), 'out', 'Conta atrasada', pg_temp.acc('4.3'), null, null, null, 2000.00, current_date - 5, null, 1, null, null);
+insert into results select 'paid above the amount (without interest) is refused',
+  pg_temp.err(format('select public.fin_settle_entry(%L, current_date, %L, 2100.00, 0, 0)', (select id from made where label = 'late'), (select id from made where label = 'bank2'))) = 'fin_settle_amount';
+insert into results select 'fractions of a cent are refused',
+  pg_temp.err(format('select public.fin_settle_entry(%L, current_date, %L, 1000.00, 46.005, 0)', (select id from made where label = 'late'), (select id from made where label = 'bank2'))) = 'fin_settle_amount';
+insert into made select 'rest', public.fin_settle_entry((select id from made where label = 'late'), current_date, (select id from made where label = 'bank2'), 1046.00, 46.00, 0);
+insert into results select 'partial payment: 1000 settled with 46 of interest, 1000 left open and linked',
+  (select status = 'settled' and amount = 1000 and interest = 46 and original_amount = 2000 from public.fin_entries where id = (select id from made where label = 'late'))
+  and (select status = 'open' and amount = 1000 and due_on = current_date - 5 and remainder_of = (select id from made where label = 'late') and description = 'Conta atrasada (restante)'
+       from public.fin_entries where id = (select id from made where label = 'rest'));
+insert into results select 'the bank balance takes what really left the account (1046)',
+  (select balance = -1046 from public.fin_bank_balances((select org from ids)) where bank_account_id = (select id from made where label = 'bank2'));
+insert into results select 'the cash flow realizes 1046 and still forecasts the 1000 left',
+  (select sum(realized_out) >= 1046 from public.fin_cash_flow((select org from ids), current_date - 5, current_date))
+  and exists (select 1 from public.fin_entries where id = (select id from made where label = 'rest') and status = 'open');
+insert into results select 'the settled event keeps paid, interest, original amount and remainder',
+  exists (select 1 from public.fin_entry_events where entry_id = (select id from made where label = 'late') and kind = 'settled'
+          and (detail->>'paid')::numeric = 1046 and (detail->>'original_amount')::numeric = 2000 and detail->>'remainder' = (select id from made where label = 'rest')::text);
+select public.fin_settle_entry((select id from made where label = 'rest'), current_date, null, null, 0, 50.00);
+insert into results select 'undo is blocked while the remainder is settled',
+  pg_temp.err(format('select public.fin_undo_settlement(%L, %L)', (select id from made where label = 'late'), 'Pagamento errado')) = 'fin_remainder_settled';
+select public.fin_undo_settlement((select id from made where label = 'rest'), 'Desconto errado');
+insert into results select 'undoing a settlement clears interest and discount',
+  (select status = 'open' and discount = 0 and interest = 0 and amount = 1000 from public.fin_entries where id = (select id from made where label = 'rest'));
+select public.fin_undo_settlement((select id from made where label = 'late'), 'Pagamento errado');
+insert into results select 'undoing the partial payment brings back 2000 and cancels the open remainder',
+  (select status = 'open' and amount = 2000 and interest = 0 and original_amount is null from public.fin_entries where id = (select id from made where label = 'late'))
+  and (select status = 'cancelled' from public.fin_entries where id = (select id from made where label = 'rest'));
+insert into made select 'auto', id from public.fin_entries where organization_id = (select org from ids) and source <> 'manual' and status = 'open' limit 1;
+insert into results select 'an automatic entry is not paid in part',
+  (select id from made where label = 'auto') is null
+  or pg_temp.err(format('select public.fin_settle_entry(%L, current_date, null, 1.00, 0, 0)', (select id from made where label = 'auto'))) = 'fin_partial_automatic';
+insert into results select 'a receipt outside the entry folder is refused',
+  pg_temp.err(format('select public.fin_add_receipt(%L, %L, %L, %L, 10, %L)', (select id from made where label = 'late'), (select org from ids) || '/x/a.pdf', 'a.pdf', 'application/pdf', repeat('a', 64))) = 'fin_receipt_invalid';
+insert into storage.objects (bucket_id, name, owner_id)
+values ('fin-receipts', (select org from ids) || '/' || (select id from made where label = 'late') || '/00000000-0000-4000-8000-000000000001/comprovante.pdf', (select admin_user from ids)::text);
+insert into results select 'a receipt uploaded to the entry folder is recorded with an event',
+  pg_temp.err(format('select public.fin_add_receipt(%L, %L, %L, %L, 10, %L)', (select id from made where label = 'late'),
+    (select org from ids) || '/' || (select id from made where label = 'late') || '/00000000-0000-4000-8000-000000000001/comprovante.pdf', 'comprovante.pdf', 'application/pdf', repeat('a', 64))) = 'ok';
+insert into results select 'the receipt shows in the history',
+  exists (select 1 from public.fin_entry_events where entry_id = (select id from made where label = 'late') and kind = 'receipt_added')
+  and exists (select 1 from public.fin_entry_receipts where entry_id = (select id from made where label = 'late'));
+insert into results select 'receipts cannot be written directly',
+  pg_temp.err(format('insert into public.fin_entry_receipts (organization_id, entry_id, storage_path, file_name, mime_type, file_size_bytes, sha256) values (%L, %L, %L, %L, %L, 1, %L)',
+    (select org from ids), (select id from made where label = 'late'), 'x', 'x.pdf', 'application/pdf', repeat('a', 64))) like 'new row violates%'
+  or pg_temp.err(format('insert into public.fin_entry_receipts (organization_id, entry_id, storage_path, file_name, mime_type, file_size_bytes, sha256) values (%L, %L, %L, %L, %L, 1, %L)',
+    (select org from ids), (select id from made where label = 'late'), 'x', 'x.pdf', 'application/pdf', repeat('a', 64))) like 'permission denied%';
 reset role;
 
 select pg_temp.act_as((select v1 from ids));
@@ -212,6 +262,11 @@ insert into results select 'a seller cannot undo a reconciliation or restore a l
   and pg_temp.err(format('select public.fin_restore_line(%L)', (select l.id from public.fin_statement_lines l limit 1))) = 'not_authorized';
 insert into results select 'a seller reads no statement line event', not exists (select 1 from public.fin_statement_line_events);
 insert into results select 'a seller reads no bank account event', not exists (select 1 from public.fin_bank_account_events);
+insert into results select 'a seller reads no receipt, nor its file',
+  not exists (select 1 from public.fin_entry_receipts) and not exists (select 1 from storage.objects where bucket_id = 'fin-receipts');
+insert into results select 'a seller cannot upload a receipt',
+  pg_temp.err(format('insert into storage.objects (bucket_id, name, owner_id) values (%L, %L, %L)', 'fin-receipts',
+    (select org from ids) || '/' || (select id from made where label = 'late') || '/00000000-0000-4000-8000-000000000002/x.pdf', (select v1 from ids)::text)) like 'new row violates%';
 insert into results select 'a seller cannot turn automatic posting off', pg_temp.err(format('select public.fin_set_auto_post(%L, true)', (select org from ids))) = 'not_authorized';
 reset role;
 insert into results select 'anon has nothing',

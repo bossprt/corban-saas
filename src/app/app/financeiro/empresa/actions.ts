@@ -2,12 +2,14 @@
 
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
+import { createHash, randomUUID } from 'crypto'
 import { requireAppContext } from '@/lib/appContext'
 import { can } from '@/lib/access'
 import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedback'
 import { isUuid } from '@/lib/team'
 import { parseMoneyInput } from '@/lib/money-input'
 import type { OfxLine } from '@/lib/finance/ofx'
+import { checkUpload, safeFileName } from '@/lib/documents'
 
 const BASE = '/app/financeiro/empresa'
 const text = (f: FormData, k: string) => String(f.get(k) ?? '').trim()
@@ -20,7 +22,7 @@ const finError = (e: { message?: string; code?: string }): FeedbackCode => {
   for (const [k, c] of [
     ['fin_account_invalid', 'erro:fin_conta_contabil'], ['fin_branch_invalid', 'erro:fin_filial'], ['fin_bank_account_invalid', 'erro:fin_conta_bancaria'],
     ['invalid_amount', 'erro:fin_valor'], ['fin_installments_invalid', 'erro:fin_parcelas'], ['fin_due_required', 'erro:fin_vencimento'],
-    ['fin_settle_invalid', 'erro:fin_baixa'], ['fin_entry_not_open', 'erro:fin_nao_aberto'], ['fin_entry_not_settled', 'erro:fin_nao_baixado'],
+    ['fin_settle_invalid', 'erro:fin_baixa'], ['fin_settle_amount', 'erro:fin_valor_pago'], ['fin_partial_automatic', 'erro:fin_parcial_automatico'], ['fin_remainder_settled', 'erro:fin_restante_baixado'], ['fin_entry_not_open', 'erro:fin_nao_aberto'], ['fin_entry_not_settled', 'erro:fin_nao_baixado'],
     ['fin_entry_automatic', 'erro:fin_automatico'], ['fin_entry_reconciled', 'erro:fin_conciliado'], ['reason_required', 'erro:fin_motivo'],
     ['fin_account_code_exists', 'erro:fin_codigo_repetido'], ['fin_account_in_use', 'erro:fin_conta_em_uso'], ['fin_account_open_entries', 'erro:fin_conta_com_abertos'], ['fin_account_system', 'erro:fin_conta_sistema'],
     ['fin_match_amount', 'erro:fin_valor_diferente'], ['fin_match_other_account', 'erro:fin_outra_conta'], ['fin_line_not_pending', 'erro:fin_linha_tratada'],
@@ -59,10 +61,48 @@ export async function createEntry(f: FormData) {
   return back(safePath(f), error ? finError(error) : 'ok:fin_lancado')
 }
 
+// Settle with paid value, interest, discount and an optional receipt (04/11/2026). Paid below the amount leaves the rest
+// open (the database decides and records it). The receipt goes to private storage after the settlement.
 export async function settleEntry(f: FormData) {
   const ctx = await editor(); if (!ctx) return back(safePath(f), 'erro:sem_permissao')
-  const { error } = await ctx.supabase.rpc('fin_settle_entry', { p_entry: uuidOrNull(f, 'entry_id'), p_settled_on: dateOrNull(f, 'settled_on'), p_bank_account: uuidOrNull(f, 'bank_account_id') })
-  return back(safePath(f), error ? finError(error) : 'ok:fin_baixado')
+  const paid = parseMoneyInput(f.get('paid')), interest = parseMoneyInput(f.get('interest')), discount = parseMoneyInput(f.get('discount'))
+  if (paid === 'invalid' || interest === 'invalid' || discount === 'invalid') return back(safePath(f), 'erro:fin_valor')
+  const file = f.get('receipt')
+  const receipt = file instanceof File && file.size > 0 ? file : null
+  if (receipt) { const c = checkUpload(receipt.size, receipt.type, new Uint8Array(await receipt.arrayBuffer())); if (!c.ok) return back(safePath(f), c.code) }
+  const entryId = uuidOrNull(f, 'entry_id')
+  const { data: rest, error } = await ctx.supabase.rpc('fin_settle_entry', {
+    p_entry: entryId, p_settled_on: dateOrNull(f, 'settled_on'), p_bank_account: uuidOrNull(f, 'bank_account_id'),
+    p_paid: paid, p_interest: interest ?? '0', p_discount: discount ?? '0',
+  })
+  if (error) return back(safePath(f), finError(error))
+  if (receipt && entryId && !(await storeReceipt(ctx, entryId, receipt))) return back(safePath(f), 'erro:fin_comprovante_depois')
+  return back(safePath(f), rest ? 'ok:fin_baixa_parcial_feita' : 'ok:fin_baixado')
+}
+
+// Attach a receipt later (from the "⋯" menu).
+export async function addReceipt(f: FormData) {
+  const ctx = await editor(); if (!ctx) return back(safePath(f), 'erro:sem_permissao')
+  const file = f.get('receipt'); const entryId = uuidOrNull(f, 'entry_id')
+  if (!(file instanceof File) || file.size === 0 || !entryId) return back(safePath(f), 'erro:doc_vazio')
+  const c = checkUpload(file.size, file.type, new Uint8Array(await file.arrayBuffer())); if (!c.ok) return back(safePath(f), c.code)
+  return back(safePath(f), (await storeReceipt(ctx, entryId, file)) ? 'ok:fin_comprovante' : 'erro:doc_armazenamento')
+}
+
+// Path <org>/<entry>/<uuid>/<file>; the storage policy and fin_add_receipt check the folder belongs to the entry. A file
+// left without a record (rare DB failure) stays private to the company, never a false record.
+async function storeReceipt(ctx: NonNullable<Awaited<ReturnType<typeof editor>>>, entryId: string, file: File): Promise<boolean> {
+  const bytes = Buffer.from(await file.arrayBuffer())
+  const check = checkUpload(file.size, file.type, bytes)
+  if (!check.ok) return false
+  const name = safeFileName(file.name)
+  const path = `${ctx.organization.id}/${entryId}/${randomUUID()}/${name}`
+  const { error: up } = await ctx.supabase.storage.from('fin-receipts').upload(path, bytes, { contentType: check.mime, upsert: false })
+  if (up) return false
+  const { error } = await ctx.supabase.rpc('fin_add_receipt', {
+    p_entry: entryId, p_path: path, p_file_name: name, p_mime: check.mime, p_size: bytes.length, p_sha256: createHash('sha256').update(bytes).digest('hex'),
+  })
+  return !error
 }
 
 // Edit an open entry (owner request 04/11/2026): the database keeps the before/after of each field in the history;
