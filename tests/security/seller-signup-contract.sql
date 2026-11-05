@@ -1,4 +1,4 @@
--- Contract test for 20261105120000_seller_signup_links_v1: registration link per seller group. Anonymous callers reach
+-- Contract test for 20261105204708_seller_signup_links_v1: registration link per seller group. Anonymous callers reach
 -- only the link info and the submit, by token; the queue is read and decided only by admin/manager of the company; an
 -- approval runs save_seller and erases the request's data. One transaction, rolled back.
 --   psql -v ON_ERROR_STOP=1 -f tests/security/seller-signup-contract.sql
