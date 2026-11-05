@@ -253,7 +253,7 @@ insert into results select 'receipts cannot be written directly',
   or pg_temp.err(format('insert into public.fin_entry_receipts (organization_id, entry_id, storage_path, file_name, mime_type, file_size_bytes, sha256) values (%L, %L, %L, %L, %L, 1, %L)',
     (select org from ids), (select id from made where label = 'late'), 'x', 'x.pdf', 'application/pdf', repeat('a', 64))) like 'permission denied%';
 
--- Cash flow opening balance and old overdue entries (20261105010000).
+-- Cash flow opening balance and old overdue entries (20261105030043).
 insert into results select 'the opening for tomorrow equals the bank balances today',
   (select opening from public.fin_cash_flow_opening((select org from ids), current_date + 1)) = (select sum(balance) from public.fin_bank_balances((select org from ids)));
 insert into made select 'old', public.fin_create_entry((select org from ids), 'out', 'Conta antiga', pg_temp.acc('4.3'), null, null, null, 321.00, current_date - 400, null, 1, null, null);
