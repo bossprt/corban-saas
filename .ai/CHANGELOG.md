@@ -15,6 +15,13 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Link de cadastro de vendedor por grupo (05/11/2026)
+- Adicionado: Cadastros > Vendedores > "Links de cadastro": um link por grupo de vendedores (Corretor, Afiliado...), com Copiar, Desligar/Ligar e Trocar link.
+- Adicionado: página pública `/cadastro/<token>`, sem login, com o mesmo formulário do vendedor (dados básicos, contato, endereço, Pix/conta e contatos), sem grupo, filial nem regras de pagamento; o grupo vem do link.
+- Adicionado: fila "Aguardando aprovação" na lista de vendedores; "Ver e aprovar" abre o cadastro preenchido e "Aprovar e cadastrar" cria o vendedor; "Recusar" apaga os dados enviados. Migration `20261105204708_seller_signup_links_v1` (ADR-0072).
+- Segurança: limite de 30 envios por hora por link e 200 em espera por empresa; o mesmo CPF/CNPJ em espera é substituído; campo invisível contra robôs; a página não diz se o documento já é vendedor.
+- Segurança: a tabela de comprovantes do financeiro perde as permissões padrão de visitante e de escrita (já bloqueadas pela RLS).
+
 ### Fluxo de caixa com saldo inicial e vencidos antigos (04/11/2026)
 - Corrigido: o "Acumulado realizado" começava em zero; agora parte do saldo das contas bancárias em 01/01 (linha "Saldo em 01/01", só com todas as filiais).
 - Corrigido: contas em aberto vencidas em anos anteriores sumiam da previsão; agora aparecem na linha "Vencidos antes de AAAA".

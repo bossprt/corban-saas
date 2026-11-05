@@ -23,28 +23,32 @@ export type SellerValues = {
   business_district: string | null; business_city: string | null; business_state: string | null
 }
 
-const address = (v: SellerValues | undefined, p: '' | 'business_') => v && {
+const address = (v: Partial<SellerValues> | undefined, p: '' | 'business_') => v && {
   zip: v[`${p}zip`] ?? '', street: v[`${p}street`] ?? '', number: v[`${p}number`] ?? '', complement: v[`${p}complement`] ?? '',
   district: v[`${p}district`] ?? '', city: v[`${p}city`] ?? '', state: v[`${p}state`] ?? '',
 }
 
 // One form for registering and for the seller file (owner decision 25/09/2026). An existing seller opens locked;
 // "Editar cadastro" unlocks it in place. Only name, CPF/CNPJ, mobile and e-mail are required.
-export function SellerForm({ action, seller, accounts = [], contacts = [], groups, branches, canEdit, canSeeBank }: {
+// Registration link (05/11/2026): "public" is the page opened from the link, without the administrator's fields (group,
+// branch, payment, internal); "prefill" opens a new seller with what the link request brought, for approval.
+export function SellerForm({ action, seller, prefill, signupId, mode = 'admin', accounts = [], contacts = [], groups, branches, canEdit, canSeeBank }: {
   action: (f: FormData) => Promise<{ error: string }>
-  seller?: SellerValues
+  seller?: SellerValues; prefill?: Partial<SellerValues>; signupId?: string; mode?: 'admin' | 'public'
   accounts?: SellerAccount[]; contacts?: SellerContact[]
   groups: { id: string; name: string }[]; branches: { id: string; name: string }[]
   canEdit: boolean; canSeeBank: boolean
 }) {
   const s = seller
+  const v: Partial<SellerValues> | undefined = seller ?? prefill
+  const admin = mode === 'admin'
   const [editing, setEditing] = useState(!s)
   const [round, setRound] = useState(0)
   const locked = !editing
-  const hasBusiness = !!s?.business_zip || !!s?.business_street
+  const hasBusiness = !!v?.business_zip || !!v?.business_street
   // Internal seller (owner, 27/10/2026): a channel of the company itself, such as paid traffic. No CPF/CNPJ of its own;
   // mobile and e-mail optional.
-  const [internal, setInternal] = useState(!!s?.is_internal)
+  const [internal, setInternal] = useState(!!v?.is_internal)
   // Sent by hand, not through the form's action: a refused save must keep everything that was typed (React resets a
   // form after its action). Success leaves the page (the server redirects); a refusal shows its message here.
   const [error, setError] = useState('')
@@ -62,6 +66,8 @@ export function SellerForm({ action, seller, accounts = [], contacts = [], group
   return (
     <form method="post" onSubmit={submit} className="grid gap-6">
       {s && <input type="hidden" name="seller_id" value={s.id} />}
+      {signupId && <input type="hidden" name="signup_id" value={signupId} />}
+      {!admin && <input name="website" tabIndex={-1} autoComplete="off" aria-hidden className="hidden" />}
       {s && canEdit && (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-muted">{locked ? 'Para alterar, clique em Editar cadastro.' : 'Editando: altere o que precisar e clique em Salvar alterações.'}</p>
@@ -74,38 +80,40 @@ export function SellerForm({ action, seller, accounts = [], contacts = [], group
         <fieldset className="grid gap-3 md:grid-cols-4">
           <legend className={legend}>1. Dados básicos</legend>
           {s && <div className={lbl}>Código<div className="field mt-1.5 flex items-center bg-surface-muted font-mono text-ink-soft" title="Número automático, não muda">{String(s.code).padStart(3, '0')}</div></div>}
-          <label className={`${lbl} ${s ? 'md:col-span-2' : 'md:col-span-3'}`}>Nome / razão social{req}<input required name="name" maxLength={160} defaultValue={s?.name ?? ''} className="field mt-1.5" autoComplete="off" /></label>
-          <label className={lbl}>CPF/CNPJ{!internal && req}<input required={!internal} disabled={internal} name="tax_id" defaultValue={internal ? '' : formatTaxId(s?.tax_id)} placeholder={internal ? 'Não tem (interno)' : undefined} inputMode="numeric" className="field mt-1.5 font-mono disabled:bg-surface-muted" autoComplete="off" /></label>
-          <label className={lbl}>Categoria{req}<select required name="seller_category" defaultValue={s?.seller_category ?? ''} className="field mt-1.5"><option value="" disabled>—</option><option value="pf">PF</option><option value="pj">PJ</option><option value="sub">SUB</option></select></label>
-          <label className={lbl}>Grupo{req}<select required name="commission_group_id" defaultValue={s?.commission_group_id ?? ''} className="field mt-1.5"><option value="" disabled>Escolha o grupo</option>{groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
-          <label className={lbl}>Recebe o repasse<select name="payment_frequency" defaultValue={s?.commission_payment_frequency ?? 'daily'} className="field mt-1.5"><option value="daily">Diário</option><option value="weekly">Semanal</option><option value="biweekly">Quinzenal</option><option value="monthly">Mensal</option></select></label>
+          <label className={`${lbl} ${s ? 'md:col-span-2' : 'md:col-span-3'}`}>Nome / razão social{req}<input required name="name" maxLength={160} defaultValue={v?.name ?? ''} className="field mt-1.5" autoComplete="off" /></label>
+          <label className={lbl}>CPF/CNPJ{!internal && req}<input required={!internal} disabled={internal} name="tax_id" defaultValue={internal ? '' : formatTaxId(v?.tax_id)} placeholder={internal ? 'Não tem (interno)' : undefined} inputMode="numeric" className="field mt-1.5 font-mono disabled:bg-surface-muted" autoComplete="off" /></label>
+          <label className={lbl}>Categoria{req}<select required name="seller_category" defaultValue={v?.seller_category ?? ''} className="field mt-1.5"><option value="" disabled>—</option><option value="pf">PF</option><option value="pj">PJ</option><option value="sub">SUB</option></select></label>
+          {admin && <>
+          <label className={lbl}>Grupo{req}<select required name="commission_group_id" defaultValue={v?.commission_group_id ?? ''} className="field mt-1.5"><option value="" disabled>Escolha o grupo</option>{groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
+          <label className={lbl}>Recebe o repasse<select name="payment_frequency" defaultValue={v?.commission_payment_frequency ?? 'daily'} className="field mt-1.5"><option value="daily">Diário</option><option value="weekly">Semanal</option><option value="biweekly">Quinzenal</option><option value="monthly">Mensal</option></select></label>
           <label className={`${lbl} flex items-center gap-2 self-end pb-2 md:col-span-4`}><input type="checkbox" name="internal" checked={internal} onChange={e => setInternal(e.target.checked)} className="accent-[var(--brand)]" />Vendedor interno (da própria empresa, ex.: tráfego pago): sem CPF/CNPJ, celular e e-mail opcionais</label>
-          <label className={`${lbl} flex items-center gap-2 self-end pb-2`}><input type="checkbox" name="receives_deferred" defaultChecked={!!s?.receives_deferred} className="accent-[var(--brand)]" />Recebe diferido (mês a mês)</label>
-          <label className={lbl}>Filial<select name="branch_id" defaultValue={s?.branch_id ?? ''} className="field mt-1.5"><option value="">Matriz (padrão)</option>{branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
-          <label className={lbl}>Nome fantasia <span className="font-normal text-muted">se PJ</span><input name="trade_name" maxLength={160} defaultValue={s?.trade_name ?? ''} className="field mt-1.5" /></label>
-          <label className={lbl}>Nascimento / abertura<input name="birth_date" type="date" defaultValue={s?.birth_or_opening_date ?? ''} className="field mt-1.5" /></label>
-          <label className={lbl}>RG<input name="rg" maxLength={20} defaultValue={s?.identity_or_registration_number ?? ''} className="field mt-1.5 font-mono" /></label>
-          <label className={lbl}>Órgão emissor<input name="rg_issuer" maxLength={20} defaultValue={s?.identity_issuer ?? ''} placeholder="SSP/AC" className="field mt-1.5" /></label>
-          <label className={lbl}>Data de emissão<input name="rg_issued_on" type="date" defaultValue={s?.rg_issued_on ?? ''} className="field mt-1.5" /></label>
-          <label className={`${lbl} md:col-span-2`}>Nome da mãe<input name="mother_name" maxLength={160} defaultValue={s?.mother_name ?? ''} className="field mt-1.5" /></label>
-          <label className={`${lbl} md:col-span-2`}>Nome do pai<input name="father_name" maxLength={160} defaultValue={s?.father_name ?? ''} className="field mt-1.5" /></label>
+          <label className={`${lbl} flex items-center gap-2 self-end pb-2`}><input type="checkbox" name="receives_deferred" defaultChecked={!!v?.receives_deferred} className="accent-[var(--brand)]" />Recebe diferido (mês a mês)</label>
+          <label className={lbl}>Filial<select name="branch_id" defaultValue={v?.branch_id ?? ''} className="field mt-1.5"><option value="">Matriz (padrão)</option>{branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
+          </>}
+          <label className={lbl}>Nome fantasia <span className="font-normal text-muted">se PJ</span><input name="trade_name" maxLength={160} defaultValue={v?.trade_name ?? ''} className="field mt-1.5" /></label>
+          <label className={lbl}>Nascimento / abertura<input name="birth_date" type="date" defaultValue={v?.birth_or_opening_date ?? ''} className="field mt-1.5" /></label>
+          <label className={lbl}>RG<input name="rg" maxLength={20} defaultValue={v?.identity_or_registration_number ?? ''} className="field mt-1.5 font-mono" /></label>
+          <label className={lbl}>Órgão emissor<input name="rg_issuer" maxLength={20} defaultValue={v?.identity_issuer ?? ''} placeholder="SSP/AC" className="field mt-1.5" /></label>
+          <label className={lbl}>Data de emissão<input name="rg_issued_on" type="date" defaultValue={v?.rg_issued_on ?? ''} className="field mt-1.5" /></label>
+          <label className={`${lbl} md:col-span-2`}>Nome da mãe<input name="mother_name" maxLength={160} defaultValue={v?.mother_name ?? ''} className="field mt-1.5" /></label>
+          <label className={`${lbl} md:col-span-2`}>Nome do pai<input name="father_name" maxLength={160} defaultValue={v?.father_name ?? ''} className="field mt-1.5" /></label>
         </fieldset>
 
         <fieldset className="grid gap-3 md:grid-cols-4">
           <legend className={legend}>2. Contato</legend>
-          <label className={lbl}>Celular{!internal && req}<input required={!internal} name="mobile" defaultValue={s?.phone ? formatPhone(s.phone) : ''} inputMode="tel" placeholder="(68) 99900-0000" className="field mt-1.5" /></label>
-          <label className={lbl}>WhatsApp<input name="whatsapp" defaultValue={s?.whatsapp ? formatPhone(s.whatsapp) : ''} inputMode="tel" className="field mt-1.5" /></label>
+          <label className={lbl}>Celular{!internal && req}<input required={!internal} name="mobile" defaultValue={v?.phone ? formatPhone(v.phone) : ''} inputMode="tel" placeholder="(68) 99900-0000" className="field mt-1.5" /></label>
+          <label className={lbl}>WhatsApp<input name="whatsapp" defaultValue={v?.whatsapp ? formatPhone(v.whatsapp) : ''} inputMode="tel" className="field mt-1.5" /></label>
           <label className="flex items-end gap-2 pb-2.5 text-sm text-ink"><input type="checkbox" name="whatsapp_same" className="accent-[var(--brand)]" />Usar o celular no WhatsApp</label>
-          <label className={lbl}>E-mail{!internal && req}<input required={!internal} name="email" type="email" maxLength={160} defaultValue={s?.email ?? ''} className="field mt-1.5" /></label>
-          <label className={`${lbl} md:col-span-4`}>Outros telefones <span className="font-normal text-muted">opcional</span><input name="other_phones" maxLength={160} defaultValue={s?.other_phones ?? ''} className="field mt-1.5" /></label>
+          <label className={lbl}>E-mail{!internal && req}<input required={!internal} name="email" type="email" maxLength={160} defaultValue={v?.email ?? ''} className="field mt-1.5" /></label>
+          <label className={`${lbl} md:col-span-4`}>Outros telefones <span className="font-normal text-muted">opcional</span><input name="other_phones" maxLength={160} defaultValue={v?.other_phones ?? ''} className="field mt-1.5" /></label>
         </fieldset>
 
         <fieldset>
           <legend className={legend}>3. Endereço <span className={optional}>opcional</span></legend>
-          <div className="grid gap-3 md:grid-cols-5"><AddressFields initial={address(s, '')} legend="Endereço residencial" /></div>
+          <div className="grid gap-3 md:grid-cols-5"><AddressFields initial={address(v, '')} legend="Endereço residencial" /></div>
           <details className="mt-3" open={hasBusiness}>
             <summary className="cursor-pointer text-sm text-brand">Endereço comercial</summary>
-            <div className="mt-2 grid gap-3 md:grid-cols-5"><AddressFields initial={address(s, 'business_')} prefix="business_" legend="Endereço comercial" /></div>
+            <div className="mt-2 grid gap-3 md:grid-cols-5"><AddressFields initial={address(v, 'business_')} prefix="business_" legend="Endereço comercial" /></div>
           </details>
         </fieldset>
 
@@ -114,10 +122,10 @@ export function SellerForm({ action, seller, accounts = [], contacts = [], group
       </fieldset>
       {editing && (
         <div className="grid gap-3">
-          {error && <p ref={errorRef} role="alert" className="rounded-[10px] border border-[#FCA5A5] bg-[#FEF2F2] px-3 py-2 text-sm text-[#991B1B]">Não foi salvo: {error} Seus dados continuam na tela; corrija e clique de novo.</p>}
+          {error && <p ref={errorRef} role="alert" className="rounded-[10px] border border-[#FCA5A5] bg-[#FEF2F2] px-3 py-2 text-sm text-[#991B1B]">{admin ? 'Não foi salvo' : 'Não foi enviado'}: {error} Seus dados continuam na tela; corrija e clique de novo.</p>}
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-xs text-muted">{internal ? 'Obrigatórios: nome, categoria e grupo.' : 'Obrigatórios: nome, CPF/CNPJ, categoria, grupo, celular e e-mail.'} O resto pode ser completado depois.</p>
-            <button type="submit" disabled={pending} aria-busy={pending} className="h-10 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-60">{pending ? 'Salvando...' : s ? 'Salvar alterações' : 'Cadastrar vendedor'}</button>
+            <p className="text-xs text-muted">{!admin ? 'Obrigatórios: nome, CPF/CNPJ, categoria, celular e e-mail. Seu cadastro será conferido pela empresa antes de ser liberado.' : internal ? 'Obrigatórios: nome, categoria e grupo.' : 'Obrigatórios: nome, CPF/CNPJ, categoria, grupo, celular e e-mail.'}{admin && ' O resto pode ser completado depois.'}</p>
+            <button type="submit" disabled={pending} aria-busy={pending} className="h-10 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-60">{pending ? (admin ? 'Salvando...' : 'Enviando...') : !admin ? 'Enviar cadastro' : s ? 'Salvar alterações' : signupId ? 'Aprovar e cadastrar' : 'Cadastrar vendedor'}</button>
           </div>
         </div>
       )}
