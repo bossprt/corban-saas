@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Plus, SlidersHorizontal } from 'lucide-react'
+import { Paperclip, Plus, SlidersHorizontal } from 'lucide-react'
 import { Badge, Card, PageHeader } from '@/components/ui'
 import { SubmitButton } from '@/components/SubmitButton'
 import { can } from '@/lib/access'
@@ -8,13 +8,15 @@ import { brl, dayLabel, FIN_KIND_LABEL, FIN_SOURCE_LABEL, FIN_STATUS_LABEL } fro
 import { isUuid } from '@/lib/team'
 import { FinanceTabs } from './FinanceTabs'
 import { SelectedTotal } from './SelectedTotal'
-import { cancelEntry, createEntry, settleEntry, settleMany, undoSettlement, updateEntry } from './actions'
+import { addReceipt, cancelEntry, createEntry, settleEntry, settleMany, undoSettlement, updateEntry } from './actions'
+import { SettleForm } from './SettleForm'
 
-type Entry = { id: string; direction: string; status: string; description: string; account_id: string; branch_id: string | null; counterpart: string | null; document: string | null; amount: string; due_on: string; competence_on: string; settled_on: string | null; bank_account_id: string | null; source: string }
+type Entry = { id: string; direction: string; status: string; description: string; account_id: string; branch_id: string | null; counterpart: string | null; document: string | null; amount: string; due_on: string; competence_on: string; settled_on: string | null; bank_account_id: string | null; source: string; interest: string; discount: string; original_amount: string | null }
 type Account = { id: string; code: string; name: string; kind: string; is_group: boolean; is_active: boolean }
 type EntryEvent = { id: string; kind: string; detail: Record<string, { from: unknown; to: unknown }>; reason: string | null; created_at: string }
+const dv = (ev: EntryEvent, k: string) => (ev.detail as Record<string, unknown> | null)?.[k]
 const VIEWS: Record<string, string> = { pagar: 'A pagar', receber: 'A receber', baixados: 'Pagos e recebidos', todos: 'Todos' }
-const EVENT_LABEL: Record<string, string> = { created: 'Lançado', edited: 'Alterado', settled: 'Baixado', settlement_undone: 'Baixa desfeita', cancelled: 'Cancelado', reconciled: 'Conciliado com o extrato', reconciliation_undone: 'Conciliação desfeita' }
+const EVENT_LABEL: Record<string, string> = { created: 'Lançado', edited: 'Alterado', settled: 'Baixado', settlement_undone: 'Baixa desfeita', cancelled: 'Cancelado', reconciled: 'Conciliado com o extrato', reconciliation_undone: 'Conciliação desfeita', receipt_added: 'Comprovante anexado' }
 const FIELD_LABEL: Record<string, string> = { description: 'Descrição', account: 'Conta do plano', branch: 'Filial', amount: 'Valor', due_on: 'Vencimento', competence_on: 'Competência' }
 const label = 'text-[13px] font-medium text-ink-soft'
 const BULK = 'pagar-varios'
@@ -43,7 +45,7 @@ export default async function CompanyFinancePage({ searchParams }: { searchParam
   const edit = can(access, 'financeiro.edit')
   const t = today()
 
-  let q = supabase.from('fin_entries').select('id,direction,status,description,account_id,branch_id,counterpart,document,amount,due_on,competence_on,settled_on,bank_account_id,source').limit(300)
+  let q = supabase.from('fin_entries').select('id,direction,status,description,account_id,branch_id,counterpart,document,amount,due_on,competence_on,settled_on,bank_account_id,source,interest,discount,original_amount').limit(300)
   if (view === 'pagar') q = q.eq('status', 'open').eq('direction', 'out').order('due_on')
   else if (view === 'receber') q = q.eq('status', 'open').eq('direction', 'in').order('due_on')
   else if (view === 'baixados') q = q.eq('status', 'settled').order('settled_on', { ascending: false })
@@ -65,6 +67,12 @@ export default async function CompanyFinancePage({ searchParams }: { searchParam
     history ? supabase.from('fin_entry_events').select('id,kind,detail,reason,created_at').eq('entry_id', history).order('created_at') : Promise.resolve({ data: [] }),
   ])
   const list = (rows ?? []) as Entry[]
+  // Receipts of the listed entries, opened by a short-lived signed link (private storage).
+  const { data: receiptRows } = list.length ? await supabase.from('fin_entry_receipts').select('entry_id,storage_path,file_name').in('entry_id', list.map(e => e.id)).order('created_at') : { data: [] }
+  const receipts = (receiptRows ?? []) as { entry_id: string; storage_path: string; file_name: string }[]
+  const { data: signed } = receipts.length ? await supabase.storage.from('fin-receipts').createSignedUrls(receipts.map(r => r.storage_path), 600) : { data: [] }
+  const receiptsOf = new Map<string, { name: string; url: string }[]>()
+  receipts.forEach((r, i) => { const url = signed?.[i]?.signedUrl; if (url) receiptsOf.set(r.entry_id, [...(receiptsOf.get(r.entry_id) ?? []), { name: r.file_name, url }]) })
   const acc = new Map(((accounts ?? []) as Account[]).map(a => [a.id, a]))
   const branchName = new Map((branches ?? []).map(b => [b.id, b.name]))
   const bankName = new Map((banks ?? []).map(b => [b.id, b.label]))
@@ -201,20 +209,19 @@ export default async function CompanyFinancePage({ searchParams }: { searchParam
                         <Badge tone={e.status === 'settled' ? 'received' : e.status === 'cancelled' ? 'neutral' : isLate ? 'reversed' : dueToday ? 'diverged' : 'pending'}>{isLate ? 'Vencido' : dueToday ? 'Vence hoje' : FIN_STATUS_LABEL[e.status]}</Badge>
                         <span className={`num mt-0.5 block text-xs ${isLate ? 'text-[#B91C1C]' : 'text-muted'}`}>{dayLabel(e.status === 'settled' ? e.settled_on : e.due_on)}</span>
                       </td>
-                      <td className="px-3 py-2.5 text-ink">{e.description}{e.counterpart ? <span className="block text-xs text-muted">{e.counterpart}</span> : null}{e.source !== 'manual' ? <span className="block text-xs text-muted">{FIN_SOURCE_LABEL[e.source]}</span> : null}</td>
-                      <td className={`num whitespace-nowrap px-3 py-2.5 text-right ${e.direction === 'in' ? 'text-[#15803D]' : 'text-ink'}`}>{e.direction === 'in' ? '+' : '−'} {brl(e.amount)}</td>
+                      <td className="px-3 py-2.5 text-ink">{e.description}{e.counterpart ? <span className="block text-xs text-muted">{e.counterpart}</span> : null}{e.source !== 'manual' ? <span className="block text-xs text-muted">{FIN_SOURCE_LABEL[e.source]}</span> : null}
+                        {(receiptsOf.get(e.id) ?? []).map((r, i) => <a key={i} href={r.url} target="_blank" rel="noopener noreferrer" className="mt-0.5 inline-flex items-center gap-1 text-xs text-brand underline"><Paperclip size={12} aria-hidden />{r.name}</a>)}</td>
+                      <td className={`num whitespace-nowrap px-3 py-2.5 text-right ${e.direction === 'in' ? 'text-[#15803D]' : 'text-ink'}`}>{e.direction === 'in' ? '+' : '−'} {brl((cents(e.amount) + cents(e.interest) - cents(e.discount)) / 100)}
+                        {(cents(e.interest) > 0 || cents(e.discount) > 0) && <span className="block text-xs text-muted">{brl(e.amount)}{cents(e.interest) > 0 ? ` + juros ${brl(e.interest)}` : ''}{cents(e.discount) > 0 ? ` − desc. ${brl(e.discount)}` : ''}</span>}
+                        {e.original_amount && <span className="block text-xs text-muted">parcial de {brl(e.original_amount)}</span>}</td>
                       <td className="px-3 py-2.5 text-ink-soft">{a ? `${a.code} ${a.name}` : '—'}<span className="block text-xs text-muted">{e.branch_id ? branchName.get(e.branch_id) ?? '—' : 'Empresa toda'}{e.bank_account_id ? ` · ${bankName.get(e.bank_account_id) ?? ''}` : ''}</span></td>
                       <td className="px-3 py-2.5">
                         <div className="flex flex-col items-end gap-1">
                           {edit && e.status === 'open' && (
                             <details>
                               <summary className="inline-flex h-8 cursor-pointer items-center rounded-lg bg-brand px-3 text-xs font-semibold text-white">{e.direction === 'in' ? 'Receber' : 'Pagar'}</summary>
-                              <form action={settleEntry} className="mt-1 flex flex-wrap items-center justify-end gap-1">
-                                <input type="hidden" name="return_to" value={back} /><input type="hidden" name="entry_id" value={e.id} />
-                                <input type="date" name="settled_on" required defaultValue={t} max={t} aria-label="Data da baixa" className="field h-8 w-auto py-0 text-xs" />
-                                <select name="bank_account_id" defaultValue={defaultBank} aria-label="Conta bancária" className="field h-8 w-auto py-0 text-xs"><option value="">Conta?</option>{bankOptions}</select>
-                                <SubmitButton className="h-8 rounded-lg bg-brand px-2.5 text-xs font-semibold text-white" pendingText="...">Confirmar</SubmitButton>
-                              </form>
+                              <SettleForm action={settleEntry} entryId={e.id} returnTo={back} amountCents={cents(e.amount)} direction={e.direction} manual={e.source === 'manual'}
+                                today={t} defaultBank={defaultBank} bankOptions={bankOptions} />
                             </details>
                           )}
                           <details className="text-right text-xs">
@@ -225,6 +232,10 @@ export default async function CompanyFinancePage({ searchParams }: { searchParam
                               {edit && e.status === 'open' && (
                                 <form action={cancelEntry} className="flex gap-1"><input type="hidden" name="return_to" value={back} /><input type="hidden" name="entry_id" value={e.id} />
                                   <input name="reason" required minLength={3} placeholder="Motivo" aria-label="Motivo do cancelamento" className="field h-8 py-0 text-xs" /><button className="rounded-lg border border-line px-2 text-xs text-[#991B1B]">Cancelar</button></form>
+                              )}
+                              {edit && e.status !== 'cancelled' && (
+                                <form action={addReceipt} className="flex items-center gap-1"><input type="hidden" name="return_to" value={back} /><input type="hidden" name="entry_id" value={e.id} />
+                                  <input type="file" name="receipt" required accept="application/pdf,image/jpeg,image/png,image/webp" aria-label="Comprovante" className="w-44 text-xs" /><button className="rounded-lg border border-line px-2 py-1 text-xs">Anexar comprovante</button></form>
                               )}
                               {edit && e.status === 'settled' && e.source === 'manual' && (
                                 <form action={undoSettlement} className="flex gap-1"><input type="hidden" name="return_to" value={back} /><input type="hidden" name="entry_id" value={e.id} />
@@ -269,6 +280,9 @@ export default async function CompanyFinancePage({ searchParams }: { searchParam
                                   <span className="num text-xs text-muted">{new Date(ev.created_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' })}</span>{' '}
                                   <span className="font-medium text-ink">{EVENT_LABEL[ev.kind] ?? ev.kind}</span>
                                   {ev.kind === 'edited' && Object.entries(ev.detail ?? {}).map(([k, c]) => FIELD_LABEL[k] && c && typeof c === 'object' ? <span key={k} className="block pl-4 text-xs">{FIELD_LABEL[k]}: {showChange(k, c.from)} → {showChange(k, c.to)}</span> : null)}
+                                  {ev.kind === 'settled' && dv(ev, 'paid') != null && <span className="block pl-4 text-xs">Valor movimentado {brl(String(dv(ev, 'paid')))}{Number(dv(ev, 'interest')) > 0 ? ` · juros e multa ${brl(String(dv(ev, 'interest')))}` : ''}{Number(dv(ev, 'discount')) > 0 ? ` · desconto ${brl(String(dv(ev, 'discount')))}` : ''}{dv(ev, 'remainder') ? ' · restante ficou em aberto' : ''}</span>}
+                                  {ev.kind === 'created' && dv(ev, 'remainder_of') ? <span className="block pl-4 text-xs">Restante de um pagamento parcial</span> : null}
+                                  {ev.kind === 'receipt_added' && dv(ev, 'file') ? <span className="block pl-4 text-xs">{String(dv(ev, 'file'))}</span> : null}
                                   {ev.reason ? <span className="block pl-4 text-xs">Motivo: {ev.reason}</span> : null}
                                 </li>
                               ))}
