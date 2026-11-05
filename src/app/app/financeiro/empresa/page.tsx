@@ -1,10 +1,11 @@
 import Link from 'next/link'
-import { Paperclip, Plus, SlidersHorizontal } from 'lucide-react'
+import { Paperclip, Plus, Search, SlidersHorizontal } from 'lucide-react'
 import { Badge, Card, PageHeader } from '@/components/ui'
 import { SubmitButton } from '@/components/SubmitButton'
 import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
 import { brl, dayLabel, FIN_KIND_LABEL, FIN_SOURCE_LABEL, FIN_STATUS_LABEL } from '@/lib/finance/labels'
+import { entrySearchFilter } from '@/lib/finance/search'
 import { isUuid } from '@/lib/team'
 import { FinanceTabs } from './FinanceTabs'
 import { SelectedTotal } from './SelectedTotal'
@@ -29,7 +30,7 @@ const moneyField = (v: string) => (cents(v) / 100).toFixed(2).replace('.', ',')
 
 // F6.5: payables and receivables of the company, with the branch as cost center. Layout reviewed 04/11/2026: what is
 // late or due first, one "Pagar" per line, the rest of the actions under "⋯", edit and history inline.
-export default async function CompanyFinancePage({ searchParams }: { searchParams: Promise<{ ver?: string; de?: string; ate?: string; filial?: string; conta?: string; cancelados?: string; novo?: string; alterar?: string; historico?: string }> }) {
+export default async function CompanyFinancePage({ searchParams }: { searchParams: Promise<{ ver?: string; busca?: string; de?: string; ate?: string; filial?: string; conta?: string; cancelados?: string; novo?: string; alterar?: string; historico?: string }> }) {
   const { supabase, organization, access } = await requireAppContext()
   if (!can(access, 'financeiro.view')) return <section><PageHeader title="Financeiro da empresa" /><Card className="p-5 text-sm text-ink-soft">Seu perfil não vê o financeiro.</Card></section>
   await supabase.rpc('fin_setup', { p_org: organization.id })
@@ -40,6 +41,8 @@ export default async function CompanyFinancePage({ searchParams }: { searchParam
   const filial = isUuid(sp.filial ?? '') ? sp.filial! : null
   const conta = isUuid(sp.conta ?? '') ? sp.conta! : null
   const cancelled = sp.cancelados === '1'
+  const busca = String(sp.busca ?? '').trim().slice(0, 80)
+  const searchFilter = entrySearchFilter(busca)
   const editing = isUuid(sp.alterar ?? '') ? sp.alterar! : null
   const history = isUuid(sp.historico ?? '') ? sp.historico! : null
   const edit = can(access, 'financeiro.edit')
@@ -55,6 +58,8 @@ export default async function CompanyFinancePage({ searchParams }: { searchParam
   if (filial) q = q.eq('branch_id', filial)
   // Company bank account (07/10/2026): only entries paid or received in it.
   if (conta) q = q.eq('bank_account_id', conta)
+  // Buscar (05/11/2026): within the open tab and the other filters.
+  if (searchFilter) q = q.or(searchFilter)
   const [{ data: rows }, { data: accounts }, { data: branches }, { data: banks }, { data: balances }, { data: open }, { data: lastPaid }, { data: events }] = await Promise.all([
     q,
     supabase.from('fin_chart_accounts').select('id,code,name,kind,is_group,is_active').order('code'),
@@ -84,7 +89,7 @@ export default async function CompanyFinancePage({ searchParams }: { searchParam
   const week = addDays(t, 7)
   const soon = openOut.filter(r => r.due_on >= t && r.due_on <= week)
   const usable = ((accounts ?? []) as Account[]).filter(a => !a.is_group && a.is_active)
-  const listQs = new URLSearchParams(Object.entries({ ver: view, de: from ?? '', ate: to ?? '', filial: filial ?? '', conta: conta ?? '', cancelados: cancelled ? '1' : '' }).filter(([, v]) => v)).toString()
+  const listQs = new URLSearchParams(Object.entries({ ver: view, busca, de: from ?? '', ate: to ?? '', filial: filial ?? '', conta: conta ?? '', cancelados: cancelled ? '1' : '' }).filter(([, v]) => v)).toString()
   const back = `/app/financeiro/empresa?${listQs}`
   const viewHref = (v: string) => `/app/financeiro/empresa?ver=${v}`
   const count: Record<string, number> = { pagar: openOut.length, receber: openRows.length - openOut.length }
@@ -166,15 +171,28 @@ export default async function CompanyFinancePage({ searchParams }: { searchParam
 
       <div className="mb-3 flex flex-wrap items-center gap-1.5">
         {Object.entries(VIEWS).map(([k, v]) => (
-          <Link key={k} href={viewHref(k)} aria-current={k === view ? 'page' : undefined}
+          <Link key={k} href={busca ? `${viewHref(k)}&busca=${encodeURIComponent(busca)}` : viewHref(k)} aria-current={k === view ? 'page' : undefined}
             className={`rounded-[10px] border px-3 py-1.5 text-sm ${k === view ? 'border-ink bg-ink text-white' : 'border-line bg-surface text-ink-soft hover:bg-surface-muted'}`}>
             {v}{count[k] !== undefined ? ` · ${count[k]}` : ''}
           </Link>
         ))}
+        <form className="flex min-w-[16rem] flex-1 items-center gap-1.5 sm:ml-3" action="/app/financeiro/empresa" role="search">
+          <input type="hidden" name="ver" value={view} />
+          {from && <input type="hidden" name="de" value={from} />}{to && <input type="hidden" name="ate" value={to} />}
+          {filial && <input type="hidden" name="filial" value={filial} />}{conta && <input type="hidden" name="conta" value={conta} />}
+          {cancelled && <input type="hidden" name="cancelados" value="1" />}
+          <span className="relative min-w-0 flex-1">
+            <Search size={15} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+            <input type="search" name="busca" defaultValue={busca} maxLength={80} placeholder="Buscar descrição, fornecedor, documento ou valor" aria-label="Buscar lançamentos" className="field h-9 w-full py-1 pl-9" />
+          </span>
+          <button className="inline-flex h-9 items-center rounded-[10px] border border-line-strong bg-surface px-3 text-sm text-ink hover:bg-surface-muted">Buscar</button>
+          {busca && <Link href={`/app/financeiro/empresa?${new URLSearchParams(Object.entries({ ver: view, de: from ?? '', ate: to ?? '', filial: filial ?? '', conta: conta ?? '', cancelados: cancelled ? '1' : '' }).filter(([, v]) => v)).toString()}`} className="inline-flex h-9 items-center px-1 text-sm text-muted underline">Limpar</Link>}
+        </form>
         <details className="ml-auto" open={moreFilters}>
           <summary className="inline-flex cursor-pointer items-center gap-1.5 rounded-[10px] border border-line bg-surface px-3 py-1.5 text-sm text-ink-soft hover:bg-surface-muted"><SlidersHorizontal size={14} aria-hidden />Mais filtros</summary>
           <form className="mt-2 flex flex-wrap items-end gap-2" action="/app/financeiro/empresa">
             <input type="hidden" name="ver" value={view} />
+            {busca && <input type="hidden" name="busca" value={busca} />}
             <label className="text-xs text-muted">De<input type="date" name="de" defaultValue={from ?? ''} className="field mt-1 block h-9 w-auto py-1" /></label>
             <label className="text-xs text-muted">Até<input type="date" name="ate" defaultValue={to ?? ''} className="field mt-1 block h-9 w-auto py-1" /></label>
             <select name="filial" defaultValue={filial ?? ''} aria-label="Filial" className="field h-9 w-auto py-1"><option value="">Todas as filiais</option>{(branches ?? []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select>
@@ -187,7 +205,8 @@ export default async function CompanyFinancePage({ searchParams }: { searchParam
       </div>
 
       <Card className="overflow-hidden">
-        {!list.length ? <p className="px-5 py-6 text-sm text-muted">Nada por aqui.</p> : (
+        {busca && <p className="border-b border-line px-5 py-2.5 text-sm text-ink-soft">{list.length === 300 ? 'Mais de 300' : list.length} lançamento(s) encontrado(s) para &quot;{busca}&quot; em {VIEWS[view]}.</p>}
+        {!list.length ? <p className="px-5 py-6 text-sm text-muted">{busca ? 'Nada encontrado nesta aba. Tente outra palavra ou a aba Todos.' : 'Nada por aqui.'}</p> : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-surface-muted text-xs text-muted"><tr>

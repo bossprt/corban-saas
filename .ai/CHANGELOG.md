@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Busca em Contas a pagar e receber (05/11/2026)
+- Adicionado: campo "Buscar" na lista de Contas a pagar e receber: procura na descrição, no fornecedor/cliente, no documento e no valor ("5000", "5.000" ou "5.000,00"), dentro da aba aberta e dos outros filtros. Sem mudança no banco.
+
 ### Link de cadastro de vendedor por grupo (05/11/2026)
 - Adicionado: Cadastros > Vendedores > "Links de cadastro": um link por grupo de vendedores (Corretor, Afiliado...), com Copiar, Desligar/Ligar e Trocar link.
 - Adicionado: página pública `/cadastro/<token>`, sem login, com o mesmo formulário do vendedor (dados básicos, contato, endereço, Pix/conta e contatos), sem grupo, filial nem regras de pagamento; o grupo vem do link.
