@@ -203,7 +203,7 @@ select public.fin_settle_entry((select id from made where label = 'e99'), curren
 insert into results select 'with only settled entries it can be deactivated',
   pg_temp.err(format('select public.fin_save_chart_account(%L, %L, %L, %L, %L, false, false)', (select org from ids), (select id from made where label = 'acc99'), '4.99', 'Conta de teste', 'expense')) = 'ok';
 
--- Interest, discount, partial payment and receipts (20261104230000).
+-- Interest, discount, partial payment and receipts (20261105003843).
 insert into made select 'bank2', public.fin_save_bank_account((select org from ids), null, 'Itaú', 'Itaú Teste', '0002', '777-1', 0, current_date - 10, true);
 insert into made select 'late', public.fin_create_entry((select org from ids), 'out', 'Conta atrasada', pg_temp.acc('4.3'), null, null, null, 2000.00, current_date - 5, null, 1, null, null);
 insert into results select 'paid above the amount (without interest) is refused',
