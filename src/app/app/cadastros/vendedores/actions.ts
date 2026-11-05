@@ -7,6 +7,7 @@ import { atLeast } from '@/lib/rbac'
 import { classifyDbFeedback, FEEDBACK, feedbackUrl, type FeedbackCode } from '@/lib/feedback'
 import { createMemberLogin } from '@/lib/team.server'
 import { PASSWORD_MAX, PASSWORD_MIN } from '@/lib/team'
+import { sellerData } from './sellerData'
 
 const PATH='/app/cadastros/vendedores'
 const text=(f:FormData,k:string)=>String(f.get(k)??'').trim()
@@ -31,13 +32,6 @@ const SELLER_ERRORS:[RegExp,FeedbackCode][]=[
   [/active_matrix_required/,'erro:sem_matriz'],
 ]
 
-// The rows of a repeated block, read in order: every row posts the same names.
-function rows(f:FormData,names:string[]):Record<string,string>[]{
-  const cols=names.map(n=>f.getAll(n).map(v=>String(v).trim()))
-  const n=Math.max(0,...cols.map(c=>c.length))
-  return Array.from({length:n},(_,i)=>Object.fromEntries(names.map((k,j)=>[k,cols[j][i]??''])))
-}
-
 // Register or change a seller: one database call (save_seller) writes identity, profile, accounts and contacts.
 // A refusal comes back as a message and the form keeps what was typed; only success leaves the page.
 export async function saveSeller(f:FormData):Promise<{error:string}>{
@@ -46,41 +40,17 @@ export async function saveSeller(f:FormData):Promise<{error:string}>{
   const back=(code:FeedbackCode)=>({error:FEEDBACK[code]})
   if(!ctx)return back('erro:sem_permissao')
   if(sellerId&&!uuid(sellerId))return back('erro:requisicao_invalida')
-  const mobile=text(f,'mobile')
-  const profile:Record<string,string>={
-    trade_name:text(f,'trade_name'),birth_date:text(f,'birth_date'),rg:text(f,'rg'),rg_issuer:text(f,'rg_issuer'),rg_issued_on:text(f,'rg_issued_on'),
-    mother_name:text(f,'mother_name'),father_name:text(f,'father_name'),mobile,
-    whatsapp:f.get('whatsapp_same')==='on'?mobile:text(f,'whatsapp'),other_phones:text(f,'other_phones'),email:text(f,'email'),
-  }
-  for(const p of ['','business_'])for(const k of ['zip','street','number','complement','district','city','state'])profile[`${p}${k}`]=text(f,`${p}${k}`)
+  const data=sellerData(f)
 
-  const data:Record<string,unknown>={
-    name:text(f,'name'),tax_id:text(f,'tax_id'),category:text(f,'seller_category'),group_id:text(f,'commission_group_id'),
-    branch_id:text(f,'branch_id'),profile,internal:f.get('internal')==='on',
-    // Part C3: how often the seller is paid and whether they receive the deferred.
-    payment_frequency:text(f,'payment_frequency')||'daily',receives_deferred:f.get('receives_deferred')==='on',
-    contacts:rows(f,['contact_name','contact_cpf','contact_role','contact_mobile','contact_email'])
-      .filter(c=>Object.values(c).some(Boolean))
-      .map(c=>({name:c.contact_name,cpf:c.contact_cpf,role:c.contact_role,mobile:c.contact_mobile,email:c.contact_email})),
-  }
-  // Bank accounts travel only when the form carried them (who cannot see bank data never overwrites it).
-  if(f.get('accounts_included')==='1'){
-    const primary=Number(text(f,'primary_account')||'0')
-    const accountRows=rows(f,['account_id','remove_account','has_payee','transfer_method','pix_key_type','pix_key','account_type','bank_code','bank_name','branch','account_number','account_digit','holder_name','holder_document','account_note'])
-    data.accounts=accountRows.map((a,i)=>({a,i})).filter(({a})=>a.account_id||a.pix_key||a.bank_code||a.account_number||a.branch).map(({a,i})=>{
-      const payee=a.has_payee==='1'
-      return {
-        id:a.account_id||null,remove:a.remove_account==='1',primary:i===primary,transfer_method:a.transfer_method,
-        pix_key_type:a.pix_key_type,pix_key:a.pix_key,account_type:a.account_type,bank_code:a.bank_code,bank_name:a.bank_name,branch:a.branch,
-        account_number:a.account_number,account_digit:a.account_digit,
-        holder_name:payee?a.holder_name:'',holder_document:payee?a.holder_document:'',note:a.account_note,
-      }
-    })
-  }
-
-  const {data:id,error}=await ctx.supabase.rpc('save_seller',{p_org:ctx.membership.organization_id,p_seller:sellerId||null,p_data:data})
+  // A request from the registration link is approved by saving it: save_seller and the closing of the request run together.
+  const signupId=text(f,'signup_id')
+  if(signupId&&(sellerId||!uuid(signupId)))return back('erro:requisicao_invalida')
+  const {data:id,error}=signupId
+    ?await ctx.supabase.rpc('seller_signup_approve',{p_request:signupId,p_data:data})
+    :await ctx.supabase.rpc('save_seller',{p_org:ctx.membership.organization_id,p_seller:sellerId||null,p_data:data})
   if(error){
     const m=error.message??''
+    if(/signup_already_decided/.test(m))return back('erro:cadastro_link_decidido')
     return back(SELLER_ERRORS.find(([re])=>re.test(m))?.[1]??classifyDbFeedback(error))
   }
   return go(sellerId?'ok:vendedor_atualizado':'ok:vendedor_cadastrado',`${PATH}/${id as string}`)
@@ -143,4 +113,35 @@ export async function linkSellerUser(f:FormData){
     return go(classifyDbFeedback(error),pageOf(f))
   }
   return go(userId?'ok:vendedor_ligado':'ok:vendedor_desligado',pageOf(f))
+}
+
+// Registration links (05/11/2026): one per seller group; "new" also replaces a link that leaked (the old one stops).
+const LINKS=`${PATH}/links`
+export async function newSignupLink(f:FormData){
+  const ctx=await manager(); if(!ctx)return go('erro:sem_permissao',LINKS)
+  const group=text(f,'group_id')
+  if(!uuid(group))return go('erro:requisicao_invalida',LINKS)
+  const {error}=await ctx.supabase.rpc('seller_signup_link_new',{p_org:ctx.membership.organization_id,p_group:group})
+  if(error)return go(/seller_group_invalid/.test(error.message??'')?'erro:vendedor_invalido':classifyDbFeedback(error),LINKS)
+  revalidatePath(LINKS)
+  return go('ok:cadastro_link_criado',LINKS)
+}
+
+export async function setSignupLinkActive(f:FormData){
+  const ctx=await manager(); if(!ctx)return go('erro:sem_permissao',LINKS)
+  const id=text(f,'link_id'),active=text(f,'active')==='true'
+  if(!uuid(id))return go('erro:requisicao_invalida',LINKS)
+  const {error}=await ctx.supabase.rpc('seller_signup_link_set_active',{p_link:id,p_active:active})
+  revalidatePath(LINKS)
+  return go(error?classifyDbFeedback(error):active?'ok:cadastro_link_ligado':'ok:cadastro_link_desligado',LINKS)
+}
+
+// Refusing a request erases what was sent; only name and document stay as a record.
+export async function rejectSignup(f:FormData){
+  const ctx=await manager(); if(!ctx)return go('erro:sem_permissao')
+  const id=text(f,'signup_id')
+  if(!uuid(id))return go('erro:requisicao_invalida')
+  const {error}=await ctx.supabase.rpc('seller_signup_reject',{p_request:id})
+  if(error)return go(/signup_already_decided/.test(error.message??'')?'erro:cadastro_link_decidido':classifyDbFeedback(error))
+  return go('ok:cadastro_link_recusado')
 }

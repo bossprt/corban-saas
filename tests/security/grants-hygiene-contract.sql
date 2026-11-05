@@ -13,9 +13,11 @@ grant select on ids to authenticated;
 create temp table results (check_name text, ok boolean);
 grant insert, select on results to authenticated;
 
+-- Only exception: the seller registration link (05/11/2026), reached without login by its token.
 insert into results select 'anon executes no function in public or private',
   not exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-              where n.nspname in ('public','private') and has_function_privilege('anon', p.oid, 'execute'));
+              where n.nspname in ('public','private') and has_function_privilege('anon', p.oid, 'execute')
+                and p.oid not in ('public.seller_signup_link_info(text)'::regprocedure, 'public.seller_signup_submit(text,jsonb)'::regprocedure));
 insert into results select 'anon holds no privilege on any public table or view',
   not exists (select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
               cross join (values ('select'),('insert'),('update'),('delete')) v(pr)

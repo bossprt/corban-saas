@@ -15,8 +15,11 @@ import { SellerForm, type SellerValues } from '../SellerForm'
 import type { SellerAccount, SellerContact } from '../SellerRows'
 
 // The seller file is the registration form ("novo" registers a new seller), plus portal access and activation.
-export default async function SellerPage({ params }: { params: Promise<{ id: string }> }) {
+type SignupPayload = { name?: string; tax_id?: string; category?: string; profile?: Record<string, string>; accounts?: Record<string, unknown>[]; contacts?: SellerContact[] }
+
+export default async function SellerPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ pedido?: string }> }) {
   const { id } = await params
+  const { pedido } = await searchParams
   const isNew = id === 'novo'
   if (!isNew && !isUuid(id)) notFound()
   const { supabase, membership, access } = await requireAppContext()
@@ -49,6 +52,28 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
     business_zip: p.business_zip ?? null, business_street: p.business_street ?? null, business_number: p.business_number ?? null, business_complement: p.business_complement ?? null,
     business_district: p.business_district ?? null, business_city: p.business_city ?? null, business_state: p.business_state ?? null,
   } : undefined
+  // A request from the registration link (05/11/2026) opens here as a new seller already filled, with the link's group;
+  // saving it approves the request. Bank data is shown only to who may see it (admin and manager open this page).
+  const { data: request } = isNew && pedido && isUuid(pedido)
+    ? await supabase.from('seller_signup_requests').select('id,commission_group_id,payload').eq('id', pedido).eq('status', 'pending').maybeSingle()
+    : { data: null }
+  const r = (request?.payload ?? null) as SignupPayload | null
+  const rp = r?.profile ?? {}
+  const prefill: Partial<SellerValues> | undefined = request && r ? {
+    name: r.name ?? '', tax_id: r.tax_id ?? null, seller_category: r.category ?? '', commission_group_id: request.commission_group_id,
+    trade_name: rp.trade_name || null, birth_or_opening_date: rp.birth_date || null, identity_or_registration_number: rp.rg || null,
+    identity_issuer: rp.rg_issuer || null, rg_issued_on: rp.rg_issued_on || null, mother_name: rp.mother_name || null, father_name: rp.father_name || null,
+    phone: rp.mobile || null, whatsapp: rp.whatsapp || null, other_phones: rp.other_phones || null, email: rp.email || null,
+    zip: rp.zip || null, street: rp.street || null, number: rp.number || null, complement: rp.complement || null, district: rp.district || null, city: rp.city || null, state: rp.state || null,
+    business_zip: rp.business_zip || null, business_street: rp.business_street || null, business_number: rp.business_number || null, business_complement: rp.business_complement || null,
+    business_district: rp.business_district || null, business_city: rp.business_city || null, business_state: rp.business_state || null,
+  } : undefined
+  const prefillAccounts: SellerAccount[] = (r?.accounts ?? []).map(a => {
+    const t = (k: string) => (typeof a[k] === 'string' && a[k] ? a[k] as string : null)
+    return { id: '', transfer_method: t('transfer_method') ?? 'pix', account_type: t('account_type'), bank_code: t('bank_code'), bank_name: t('bank_name'), branch: t('branch'),
+      account_number: t('account_number'), account_digit: t('account_digit'), pix_key_type: t('pix_key_type'), pix_key: t('pix_key'),
+      holder_name: t('holder_name'), holder_document: t('holder_document'), note: t('note'), is_primary: a.primary === true }
+  })
   const groupOptions = (groups ?? []).filter(g => g.is_active || g.id === s?.commission_group_id).map(g => ({ id: g.id, name: g.name }))
   // Team members with a login (06/10/2026): a seller can be linked to one of them, of any role, instead of a new
   // portal login. Shown to whoever may link (admin, manager).
@@ -72,7 +97,7 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
     <section>
       <Link href="/app/cadastros/vendedores" className="mb-3 inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink"><ArrowLeft size={15} aria-hidden />Vendedores</Link>
       <PageHeader
-        title={s ? s.name : 'Novo vendedor'}
+        title={s ? s.name : request ? 'Aprovar cadastro do link' : 'Novo vendedor'}
         description={s ? (
           <span className="flex flex-wrap items-center gap-2">
             <span className="font-mono">Código {sellerCode(s.code)}</span>
@@ -86,8 +111,9 @@ export default async function SellerPage({ params }: { params: Promise<{ id: str
         ) : 'O código do vendedor é gerado automaticamente ao cadastrar.'}
       />
       <Card className="p-5">
-        <SellerForm key={s ? `${s.id}-${p.updated_at ?? ''}` : 'novo'} action={saveSeller} seller={values}
-          accounts={(accounts.data ?? []) as SellerAccount[]} contacts={(contacts.data ?? []) as SellerContact[]}
+        {request && <p className="mb-4 rounded-[10px] bg-[#FAEEDA] px-3 py-2 text-sm text-[#854F0B]">Cadastro enviado pelo link. Confira os dados, ajuste o que precisar e clique em Aprovar e cadastrar.</p>}
+        <SellerForm key={s ? `${s.id}-${p.updated_at ?? ''}` : request ? request.id : 'novo'} action={saveSeller} seller={values} prefill={prefill} signupId={request?.id}
+          accounts={request ? prefillAccounts : (accounts.data ?? []) as SellerAccount[]} contacts={request ? r?.contacts ?? [] : (contacts.data ?? []) as SellerContact[]}
           groups={groupOptions} branches={(branches ?? []).map(b => ({ id: b.id, name: b.name }))} canEdit={canEdit} canSeeBank={canSeeBank} />
       </Card>
 

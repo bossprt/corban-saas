@@ -49,7 +49,7 @@ function AccountRow({ a, index, primary, removed, locked, onRemove, canDrop }: {
         <span className="text-xs font-semibold text-muted">Conta {index + 1}{removed && ' · será removida ao salvar'}</span>
         <span className="flex items-center gap-3">
           <label className="flex items-center gap-1.5 text-xs text-ink"><input type="radio" name="primary_account" value={index} defaultChecked={primary} className="accent-[var(--brand)]" />Principal</label>
-          {!locked && (a
+          {!locked && (a?.id
             ? <button type="button" onClick={onRemove} className={removeBtn}>{removed ? <><RotateCcw size={13} aria-hidden />Manter</> : <><X size={13} aria-hidden />Remover</>}</button>
             : canDrop && <button type="button" onClick={onRemove} className={removeBtn}><X size={13} aria-hidden />Remover</button>)}
         </span>
@@ -98,7 +98,7 @@ export function SellerAccountRows({ initial, locked, visible }: { initial: Selle
         {locked && !initial.length && <p className="text-sm text-muted">Nenhuma conta cadastrada.</p>}
         {!(locked && !initial.length) && rows.map((r, i) => (
           <AccountRow key={r.key} a={r.item} index={i} primary={i === primaryIndex} removed={r.removed} locked={locked}
-            onRemove={() => (r.item ? toggle(r.key) : drop(r.key))} canDrop={rows.length > 1} />
+            onRemove={() => (r.item?.id ? toggle(r.key) : drop(r.key))} canDrop={rows.length > 1} />
         ))}
         {!locked && <div><button type="button" onClick={add} className={addBtn}><Plus size={15} aria-hidden />Adicionar outra conta</button></div>}
       </div>
