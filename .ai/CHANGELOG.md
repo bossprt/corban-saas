@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Busca sem acento em Contas a pagar e receber (05/11/2026)
+- Alterado: o campo "Buscar" ignora acentos e maiúsculas ("ficticia" acha "Fictícia", "GRAFICA SAO" acha "Gráfica São João"). Migration `20261106035526_fin_entries_search_text_v1`: função `fold_text` (imutável, sem extensão) e coluna gerada `fin_entries.search_text` com descrição, fornecedor/cliente e documento já sem acento; nenhum valor financeiro ou evento é alterado.
+
 ### Busca em Contas a pagar e receber (05/11/2026)
 - Adicionado: campo "Buscar" na lista de Contas a pagar e receber: procura na descrição, no fornecedor/cliente, no documento e no valor ("5000", "5.000" ou "5.000,00"), dentro da aba aberta e dos outros filtros. Sem mudança no banco.
 
