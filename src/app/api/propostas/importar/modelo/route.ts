@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs'
 import { requireAppContext } from '@/lib/appContext'
-import { can } from '@/lib/access'
+import { canImportContracts } from '@/lib/access'
 import { CONTRACT_LAYOUTS } from '@/lib/imports/contract-layout'
 
 export const dynamic = 'force-dynamic'
@@ -58,7 +58,7 @@ const TEXT_COLUMNS = ['CPF *', 'Nº contrato/ADE', 'Contrato de origem', 'WhatsA
 
 export async function GET(request: Request) {
   const { supabase, access, organization } = await requireAppContext()
-  if (!can(access, 'propostas.create')) return new Response('Sem permissão', { status: 403 })
+  if (!canImportContracts(access)) return new Response('Sem permissão', { status: 403 })
   const layout = CONTRACT_LAYOUTS.find(l => l.key === new URL(request.url).searchParams.get('layout')) ?? CONTRACT_LAYOUTS[0]
 
   const [{ data: banks }, { data: catalog }] = await Promise.all([

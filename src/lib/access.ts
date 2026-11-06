@@ -41,6 +41,18 @@ export function can(access: Access | null | undefined, permission: Permission): 
   return !!access && (access.tier === 'admin' || access.permissions.has(permission))
 }
 
+// Contract import (audit G1, 06/11/2026): it writes contracts for anyone of the team, so it needs who edits contracts
+// besides creating contracts and clients (Administrador, Gerente, Supervisor, Operador; not Vendedor nor Corretor).
+export function canImportContracts(access: Access | null | undefined): boolean {
+  return can(access, 'propostas.create') && can(access, 'clientes.create') && can(access, 'propostas.edit')
+}
+
+// The Bevicred search brings every contract of the company and saves "partner code -> seller" for the whole company:
+// only for who imports and sees the whole company or manages it (Administrador, Gerente, or a role with scope "all").
+export function canImportBevicred(access: Access | null | undefined): boolean {
+  return !!access && canImportContracts(access) && (access.tier === 'admin' || access.tier === 'manager' || access.scope === 'all')
+}
+
 // Modules the platform switches per company (plans). MUST match private.module_catalog(); a unit test pins it.
 export const PLAN_MODULES = [...MODULES, 'portal_corretor', 'campanhas', 'ia', 'api'] as const
 export type PlanModule = (typeof PLAN_MODULES)[number]

@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Importar contratos e validação de documentos: travas de permissão (06/11/2026)
+- Segurança: Esteira > Importar contratos exige também "Editar propostas" (Vendedor e Corretor externo não abrem a tela, a ação nem o modelo). A busca na Bevicred (produção da empresa toda) e o vínculo "código do parceiro → vendedor" ficam só para Administrador, Gerente ou papel com escopo "toda a empresa", conferidos no servidor antes de usar a chave de serviço.
+- Segurança: migration `20261106234453_document_validation_role_guard_v1` (local; aplicar em produção antes do merge): item do checklist de documentos sempre nasce "faltando" (ninguém cria já validado ou dispensado pela API); motivo e aprovador da dispensa não mudam depois; usuário sem papel de Supervisor ou acima é recusado mesmo sem vínculo ativo. Contrato `tests/security/document-validation-role-contract.sql`.
+
 ### Filtro por prazo em Cadastros > Tabelas (06/11/2026)
 - Adicionado: filtro "Prazo (meses)" na pesquisa de tabelas: mostra as tabelas que têm alguma linha cujo prazo (mínimo a máximo) inclui o número digitado; vale junto com os outros filtros, na exportação e na "Nova pesquisa". Nova coluna "Prazos" com a faixa da versão mostrada. Sem mudança no banco.
 

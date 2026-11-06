@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { FilePlus2, Calculator, FileSpreadsheet, RefreshCw } from 'lucide-react'
 import { Badge, ButtonLink, Card, PageHeader, type Tone } from '@/components/ui'
-import { can } from '@/lib/access'
+import { can, canImportBevicred, canImportContracts } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
 import { listBevicredCredentials } from '@/lib/bevicred.server'
 import { formatCpf } from '@/lib/cpf'
@@ -71,8 +71,8 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
   }
   const alerts = shown.filter(c => alertOf(c)).length
   // A company with a Bevicred credential gets the shortcut that opens the contract import already searching Bevicred.
-  const canImport = can(access, 'propostas.create') && can(access, 'clientes.create')
-  const bevicred = canImport && (await listBevicredCredentials(organization.id).catch(() => [])).length > 0
+  const canImport = canImportContracts(access)
+  const bevicred = canImportBevicred(access) && (await listBevicredCredentials(organization.id).catch(() => [])).length > 0
 
   return (
     <section>
