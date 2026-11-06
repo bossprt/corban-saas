@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 // The tables search form goes through here (owner decision 26/09/2026): the filters are remembered in a cookie of that
 // screen, so a table page's "Nova pesquisa" goes back to them. Only the known filters travel; nothing else is stored.
 const SEARCH_COOKIE = 'tabelas_busca'
-const KEYS = ['banco', 'convenio', 'nome', 'promotora', 'situacao', 'vigencia', 'tipo', 'codigo', 'n']
+const KEYS = ['banco', 'convenio', 'nome', 'promotora', 'situacao', 'vigencia', 'tipo', 'codigo', 'prazo', 'n']
 const BASE = '/app/comercial/tabelas'
 
 export function GET(req: NextRequest) {

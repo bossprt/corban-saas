@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Filtro por prazo em Cadastros > Tabelas (06/11/2026)
+- Adicionado: filtro "Prazo (meses)" na pesquisa de tabelas: mostra as tabelas que têm alguma linha cujo prazo (mínimo a máximo) inclui o número digitado; vale junto com os outros filtros, na exportação e na "Nova pesquisa". Nova coluna "Prazos" com a faixa da versão mostrada. Sem mudança no banco.
+
 ### Busca sem acento em Contas a pagar e receber (05/11/2026)
 - Alterado: o campo "Buscar" ignora acentos e maiúsculas ("ficticia" acha "Fictícia", "GRAFICA SAO" acha "Gráfica São João"). Migration `20261106035526_fin_entries_search_text_v1`: função `fold_text` (imutável, sem extensão) e coluna gerada `fin_entries.search_text` com descrição, fornecedor/cliente e documento já sem acento; nenhum valor financeiro ou evento é alterado.
 
