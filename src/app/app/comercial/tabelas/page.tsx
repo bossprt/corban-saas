@@ -5,6 +5,7 @@ import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
 import { PAGE_SIZES, pageSize } from '@/lib/commission/tableValues'
 import { readTableFilters, searchTables } from '@/lib/commission/tableSearch'
+import { termsLabel } from '@/lib/commission/tableTerms'
 import { PublishDraftsForm } from './PublishDraftsForm'
 
 type SP = Record<string, string | string[] | undefined>
@@ -60,6 +61,7 @@ export default async function TablesSearchPage({ searchParams }: { searchParams:
           <label className={lbl}>Vigência<select name="vigencia" defaultValue={f.vigencia} className="field mt-1.5"><option value="atuais">Com vigência atual</option><option value="rascunho">Com rascunho</option><option value="todas">Todas</option></select></label>
           <label className={lbl}>Tipo de contrato<select name="tipo" defaultValue={f.tipo} className="field mt-1.5"><option value="">Todos</option>{types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
           <label className={lbl}>Código no banco<input name="codigo" defaultValue={f.codigo} className="field mt-1.5 font-mono" /></label>
+          <label className={lbl}>Prazo (meses)<input name="prazo" defaultValue={f.prazo} inputMode="numeric" pattern="[0-9]*" maxLength={3} placeholder="84" className="field mt-1.5" /></label>
           <input type="hidden" name="n" value={size} />
           <div className="flex items-end gap-2 md:col-span-4">
             <button className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><Search size={15} aria-hidden />Pesquisar</button>
@@ -79,7 +81,7 @@ export default async function TablesSearchPage({ searchParams }: { searchParams:
 
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4 text-sm text-ink-soft">
-          <span className="flex flex-wrap items-center gap-3"><span><strong className="text-ink">{total}</strong> tabela(s)</span>
+          <span className="flex flex-wrap items-center gap-3"><span><strong className="text-ink">{total}</strong> tabela(s){f.prazo && ` com prazo de ${f.prazo} meses`}</span>
             {total > 0 && <a href={`/api/comercial/tabelas/exportar?${exportQs}`} className="inline-flex h-8 items-center gap-1.5 rounded-[10px] border border-line-strong bg-surface px-3 text-[13px] text-ink hover:bg-surface-muted"><Download size={14} aria-hidden />Exportar planilha ({total})</a>}</span>
           <span className="flex items-center gap-1.5">Exibir {PAGE_SIZES.map(n => (
             <Link key={n} href={qs({ n, p: 1 })} aria-current={n === size ? 'true' : undefined}
@@ -87,10 +89,10 @@ export default async function TablesSearchPage({ searchParams }: { searchParams:
           ))} por página</span>
         </div>
         <div className="mt-3 overflow-x-auto">
-          <table className="w-full min-w-[880px] text-left text-[13px]">
+          <table className="w-full min-w-[960px] text-left text-[13px]">
             <thead className="border-y border-line bg-surface-muted text-xs text-muted">
               <tr><th className="px-4 py-2 font-medium">Tabela</th><th className="px-3 py-2 font-medium">Banco</th><th className="px-3 py-2 font-medium">Convênio</th><th className="px-3 py-2 font-medium">Promotora</th>
-                <th className="px-3 py-2 font-medium">Vigência</th><th className="px-3 py-2 text-right font-medium">Linhas</th><th className="px-3 py-2 text-right font-medium">Ações</th></tr>
+                <th className="px-3 py-2 font-medium">Vigência</th><th className="px-3 py-2 font-medium">Prazos</th><th className="px-3 py-2 text-right font-medium">Linhas</th><th className="px-3 py-2 text-right font-medium">Ações</th></tr>
             </thead>
             <tbody>
               {shown.map(x => (
@@ -107,6 +109,7 @@ export default async function TablesSearchPage({ searchParams }: { searchParams:
                     {x.current ? <span className="text-ink">v{x.current.version} desde {dateBr(x.current.effective_from ?? x.current.published_at)}</span> : <span className="text-muted">Sem vigência</span>}
                     {x.draft && <Badge tone="pending" className="ml-1.5">Rascunho v{x.draft.version}</Badge>}
                   </td>
+                  <td className="num px-3 py-2.5 whitespace-nowrap">{termsLabel(x.terms)}</td>
                   <td className="num px-3 py-2.5 text-right">{x.lines}</td>
                   <td className="px-3 py-1.5">
                     <span className="flex justify-end gap-0.5">
@@ -117,7 +120,7 @@ export default async function TablesSearchPage({ searchParams }: { searchParams:
                   </td>
                 </tr>
               ))}
-              {!shown.length && <tr><td colSpan={7} className="px-4 py-6 text-center text-muted">Nenhuma tabela com esses filtros.</td></tr>}
+              {!shown.length && <tr><td colSpan={8} className="px-4 py-6 text-center text-muted">Nenhuma tabela com esses filtros.</td></tr>}
             </tbody>
           </table>
         </div>

@@ -1,13 +1,14 @@
 import { fetchAll } from '@/lib/fetchAll'
+import { acceptsTerm, readTerm, type TermRange } from './tableTerms'
 
 // The commission tables search (owner decision 25/09/2026), shared by the search screen and the "Exportar planilha" of
 // the search, so the export always holds exactly the tables the filters show.
-export type TableFilters = { banco: string; convenio: string; nome: string; promotora: string; situacao: string; vigencia: string; tipo: string; codigo: string }
+export type TableFilters = { banco: string; convenio: string; nome: string; promotora: string; situacao: string; vigencia: string; tipo: string; codigo: string; prazo: string }
 
 export function readTableFilters(get: (k: string) => string): TableFilters {
   return {
     banco: get('banco'), convenio: get('convenio'), nome: get('nome').trim(), promotora: get('promotora'), situacao: get('situacao') || 'ativas',
-    vigencia: get('vigencia') || 'atuais', tipo: get('tipo'), codigo: get('codigo').trim(),
+    vigencia: get('vigencia') || 'atuais', tipo: get('tipo'), codigo: get('codigo').trim(), prazo: String(readTerm(get('prazo')) ?? ''),
   }
 }
 
@@ -26,35 +27,40 @@ export async function searchTables(supabase: { from: (table: string) => any }, f
     supabase.from('organization_product_routes').select('id,org_bank_id,org_agreement_id,org_provider_id').not('org_bank_id', 'is', null),
     supabase.from('product_tables').select('id,route_id,code,name,status,formalization').order('name'),
     fetchAll<TableVersion>((a, b) => supabase.from('product_table_versions').select('id,product_table_id,version,status,effective_from,effective_until,published_at,metadata').order('version', { ascending: false }).order('id').range(a, b)),
-    fetchAll<{ product_table_version_id: string; contract_type_id: string }>((a, b) => supabase.from('commercial_conditions').select('product_table_version_id,contract_type_id').order('id').range(a, b)),
+    fetchAll<{ product_table_version_id: string; contract_type_id: string; term: number | null; term_min: number | null; term_max: number | null }>((a, b) => supabase.from('commercial_conditions').select('product_table_version_id,contract_type_id,term,term_min,term_max').order('id').range(a, b)),
   ])
   const route = new Map(((routes.data ?? []) as Route[]).map(r => [r.id, r]))
   const byTable = new Map<string, TableVersion[]>()
   for (const v of versions) byTable.set(v.product_table_id, [...(byTable.get(v.product_table_id) ?? []), v])
-  const lines = new Map<string, number>(), typesOf = new Map<string, Set<string>>()
+  const lines = new Map<string, number>(), typesOf = new Map<string, Set<string>>(), termsOf = new Map<string, TermRange[]>()
   for (const c of conditions) {
     lines.set(c.product_table_version_id, (lines.get(c.product_table_version_id) ?? 0) + 1)
     typesOf.set(c.product_table_version_id, (typesOf.get(c.product_table_version_id) ?? new Set()).add(c.contract_type_id))
+    const min = c.term_min ?? c.term, max = c.term_max ?? c.term
+    if (min != null && max != null) termsOf.set(c.product_table_version_id, [...(termsOf.get(c.product_table_version_id) ?? []), { min, max }])
   }
 
-  const rows = ((tables.data ?? []) as Table[]).filter(t => route.has(t.route_id)).map(t => {
+  const rows0 = ((tables.data ?? []) as Table[]).filter(t => route.has(t.route_id)).map(t => {
     const r = route.get(t.route_id)!
     const vs = byTable.get(t.id) ?? []
     const current = vs.find(v => v.status === 'published')
     const draft = vs.find(v => v.status === 'draft')
     const shown = current ?? draft ?? vs[0]
-    return { t, r, current, draft, shown, lines: shown ? lines.get(shown.id) ?? 0 : 0, types: shown ? typesOf.get(shown.id) ?? new Set<string>() : new Set<string>() }
-  }).filter(x =>
+    return { t, r, current, draft, shown, lines: shown ? lines.get(shown.id) ?? 0 : 0, types: shown ? typesOf.get(shown.id) ?? new Set<string>() : new Set<string>(), terms: shown ? termsOf.get(shown.id) ?? [] : [] }
+  })
+  const term = readTerm(f.prazo)
+  const found = rows0.filter(x =>
     (!f.banco || x.r.org_bank_id === f.banco) && (!f.convenio || x.r.org_agreement_id === f.convenio)
     && (!f.promotora || (f.promotora === 'propria' ? !x.r.org_provider_id : x.r.org_provider_id === f.promotora))
     && (f.situacao === 'todas' || (f.situacao === 'inativas' ? x.t.status !== 'active' : x.t.status === 'active'))
     && (f.vigencia === 'todas' || (f.vigencia === 'rascunho' ? !!x.draft : !!x.current))
     && (!f.tipo || x.types.has(f.tipo))
     && (!f.nome || x.t.name.toLowerCase().includes(f.nome.toLowerCase()))
-    && (!f.codigo || (x.t.code ?? '').toLowerCase().includes(f.codigo.toLowerCase())))
+    && (!f.codigo || (x.t.code ?? '').toLowerCase().includes(f.codigo.toLowerCase()))
+    && (term == null || acceptsTerm(x.terms, term)))
 
   return {
-    rows,
+    rows: found,
     banks: (banks.data ?? []) as Named[], agreements: (agreements.data ?? []) as Named[],
     providers: (providers.data ?? []) as Named[], types: (types.data ?? []) as Named[],
   }
