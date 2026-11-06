@@ -15,7 +15,15 @@ const button='inline-flex h-10 items-center justify-center rounded-[10px] bg-bra
 
 export default async function PlatformPage({searchParams}:{searchParams:Promise<{ok?:string;erro?:string;sol?:string}>}) {
   const gate=await requirePlatformAdmin()
-  if(!gate.ok) redirect('/login')
+  if(!gate.ok&&gate.status===401) redirect('/login')
+  // Logged in but not a platform administrator: say so instead of looking like the session ended.
+  if(!gate.ok) return <main className="flex min-h-screen items-center justify-center bg-canvas p-4">
+    <Card className="max-w-md p-6 text-center">
+      <h1 className="text-xl font-semibold text-ink">Sem acesso</h1>
+      <p className="mt-2 text-sm text-muted">Esta área é só para a administração da plataforma Corban. Sua conta não tem esse acesso.</p>
+      <a href="/app" className={`${button} mt-4`}>Voltar ao início</a>
+    </Card>
+  </main>
   const admin=createAdminClient()
   const [docs,orgs,orgModules,terms,improvements,billingSettings,subscriptions,charges]=await Promise.all([
     admin.from('document_types').select('id,code,name,is_active').order('name'),

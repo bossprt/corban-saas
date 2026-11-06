@@ -23,9 +23,26 @@ $$;
 insert into public.organizations (id, name, document, plan_type, is_active)
 select org_b, 'Empresa B Cobranca', 'cobranca-' || gen_random_uuid(), 'starter', true from ids;
 
--- Receiver and a subscription that started two months ago, due day 1, grace 0: last month's charge is blocking.
+-- Receiver and a subscription that started last month, due day 1, grace 0: last month's charge is blocking.
+-- (20261106234256_billing_starts_on_guard_v1: a new subscription can no longer start in a past month through the
+-- function, so this pre-existing one is written directly, as if created before the guard.)
 select public.platform_set_billing_settings(null, '12345678909', 'cpf', 'Fulano de Tal', 'Rio Branco');
-select public.platform_set_subscription(null, org_a, 399.90, 1, 0, (date_trunc('month', now() at time zone 'America/Sao_Paulo') - interval '1 month')::date, true) from ids;
+insert into public.organization_subscriptions (organization_id, amount, due_day, grace_days, starts_on, is_active)
+select org_a, 399.90, 1, 0, (date_trunc('month', now() at time zone 'America/Sao_Paulo') - interval '1 month')::date, true from ids
+on conflict (organization_id) do update set amount = excluded.amount, due_day = excluded.due_day, grace_days = excluded.grace_days,
+  starts_on = excluded.starts_on, is_active = excluded.is_active;
+
+-- First month guard: a new subscription in a past month is refused and writes nothing; an existing one keeps its own
+-- first month (saving it again works) but cannot be moved further back.
+insert into results select 'new subscription past month refused',
+  pg_temp.err(format('select public.platform_set_subscription(null, %L, 399.90, 1, 0, %L, true)', org_b, (date_trunc('month', now() at time zone 'America/Sao_Paulo') - interval '1 month')::date)) like '%billing_starts_on_in_past%' from ids;
+insert into results select 'refused new subscription wrote nothing', not exists (select 1 from public.organization_subscriptions s where s.organization_id = org_b) from ids;
+insert into results select 'existing subscription keeps its past first month',
+  pg_temp.err(format('select public.platform_set_subscription(null, %L, 399.90, 1, 0, %L, true)', org_a, (date_trunc('month', now() at time zone 'America/Sao_Paulo') - interval '1 month')::date)) = 'ok' from ids;
+insert into results select 'existing subscription cannot move further back',
+  pg_temp.err(format('select public.platform_set_subscription(null, %L, 399.90, 1, 0, %L, true)', org_a, (date_trunc('month', now() at time zone 'America/Sao_Paulo') - interval '2 month')::date)) like '%billing_starts_on_in_past%' from ids;
+insert into results select 'null first month refused',
+  pg_temp.err(format('select public.platform_set_subscription(null, %L, 399.90, 1, 0, null, true)', org_b)) like '%billing_starts_on_in_past%' from ids;
 
 insert into results values ('3 decimals refused',
   pg_temp.err(format('select public.platform_set_subscription(null, %L, 399.901, 1, 0, current_date, true)', (select org_a from ids))) like '%billing_invalid_amount%');
@@ -81,7 +98,7 @@ insert into results select 'inactive not blocked', not (private.billing_summary(
 select check_name, ok from results order by ok, check_name;
 do $$ begin
   if exists (select 1 from results where ok is not true) then raise exception 'billing contract failed'; end if;
-  if (select count(*) from results) < 20 then raise exception 'billing contract incomplete'; end if;
+  if (select count(*) from results) < 25 then raise exception 'billing contract incomplete'; end if;
 end $$;
 
 rollback;

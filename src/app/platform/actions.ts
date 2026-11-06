@@ -6,6 +6,7 @@ import { createAdminClient } from '@/lib/supabaseAdmin'
 import { requirePlatformAdmin } from '@/lib/platform.server'
 import { isPlanModule } from '@/lib/access'
 import { digitsOnly, isValidCnpj, sameOrganizationName } from '@/lib/platform'
+import { brl, parseSubscriptionAmount } from '@/lib/billing'
 import { PASSWORD_MAX, PASSWORD_MIN, passwordRefusal, TEAM_ERROR_MESSAGES } from '@/lib/team'
 
 const clean = (v: FormDataEntryValue | null) => String(v ?? '').trim()
@@ -16,7 +17,8 @@ const go = (kind: 'ok'|'erro', msg: string): never => {
 }
 async function gate() {
   const g = await requirePlatformAdmin()
-  if (!g.ok) redirect('/login')
+  // No session: log in. Logged in but not a platform administrator: /platform shows "Sem acesso".
+  if (!g.ok) redirect(g.status === 401 ? '/login' : '/platform')
   return g
 }
 
@@ -148,6 +150,7 @@ const BILLING_ERRORS: Record<string, string> = {
   billing_reversal_note_required: 'Escreva o motivo do estorno.',
   billing_invalid_paid_on: 'Data de recebimento inválida (não pode ser futura).',
   billing_charge_not_found: 'Mensalidade não encontrada.',
+  billing_starts_on_in_past: 'O primeiro mês não pode ser anterior ao mês atual: isso criaria mensalidades já vencidas e bloquearia a empresa. Nada foi salvo.',
 }
 const billingFail = (e: { message?: string }, fallback: string): never => go('erro', Object.entries(BILLING_ERRORS).find(([k]) => (e.message ?? '').includes(k))?.[1] ?? fallback)
 const isUuid = (v: string) => /^[0-9a-f-]{36}$/i.test(v)
@@ -167,15 +170,16 @@ export async function saveBillingSettings(f: FormData) {
 
 export async function saveSubscription(f: FormData) {
   const g = await gate()
-  const org = clean(f.get('organization_id')), amount = clean(f.get('amount')).replace(/\./g, '').replace(',', '.')
+  // "399,90", "399.90" and "1.234,56" are all read as money (never "399.90" → 39990).
+  const org = clean(f.get('organization_id')), amount = parseSubscriptionAmount(f.get('amount'))
   const dueDay = Number(clean(f.get('due_day'))), grace = Number(clean(f.get('grace_days'))), starts = clean(f.get('starts_on'))
-  if (!isUuid(org) || !/^\d{1,8}(\.\d{1,2})?$/.test(amount) || !Number.isInteger(dueDay) || dueDay < 1 || dueDay > 28 || !Number.isInteger(grace) || grace < 0 || grace > 30 || !/^\d{4}-\d{2}$/.test(starts)) go('erro', 'Confira valor, dia (1 a 28), carência (0 a 30) e mês de início.')
+  if (!isUuid(org) || !amount || !Number.isInteger(dueDay) || dueDay < 1 || dueDay > 28 || !Number.isInteger(grace) || grace < 0 || grace > 30 || !/^\d{4}-\d{2}$/.test(starts)) go('erro', 'Confira valor, dia (1 a 28), carência (0 a 30) e mês de início.')
   const admin = createAdminClient()
   // amount travels as text, the database turns it into numeric(14,2)
   const { error } = await admin.rpc('platform_set_subscription', { p_actor: g.userId, p_org: org, p_amount: amount, p_due_day: dueDay, p_grace_days: grace, p_starts_on: `${starts}-01`, p_active: f.get('is_active') === 'on' })
   if (error) billingFail(error, 'Não foi possível salvar a assinatura.')
   await admin.from('platform_admin_audit_events').insert({ actor_user_id: g.userId, organization_id: org, action: 'billing.subscription.set', metadata: { amount, due_day: dueDay, grace_days: grace, starts_on: starts, active: f.get('is_active') === 'on' } })
-  go('ok', 'Assinatura salva.')
+  go('ok', `Assinatura salva: ${brl(amount!)} por mês.`)
 }
 
 export async function markChargePaid(f: FormData) {

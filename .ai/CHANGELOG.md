@@ -15,6 +15,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Plataforma > Cobrança: valor com ponto e primeiro mês no passado (06/11/2026)
+- Corrigido: "399.90" no valor da assinatura era gravado como R$ 39.990,00; agora usa `parseMoneyInput` ("399,90", "399.90", "1.234,56"), mostra "R$ X por mês" ao digitar e pede confirmação antes de salvar.
+- Corrigido: assinatura nova com primeiro mês anterior ao mês atual criava mensalidades já vencidas e bloqueava a empresa na hora. O banco recusa (`platform_set_subscription`, migration `20261106234256_billing_starts_on_guard_v1`); assinatura existente mantém o primeiro mês que já tem, só não volta para antes. A tela começa no mês atual e explica o motivo.
+- Corrigido: usuário comum que abre /platform vê "Sem acesso" em vez de ir para o login.
+
 ### Filtro por prazo em Cadastros > Tabelas (06/11/2026)
 - Adicionado: filtro "Prazo (meses)" na pesquisa de tabelas: mostra as tabelas que têm alguma linha cujo prazo (mínimo a máximo) inclui o número digitado; vale junto com os outros filtros, na exportação e na "Nova pesquisa". Nova coluna "Prazos" com a faixa da versão mostrada. Sem mudança no banco.
 
