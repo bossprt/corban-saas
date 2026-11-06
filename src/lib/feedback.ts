@@ -352,6 +352,7 @@ export const FEEDBACK = {
   'ok:lote_desfeito': 'Lote desfeito. Os valores voltaram ao saldo de cada pessoa e as saídas do banco foram anuladas.',
   'ok:repasse_desfeito': 'Pagamento desfeito. O valor voltou ao saldo e a saída do banco foi anulada. Pague de novo quando fizer o PIX.',
   'erro:repasse_proprio': 'Você não pode registrar pagamento para a sua própria conta.',
+  'erro:repasse_valor_mudou': 'O valor a pagar mudou desde que a página foi aberta. Nada foi registrado: confira o novo valor e pague de novo.',
   'ok:recebimento_registrado': 'Recebimento registrado. Se o valor não bate com o esperado, ele aparece como divergente na Conciliação.',
   'erro:recebimento_valor': 'Valor inválido. Use o formato 1.234,56.',
   'erro:recebimento_data': 'Data inválida: use a data em que o dinheiro caiu, até hoje.',

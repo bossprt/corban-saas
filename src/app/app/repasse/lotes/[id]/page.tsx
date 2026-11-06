@@ -7,6 +7,7 @@ import { isUuid } from '@/lib/team'
 import { brlText } from '@/lib/receipts/format'
 import { dateBr, PAYOUT_STATUS_LABEL, PAYOUT_STATUS_TONE } from '@/lib/payout/format'
 import { batchItemLabel, batchStatus, type BatchDetail } from '@/lib/payout/batches'
+import { batchTotals } from '@/lib/payout/pay-safety'
 import { Printer } from 'lucide-react'
 import { formatTaxId } from '@/lib/sellers'
 import { payTo } from '@/app/imprimir/sheets'
@@ -25,8 +26,9 @@ export default async function PayoutBatchPage({ params }: { params: Promise<{ id
   const { data, error } = await supabase.rpc('payout_batch_detail', { p_batch: id })
   if (error || !data) notFound()
   const b = data as BatchDetail
-  const undone = b.lines.filter(l => l.status === 'reversed').length
-  const st = batchStatus({ payouts: b.lines.length, undone })
+  // Same rule as the print and the Excel (06/11/2026): only effective payments count; the undone ones apart.
+  const totals = batchTotals(b.lines)
+  const st = batchStatus({ payouts: b.lines.length, undone: totals.undoneCount })
   const stillPaid = b.lines.some(l => l.status === 'paid')
 
   return (
@@ -40,8 +42,8 @@ export default async function PayoutBatchPage({ params }: { params: Promise<{ id
 
       <div className="mb-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <div className={box}><div className="text-xs text-muted">Pagamento dia</div><div className="num mt-1 font-semibold text-ink">{dateBr(b.paid_on)}</div></div>
-        <div className={box}><div className="text-xs text-muted">Pessoas pagas</div><div className="num mt-1 font-semibold text-ink">{b.lines.length}</div></div>
-        <div className={box}><div className="text-xs text-muted">Valor total</div><div className="num mt-1 font-semibold text-ink">{brlText(b.total)}</div></div>
+        <div className={box}><div className="text-xs text-muted">Pessoas pagas</div><div className="num mt-1 font-semibold text-ink">{totals.paidCount}</div>{totals.undoneCount > 0 && <div className="text-xs text-muted">{totals.undoneCount} desfeito(s)</div>}</div>
+        <div className={box}><div className="text-xs text-muted">Valor pago</div><div className="num mt-1 font-semibold text-ink">{brlText(totals.paidTotal)}</div>{totals.undoneCount > 0 && <div className="text-xs text-muted">desfeito {brlText(totals.undoneTotal)}</div>}</div>
         <div className={box}><div className="text-xs text-muted">Conta que pagou</div><div className="mt-1 font-semibold text-ink">{b.bank_accounts ?? '—'}</div></div>
         <div className={box}><div className="text-xs text-muted">Comprovante · pago por</div><div className="mt-1 text-sm text-ink">{b.payment_reference ?? '—'} · {b.paid_by ?? '—'}</div></div>
         <div className={box}><div className="text-xs text-muted">Situação</div><div className="mt-1"><Badge tone={st.tone}>{st.label}</Badge></div></div>
