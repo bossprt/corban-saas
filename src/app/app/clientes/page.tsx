@@ -5,6 +5,7 @@ import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
 import { formatCpf, formatPhone } from '@/lib/cpf'
 import { digitsOnly, searchTerm } from '@/lib/search'
+import { foldText } from '@/lib/finance/search'
 import { createCustomer } from './actions'
 import { ClientForm } from './ClientForm'
 import { CpfSearchForm } from '@/components/CpfSearchForm'
@@ -20,7 +21,9 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
   let query = supabase.from('clients').select('id,full_name,cpf,phone,original_source,created_at').is('deleted_at', null).order('created_at', { ascending: false }).limit(100)
   if (q) {
     const d = digitsOnly(q)
-    query = query.or(d.length >= 4 ? `full_name.ilike.%${q}%,phone.ilike.%${d}%` : `full_name.ilike.%${q}%`)
+    // The name is matched without accents or case against clients.search_name, folded by the database ("joao" finds "João").
+    const name = `search_name.like.%${foldText(q)}%`
+    query = query.or(d.length >= 4 ? `${name},phone.ilike.%${d}%` : name)
   }
   const { data: customers, error } = await query
   const canCreate = can(access, 'clientes.create')

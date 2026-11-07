@@ -15,6 +15,13 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Esteira e Contratos para o uso diário com base grande (06/11/2026)
+- Corrigido: a Esteira lia só os 500 casos mais antigos (inclusive fechados); agora busca no banco os abertos (Kanban: mais os fechados dos últimos 7 dias), mais novos primeiro, com contadores das abas calculados no banco e aviso "Mostrando X de Y" quando passa de 500. Sem lista de ids na URL (E6).
+- Corrigido: totais de comissão de Contratos (Empresa recebe, Vendedores recebem, Margem, Ganho) somados no banco em numeric, sem o teto silencioso de 50.000 linhas (G3). Filtros e páginas também no banco: cada clique lê só a página e os totais.
+- Adicionado: busca sem acento por nome e ADE em Contratos e na Esteira (CPF pela busca já existente, sem ir para a URL) e no nome em Clientes; filtro por vendedor na Esteira; nome do cliente abre o contrato; "Mover etapa" no menu da linha de Contratos; filtros recolhidos e lista em cartões no celular.
+- Corrigido: mover para Pendência, Recusada ou Cancelada pede o motivo (vai para o histórico da etapa); Recusada e Cancelada pedem confirmação (E7). Nova proposta recusa prazo fora da tabela e mostra os prazos aceitos (E2).
+- Migration `20261107001252_contract_pipeline_lists_v1` (funções `pipeline_case_list` e `contract_list`, security invoker; coluna gerada `clients.search_name`). Migration local; aplicar em produção antes do merge. Depende do PR #204.
+
 ### Vendas, Esteira e Contratos com a mesma situação e a venda fechada com vendedor (06/11/2026)
 - Corrigido: um único dicionário de situações (`src/lib/contractStatus.ts`) para Esteira, Contratos, ficha do contrato, histórico, cliente, lead, painel do vendedor e Operacional. O contrato que está na Esteira mostra a etapa dela (mesmo nome); "Paga (confirmada por evidência)" só quando veio de arquivo do banco (importação ou relatório de comissão); à mão é "Paga".
 - Corrigido: filtro "Situação" de Contratos com cada situação uma vez (sem "Em digitação" duplicado) e todas encontram contratos ("Aguardando digitação" e "Pendência" agora acham pela etapa da Esteira).

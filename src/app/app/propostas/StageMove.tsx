@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { feedbackUrl } from '@/lib/feedback'
+import { closesContract, needsReason, REASON_MAX, REASON_MIN } from '@/lib/pipeline/stageReason'
 import { moveToStage } from './stage-actions'
 
 export type StageOption = { id: string; name: string; canonical_state: string }
@@ -11,7 +12,8 @@ type Pending = { caseId: string; proposalId: string; stage: StageOption; onDone?
 const todayBr = () => new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10)
 
 // One flow for every place a proposal changes stage. "Paga" asks the day it was paid (today already filled in);
-// "Pendência" offers a note and a due date, both optional. Every other stage moves at once.
+// "Pendência" asks the reason (required: Contratos shows it) and an optional due date; "Recusada" and "Cancelada" ask
+// to confirm and the reason (audit 06/11/2026). Every other stage moves at once.
 export function useStageMove() {
   const router = useRouter()
   const [pending, setPending] = useState<Pending | null>(null)
@@ -28,7 +30,7 @@ export function useStageMove() {
   })
 
   const move = (p: Pending) => {
-    if (p.stage.canonical_state === 'paid' || p.stage.canonical_state === 'pending_external') setPending(p)
+    if (p.stage.canonical_state === 'paid' || needsReason(p.stage.canonical_state)) setPending(p)
     else run(p, {})
   }
 
@@ -44,30 +46,41 @@ export function useStageMove() {
 
 function StageDialog({ pending, busy, onCancel, onConfirm }: { pending: Pending; busy: boolean; onCancel: () => void; onConfirm: (extra: { note?: string; pendencyDue?: string; paidOn?: string }) => void }) {
   const paid = pending.stage.canonical_state === 'paid'
+  const pendency = pending.stage.canonical_state === 'pending_external'
+  const closing = closesContract(pending.stage.canonical_state)
   const [paidOn, setPaidOn] = useState(todayBr())
   const [note, setNote] = useState('')
   const [due, setDue] = useState('')
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onCancel}>
       <form role="dialog" aria-modal="true" aria-label={`Mover para ${pending.stage.name}`} onClick={e => e.stopPropagation()}
-        onSubmit={e => { e.preventDefault(); onConfirm(paid ? { paidOn, note } : { note, pendencyDue: due }) }}
+        onSubmit={e => { e.preventDefault(); onConfirm(paid ? { paidOn, note } : pendency ? { note, pendencyDue: due } : { note }) }}
         className="w-full max-w-sm space-y-3 rounded-[14px] bg-surface p-5 text-sm shadow-xl">
         <h2 className="text-base font-semibold text-ink">Mover para {pending.stage.name}</h2>
-        {paid ? (
+        {closing && <p className="rounded-[10px] border border-[#FCD34D] bg-[#FFFBEB] px-3 py-2 text-[13px] text-[#92400E]">O contrato sai da esteira como {pending.stage.name}. Confirme e diga o motivo.</p>}
+        {paid && (
           <label className="block text-[13px] font-medium text-ink-soft">Pago ao cliente em
             <input type="date" required max={todayBr()} value={paidOn} onChange={e => setPaidOn(e.target.value)} className="field mt-1.5" />
           </label>
-        ) : (
+        )}
+        {pendency && (
           <label className="block text-[13px] font-medium text-ink-soft">Prazo da pendência (opcional)
             <input type="date" value={due} onChange={e => setDue(e.target.value)} className="field mt-1.5" />
           </label>
         )}
-        <label className="block text-[13px] font-medium text-ink-soft">Observação (opcional)
-          <input maxLength={500} value={note} onChange={e => setNote(e.target.value)} className="field mt-1.5" />
-        </label>
+        {paid ? (
+          <label className="block text-[13px] font-medium text-ink-soft">Observação (opcional)
+            <input maxLength={REASON_MAX} value={note} onChange={e => setNote(e.target.value)} className="field mt-1.5" />
+          </label>
+        ) : (
+          <label className="block text-[13px] font-medium text-ink-soft">{pendency ? 'Motivo da pendência' : 'Motivo'}
+            <input required minLength={REASON_MIN} maxLength={REASON_MAX} autoFocus value={note} onChange={e => setNote(e.target.value)}
+              placeholder={pendency ? 'Ex.: falta comprovante de residência' : 'Ex.: cliente desistiu'} className="field mt-1.5" />
+          </label>
+        )}
         <div className="flex justify-end gap-2 pt-1">
           <button type="button" onClick={onCancel} className="h-10 rounded-[10px] border border-line px-4 font-medium text-ink-soft hover:bg-surface-muted">Cancelar</button>
-          <button disabled={busy} className="h-10 rounded-[10px] bg-brand px-4 font-semibold text-white hover:bg-brand-strong disabled:opacity-60">Confirmar</button>
+          <button disabled={busy} className="h-10 rounded-[10px] bg-brand px-4 font-semibold text-white hover:bg-brand-strong disabled:opacity-60">{closing ? `Sim, mover para ${pending.stage.name}` : 'Confirmar'}</button>
         </div>
       </form>
     </div>
