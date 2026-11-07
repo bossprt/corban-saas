@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useTransition } from 'react'
+import { Fragment, useEffect, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import QRCode from 'qrcode'
@@ -10,7 +10,10 @@ import type { PayLine } from '@/lib/payout/pay-list'
 import { markAll } from '@/lib/payout/pay-safety'
 import { PIX_TYPE_LABEL, formatTaxId } from '@/lib/sellers'
 import { brlText } from '@/lib/receipts/format'
-import type { PayBatchResult } from './actions'
+import { loadPayPreview, type PayBatchResult } from './actions'
+import { PayoutBreakdown } from './PayoutBreakdown'
+import type { Breakdown } from '@/lib/payout/batches'
+import { sameAmount } from '@/lib/payout/pay-safety'
 import { BankAccountSelect } from '@/components/BankAccountSelect'
 import type { BankOption } from '@/lib/finBankAccounts'
 
@@ -50,6 +53,13 @@ export function PayBatch({ lines, action, today, banks = [], suggestedBank = '' 
   const [drawn, setDrawn] = useState<{ code: string; svg: string } | null>(null)
   const [result, setResult] = useState<PayBatchResult | null>(null)
   const [pending, start] = useTransition()
+  // "ver contratos" (owner, 06/11/2026): the contracts and entries of each amount, read before paying.
+  const [open, setOpen] = useState<Set<string>>(() => new Set())
+  const [previews, setPreviews] = useState<Record<string, { data?: Breakdown & { total: string }; error?: string }>>({})
+  const togglePreview = (id: string) => {
+    setOpen(s => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n })
+    if (!previews[id]) void loadPayPreview(id).then(r => setPreviews(p => ({ ...p, [id]: r })))
+  }
   const dialog = useRef<HTMLDialogElement>(null)
   const pixLines = qrList.map(id => lines.find(l => l.account === id)).filter((l): l is PayLine => !!l && !!codeOf(l))
   const current = qr === null ? null : pixLines[qr]
@@ -113,13 +123,15 @@ export function PayBatch({ lines, action, today, banks = [], suggestedBank = '' 
             {lines.map(l => {
               const code = codeOf(l)
               return (
-                <tr key={l.account} className="border-t border-line align-top">
+                <Fragment key={l.account}>
+                <tr className="border-t border-line align-top">
                   <td className="py-2.5 pl-5 pr-1">
                     <input type="checkbox" name="account" value={l.account} checked={checked.has(l.account)} onChange={() => toggle(l.account)} disabled={!l.method}
                       aria-label={`Pagar ${l.name}`} title={l.method ? undefined : 'Sem chave PIX nem conta no cadastro'} className="accent-[var(--brand)] disabled:opacity-40" />
                     <input type="hidden" name={`amount_${l.account}`} value={l.amount} /><input type="hidden" name={`name_${l.account}`} value={l.name} />
                   </td>
-                  <td className="px-3 py-2.5"><Link href={`/app/repasse/${l.account}`} className="font-medium text-ink hover:underline">{l.name}</Link></td>
+                  <td className="px-3 py-2.5"><Link href={`/app/repasse/${l.account}`} className="font-medium text-ink hover:underline">{l.name}</Link>
+                    <button type="button" onClick={() => togglePreview(l.account)} aria-expanded={open.has(l.account)} className="block text-xs font-medium text-brand hover:underline">{open.has(l.account) ? 'fechar contratos' : 'ver contratos'}</button></td>
                   <td className="num whitespace-nowrap px-3 py-2.5 text-right font-semibold text-ink">{brlText(l.amount)}</td>
                   <td className="px-3 py-2.5">
                     {!l.method ? <span className="rounded-md bg-[#FEF2F2] px-2 py-0.5 text-xs text-[#991B1B]">Sem chave PIX nem conta no cadastro</span>
@@ -131,6 +143,19 @@ export function PayBatch({ lines, action, today, banks = [], suggestedBank = '' 
                     {l.holderName && <span className="block text-xs text-[#92400E]">Favorecido: {l.holderName}{l.holderDocument ? ` · ${formatTaxId(l.holderDocument)}` : ''}</span>}
                   </td>
                 </tr>
+                {open.has(l.account) && (
+                  <tr className="bg-surface-muted/40">
+                    <td colSpan={4} className="px-0 py-0">
+                      {!previews[l.account] ? <p className="px-5 py-3 text-xs text-muted">Carregando contratos...</p>
+                        : previews[l.account].error || !previews[l.account].data ? <p className="px-5 py-3 text-xs text-[#991B1B]">{previews[l.account].error ?? 'Não foi possível carregar os contratos.'}</p>
+                        : <>
+                          {!sameAmount(previews[l.account].data!.total, l.amount) && <p className="px-5 pt-3 text-xs font-semibold text-[#991B1B]">O valor mudou para {brlText(previews[l.account].data!.total)} desde que a lista abriu. Atualize a página antes de pagar.</p>}
+                          <PayoutBreakdown b={previews[l.account].data!} total={previews[l.account].data!.total} empty="Sem contratos: o valor vem só de outros lançamentos." />
+                        </>}
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               )
             })}
           </tbody>

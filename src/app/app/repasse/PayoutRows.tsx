@@ -27,7 +27,9 @@ export function PayoutRows({ rows, names, back, canApprove, canPay, payTo, canRe
           {rows.map(p => (
             <tr key={p.id} className="border-t border-line align-top">
               {names && <td className="px-3 py-2"><Link href={`/app/repasse/${p.account_id}`} className="text-ink hover:underline">{names.get(p.account_id) ?? 'Conta'}</Link></td>}
-              <td className="px-3 py-2">{p.kind === 'closing' ? `Fechamento até ${dateBr(p.period_end)}` : 'Saque'}{p.note && <div className="text-xs text-muted">{p.note}</div>}</td>
+              <td className="px-3 py-2">{p.kind === 'closing' ? `Fechamento até ${dateBr(p.period_end)}` : 'Saque'}{p.note && <div className="text-xs text-muted">{p.note}</div>}
+                {/* Contracts of this payment and how its amount is made (owner, 06/11/2026). */}
+                <div><Link href={`/app/repasse/pagamento/${p.id}`} className="text-xs font-medium text-brand hover:underline">Ver contratos</Link></div></td>
               <td className="num px-3 py-2 text-right">{brlText(p.carry_in)}</td>
               <td className="num px-3 py-2 text-right">{brlText(p.period_net)}</td>
               <td className="num px-3 py-2 text-right">{brlText(p.debt_deduction)}</td>

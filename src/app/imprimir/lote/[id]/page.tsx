@@ -7,7 +7,8 @@ import { formatTaxId } from '@/lib/sellers'
 import { brlText } from '@/lib/receipts/format'
 import type { BatchDetail } from '@/lib/payout/batches'
 import { PrintBar } from '../../PrintBar'
-import { ContractTable, PRINT_CSS, PartialNote, SheetFooter, SheetHeader, Signatures, TotalInWords, payTo, sumOf } from '../../sheets'
+import { batchFooter } from '@/lib/payout/breakdown'
+import { ContractTable, FooterSplit, PRINT_CSS, PartialNote, SheetFooter, SheetHeader, Signatures, TotalInWords, payTo, sumOf } from '../../sheets'
 
 const day = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/')
 type Part = 'tudo' | 'resumo' | 'demonstrativos'
@@ -79,6 +80,7 @@ export default async function PrintBatchPage({ params, searchParams }: { params:
             </tbody>
             <tfoot><tr><td colSpan={3} style={{ fontWeight: 700, borderBottom: 0 }}>Total do lote</td><td className="c" style={{ fontWeight: 700, borderBottom: 0 }}>{paid.reduce((s, l) => s + contractsOf(l), 0)}</td><td className="r" style={{ fontWeight: 700, fontSize: 12, borderBottom: 0 }}>{brlText(total)}</td></tr></tfoot>
           </table>
+          <FooterSplit f={batchFooter(paid)} withHolder />
           <TotalInWords label="Total do lote" amount={total} />
           {b.payment_reference && <p className="muted" style={{ marginTop: 6 }}>Comprovante: {b.payment_reference} · registrado por {b.paid_by ?? '—'}</p>}
           <Signatures left="Preparado por · financeiro" right="Aprovado por · diretoria" />
@@ -103,7 +105,7 @@ export default async function PrintBatchPage({ params, searchParams }: { params:
               <div><span className="muted">Comprovante:</span> {b.payment_reference ?? '—'}</div>
             </div>
           </div>
-          <ContractTable contracts={l.contracts} total={l.amount} />
+          <ContractTable b={l} total={l.amount} />
           <PartialNote contracts={l.contracts} />
           <TotalInWords label="Total pago" amount={l.amount} />
           <Signatures left={b.company?.name ?? 'Empresa'} right={`${l.holder} · beneficiário`} />
