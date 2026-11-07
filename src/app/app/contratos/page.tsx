@@ -17,6 +17,7 @@ import { QUICK_ACTIONS, QuickModal, type QuickAction } from './QuickModal'
 import { RowMenu, type RowMenuItem } from './RowMenu'
 import { AssociateModal } from './AssociateModal'
 import { RecalcBar } from './RecalcBar'
+import { formatDateSP } from '@/lib/dates'
 
 type SP = Record<string, string | string[] | undefined>
 const one = (v: string | string[] | undefined) => (typeof v === 'string' ? v : '')
@@ -262,7 +263,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
                     </td>
                     <td className="px-5 py-2.5">
                       <span className="block font-medium text-ink">{c.customer_snapshot?.full_name ?? '—'}</span>
-                      <span className="text-xs text-muted">{formatCpf(c.customer_snapshot?.cpf)}{c.external_proposal_id ? ` · nº ${c.external_proposal_id}` : ''} · {new Date(c.created_at).toLocaleDateString('pt-BR')}</span>
+                      <span className="text-xs text-muted">{formatCpf(c.customer_snapshot?.cpf)}{c.external_proposal_id ? ` · nº ${c.external_proposal_id}` : ''} · {formatDateSP(c.created_at)}</span>
                     </td>
                     <td className="px-3 py-2.5"><span className="block text-ink">{s?.name ?? '—'}</span><span className="text-xs text-muted">{s?.commission_group_id ? groupName.get(s.commission_group_id) ?? '' : 'sem grupo'}</span>{stale(c) && <Badge tone="pending" className="ml-1.5">Comissão desatualizada</Badge>}</td>
                     <td className="px-3 py-2.5"><span className="block text-ink">{bankName.get(w.bank) ?? '—'} · {agreementName.get(w.agreement) ?? '—'}</span><span className="text-xs text-muted">{w.table}{c.term ? ` · ${termText(c.term, c.term, c.term)}` : ''}</span></td>

@@ -12,6 +12,7 @@ import { brlText } from '@/lib/receipts/format'
 import { isUuid } from '@/lib/team'
 import { CommissionCard } from '../../../propostas/[id]/CommissionCard'
 import { uploadPortalDocument } from '../../actions'
+import { formatDateSP, formatDateTimeSP } from '@/lib/dates'
 
 const TONE: Record<string, Tone> = { pending: 'pending', validated: 'received', rejected: 'reversed' }
 const label = 'text-[13px] font-medium text-ink-soft'
@@ -40,7 +41,7 @@ export default async function PortalProposalPage({ params }: { params: Promise<{
   return (
     <section>
       <Link href="/app/portal" className="mb-3 inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink"><ArrowLeft size={15} aria-hidden />Meu portal</Link>
-      <PageHeader title={client.full_name ?? 'Proposta'} description={<>CPF {formatCpf(client.cpf)} · {s ? `enviada em ${new Date(s.created_at).toLocaleString('pt-BR')}` : `digitada pela empresa em ${new Date(p.created_at).toLocaleDateString('pt-BR')}`}</>} />
+      <PageHeader title={client.full_name ?? 'Proposta'} description={<>CPF {formatCpf(client.cpf)} · {s ? `enviada em ${formatDateTimeSP(s.created_at)}` : `digitada pela empresa em ${formatDateSP(p.created_at)}`}</>} />
 
       <Card className="mb-4 p-5">
         <div className="flex flex-wrap items-center gap-2"><Badge tone={TONE[status] ?? 'neutral'}>{situation}</Badge>

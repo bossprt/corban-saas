@@ -3,6 +3,7 @@ import { Badge, ButtonLink, Card, CardHeader, Kpi, PageHeader } from '@/componen
 import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
 import { ALERT_LABEL, brlText, REPORT_KIND_LABEL, REPORT_STATUS_LABEL } from '@/lib/receipts/format'
+import { formatDateSP } from '@/lib/dates'
 
 type Report = { id: string; source_kind: string; source_id: string; report_kind: string; reference_month: string; file_name: string; line_count: number; lines_total: string; status: string; created_at: string }
 type Alert = { kind: string; proposal_id: string; reference: string; amount: string | null; since: string }
@@ -39,7 +40,7 @@ export default async function FinancePage() {
             {list.slice(0, 20).map((a, i) => (
               <li key={`${a.kind}-${a.proposal_id}-${i}`} className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-3 py-2 first:border-t-0">
                 <span><Badge tone={a.kind === 'chargeback' ? 'reversed' : 'diverged'}>{ALERT_LABEL[a.kind]}</Badge> <Link href={`/app/propostas/${a.proposal_id}`} className="ml-2 text-ink hover:underline">{a.reference || 'Proposta'}</Link></span>
-                <span className="num text-ink-soft">{a.kind === 'deferred_missing' ? `${a.amount} parcela(s)` : a.amount !== null ? brlText(a.amount) : `desde ${new Date(a.since).toLocaleDateString('pt-BR')}`}</span>
+                <span className="num text-ink-soft">{a.kind === 'deferred_missing' ? `${a.amount} parcela(s)` : a.amount !== null ? brlText(a.amount) : `desde ${formatDateSP(a.since)}`}</span>
               </li>
             ))}
           </ul>

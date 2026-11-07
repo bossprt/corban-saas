@@ -4,13 +4,14 @@ import { useState } from 'react'
 import { Plus, RotateCcw, X } from 'lucide-react'
 import { ACCOUNT_TYPE_LABEL } from '@/lib/clients/profile'
 import { RevealPassword } from './[id]/RevealPassword'
+import { todaySP } from '@/lib/dates'
 
 const lbl = 'text-[13px] font-medium text-ink-soft'
 const legend = 'mb-2 text-sm font-semibold text-ink'
 const optional = 'ml-1 text-xs font-normal text-muted'
 const addBtn = 'inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line bg-surface px-3 text-sm text-ink hover:bg-surface-muted'
 const removeBtn = 'inline-flex items-center gap-1 text-xs text-muted hover:text-[#991B1B]'
-const todayIso = () => new Date().toISOString().slice(0, 10)
+const todayIso = () => todaySP()
 // Database numeric ("350" or "812.45") to the form's "350,00" / "812,45", on the text: money never goes through float.
 const marginText = (v: string | null | undefined) => {
   if (v === null || v === undefined || v === '') return ''

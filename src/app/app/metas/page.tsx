@@ -4,9 +4,10 @@ import { brl, toCents } from '@/lib/finance/labels'
 import { atLeast, canManageTeam } from '@/lib/rbac'
 import { memberEmails } from '@/lib/team.server'
 import { saveDistribution, saveGoal } from './actions'
+import { currentMonthSP } from '@/lib/dates'
 
 const MODE_LABEL: Record<string, string> = { round_robin: 'Rodízio entre quem recebe leads', queue: 'Fila aberta (quem pegar primeiro)', manual: 'Manual (supervisor distribui)' }
-const thisMonth = () => new Date().toISOString().slice(0, 7)
+const thisMonth = () => currentMonthSP()
 
 // Goals (paid released amount per month) and lead distribution. Supervisors set goals for people they can see;
 // administrators and managers choose how leads from the API are distributed.

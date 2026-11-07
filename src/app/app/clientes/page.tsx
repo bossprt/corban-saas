@@ -8,6 +8,7 @@ import { digitsOnly, searchTerm } from '@/lib/search'
 import { createCustomer } from './actions'
 import { ClientForm } from './ClientForm'
 import { CpfSearchForm } from '@/components/CpfSearchForm'
+import { formatDateSP } from '@/lib/dates'
 
 const SOURCE_LABEL: Record<string, string> = { manual: 'Cadastro manual', corban_os: 'Cadastro manual', api: 'API', legado: 'Legado' }
 const sourceLabel = (s: string | null) => (s ? SOURCE_LABEL[s] ?? (s.startsWith('lead:') ? `Lead (${s.slice(5)})` : s.startsWith('legacy:') ? `Base antiga (${s.slice(7)})` : s) : '—')
@@ -69,7 +70,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
                     <td className="px-4 py-2.5 font-mono text-[13px] text-ink-soft">{formatCpf(c.cpf)}</td>
                     <td className="px-4 py-2.5 text-ink-soft">{formatPhone(c.phone)}</td>
                     <td className="px-4 py-2.5 text-ink-soft">{sourceLabel(c.original_source)}</td>
-                    <td className="num px-4 py-2.5 text-right text-muted">{new Date(c.created_at).toLocaleDateString('pt-BR')}</td>
+                    <td className="num px-4 py-2.5 text-right text-muted">{formatDateSP(c.created_at)}</td>
                   </tr>
                 ))}
                 {!customers?.length && (

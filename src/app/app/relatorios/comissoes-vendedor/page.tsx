@@ -5,9 +5,10 @@ import { Card, PageHeader } from '@/components/ui'
 import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
 import { PeriodFields } from './PeriodFields'
+import { todaySP } from '@/lib/dates'
 
 const label = 'grid gap-1.5 text-[13px] font-medium text-ink-soft'
-const today = () => new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10)
+const today = () => todaySP()
 const monthStart = () => `${today().slice(0, 8)}01`
 
 type Summary = { account_id: string; holder_name: string }

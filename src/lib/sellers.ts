@@ -1,4 +1,5 @@
 import { isValidCpf } from './cpf'
+import { formatDateSP } from './dates'
 
 // Seller registration (owner decision 25/09/2026): labels and document helpers shared by the seller screens.
 export const CATEGORY_LABEL: Record<string, string> = { pf: 'PF', pj: 'PJ', sub: 'SUB' }
@@ -22,7 +23,7 @@ export function payToText(a: PayTarget): string {
 export function originText(origin: string | null | undefined, importedAt: string | null | undefined): string | null {
   if (!origin || origin === 'manual') return null
   const system = origin === 'import:2tech' ? '2tech' : origin.replace(/^import:/, '')
-  return `Importado da ${system}${importedAt ? ` em ${new Date(importedAt).toLocaleDateString('pt-BR')}` : ''}`
+  return `Importado da ${system}${importedAt ? ` em ${formatDateSP(importedAt)}` : ''}`
 }
 
 export const sellerCode = (n: number | null | undefined) => (n ? String(n).padStart(3, '0') : '—')

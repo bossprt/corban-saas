@@ -9,16 +9,17 @@ import { atLeast } from '@/lib/rbac'
 import { isPortalUser } from '@/lib/portal'
 import { Badge, ButtonLink, Card, CardHeader, PageHeader, type Tone } from '@/components/ui'
 import { OPEN_STAGES, TASK_KIND_LABEL, isTaskKind, stageLabel } from '@/lib/crm'
+import { currentYearSP, formatDateSP, monthStartSP, todaySP } from '@/lib/dates'
 
 const SEVERITY_TONE: Record<Severity, Tone> = { critical: 'reversed', high: 'diverged', medium: 'paid-out', low: 'neutral' }
 const OPEN_PROPOSAL = ['draft', 'documents_pending', 'ready_for_digitization', 'digitization', 'submitted', 'approved']
 
 const brl = (v: unknown) => (v === null || v === undefined || v === '' ? '—' : Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }))
-const monthStart = () => `${new Date().toISOString().slice(0, 7)}-01`
+const monthStart = () => monthStartSP()
 const daysSince = (iso: string) => Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000))
 const isOverdue = (iso: string) => new Date(iso).getTime() < Date.now()
 // The year shows only when it is not this year (a return far ahead or long overdue).
-const returnAt = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', ...(new Date(iso).getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}), hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
+const returnAt = (iso: string) => new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', ...(currentYearSP(new Date(iso)) !== currentYearSP() ? { year: 'numeric' } : {}), hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
 const ago = (iso: string) => {
   const d = daysSince(iso)
   return d === 0 ? 'hoje' : d === 1 ? 'há 1 dia' : `há ${d} dias`
@@ -48,7 +49,7 @@ export default async function TodayPage() {
   const open = attention.items
     .filter(i => i.status === 'open')
     .sort((a, b) => SEVERITY_ORDER.indexOf(isSeverity(a.severity) ? a.severity : 'low') - SEVERITY_ORDER.indexOf(isSeverity(b.severity) ? b.severity : 'low'))
-  const weekday = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
+  const weekday = formatDateSP(todaySP(), { weekday: 'long', day: 'numeric', month: 'long' })
   const today = weekday.charAt(0).toUpperCase() + weekday.slice(1)
   const firstName = (user.user_metadata?.full_name as string | undefined)?.split(' ')[0]
 

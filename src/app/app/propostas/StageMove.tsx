@@ -4,11 +4,12 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { feedbackUrl } from '@/lib/feedback'
 import { moveToStage } from './stage-actions'
+import { todaySP } from '@/lib/dates'
 
 export type StageOption = { id: string; name: string; canonical_state: string }
 type Pending = { caseId: string; proposalId: string; stage: StageOption; onDone?: (ok: boolean) => void }
 
-const todayBr = () => new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10)
+const todayBr = () => todaySP()
 
 // One flow for every place a proposal changes stage. "Paga" asks the day it was paid (today already filled in);
 // "Pendência" offers a note and a due date, both optional. Every other stage moves at once.

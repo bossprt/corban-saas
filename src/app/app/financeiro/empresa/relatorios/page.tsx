@@ -3,6 +3,7 @@ import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
 import { brlCents, DRE_ORDER, monthLabel, toCents } from '@/lib/finance/labels'
 import { FinanceTabs } from '../FinanceTabs'
+import { currentYearSP } from '@/lib/dates'
 
 type Flow = { month: string; realized_in: string; realized_out: string; forecast_in: string; forecast_out: string }
 type Dre = { month: string; kind: string; account_code: string; account_name: string; total: string }
@@ -14,7 +15,7 @@ export default async function FinanceReportsPage({ searchParams }: { searchParam
   const { supabase, organization, access } = await requireAppContext()
   if (!can(access, 'financeiro.view')) return <section><PageHeader title="Fluxo de caixa e DRE" /><Card className="p-5 text-sm text-ink-soft">Seu perfil não vê o financeiro.</Card></section>
   const sp = await searchParams
-  const year = /^\d{4}$/.test(sp.ano ?? '') ? Number(sp.ano) : new Date().getFullYear()
+  const year = /^\d{4}$/.test(sp.ano ?? '') ? Number(sp.ano) : currentYearSP()
   const branch = /^[0-9a-f-]{36}$/.test(sp.filial ?? '') ? sp.filial! : null
   const from = `${year}-01-01`, to = `${year}-12-31`
   const [{ data: flow }, { data: dre }, { data: branches }, { data: start }] = await Promise.all([

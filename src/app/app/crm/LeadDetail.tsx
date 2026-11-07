@@ -16,6 +16,7 @@ import type { BankAccount, Registration } from '@/app/app/clientes/[id]/ProfileS
 import { SavedSimulations } from '@/app/app/simulacoes/SavedSimulations'
 import { SimulatorPanel, type SimulatorSp } from '@/app/app/simulacoes/SimulatorPanel'
 import { addLeadNote, assignLeads, claimLead, createLeadTask, finishLeadTask, logLeadActivity, markLeadDnd, moveLeadToStage, setLeadStage, startLeadSale } from './actions'
+import { addDaysISO, todaySP } from '@/lib/dates'
 
 const label = 'text-[13px] font-medium text-ink-soft'
 const primary = 'inline-flex h-10 items-center justify-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong'
@@ -24,7 +25,7 @@ const TZ = 'America/Sao_Paulo'
 const dateTime = (iso: string) => new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: TZ })
 function isPast(iso: string) { return new Date(iso).getTime() < Date.now() }
 // Default for a new task: tomorrow at 10:00 in Brasília.
-function tomorrowAt10() { const d = new Date(Date.now() - 3 * 3600_000 + 86_400_000); return `${d.toISOString().slice(0, 10)}T10:00` }
+function tomorrowAt10() { return `${addDaysISO(todaySP(), 1)}T10:00` }
 
 const EVENT_TEXT: Record<string, string> = {
   created: 'Lead cadastrado', imported: 'Veio da planilha da campanha', status_changed: 'Etapa alterada', owner_changed: 'Vendedor definido',

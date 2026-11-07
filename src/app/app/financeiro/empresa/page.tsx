@@ -12,6 +12,7 @@ import { NewEntryForm } from './NewEntryForm'
 import { SelectedTotal } from './SelectedTotal'
 import { addReceipt, cancelEntry, settleEntry, settleMany, undoSettlement, updateEntry } from './actions'
 import { SettleForm } from './SettleForm'
+import { addDaysISO, todaySP } from '@/lib/dates'
 
 type Entry = { id: string; direction: string; status: string; description: string; account_id: string; branch_id: string | null; counterpart: string | null; document: string | null; amount: string; due_on: string; competence_on: string; settled_on: string | null; bank_account_id: string | null; source: string; interest: string; discount: string; original_amount: string | null }
 type Account = { id: string; code: string; name: string; kind: string; is_group: boolean; is_active: boolean }
@@ -22,8 +23,8 @@ const EVENT_LABEL: Record<string, string> = { created: 'Lançado', edited: 'Alte
 const FIELD_LABEL: Record<string, string> = { description: 'Descrição', account: 'Conta do plano', branch: 'Filial', amount: 'Valor', due_on: 'Vencimento', competence_on: 'Competência' }
 const label = 'text-[13px] font-medium text-ink-soft'
 const BULK = 'pagar-varios'
-const today = () => new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10)
-const addDays = (iso: string, n: number) => new Date(Date.parse(`${iso}T12:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10)
+const today = () => todaySP()
+const addDays = addDaysISO
 // numeric(15,2) comes as text: cents without going through a float.
 const cents = toCents
 const sumCents = (xs: { amount: string }[]) => xs.reduce((s, x) => s + cents(x.amount), 0)

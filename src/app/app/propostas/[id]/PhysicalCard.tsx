@@ -3,6 +3,7 @@ import { Badge, Card, CardHeader } from '@/components/ui'
 import { SubmitButton } from '@/components/SubmitButton'
 import { memberEmails } from '@/lib/team.server'
 import { setContractPhysical } from './contract-actions'
+import { formatDateTimeSP, nowLocalSP } from '@/lib/dates'
 
 type Physical = { received_at: string | null; received_by: string | null; sent_at: string | null; sent_by: string | null; bank_at: string | null; bank_by: string | null }
 const STEPS = [
@@ -11,7 +12,7 @@ const STEPS = [
   { key: 'bank', label: 'Recepcionado pelo banco', at: 'bank_at', by: 'bank_by' },
 ] as const
 // Now in Brazil (UTC-3) for the datetime-local default.
-const nowLocal = () => new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 16)
+const nowLocal = () => nowLocalSP()
 
 // The physical file of a physical contract (part C3): three milestones in order, each with date, time and who. The
 // seller's credit waits for "Recebido pela empresa".
@@ -27,7 +28,7 @@ export async function PhysicalCard({ proposalId, p, canEdit }: { proposalId: str
           return (
             <li key={s.key} className={`rounded-[12px] border px-4 py-3 text-sm ${at ? 'border-[#86EFAC] bg-[#F0FDF4]' : 'border-line'}`}>
               <div className="flex items-center gap-1.5 font-medium text-ink">{at && <Check size={15} aria-hidden className="text-[#15803D]" />}{s.label}</div>
-              {at ? <p className="mt-1 text-xs text-muted">{new Date(at).toLocaleString('pt-BR')}{by ? ` · ${who.get(by) ?? 'usuário'}` : ''}</p>
+              {at ? <p className="mt-1 text-xs text-muted">{formatDateTimeSP(at)}{by ? ` · ${who.get(by) ?? 'usuário'}` : ''}</p>
                 : canEdit && next?.key === s.key ? (
                   <form action={setContractPhysical} className="mt-2 flex flex-wrap items-end gap-2">
                     <input type="hidden" name="proposal_id" value={proposalId} /><input type="hidden" name="step" value={s.key} />

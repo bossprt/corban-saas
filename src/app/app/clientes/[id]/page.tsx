@@ -16,9 +16,10 @@ import { SubmitButton } from '@/components/SubmitButton'
 const DOC_STATUS: Record<string, string> = { archived: 'Arquivado', expired: 'Vencido', rejected: 'Recusado' }
 import { ClientForm, type ClientFormValues } from '../ClientForm'
 import { BankAccounts, PersonalData, Registrations, type BankAccount, type Registration } from './ProfileSections'
+import { formatDateSP } from '@/lib/dates'
 
 const brl = (v: unknown) => (v === null || v === undefined || v === '' ? '—' : Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }))
-const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('pt-BR') : '—')
+const day = (iso: string | null) => (iso ? formatDateSP(iso) : '—')
 const SOURCE: Record<string, string> = { manual: 'cadastro manual', corban_os: 'cadastro manual', api: 'API', legado: 'legado' }
 const source = (s: string | null) => (s ? SOURCE[s] ?? (s.startsWith('lead:') ? `lead (${s.slice(5)})` : s.startsWith('legacy:') ? `base antiga (${s.slice(7)})` : s) : '—')
 const EVENT: Record<string, string> = { 'customer.created': 'Cliente cadastrado', 'customer.recognized': 'CPF cadastrado de novo: contatos atualizados' }

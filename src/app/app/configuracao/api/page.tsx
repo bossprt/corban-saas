@@ -3,8 +3,9 @@ import { ConfirmSubmit } from '@/components/ConfirmSubmit'
 import { requireAppContext } from '@/lib/appContext'
 import { revokeApiKey } from './revoke-action'
 import { CreateKeyForm } from './CreateKeyForm'
+import { formatDateTimeSP } from '@/lib/dates'
 
-const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString('pt-BR') : '—')
+const when = (iso: string | null) => (iso ? formatDateTimeSP(iso) : '—')
 const code = 'font-mono text-[13px]'
 const SCOPE_LABEL: Record<string, string> = { 'leads.write': 'Leads', 'contracts.write': 'Contratos' }
 
