@@ -9,7 +9,7 @@ import { BASE_STAGES, STAGE_LABEL } from '@/lib/crm'
 import { saveLeadStage } from '../actions'
 
 const label = 'text-[13px] font-medium text-ink-soft'
-const btn = 'inline-flex h-9 items-center rounded-[10px] border border-line bg-surface px-3 text-sm hover:bg-surface-muted'
+const btn = 'inline-flex h-9 items-center rounded-none border border-line bg-surface px-3 text-sm hover:bg-surface-muted'
 
 type Stage = { id: string; name: string; base_status: string; sort_order: number; is_active: boolean }
 

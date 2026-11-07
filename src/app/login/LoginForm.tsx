@@ -41,7 +41,7 @@ export default function LoginForm({ notice }: { notice?: string }) {
             <p className="text-sm text-muted">Acesse sua operação</p>
           </div>
         </div>
-        <form method="post" onSubmit={handleSubmit} className="space-y-5 rounded-[16px] border border-line bg-surface p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+        <form method="post" onSubmit={handleSubmit} className="space-y-5 rounded-none border border-line bg-surface p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
           <div>
             <label htmlFor="login-email" className="mb-1.5 block text-[13px] font-medium text-ink-soft">E-mail</label>
             <input id="login-email" name="email" type="email" autoComplete="email" required className="field h-11" />
@@ -54,7 +54,7 @@ export default function LoginForm({ notice }: { notice?: string }) {
             <input id="login-password" name="password" type="password" autoComplete="current-password" required className="field h-11" />
           </div>
           {error ? <p role="alert" className="rounded-lg bg-[#FDE2E1] px-3 py-2 text-sm text-[#991B1B]">{error}</p> : null}
-          <button disabled={loading} type="submit" className="h-11 w-full rounded-[10px] bg-brand text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-60">
+          <button disabled={loading} type="submit" className="h-11 w-full rounded-none bg-brand text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-60">
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>

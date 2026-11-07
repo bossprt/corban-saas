@@ -6,12 +6,12 @@ import Link from 'next/link'
 export function Kpi({ label, value, hint, href }: { label: string; value: ReactNode; hint?: ReactNode; href?: string }) {
   const body = (
     <>
-      <span className="text-[13px] font-medium text-muted">{label}</span>
-      <span className="num text-[28px] font-semibold tracking-tight text-ink">{value}</span>
+      <span className="narrow text-[13px] text-muted">{label}</span>
+      <span className="num wide text-[28px] font-extrabold text-ink">{value}</span>
       {hint ? <span className="text-[13px] text-ink-soft">{hint}</span> : null}
     </>
   )
   return href
-    ? <Link href={href} className="group flex flex-col gap-1.5 rounded-[14px] border border-line bg-surface px-5 py-4 hover:border-brand hover:bg-surface-muted">{body}</Link>
-    : <div className="flex flex-col gap-1.5 rounded-[14px] border border-line bg-surface px-5 py-4">{body}</div>
+    ? <Link href={href} className="group flex flex-col gap-1.5 border-t-[3px] border-ink bg-surface py-3 hover:bg-surface-muted">{body}</Link>
+    : <div className="flex flex-col gap-1.5 border-t-[3px] border-ink bg-surface py-3">{body}</div>
 }

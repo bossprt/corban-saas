@@ -88,7 +88,7 @@ export async function OperatorDashboard({ supabase, organizationId, organization
       <PageHeader title="Visão geral" description={organizationName} />
       <div className="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
         {kpis.map(k => (
-          <Link key={k.label} href={k.href} className="flex flex-col gap-1 rounded-[14px] border border-line bg-surface px-5 py-4 hover:border-line-strong hover:bg-surface-muted">
+          <Link key={k.label} href={k.href} className="flex flex-col gap-1 rounded-none border border-line bg-surface px-5 py-4 hover:border-line-strong hover:bg-surface-muted">
             <span className="text-[13px] font-medium text-muted">{k.label}</span>
             <span className={`num text-[26px] font-semibold tracking-tight ${k.tone || 'text-ink'}`}>{k.value}</span>
             <span className="text-xs text-ink-soft">{k.hint}</span>

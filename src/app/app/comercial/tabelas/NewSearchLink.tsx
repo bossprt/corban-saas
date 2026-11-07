@@ -9,7 +9,7 @@ export async function NewSearchLink() {
   const q = (await cookies()).get('tabelas_busca')?.value ?? ''
   return (
     <Link href={q ? `/app/comercial/tabelas?${q}` : '/app/comercial/tabelas'}
-      className="mb-3 inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line-strong bg-surface px-3 text-sm text-ink hover:bg-surface-muted">
+      className="mb-3 inline-flex h-9 items-center gap-1.5 rounded-none border border-line-strong bg-surface px-3 text-sm text-ink hover:bg-surface-muted">
       <Search size={15} aria-hidden />Nova pesquisa
     </Link>
   )

@@ -101,7 +101,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
 
   const { data: chosenClient } = f.cliente ? await supabase.from('clients').select('id,full_name,cpf').eq('id', f.cliente).maybeSingle() : { data: null }
   const newHref = `/app/propostas/nova${f.cliente ? `?cliente=${f.cliente}` : ''}`
-  const newButton = (label: string) => canCreate ? <Link href={newHref} className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><FilePlus2 size={16} aria-hidden />{label}</Link> : null
+  const newButton = (label: string) => canCreate ? <Link href={newHref} className="inline-flex h-10 items-center gap-2 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><FilePlus2 size={16} aria-hidden />{label}</Link> : null
 
   // The arrow menu of each row: what this user may do, each item opening its window over this same list.
   const canEditContract = canRecalc
@@ -132,7 +132,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
       {canRecalc && one(sp.acao) === 'associar' && <AssociateModal back={qs({})} />}
       {quick && <QuickModal id={quick.id} acao={quick.acao} back={qs({})} canEdit={canEditContract} finance={finance} owner={owner} canMove={canMove} />}
       <PageHeader title="Contratos" description="Busque os contratos e veja a comissão de cada um: o que a empresa recebe, o que o vendedor recebe pela tabela e o grupo dele, e a margem."
-        actions={<>{canRecalc && <Link href={`${qs({})}&acao=associar`} scroll={false} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-line-strong bg-surface px-4 text-sm font-medium text-ink hover:bg-surface-muted"><Link2 size={16} aria-hidden />Associar proposta</Link>}{newButton('Novo contrato')}</>} />
+        actions={<>{canRecalc && <Link href={`${qs({})}&acao=associar`} scroll={false} className="inline-flex h-10 items-center gap-2 rounded-none border border-line-strong bg-surface px-4 text-sm font-medium text-ink hover:bg-surface-muted"><Link2 size={16} aria-hidden />Associar proposta</Link>}{newButton('Novo contrato')}</>} />
 
       <Card className="mb-4">
         <CpfSearchForm action="/app/contratos" mode="filter" className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5 lg:grid-cols-4">
@@ -157,8 +157,8 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
             {owner && <label className={`${lbl} flex items-center gap-2 self-end pb-2`}><input type="checkbox" name="alterado" value="1" defaultChecked={!!f.alterado} className="accent-[var(--brand)]" />Só repasse alterado</label>}
           </MobileFilters>
           <div className="flex items-end gap-2 lg:col-span-3">
-            <button className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><Search size={15} aria-hidden />Buscar</button>
-            <Link href="/app/contratos" className="inline-flex h-10 items-center rounded-[10px] border border-line px-3 text-sm text-ink-soft hover:bg-surface-muted">Limpar</Link>
+            <button className="inline-flex h-10 items-center gap-1.5 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><Search size={15} aria-hidden />Buscar</button>
+            <Link href="/app/contratos" className="inline-flex h-10 items-center rounded-none border border-line px-3 text-sm text-ink-soft hover:bg-surface-muted">Limpar</Link>
           </div>
         </CpfSearchForm>
         {(f.pago_de || f.pago_ate) && (
@@ -175,7 +175,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
         )}
       </Card>
 
-      {listError && <p role="alert" className="mb-4 rounded-[10px] border border-[#FCA5A5] bg-[#FEF2F2] px-4 py-3 text-sm text-[#991B1B]">Não foi possível carregar os contratos agora. Tente de novo em instantes.</p>}
+      {listError && <p role="alert" className="mb-4 rounded-none border border-[#FCA5A5] bg-[#FEF2F2] px-4 py-3 text-sm text-[#991B1B]">Não foi possível carregar os contratos agora. Tente de novo em instantes.</p>}
 
       <div className="mb-3 grid grid-cols-2 gap-3">
         {[['Total líquido', sumText('released')], ['Total bruto', sumText('requested')]].map(([k, v]) => (
@@ -191,7 +191,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
 
       <Card>
         <CardHeader title={<span className="flex items-center gap-2">Contratos <Badge tone="neutral">{total}</Badge></span>}
-          action={CLOSED_STATUSES.includes(f.situacao) ? undefined : <Link href={qs({ encerradas: f.encerradas ? '' : '1', p: 1 })} scroll={false} className="inline-flex h-9 items-center rounded-[10px] border border-line bg-surface px-3 text-sm text-ink-soft hover:bg-surface-muted">
+          action={CLOSED_STATUSES.includes(f.situacao) ? undefined : <Link href={qs({ encerradas: f.encerradas ? '' : '1', p: 1 })} scroll={false} className="inline-flex h-9 items-center rounded-none border border-line bg-surface px-3 text-sm text-ink-soft hover:bg-surface-muted">
             {f.encerradas ? 'Esconder canceladas e recusadas' : `Mostrar canceladas e recusadas (${showClosed ? 0 : list.hidden_closed ?? 0})`}</Link>} />
         {canRecalc && <div className="mt-3 hidden md:block"><RecalcBar action={recalcContracts} sellerAction={bulkSeller} sellers={(sellers ?? []).map(s => ({ id: s.id, name: `${s.code ? `${String(s.code).padStart(3, '0')} · ` : ''}${s.name}` }))} /></div>}
 
@@ -200,7 +200,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
           {rows.map(c => {
             const s = c.seller_id ? sellerOf.get(c.seller_id) : undefined
             return (
-              <li key={c.id} className="relative rounded-[12px] border border-line bg-surface p-3.5">
+              <li key={c.id} className="relative rounded-none border border-line bg-surface p-3.5">
                 <div className="flex items-start gap-2">
                   <Link href={`/app/propostas/${c.id}`} className="min-w-0 flex-1">
                     <span className="block font-medium text-ink">{c.full_name ?? '—'}</span>
@@ -219,7 +219,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
               </li>
             )
           })}
-          {!rows.length && <li className="rounded-[12px] border border-line bg-surface px-4 py-8 text-center text-sm text-muted">{emptyText}{canCreate && <span className="mt-3 block">{newButton(f.cliente ? 'Cadastrar contrato para este cliente' : 'Cadastrar novo contrato')}</span>}</li>}
+          {!rows.length && <li className="rounded-none border border-line bg-surface px-4 py-8 text-center text-sm text-muted">{emptyText}{canCreate && <span className="mt-3 block">{newButton(f.cliente ? 'Cadastrar contrato para este cliente' : 'Cadastrar novo contrato')}</span>}</li>}
         </ul>
 
         <div className="mt-3 hidden overflow-x-auto md:block">

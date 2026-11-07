@@ -39,10 +39,10 @@ export default async function ReconciliationPage({ searchParams }: { searchParam
     <section>
       <PageHeader title="Conciliação por contrato" description="O que cada contrato já recebeu do banco ou da promotora, e as divergências ainda em aberto."
         actions={<Link href="/app/financeiro" className="text-sm text-brand hover:underline">Voltar ao financeiro</Link>} />
-      {(de || ate) && <p className="mb-4 flex flex-wrap items-center gap-2 rounded-[10px] border border-line bg-surface-muted px-4 py-2 text-sm">
+      {(de || ate) && <p className="mb-4 flex flex-wrap items-center gap-2 rounded-none border border-line bg-surface-muted px-4 py-2 text-sm">
         <span className="text-ink-soft">Recebido {de && `de ${de.split('-').reverse().join('/')} `}{ate && `até ${ate.split('-').reverse().join('/')}`}</span>
         <Link href="?ver=todas" className="text-brand hover:underline">Ver tudo</Link></p>}
-      {error && <p role="alert" className="mb-4 rounded-[10px] bg-[#FDF3DC] px-4 py-2 text-sm text-[#92400E]">Não foi possível carregar a conciliação agora. Tente de novo em instantes.</p>}
+      {error && <p role="alert" className="mb-4 rounded-none bg-[#FDF3DC] px-4 py-2 text-sm text-[#92400E]">Não foi possível carregar a conciliação agora. Tente de novo em instantes.</p>}
       <Card className="overflow-hidden">
         <CardHeader title={ver === 'todas' ? 'Todos os contratos com recebimento' : 'Contratos com divergência em aberto'} action={
           <nav className="flex gap-1 text-[13px]">

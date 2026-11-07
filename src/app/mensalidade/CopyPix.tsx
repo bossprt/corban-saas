@@ -8,7 +8,7 @@ export function CopyPix({ code }: { code: string }) {
     <div className="mt-3 flex gap-2">
       <input readOnly value={code} aria-label="Pix copia e cola" onFocus={e => e.currentTarget.select()} className="field min-w-0 flex-1 font-mono text-xs" />
       <button type="button" onClick={async () => { try { await navigator.clipboard.writeText(code); setCopied(true) } catch { setCopied(false) } }}
-        className="h-10 shrink-0 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">
+        className="h-10 shrink-0 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">
         {copied ? 'Copiado' : 'Copiar código'}
       </button>
     </div>

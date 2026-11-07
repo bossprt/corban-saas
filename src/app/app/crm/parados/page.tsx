@@ -43,7 +43,7 @@ export default async function IdleLeadsPage({ searchParams }: { searchParams: Pr
         <label className={label}>Sem movimento há mais de
           <select name="dias" defaultValue={String(days)} className="field mt-1.5">{DAY_OPTIONS.map(d => <option key={d} value={d}>{d} dias</option>)}</select>
         </label>
-        <button className="inline-flex h-10 items-center rounded-[10px] border border-line bg-surface px-3 text-sm hover:bg-surface-muted">Ver</button>
+        <button className="inline-flex h-10 items-center rounded-none border border-line bg-surface px-3 text-sm hover:bg-surface-muted">Ver</button>
       </form>
 
       <form>
@@ -77,8 +77,8 @@ export default async function IdleLeadsPage({ searchParams }: { searchParams: Pr
                 {people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </label>
-            <button formAction={assignLeads} className="inline-flex h-10 items-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Passar para o vendedor</button>
-            <button formAction={releaseLeads} className="inline-flex h-10 items-center rounded-[10px] border border-line bg-surface px-4 text-sm hover:bg-surface-muted">Devolver para a fila</button>
+            <button formAction={assignLeads} className="inline-flex h-10 items-center rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Passar para o vendedor</button>
+            <button formAction={releaseLeads} className="inline-flex h-10 items-center rounded-none border border-line bg-surface px-4 text-sm hover:bg-surface-muted">Devolver para a fila</button>
           </div>
         )}
       </form>

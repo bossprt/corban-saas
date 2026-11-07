@@ -46,8 +46,8 @@ export default async function LegacyBatchPage({ params }: { params: Promise<{ id
         <Card className="mb-4 flex flex-wrap items-center justify-between gap-3 p-5">
           <p className="text-sm text-ink-soft">Nada foi gravado ainda. Confirme para trazer as {ok} linha(s) sem problema; as outras ficam de fora.</p>
           <div className="flex gap-2">
-            <form action={discardLegacyBatch}><input type="hidden" name="batch_id" value={b.id} /><SubmitButton className="h-10 rounded-[10px] border border-line px-4 text-sm hover:bg-surface-muted" pendingText="...">Descartar</SubmitButton></form>
-            {ok > 0 && <form action={confirmLegacyBatch}><input type="hidden" name="batch_id" value={b.id} /><SubmitButton className="h-10 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Importando...">Confirmar importação</SubmitButton></form>}
+            <form action={discardLegacyBatch}><input type="hidden" name="batch_id" value={b.id} /><SubmitButton className="h-10 rounded-none border border-line px-4 text-sm hover:bg-surface-muted" pendingText="...">Descartar</SubmitButton></form>
+            {ok > 0 && <form action={confirmLegacyBatch}><input type="hidden" name="batch_id" value={b.id} /><SubmitButton className="h-10 rounded-none bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Importando...">Confirmar importação</SubmitButton></form>}
           </div>
         </Card>
       )}
@@ -58,7 +58,7 @@ export default async function LegacyBatchPage({ params }: { params: Promise<{ id
             <form action={undoLegacyBatch} className="mt-3 flex flex-wrap items-end gap-2">
               <input type="hidden" name="batch_id" value={b.id} />
               <label className="text-[13px] font-medium text-ink-soft">Motivo<input name="reason" required minLength={3} maxLength={300} className="field mt-1.5" /></label>
-              <SubmitButton className="h-10 rounded-[10px] border border-[#F5C2C0] px-4 text-sm text-[#991B1B] hover:bg-[#FDE2E1]" pendingText="...">Desfazer</SubmitButton>
+              <SubmitButton className="h-10 rounded-none border border-[#F5C2C0] px-4 text-sm text-[#991B1B] hover:bg-[#FDE2E1]" pendingText="...">Desfazer</SubmitButton>
             </form>
             <p className="mt-2 text-xs text-muted">Os contratos saem; os clientes criados por esta importação saem se nada mais aconteceu com eles. Clientes que já existiam ficam como estão.</p>
           </details>

@@ -69,7 +69,7 @@ export default async function StatementPage({ searchParams }: { searchParams: Pr
                   {edit && (
                     <div className="grid gap-2">
                       {sug.map(e => (
-                        <form key={e.id} action={matchLine} className="flex flex-wrap items-center justify-between gap-2 rounded-[10px] border border-line px-3 py-2 text-sm">
+                        <form key={e.id} action={matchLine} className="flex flex-wrap items-center justify-between gap-2 rounded-none border border-line px-3 py-2 text-sm">
                           <input type="hidden" name="line_id" value={l.id} /><input type="hidden" name="entry_id" value={e.id} />
                           <span>{e.description} <span className="text-xs text-muted">· {e.status === 'open' ? `vence ${dayLabel(e.due_on)}` : `baixado ${dayLabel(e.settled_on)} sem conta`}</span></span>
                           <SubmitButton className="h-8 rounded-lg bg-brand px-3 text-xs font-semibold text-white" pendingText="...">Conciliar</SubmitButton>
@@ -101,7 +101,7 @@ export default async function StatementPage({ searchParams }: { searchParams: Pr
         <CardHeader title="Já tratadas (últimas 100)" action={
           <div className="flex gap-1.5">{Object.entries(DONE).map(([k, v]) => (
             <Link key={k} href={`/app/financeiro/empresa/extrato?tratadas=${k}`} aria-current={k === doneView ? 'page' : undefined}
-              className={`rounded-[10px] border px-3 py-1 text-sm ${k === doneView ? 'border-ink bg-ink text-white' : 'border-line bg-surface text-ink-soft hover:bg-surface-muted'}`}>{v}</Link>
+              className={`rounded-none border px-3 py-1 text-sm ${k === doneView ? 'border-ink bg-ink text-white' : 'border-line bg-surface text-ink-soft hover:bg-surface-muted'}`}>{v}</Link>
           ))}</div>} />
         {!done.length ? <p className="px-5 pb-5 pt-2 text-sm text-muted">Nenhuma linha tratada.</p> : (
           <ul className="mt-3">
@@ -125,7 +125,7 @@ export default async function StatementPage({ searchParams }: { searchParams: Pr
                   ) : (
                     <details className="sm:text-right">
                       <summary className="inline-flex h-8 cursor-pointer items-center rounded-lg border border-line-strong px-3 text-xs">Desfazer conciliação</summary>
-                      <form action={unmatchLine} className="mt-2 grid gap-1.5 rounded-[10px] border border-line p-2.5 text-left sm:w-80">
+                      <form action={unmatchLine} className="mt-2 grid gap-1.5 rounded-none border border-line p-2.5 text-left sm:w-80">
                         <input type="hidden" name="line_id" value={l.id} />
                         <p className="text-xs text-ink-soft">A linha volta para a conciliar. {created ? 'O lançamento criado a partir dela é cancelado.' : 'O lançamento volta como estava antes (em aberto, se foi esta conciliação que o pagou).'}</p>
                         <div className="flex gap-1.5">

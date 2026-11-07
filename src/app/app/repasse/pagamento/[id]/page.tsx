@@ -12,8 +12,8 @@ type PayoutBreakdownRow = Breakdown & {
   payout_id: string; account_id: string; holder: string; kind: string; status: string; amount: string; paid_on: string | null
   payment_reference: string | null; period_start: string | null; period_end: string | null; requested_at: string; batch_id: string | null; note: string | null
 }
-const box = 'rounded-[14px] border border-line bg-surface px-4 py-3'
-const btn = 'inline-flex h-9 items-center rounded-[10px] border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted'
+const box = 'rounded-none border border-line bg-surface px-4 py-3'
+const btn = 'inline-flex h-9 items-center rounded-none border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted'
 
 // "Ver contratos" of one payment (owner, 06/11/2026): every payment, in a batch or not ("Pagar agora", "Marcar pago"),
 // with the contracts it pays and the composition of its amount. Finance, or the person (own payments); the database decides.
@@ -40,7 +40,7 @@ export default async function PayoutPaymentPage({ params }: { params: Promise<{ 
         <div className={box}><div className="text-xs text-muted">Pago em</div><div className="num mt-1 font-semibold text-ink">{dateBr(p.paid_on)}</div></div>
         <div className={box}><div className="text-xs text-muted">Comprovante</div><div className="mt-1 text-sm text-ink">{p.payment_reference ?? '—'}</div></div>
       </div>
-      {p.status !== 'paid' && !p.undone && <p className="mb-4 rounded-[10px] bg-surface-muted px-4 py-2 text-sm text-ink-soft">Ainda não pago: é o que será pago ao marcar como pago.</p>}
+      {p.status !== 'paid' && !p.undone && <p className="mb-4 rounded-none bg-surface-muted px-4 py-2 text-sm text-ink-soft">Ainda não pago: é o que será pago ao marcar como pago.</p>}
       <Card className="overflow-hidden">
         <PayoutBreakdown b={p} total={p.amount} empty={p.kind === 'withdrawal' ? 'Saque do saldo sem contratos' : 'Sem contratos'} />
       </Card>

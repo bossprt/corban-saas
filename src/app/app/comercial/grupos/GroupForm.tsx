@@ -53,8 +53,8 @@ export function GroupForm({ action, group, rule, components, otherGroups, canEdi
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-muted">{locked ? 'Para alterar, clique em Editar grupo. Cada alteração vira uma nova versão da regra; as anteriores ficam guardadas.' : 'Editando: altere o que precisar e clique em Salvar grupo.'}</p>
           {locked
-            ? <button type="button" onClick={() => setEditing(true)} className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line-strong bg-surface px-3 text-sm font-medium text-ink hover:bg-surface-muted"><Pencil size={15} aria-hidden />Editar grupo</button>
-            : <button type="button" onClick={() => { setEditing(false); setOwn(rule?.own_production ?? false); setRound(r => r + 1) }} className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line bg-surface px-3 text-sm text-ink-soft hover:bg-surface-muted"><X size={15} aria-hidden />Cancelar</button>}
+            ? <button type="button" onClick={() => setEditing(true)} className="inline-flex h-9 items-center gap-1.5 rounded-none border border-line-strong bg-surface px-3 text-sm font-medium text-ink hover:bg-surface-muted"><Pencil size={15} aria-hidden />Editar grupo</button>
+            : <button type="button" onClick={() => { setEditing(false); setOwn(rule?.own_production ?? false); setRound(r => r + 1) }} className="inline-flex h-9 items-center gap-1.5 rounded-none border border-line bg-surface px-3 text-sm text-ink-soft hover:bg-surface-muted"><X size={15} aria-hidden />Cancelar</button>}
         </div>
       )}
       <fieldset key={round} disabled={locked} className="grid gap-6">
@@ -67,7 +67,7 @@ export function GroupForm({ action, group, rule, components, otherGroups, canEdi
         </div>
 
         {own ? (
-          <p className="rounded-[12px] border border-line bg-surface-muted/50 p-4 text-sm text-ink-soft">
+          <p className="rounded-none border border-line bg-surface-muted/50 p-4 text-sm text-ink-soft">
             Vendas deste grupo não geram repasse: a comissão inteira fica com a empresa, e as tabelas não terão coluna para ele. Supervisor e gerente, se tiverem percentual, são calculados normalmente.
           </p>
         ) : (
@@ -78,7 +78,7 @@ export function GroupForm({ action, group, rule, components, otherGroups, canEdi
               {components.map(c => {
                 const it = rule?.items[c.tech_key]
                 return (
-                  <div key={c.tech_key} className="grid gap-2 rounded-[12px] border border-line p-3" data-row="component">
+                  <div key={c.tech_key} className="grid gap-2 rounded-none border border-line p-3" data-row="component">
                     <input type="hidden" name="component" value={c.tech_key} />
                     <span className="text-sm font-semibold text-ink">{c.name}</span>
                     <label className={lbl}>Coluna de referência
@@ -106,7 +106,7 @@ export function GroupForm({ action, group, rule, components, otherGroups, canEdi
       {editing && (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-muted">Percentuais de 0 a 100, com vírgula. Cada empresa define as próprias regras.</p>
-          <SubmitButton className="h-10 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Salvando...">{group ? 'Salvar grupo' : 'Cadastrar grupo'}</SubmitButton>
+          <SubmitButton className="h-10 rounded-none bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Salvando...">{group ? 'Salvar grupo' : 'Cadastrar grupo'}</SubmitButton>
         </div>
       )}
     </form>

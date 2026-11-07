@@ -151,7 +151,7 @@ export function ReceiptImportClient({ sources, bankAccounts, suggestedBank }: { 
         </div>
       </div>
       <div className="flex justify-end">
-        <button type="button" onClick={readColumns} disabled={busy || !files.length || !source} className="h-10 rounded-[10px] border border-line bg-surface px-4 text-sm font-medium hover:bg-surface-muted disabled:opacity-50">Ler colunas do arquivo</button>
+        <button type="button" onClick={readColumns} disabled={busy || !files.length || !source} className="h-10 rounded-none border border-line bg-surface px-4 text-sm font-medium hover:bg-surface-muted disabled:opacity-50">Ler colunas do arquivo</button>
       </div>
 
       {inspect && (
@@ -171,14 +171,14 @@ export function ReceiptImportClient({ sources, bankAccounts, suggestedBank }: { 
           </div>
           {/* Every line of the file (owner, 20/10/2026: five sample lines looked like only five would be imported). */}
           <p className="text-[13px] font-medium text-ink-soft">Prévia: {body.length} linha(s){files.length > 1 ? ' (contratos repetidos nos arquivos já somados)' : ' do arquivo'}</p>
-          <div className="max-h-[420px] overflow-auto rounded-[10px] border border-line">
+          <div className="max-h-[420px] overflow-auto rounded-none border border-line">
             <table className="w-full text-left text-[12px]">
               <thead className="sticky top-0 bg-surface-muted text-muted"><tr>{inspect.sheet.headers.map((h, i) => <th key={i} className="whitespace-nowrap px-3 py-2 font-medium">{h}</th>)}</tr></thead>
               <tbody>{body.slice(0, 1000).map((r, i) => <tr key={i} className="border-t border-line">{inspect.sheet.headers.map((_, j) => <td key={j} className="whitespace-nowrap px-3 py-1.5 text-ink-soft">{r[j]}</td>)}</tr>)}</tbody>
             </table>
           </div>
           {check && (
-            <div role="status" className={`rounded-[10px] border px-4 py-3 text-sm ${problems.length ? 'border-[#F3D9A4] bg-[#FDF3DC] text-[#92400E]' : 'border-[#BBE5C8] bg-[#E3F5E9] text-[#15803D]'}`}>
+            <div role="status" className={`rounded-none border px-4 py-3 text-sm ${problems.length ? 'border-[#F3D9A4] bg-[#FDF3DC] text-[#92400E]' : 'border-[#BBE5C8] bg-[#E3F5E9] text-[#15803D]'}`}>
               <p className="font-semibold">O arquivo tem {check.length} contrato(s): {check.length - problems.length} pronto(s) para conferir{problems.length ? `, ${problems.length} com pendência` : ''}.</p>
               {groups.map(g => (
                 <p key={g.k} className="mt-1.5">{g.ades.length} — {CHECK_TEXT[g.k]} <span className="num block text-xs">{g.ades.join(', ')}</span></p>
@@ -188,13 +188,13 @@ export function ReceiptImportClient({ sources, bankAccounts, suggestedBank }: { 
             </div>
           )}
           <div className="flex justify-end">
-            <button type="button" onClick={runImport} disabled={busy || !cols.ade || !cols.amount} className="h-10 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50">{problems.length ? 'Importar mesmo assim' : 'Importar para conferência'}</button>
+            <button type="button" onClick={runImport} disabled={busy || !cols.ade || !cols.amount} className="h-10 rounded-none bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50">{problems.length ? 'Importar mesmo assim' : 'Importar para conferência'}</button>
           </div>
         </div>
       )}
 
       {error && (
-        <div role="alert" className="rounded-[10px] border border-[#F5C2C0] bg-[#FDE2E1] px-4 py-3 text-sm text-[#991B1B]">
+        <div role="alert" className="rounded-none border border-[#F5C2C0] bg-[#FDE2E1] px-4 py-3 text-sm text-[#991B1B]">
           {error}
           {issues.length > 0 && <ul className="mt-2 list-disc pl-5">{issues.map(i => <li key={i.row}>Linha {i.row}: {i.message}</li>)}</ul>}
         </div>

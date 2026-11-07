@@ -6,7 +6,7 @@ import { brl, minStartMonth, monthLabel, parseSubscriptionAmount } from '@/lib/b
 import { saveSubscription } from './actions'
 
 type Sub = { amount: string; due_day: number; grace_days: number; starts_on: string; is_active: boolean }
-const button = 'inline-flex h-10 items-center justify-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong'
+const button = 'inline-flex h-10 items-center justify-center rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong'
 
 // One company's subscription. Shows how the typed amount was read ("399.90" and "399,90" are both R$ 399,90) and asks
 // for confirmation before saving. The first month cannot be before the current month for a new subscription (the

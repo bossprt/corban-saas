@@ -52,7 +52,7 @@ export function NewEntryForm({ back, today, defaultBank, accountOptions, bankOpt
           <label className={label}>Documento<input name="document" maxLength={60} defaultValue={v('document')} className="field mt-1.5" /></label>
         </div>
       </details>
-      <div className="flex justify-end sm:col-span-3"><SubmitButton className="h-10 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Salvando...">Registrar</SubmitButton></div>
+      <div className="flex justify-end sm:col-span-3"><SubmitButton className="h-10 rounded-none bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Salvando...">Registrar</SubmitButton></div>
     </form>
   )
 }

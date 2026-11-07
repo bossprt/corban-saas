@@ -60,7 +60,7 @@ export default async function NewProposalPage({ searchParams }: { searchParams: 
           </fieldset>
           <label className={label}>Número da proposta no banco (ADE)<input name="ade" maxLength={60} placeholder="Obrigatório se já digitada" className="field mt-1.5 font-mono" /></label>
           <div className="flex items-end justify-end sm:col-span-2">
-            <SubmitButton className="h-10 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Salvando...">Registrar proposta</SubmitButton>
+            <SubmitButton className="h-10 rounded-none bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Salvando...">Registrar proposta</SubmitButton>
           </div>
         </form>
       </Card>

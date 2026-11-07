@@ -105,14 +105,14 @@ export async function CommissionCard({ supabase, access, proposalId, closed, can
         action={canCalc ? (
           <form action={calculateCommission}>
             <input type="hidden" name="proposal_id" value={proposalId} />
-            <button className="h-9 rounded-[10px] border border-line bg-surface px-3 text-sm hover:bg-surface-muted">{calc ? 'Recalcular' : failureCode ? 'Tentar de novo' : 'Calcular comissão'}</button>
+            <button className="h-9 rounded-none border border-line bg-surface px-3 text-sm hover:bg-surface-muted">{calc ? 'Recalcular' : failureCode ? 'Tentar de novo' : 'Calcular comissão'}</button>
           </form>
         ) : undefined}
       />
       <div className="p-5 pt-3 text-sm">
         {!calc ? (
           failureCode
-            ? <p role="alert" className="rounded-[10px] border border-[#FCA5A5] bg-[#FEF2F2] px-3 py-2 text-[#991B1B]">Comissão não calculada: {CALC_FAILURE[failureCode] ?? 'erro no cálculo'}. {failureCode === 'proposal_without_seller' ? 'Clique em “Editar contrato”, escolha o vendedor e salve; depois clique em “Tentar de novo”.' : 'Corrija e clique em “Tentar de novo”.'}</p>
+            ? <p role="alert" className="rounded-none border border-[#FCA5A5] bg-[#FEF2F2] px-3 py-2 text-[#991B1B]">Comissão não calculada: {CALC_FAILURE[failureCode] ?? 'erro no cálculo'}. {failureCode === 'proposal_without_seller' ? 'Clique em “Editar contrato”, escolha o vendedor e salve; depois clique em “Tentar de novo”.' : 'Corrija e clique em “Tentar de novo”.'}</p>
             : <p className="text-muted">Comissão ainda não calculada. Ela é calculada sozinha quando o contrato é criado (no portal, quando a empresa aprova): linha da tabela, grupo do vendedor, imposto e IR retido.</p>
         ) : !finance ? (
           mine?.mine ? (
@@ -156,7 +156,7 @@ export async function CommissionCard({ supabase, access, proposalId, closed, can
             </div>
             {owner && anyOverride && <p className="mt-2 text-[13px] text-ink-soft">Ganho da empresa com a alteração do repasse: <strong className="text-ink">{money(sumRows('gain'))}</strong></p>}
             {credit && (
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-line px-4 py-3 text-sm">
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-none border border-line px-4 py-3 text-sm">
                 <span className="flex flex-wrap items-center gap-2">Repasse do vendedor:
                   {credit.paid_on ? <Badge tone="received">Pago ao vendedor em {new Date(`${credit.paid_on}T12:00:00Z`).toLocaleDateString('pt-BR')}</Badge>
                     : credit.waiting === 'client' ? <Badge tone="neutral">Aguardando pagamento ao cliente</Badge>
@@ -176,7 +176,7 @@ export async function CommissionCard({ supabase, access, proposalId, closed, can
                       <input type="hidden" name="proposal_id" value={proposalId} />
                       <label className={lbl}>Pago em<input type="date" name="paid_on" required className="field mt-1.5" /></label>
                       <label className={lbl}>Comprovante / referência<input name="reference" required minLength={3} maxLength={120} className="field mt-1.5" /></label>
-                      <SubmitButton className="h-10 rounded-[10px] border border-line-strong bg-surface px-4 text-sm text-ink hover:bg-surface-muted" pendingText="...">Registrar pagamento</SubmitButton>
+                      <SubmitButton className="h-10 rounded-none border border-line-strong bg-surface px-4 text-sm text-ink hover:bg-surface-muted" pendingText="...">Registrar pagamento</SubmitButton>
                     </form>
                   </details>
                 )}
@@ -186,20 +186,20 @@ export async function CommissionCard({ supabase, access, proposalId, closed, can
             {canOverride && !received && rows.length > 0 && (
               <div className="mt-4 grid gap-2 border-t border-line pt-4">
                 {rows.map(r => (
-                  <details key={r.p.component_key} className="rounded-[12px] border border-line px-4 py-3">
+                  <details key={r.p.component_key} className="rounded-none border border-line px-4 py-3">
                     <summary className="cursor-pointer text-sm font-medium text-ink">Alterar repasse do vendedor — {COMPONENT_LABEL[r.p.component_key] ?? r.p.component_key}</summary>
                     <form action={setPayoutOverride} className="mt-3 grid gap-3 sm:grid-cols-[160px_160px_1fr_auto] sm:items-end">
                       <input type="hidden" name="proposal_id" value={proposalId} /><input type="hidden" name="component" value={r.p.component_key} />
                       <label className={lbl}>Tipo<select name="kind" defaultValue={r.p.value_kind ?? 'percentage'} className="field mt-1.5"><option value="percentage">% da base</option><option value="fixed_brl">Valor fixo (R$)</option></select></label>
                       <label className={lbl}>Valor<input name="value" required inputMode="decimal" placeholder="4 ou 800,00" aria-label={`Repasse ${COMPONENT_LABEL[r.p.component_key] ?? r.p.component_key}`} className="field mt-1.5" /></label>
                       <label className={lbl}>Motivo<input name="reason" required minLength={3} maxLength={500} placeholder="Obrigatório" aria-label={`Motivo ${COMPONENT_LABEL[r.p.component_key] ?? r.p.component_key}`} className="field mt-1.5" /></label>
-                      <SubmitButton className="h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Salvando...">Salvar repasse</SubmitButton>
+                      <SubmitButton className="h-10 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Salvando...">Salvar repasse</SubmitButton>
                     </form>
                     {r.p.overridden && (
                       <form action={setPayoutOverride} className="mt-3 flex flex-wrap items-end gap-2 border-t border-line pt-3">
                         <input type="hidden" name="proposal_id" value={proposalId} /><input type="hidden" name="component" value={r.p.component_key} /><input type="hidden" name="clear" value="1" />
                         <label className={`${lbl} flex-1`}>Motivo para voltar à regra<input name="reason" required minLength={3} maxLength={500} className="field mt-1.5" /></label>
-                        <SubmitButton className="h-10 rounded-[10px] border border-line-strong bg-surface px-4 text-sm text-ink hover:bg-surface-muted" pendingText="...">Voltar à regra</SubmitButton>
+                        <SubmitButton className="h-10 rounded-none border border-line-strong bg-surface px-4 text-sm text-ink hover:bg-surface-muted" pendingText="...">Voltar à regra</SubmitButton>
                       </form>
                     )}
                   </details>
@@ -226,7 +226,7 @@ export async function CommissionCard({ supabase, access, proposalId, closed, can
                   <BankAccountSelect banks={receiptBanks.banks} suggested={receiptBanks.suggested} label="Conta que recebeu" labelClass={lbl} />
                   <label className={`${lbl} sm:col-span-2`}>Observação do recebimento<input name="note" maxLength={100} placeholder="Ex.: caiu na conta, banco sem relatório" className="field mt-1.5" /></label>
                   <div className="sm:col-span-2 lg:col-span-3 flex flex-wrap items-center gap-3">
-                    <SubmitButton pendingText="Registrando..." className="h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Registrar recebimento</SubmitButton>
+                    <SubmitButton pendingText="Registrando..." className="h-10 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Registrar recebimento</SubmitButton>
                     <span className="text-xs text-muted">Entra igual a uma linha do relatório do banco: compara com o esperado e, se não bater, vai para a Conciliação. A Gratificação é registrada à parte, quando o banco pagar.</span>
                   </div>
                 </form>

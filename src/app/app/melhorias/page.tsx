@@ -32,8 +32,8 @@ export default async function ImprovementsPage({ searchParams }: { searchParams:
   return (
     <section>
       <PageHeader title="Sugerir melhoria" description="Ajude a melhorar o Corban: sugira uma melhoria, avise de um erro ou tire uma dúvida. Cada pedido recebe um protocolo, e a resposta aparece aqui." />
-      {protocol && <p role="status" className="mb-4 rounded-[10px] border border-[#86EFAC] bg-[#F0FDF4] px-4 py-3 text-sm text-[#166534]">Solicitação registrada. Protocolo <strong>{protocol}</strong>. Acompanhe a resposta abaixo.</p>}
-      {sp.erro && ERRORS[sp.erro] && <p role="alert" className="mb-4 rounded-[10px] border border-[#FCD34D] bg-[#FFFBEB] px-4 py-3 text-sm text-[#92400E]">{ERRORS[sp.erro]}</p>}
+      {protocol && <p role="status" className="mb-4 rounded-none border border-[#86EFAC] bg-[#F0FDF4] px-4 py-3 text-sm text-[#166534]">Solicitação registrada. Protocolo <strong>{protocol}</strong>. Acompanhe a resposta abaixo.</p>}
+      {sp.erro && ERRORS[sp.erro] && <p role="alert" className="mb-4 rounded-none border border-[#FCD34D] bg-[#FFFBEB] px-4 py-3 text-sm text-[#92400E]">{ERRORS[sp.erro]}</p>}
       <Card className="mb-6 p-5">
         <form action={submitImprovement} className="grid gap-3">
           <input type="hidden" name="page" value={from} />
@@ -43,7 +43,7 @@ export default async function ImprovementsPage({ searchParams }: { searchParams:
           </div>
           <label className={lbl}>Descrição<textarea name="body" required minLength={10} maxLength={4000} rows={5} placeholder="O que você precisa, onde e por quê. Se for um erro: o que fez e o que apareceu." className="field mt-1.5" /></label>
           <p className="text-xs text-muted">{from ? `Tela de origem: ${from}. ` : ''}Não coloque CPF, senhas nem dados de clientes.</p>
-          <div><SubmitButton className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Enviando..."><Lightbulb size={16} aria-hidden />Enviar solicitação</SubmitButton></div>
+          <div><SubmitButton className="inline-flex h-10 items-center gap-1.5 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Enviando..."><Lightbulb size={16} aria-hidden />Enviar solicitação</SubmitButton></div>
         </form>
       </Card>
       <Card>
@@ -52,7 +52,7 @@ export default async function ImprovementsPage({ searchParams }: { searchParams:
           {rows.map(r => {
             const [st, tone] = IMPROVEMENT_STATUS[r.status] ?? [r.status, 'neutral' as Tone]
             return (
-              <li key={r.id} className="rounded-[12px] border border-line px-4 py-3">
+              <li key={r.id} className="rounded-none border border-line px-4 py-3">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                   <span className="font-mono text-xs text-muted">{r.protocol}</span>
                   <span className="font-medium text-ink">{r.title}</span>
@@ -61,7 +61,7 @@ export default async function ImprovementsPage({ searchParams }: { searchParams:
                   <span className="ml-auto text-xs text-muted">{new Date(r.created_at).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}{admin ? ` · ${r.created_by === user.id ? 'você' : (who.get(r.created_by) ?? 'usuário')}` : ''}</span>
                 </div>
                 <p className="mt-1 whitespace-pre-wrap text-sm text-ink-soft">{r.body}</p>
-                {r.response && <p className="mt-2 rounded-[10px] bg-surface-muted px-3 py-2 text-sm text-ink"><span className="font-medium">Resposta:</span> {r.response}</p>}
+                {r.response && <p className="mt-2 rounded-none bg-surface-muted px-3 py-2 text-sm text-ink"><span className="font-medium">Resposta:</span> {r.response}</p>}
               </li>
             )
           })}

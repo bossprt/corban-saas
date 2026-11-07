@@ -5,8 +5,8 @@ import { SubmitButton } from '@/components/SubmitButton'
 import { Card, PageHeader, Badge } from '@/components/ui'
 import { createContractType, saveContractTypeSettings, updateOwnContractType } from './actions'
 
-const btn='inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong'
-const ghost='h-9 rounded-[10px] border border-line bg-surface px-3 text-xs hover:bg-surface-muted'
+const btn='inline-flex h-10 items-center gap-1.5 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong'
+const ghost='h-9 rounded-none border border-line bg-surface px-3 text-xs hover:bg-surface-muted'
 
 export default async function ContractTypesPage(){
  const {supabase,membership}=await requireAppContext()

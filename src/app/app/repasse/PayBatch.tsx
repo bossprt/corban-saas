@@ -107,13 +107,13 @@ export function PayBatch({ lines, action, today, banks = [], suggestedBank = '' 
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 pb-3 text-sm">
         <span className="text-ink-soft">{lines.length} a pagar · <strong className="text-ink">{brlText(totalAll)}</strong> · marcados {chosen.length} · <strong className="text-ink">{brlText(totalChosen)}</strong></span>
         <span className="flex flex-wrap gap-2">
-          <button type="button" onClick={tickAll} className="h-9 rounded-[10px] border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted">Marcar todos</button>
-          <button type="button" onClick={untickAll} className="h-9 rounded-[10px] border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted">Desmarcar</button>
-          {lines.some(l => codeOf(l)) && <button type="button" onClick={() => openQr()} disabled={!chosenPix.length} className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted disabled:opacity-50"><QrCode size={15} aria-hidden />Pagar marcados com QR Code ({chosenPix.length})</button>}
-          <a href="/api/repasse/pagamentos" download className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted"><Download size={15} aria-hidden />Baixar Excel</a>
+          <button type="button" onClick={tickAll} className="h-9 rounded-none border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted">Marcar todos</button>
+          <button type="button" onClick={untickAll} className="h-9 rounded-none border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted">Desmarcar</button>
+          {lines.some(l => codeOf(l)) && <button type="button" onClick={() => openQr()} disabled={!chosenPix.length} className="inline-flex h-9 items-center gap-1.5 rounded-none border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted disabled:opacity-50"><QrCode size={15} aria-hidden />Pagar marcados com QR Code ({chosenPix.length})</button>}
+          <a href="/api/repasse/pagamentos" download className="inline-flex h-9 items-center gap-1.5 rounded-none border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted"><Download size={15} aria-hidden />Baixar Excel</a>
         </span>
       </div>
-      {!!skipped.length && <p role="status" className="mx-5 mb-3 rounded-[10px] bg-[#FEF2F2] px-3 py-2 text-xs text-[#991B1B]">Não marcados por falta de chave PIX ou conta no cadastro: {skipped.join(', ')}.</p>}
+      {!!skipped.length && <p role="status" className="mx-5 mb-3 rounded-none bg-[#FEF2F2] px-3 py-2 text-xs text-[#991B1B]">Não marcados por falta de chave PIX ou conta no cadastro: {skipped.join(', ')}.</p>}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[760px] text-left text-[13px]">
           <thead className="border-y border-line bg-surface-muted text-xs text-muted"><tr>
@@ -170,24 +170,24 @@ export function PayBatch({ lines, action, today, banks = [], suggestedBank = '' 
             <BankAccountSelect banks={banks} suggested={suggestedBank} label="Conta que pagou" />
           </span>
           {!confirming && (
-            <button type="submit" disabled={pending || !chosen.length} className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50">
+            <button type="submit" disabled={pending || !chosen.length} className="inline-flex h-10 items-center gap-1.5 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50">
               <Check size={16} aria-hidden />{`Confirmar ${chosen.length} pago(s) · ${brlText(totalChosen)}`}
             </button>
           )}
         </div>
         {confirming && (
-          <div role="alertdialog" aria-label="Confirmar pagamentos" className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-brand/40 bg-surface px-3 py-2">
+          <div role="alertdialog" aria-label="Confirmar pagamentos" className="flex flex-wrap items-center justify-between gap-3 rounded-none border border-brand/40 bg-surface px-3 py-2">
             <span className="text-sm text-ink">Registrar <strong>{chosen.length}</strong> pagamento(s), total <strong className="num">{brlText(totalChosen)}</strong>? Confira se pagou cada um no banco.</span>
             <span className="flex gap-2">
-              <button type="button" onClick={() => setConfirming(false)} disabled={pending} className="h-9 rounded-[10px] border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted">Voltar</button>
-              <button type="submit" disabled={pending || !chosen.length} aria-busy={pending} className="inline-flex h-9 items-center gap-1.5 rounded-[10px] bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50">
+              <button type="button" onClick={() => setConfirming(false)} disabled={pending} className="h-9 rounded-none border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted">Voltar</button>
+              <button type="submit" disabled={pending || !chosen.length} aria-busy={pending} className="inline-flex h-9 items-center gap-1.5 rounded-none bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50">
                 <Check size={16} aria-hidden />{pending ? 'Registrando...' : 'Sim, registrar'}
               </button>
             </span>
           </div>
         )}
         {result && (
-          <div role="status" className={`rounded-[10px] border px-3 py-2 text-sm ${result.error || result.failed.length ? 'border-[#FCD34D] bg-[#FFFBEB] text-[#92400E]' : 'border-[#86EFAC] bg-[#F0FDF4] text-[#166534]'}`}>
+          <div role="status" className={`rounded-none border px-3 py-2 text-sm ${result.error || result.failed.length ? 'border-[#FCD34D] bg-[#FFFBEB] text-[#92400E]' : 'border-[#86EFAC] bg-[#F0FDF4] text-[#166534]'}`}>
             {result.error ?? `${result.ok} pagamento(s) registrado(s) · ${brlText(result.total)}.${result.failed.length ? ` ${result.failed.length} não registrado(s):` : ''}`}
             {result.batchId && <> <Link href={`/app/repasse/lotes/${result.batchId}`} className="font-semibold underline">Ver o lote</Link></>}
             {!!result.failed.length && <ul className="mt-1 list-disc pl-5">{result.failed.map(x => <li key={x.account}>{x.name}: {x.reason}</li>)}</ul>}
@@ -195,7 +195,7 @@ export function PayBatch({ lines, action, today, banks = [], suggestedBank = '' 
         )}
       </div>
 
-      <dialog ref={dialog} onClose={() => setQr(null)} aria-label="Pagar com QR Code" className="m-auto w-[min(92vw,420px)] rounded-[16px] border border-line bg-surface p-0 text-ink backdrop:bg-black/50">
+      <dialog ref={dialog} onClose={() => setQr(null)} aria-label="Pagar com QR Code" className="m-auto w-[min(92vw,420px)] rounded-none border border-line bg-surface p-0 text-ink backdrop:bg-black/50">
         {current && (
           <div className="grid gap-3 p-5 text-center">
             <div className="flex items-center justify-between text-left">
@@ -204,13 +204,13 @@ export function PayBatch({ lines, action, today, banks = [], suggestedBank = '' 
             </div>
             <div className="text-sm text-ink-soft">{current.name}</div>
             <div className="num text-2xl font-semibold">{brlText(current.amount)}</div>
-            <div className="mx-auto w-60 rounded-[12px] bg-white p-2" dangerouslySetInnerHTML={{ __html: svg }} />
+            <div className="mx-auto w-60 rounded-none bg-white p-2" dangerouslySetInnerHTML={{ __html: svg }} />
             <div className="text-xs text-ink-soft">Recebe: <strong className="text-ink">{receiver(current)}</strong> · PIX {PIX_TYPE_LABEL[current.pixType ?? ''] ?? ''} <span className="font-mono">{current.pixKey}</span></div>
-            <p className="rounded-[10px] bg-[#FFFBEB] px-3 py-2 text-left text-xs text-[#92400E]">No app do banco, confira se o nome de quem recebe é <strong>{receiver(current)}</strong> antes de confirmar.</p>
-            {currentCode && <button type="button" onClick={() => void navigator.clipboard.writeText(currentCode)} className="mx-auto inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line-strong px-3 text-sm hover:bg-surface-muted"><Copy size={15} aria-hidden />Copiar PIX copia e cola</button>}
+            <p className="rounded-none bg-[#FFFBEB] px-3 py-2 text-left text-xs text-[#92400E]">No app do banco, confira se o nome de quem recebe é <strong>{receiver(current)}</strong> antes de confirmar.</p>
+            {currentCode && <button type="button" onClick={() => void navigator.clipboard.writeText(currentCode)} className="mx-auto inline-flex h-9 items-center gap-1.5 rounded-none border border-line-strong px-3 text-sm hover:bg-surface-muted"><Copy size={15} aria-hidden />Copiar PIX copia e cola</button>}
             <div className="flex justify-between">
-              <button type="button" disabled={!qr} onClick={() => setQr(q => (q ?? 1) - 1)} className="inline-flex h-9 items-center gap-1 rounded-[10px] px-3 text-sm hover:bg-surface-muted disabled:opacity-40"><ChevronLeft size={16} aria-hidden />Anterior</button>
-              <button type="button" disabled={(qr ?? 0) >= pixLines.length - 1} onClick={() => setQr(q => (q ?? 0) + 1)} className="inline-flex h-9 items-center gap-1 rounded-[10px] px-3 text-sm hover:bg-surface-muted disabled:opacity-40">Próximo<ChevronRight size={16} aria-hidden /></button>
+              <button type="button" disabled={!qr} onClick={() => setQr(q => (q ?? 1) - 1)} className="inline-flex h-9 items-center gap-1 rounded-none px-3 text-sm hover:bg-surface-muted disabled:opacity-40"><ChevronLeft size={16} aria-hidden />Anterior</button>
+              <button type="button" disabled={(qr ?? 0) >= pixLines.length - 1} onClick={() => setQr(q => (q ?? 0) + 1)} className="inline-flex h-9 items-center gap-1 rounded-none px-3 text-sm hover:bg-surface-muted disabled:opacity-40">Próximo<ChevronRight size={16} aria-hidden /></button>
             </div>
           </div>
         )}

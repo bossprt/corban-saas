@@ -9,7 +9,7 @@ import { DOCUMENT_LISTS_HREF, versionsWithoutDocumentList } from '@/lib/proposal
 import { prepareDocuments, sendToDigitization } from './[id]/actions'
 import { CancelPreQueue } from './CancelPreQueue'
 
-const primary = 'inline-flex h-8 items-center whitespace-nowrap rounded-[10px] bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-strong'
+const primary = 'inline-flex h-8 items-center whitespace-nowrap rounded-none bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-strong'
 const money = (v: number | string | null) => (v === null || v === undefined ? '—' : brlText(String(v)))
 const PRE_QUEUE = [...PRE_QUEUE_SITUATIONS]
 
@@ -35,7 +35,7 @@ export async function PreQueue() {
           const client = name.get(p.customer_id) ?? 'Cliente'
           const created = new Date(p.created_at).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
           return (
-            <li key={p.id} className="rounded-[12px] border border-line px-4 py-3">
+            <li key={p.id} className="rounded-none border border-line px-4 py-3">
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <div className="min-w-[180px] flex-1">
                   <Link href={`/app/propostas/${p.id}`} className="font-medium text-ink hover:text-brand">{client}</Link>
@@ -52,7 +52,7 @@ export async function PreQueue() {
                 </div>
               </div>
               {p.status === 'draft' && noList.has(p.product_table_version_id) && (
-                <p className="mt-2 rounded-[10px] bg-[#FEF3C7] px-3 py-2 text-xs text-[#92400E]">
+                <p className="mt-2 rounded-none bg-[#FEF3C7] px-3 py-2 text-xs text-[#92400E]">
                   Parada porque este banco e convênio não têm lista de documentos. Próximo passo: cadastre a lista em{' '}
                   <Link href={DOCUMENT_LISTS_HREF} className="font-medium underline">Cadastros › Documentos por banco</Link> e depois clique em Preparar documentos.
                 </p>

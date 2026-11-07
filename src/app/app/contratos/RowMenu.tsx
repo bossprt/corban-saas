@@ -24,7 +24,7 @@ export function RowMenu({ label, items }: { label: string; items: RowMenuItem[] 
         <ChevronDown size={14} aria-hidden className={open ? 'rotate-180 transition-transform' : 'transition-transform'} />
       </button>
       {open && (
-        <ul role="menu" className="absolute left-0 top-7 z-30 w-56 overflow-hidden rounded-[10px] border border-line bg-surface py-1 shadow-lg">
+        <ul role="menu" className="absolute left-0 top-7 z-30 w-56 overflow-hidden rounded-none border border-line bg-surface py-1 shadow-lg">
           {items.map(i => (
             <li key={i.acao} role="none">
               <Link role="menuitem" href={i.href} scroll={false} onClick={() => setOpen(false)} className="block px-3 py-2 text-sm text-ink hover:bg-surface-muted">{i.label}</Link>

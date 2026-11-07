@@ -119,12 +119,12 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
           <select name="vendedor" defaultValue={filters.vendedor} className="field mt-1.5"><option value="">Todos</option><option value="none">Sem vendedor</option>
             {(sellers ?? []).map(s => <option key={s.id} value={s.id}>{s.code ? `${String(s.code).padStart(3, '0')} · ` : ''}{s.name}</option>)}</select>
         </label>
-        <button className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><Search size={15} aria-hidden />Buscar</button>
-        {filtering && <Link href={href({ ...keep, q: '', vendedor: '', cliente: '' })} className="inline-flex h-10 items-center gap-1 rounded-[10px] border border-line px-3 text-sm text-ink-soft hover:bg-surface-muted"><X size={14} aria-hidden />Limpar</Link>}
+        <button className="inline-flex h-10 items-center gap-1.5 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><Search size={15} aria-hidden />Buscar</button>
+        {filtering && <Link href={href({ ...keep, q: '', vendedor: '', cliente: '' })} className="inline-flex h-10 items-center gap-1 rounded-none border border-line px-3 text-sm text-ink-soft hover:bg-surface-muted"><X size={14} aria-hidden />Limpar</Link>}
       </CpfSearchForm>
       {filters.cliente && <p className="-mt-2 mb-4 text-sm text-ink-soft">Cliente: <Link href={`/app/clientes/${filters.cliente}`} className="font-medium text-ink hover:text-brand">{chosenClient?.full_name ?? '—'}</Link></p>}
 
-      {late && <p className="mb-4 flex flex-wrap items-center gap-2 rounded-[10px] border border-line bg-surface-muted px-4 py-2 text-sm">
+      {late && <p className="mb-4 flex flex-wrap items-center gap-2 rounded-none border border-line bg-surface-muted px-4 py-2 text-sm">
         <span className="text-ink-soft">Só os parados além do prazo da etapa</span>
         <Link href={href({})} className="text-brand hover:underline">Ver todos</Link></p>}
       <nav aria-label="Etapas" className="mb-4 flex gap-1 overflow-x-auto border-b border-line">
@@ -147,7 +147,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
         </span>
       </div>
 
-      {listError && <p role="alert" className="mb-4 rounded-[10px] border border-[#FCA5A5] bg-[#FEF2F2] px-4 py-3 text-sm text-[#991B1B]">Não foi possível carregar a esteira agora. Tente de novo em instantes.</p>}
+      {listError && <p role="alert" className="mb-4 rounded-none border border-[#FCA5A5] bg-[#FEF2F2] px-4 py-3 text-sm text-[#991B1B]">Não foi possível carregar a esteira agora. Tente de novo em instantes.</p>}
 
       {kanban ? (
         <PipelineBoard
@@ -169,7 +169,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
           const alert = alertOf(c)
           return (
             <li key={c.id}>
-              <Link href={`/app/propostas/${c.proposal_id}`} className="block rounded-[12px] border border-line bg-surface p-3.5 active:bg-surface-muted">
+              <Link href={`/app/propostas/${c.proposal_id}`} className="block rounded-none border border-line bg-surface p-3.5 active:bg-surface-muted">
                 <span className="flex items-start justify-between gap-2">
                   <span className="min-w-0 font-medium text-ink">{c.full_name ?? 'Cliente'}</span>
                   <Badge tone={STATE_TONE[c.canonical_state] ?? 'neutral'} className="shrink-0">{stageName.get(c.current_stage_id) ?? c.canonical_state}</Badge>
@@ -185,7 +185,7 @@ export default async function PipelinePage({ searchParams }: { searchParams: Pro
             </li>
           )
         })}
-        {shown.length === 0 && <li className="rounded-[12px] border border-line bg-surface px-4 py-8 text-center text-sm text-muted">{empty}</li>}
+        {shown.length === 0 && <li className="rounded-none border border-line bg-surface px-4 py-8 text-center text-sm text-muted">{empty}</li>}
       </ul>
       <Card className="hidden overflow-hidden md:block">
         <div className="overflow-x-auto">

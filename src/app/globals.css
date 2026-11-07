@@ -3,29 +3,31 @@
 /*
  * Corban design tokens.
  * Semantic names are the contract for new components (bg-canvas, bg-surface, text-ink, text-muted, border-line, bg-brand...).
- * --brand is pluggable: each company's accent color is set on the app shell at runtime.
+ * Identity "Boleto ipê" (owner, 07/11/2026): black on white, thick black rules, no rounded corners or soft shadows,
+ * one type family (Archivo) varying in width. Actions are black; ipê yellow only marks the current place and the result.
  */
 :root {
-  --brand: #0e5e5a;
-  --brand-strong: #0a4744;
-  --brand-soft: #e8f0ef;
+  --brand: #111111;
+  --brand-strong: #000000;
+  --brand-soft: #f2c200;
+  --highlight: #f2c200;
 
-  /* Cool neutral grays (Visão geral redesign 07/11/2026, direction "Demonstrativo"): the warm cream read as a template. */
-  --canvas: #f4f5f7;
+  --canvas: #ffffff;
   --surface: #ffffff;
-  --surface-muted: #f8f9fa;
-  --line: #e2e5e9;
-  --line-strong: #cfd4da;
-  --ink: #15191e;
-  --ink-soft: #3a414a;
-  --muted: #646b75;
+  --surface-muted: #f4f4f4;
+  --line: #e2e2e2;
+  --line-strong: #b8b8b8;
+  --ink: #111111;
+  --ink-soft: #333333;
+  --muted: #666666;
 
   /* Money and pipeline states: differ in lightness as well as hue. */
   --expected: #5b6b7f;
   --received: #0e7a5f;
   --diverged: #b45309;
-  --reversed: #b42318;
+  --reversed: #c8102e;
   --paid-out: #1d4ed8;
+  --warn: #c2410c;
   --pending: #6d28d9;
 }
 
@@ -42,8 +44,31 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  /* One family: codes and numbers use Archivo with tabular figures instead of a monospace face. */
+  --font-mono: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+
+  /* No rounded corners anywhere; round dots (rounded-full) stay. */
+  --radius: 0;
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
+  --radius-4xl: 0;
+  /* No soft shadows: floating panels (menus, dialogs) get a hard black frame instead. */
+  --shadow: none;
+  --shadow-xs: none;
+  --shadow-sm: none;
+  --shadow-md: 0 0 0 2px var(--ink);
+  --shadow-lg: 0 0 0 2px var(--ink);
+  --shadow-xl: 0 0 0 2px var(--ink);
+  --shadow-2xl: 0 0 0 2px var(--ink);
+
+  --color-highlight: var(--highlight);
+  --color-warn: var(--warn);
 
   --color-brand: var(--brand);
   --color-brand-strong: var(--brand-strong);
@@ -74,7 +99,7 @@
   --color-slate-300: var(--ink-soft);
   --color-slate-400: var(--muted);
   --color-slate-500: #6b7075;
-  --color-slate-600: #b9b5aa;
+  --color-slate-600: #b8b8b8;
   --color-slate-700: var(--line-strong);
   --color-slate-800: var(--line);
   --color-slate-900: var(--surface);
@@ -87,17 +112,17 @@
   --color-emerald-500: var(--brand);
   --color-emerald-600: var(--brand-strong);
 
-  --color-amber-100: #92400e;
-  --color-amber-200: #92400e;
-  --color-amber-300: #92400e;
-  --color-amber-400: #b45309;
-  --color-amber-500: #b45309;
+  --color-amber-100: #9a3412;
+  --color-amber-200: #9a3412;
+  --color-amber-300: #9a3412;
+  --color-amber-400: #c2410c;
+  --color-amber-500: #c2410c;
 
-  --color-red-100: #991b1b;
-  --color-red-200: #991b1b;
-  --color-red-300: #991b1b;
-  --color-red-400: #b42318;
-  --color-red-500: #b42318;
+  --color-red-100: #9f0d24;
+  --color-red-200: #9f0d24;
+  --color-red-300: #9f0d24;
+  --color-red-400: #c8102e;
+  --color-red-500: #c8102e;
 
   --color-sky-200: #1e3a8a;
   --color-sky-300: #1e3a8a;
@@ -111,6 +136,15 @@ html {
 body {
   font-family: var(--font-sans);
   font-feature-settings: "tnum" 0;
+}
+
+/* Archivo width axis: titles go wide, dense labels go narrow. */
+.wide {
+  font-variation-settings: "wdth" 125;
+  letter-spacing: -0.02em;
+}
+.narrow {
+  font-variation-settings: "wdth" 82;
 }
 
 .num {
@@ -141,10 +175,10 @@ body {
 
 @layer components {
   .field {
-    @apply w-full rounded-lg border border-line-strong bg-surface px-3 py-2.5 text-sm text-ink outline-none placeholder:text-muted focus:border-brand focus:ring-2 focus:ring-brand/20;
+    @apply w-full border-2 border-ink bg-surface px-3 py-2 text-sm text-ink outline-none placeholder:text-muted focus:ring-2 focus:ring-highlight;
   }
   /* Locked client file: fields stay fully readable; only the frame shows they cannot be typed in. */
   .field:disabled {
-    @apply cursor-default border-line bg-surface-muted/40 text-ink opacity-100;
+    @apply cursor-default border border-line-strong bg-surface-muted/40 text-ink opacity-100;
   }
 }

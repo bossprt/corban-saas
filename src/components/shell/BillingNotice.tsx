@@ -10,7 +10,7 @@ export function BillingNotice({ billing }: { billing: BillingStatus }) {
   const until = dayLabel(last.toISOString().slice(0, 10))
   const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' })
   return (
-    <p role="alert" className={`mb-5 flex flex-wrap items-center justify-between gap-2 rounded-[10px] border px-4 py-3 text-sm ${billing.overdue ? 'border-[#F5C2C0] bg-[#FDE2E1] text-[#991B1B]' : 'border-[#FDE68A] bg-[#FEF3C7] text-[#92400E]'}`}>
+    <p role="alert" className={`mb-5 flex flex-wrap items-center justify-between gap-2 rounded-none border px-4 py-3 text-sm ${billing.overdue ? 'border-[#F5C2C0] bg-[#FDE2E1] text-[#991B1B]' : 'border-[#FDE68A] bg-[#FEF3C7] text-[#92400E]'}`}>
       <span>{billing.overdue
         ? `Mensalidade de ${monthLabel(billing.period)} vencida. Pague até ${until} para não bloquear o acesso da empresa.`
         : `A mensalidade de ${monthLabel(billing.period)} vence ${billing.due_on === today ? 'hoje' : `em ${billing.due_on ? dayLabel(billing.due_on) : 'breve'}`}.`}</span>

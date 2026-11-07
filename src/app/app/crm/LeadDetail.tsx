@@ -19,8 +19,8 @@ import { addLeadNote, assignLeads, claimLead, createLeadTask, finishLeadTask, lo
 import { addDaysISO, todaySP } from '@/lib/dates'
 
 const label = 'text-[13px] font-medium text-ink-soft'
-const primary = 'inline-flex h-10 items-center justify-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong'
-const secondary = 'inline-flex h-9 items-center justify-center rounded-[10px] border border-line bg-surface px-3 text-sm font-medium text-ink hover:bg-surface-muted'
+const primary = 'inline-flex h-10 items-center justify-center gap-1.5 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong'
+const secondary = 'inline-flex h-9 items-center justify-center rounded-none border border-line bg-surface px-3 text-sm font-medium text-ink hover:bg-surface-muted'
 const TZ = 'America/Sao_Paulo'
 const dateTime = (iso: string) => new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short', timeZone: TZ })
 function isPast(iso: string) { return new Date(iso).getTime() < Date.now() }
@@ -125,7 +125,7 @@ export async function LeadDetail({ id, tab, sp, href, keep, close }: {
         <div className="flex flex-wrap items-center gap-2">
           {wa && <a href={wa} target="_blank" rel="noopener noreferrer" className={`${secondary} gap-1.5`}><MessageCircle size={15} aria-hidden />WhatsApp</a>}
           {proposal && <Link href={`/app/propostas/${proposal.id}`} className={`${secondary} gap-1.5`}><FileText size={15} aria-hidden />Proposta na esteira</Link>}
-          {close && <Link href={close} aria-label="Fechar" className="inline-flex size-9 items-center justify-center rounded-[10px] border border-line bg-surface text-ink-soft hover:bg-surface-muted"><X size={16} aria-hidden /></Link>}
+          {close && <Link href={close} aria-label="Fechar" className="inline-flex size-9 items-center justify-center rounded-none border border-line bg-surface text-ink-soft hover:bg-surface-muted"><X size={16} aria-hidden /></Link>}
         </div>
       </header>
 
@@ -138,9 +138,9 @@ export async function LeadDetail({ id, tab, sp, href, keep, close }: {
         ))}
       </nav>
 
-      {dndError && <p role="alert" className="mb-4 rounded-[10px] bg-[#FDF3DC] px-4 py-2 text-sm text-[#92400E]">Não foi possível conferir a lista &quot;Não perturbe&quot; agora.</p>}
+      {dndError && <p role="alert" className="mb-4 rounded-none bg-[#FDF3DC] px-4 py-2 text-sm text-[#92400E]">Não foi possível conferir a lista &quot;Não perturbe&quot; agora.</p>}
       {dndPhones.size > 0 && (
-        <div role="alert" className="mb-4 flex items-center gap-2 rounded-[10px] border border-[#F5C2C0] bg-[#FDE2E1] px-4 py-3 text-sm text-[#991B1B]">
+        <div role="alert" className="mb-4 flex items-center gap-2 rounded-none border border-[#F5C2C0] bg-[#FDE2E1] px-4 py-3 text-sm text-[#991B1B]">
           <PhoneOff size={16} aria-hidden />
           {fromLemit
             ? <>Telefone no &quot;Não Perturbe SP&quot; (lista do Lemit de {dateTime(fromLemit.created_at).slice(0, 10)}). Confirme antes de ligar ou mandar mensagem.</>
@@ -148,11 +148,11 @@ export async function LeadDetail({ id, tab, sp, href, keep, close }: {
         </div>
       )}
       {dndPhones.size === 0 && dndSoon?.valid_from && (
-        <p className="mb-4 rounded-[10px] bg-[#FDF3DC] px-4 py-2 text-sm text-[#92400E]">Este telefone entra no &quot;Não Perturbe SP&quot; em {dndSoon.valid_from.split('-').reverse().join('/')}.</p>
+        <p className="mb-4 rounded-none bg-[#FDF3DC] px-4 py-2 text-sm text-[#92400E]">Este telefone entra no &quot;Não Perturbe SP&quot; em {dndSoon.valid_from.split('-').reverse().join('/')}.</p>
       )}
 
       {lead.owner_user_id === null && !closed && (
-        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-[10px] border border-[#F3D9A4] bg-[#FDF3DC] px-4 py-3 text-sm text-[#92400E]">
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-none border border-[#F3D9A4] bg-[#FDF3DC] px-4 py-3 text-sm text-[#92400E]">
           Este lead ainda não tem vendedor.
           {can(access, 'leads.edit') && <form action={claimLead}><input type="hidden" name="lead_id" value={lead.id} />{back()}<SubmitButton pendingText="Assumindo..." className={secondary}>Assumir este lead</SubmitButton></form>}
         </div>

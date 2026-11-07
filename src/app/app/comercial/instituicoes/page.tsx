@@ -9,7 +9,7 @@ import { createBank, renameCatalogItem, setActive } from '../actions'
 import { saveBankIrWithheld, saveOriginIrWithheld } from './actions'
 
 const lbl = 'text-[13px] font-medium text-ink-soft'
-const ghost = 'h-9 rounded-[10px] border border-line-strong bg-surface px-3 text-sm text-ink hover:bg-surface-muted'
+const ghost = 'h-9 rounded-none border border-line-strong bg-surface px-3 text-sm text-ink hover:bg-surface-muted'
 
 // Banks the company works with. Whether the company pays tax on a bank's production is read from the "Imposto" column
 // of its published tables (ADR-0037), never typed here; the IR the bank withholds at source is typed here.
@@ -54,7 +54,7 @@ export default async function BanksPage() {
         <form action={createBank} className="flex flex-wrap items-end gap-2 p-5">
           <input type="hidden" name="return_to" value="/app/comercial/instituicoes" />
           <label className={`${lbl} min-w-64 flex-1`}>Novo banco<input required name="name" maxLength={120} placeholder="Ex.: Daycoval" className="field mt-1.5" /></label>
-          <SubmitButton className="h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Cadastrando...">Cadastrar banco</SubmitButton>
+          <SubmitButton className="h-10 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Cadastrando...">Cadastrar banco</SubmitButton>
         </form>
       </Card>}
 

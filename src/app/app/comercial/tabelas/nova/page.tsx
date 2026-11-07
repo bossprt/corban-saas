@@ -28,7 +28,7 @@ export default async function NewTablePage() {
           <label className={lbl}>Origem da produção<select required name="production_origin" defaultValue="own" className="field mt-1.5"><option value="own">Produção própria</option><option value="third_party">Por promotora parceira</option></select></label>
           <label className={lbl}>Promotora parceira <span className="font-normal text-muted">se for o caso</span><select name="provider_id" defaultValue="" className="field mt-1.5"><option value="">—</option>{(providers.data ?? []).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
           <label className={`${lbl} md:col-span-2`}>Nome da tabela<input required name="name" maxLength={120} className="field mt-1.5" /></label>
-          <div className="md:col-span-2 flex justify-end"><SubmitButton className="h-10 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong">Criar tabela</SubmitButton></div>
+          <div className="md:col-span-2 flex justify-end"><SubmitButton className="h-10 rounded-none bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong">Criar tabela</SubmitButton></div>
         </form>
       </Card>
     </section>

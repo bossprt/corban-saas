@@ -69,7 +69,7 @@ export default async function PortalHomePage() {
       </div>
       <div className="mb-4 flex flex-wrap gap-2">
         <ButtonLink href="/app/portal/nova" className="w-full sm:w-auto"><FilePlus2 size={16} aria-hidden />Enviar nova proposta</ButtonLink>
-        <Link href="/app/repasse" className="inline-flex h-10 w-full items-center justify-center rounded-[10px] border border-line-strong bg-surface px-4 text-sm text-ink hover:bg-surface-muted sm:w-auto">Ver meu extrato</Link>
+        <Link href="/app/repasse" className="inline-flex h-10 w-full items-center justify-center rounded-none border border-line-strong bg-surface px-4 text-sm text-ink hover:bg-surface-muted sm:w-auto">Ver meu extrato</Link>
       </div>
 
       <Card className="mb-4 overflow-hidden">
@@ -127,7 +127,7 @@ export default async function PortalHomePage() {
 
 function Stat({ label, value, hint, tone }: { label: string; value: string; hint?: string; tone?: string }) {
   return (
-    <div className="rounded-[14px] border border-line bg-surface px-4 py-3">
+    <div className="rounded-none border border-line bg-surface px-4 py-3">
       <div className="text-[12px] text-muted">{label}</div>
       <div className={`num mt-1 whitespace-nowrap text-lg font-semibold sm:text-xl ${tone ?? 'text-ink'}`}>{value}</div>
       {hint && <div className="mt-0.5 text-[11px] text-muted">{hint}</div>}

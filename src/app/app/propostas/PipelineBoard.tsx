@@ -50,7 +50,7 @@ function Column({ column, cards, canEdit }: { column: BoardColumn; cards: BoardC
   const { setNodeRef, isOver } = useDroppable({ id: column.id, disabled: !canEdit })
   return (
     <section ref={setNodeRef} aria-label={column.name}
-      className={`flex min-w-[10.5rem] flex-1 basis-0 flex-col rounded-[14px] border bg-surface-muted ${isOver ? 'border-brand ring-2 ring-brand/30' : 'border-line'}`}>
+      className={`flex min-w-[10.5rem] flex-1 basis-0 flex-col rounded-none border bg-surface-muted ${isOver ? 'border-brand ring-2 ring-brand/30' : 'border-line'}`}>
       <header className="flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-ink">{column.name}<span className="num text-xs font-normal text-muted">{cards.length}</span></header>
       <div className="flex min-h-24 flex-col gap-2 px-2 pb-2">
         {cards.map(c => <Card key={c.caseId} card={c} canEdit={canEdit} />)}
@@ -66,7 +66,7 @@ function Card({ card, canEdit }: { card: BoardCard; canEdit: boolean }) {
   const style = transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners} aria-roledescription="cartão arrastável"
-      className={`touch-manipulation rounded-[10px] border border-line bg-surface text-[13px] ${isDragging ? 'z-10 cursor-grabbing shadow-lg' : canEdit ? 'cursor-grab hover:border-brand/50' : 'hover:border-brand/50'}`}>
+      className={`touch-manipulation rounded-none border border-line bg-surface text-[13px] ${isDragging ? 'z-10 cursor-grabbing shadow-lg' : canEdit ? 'cursor-grab hover:border-brand/50' : 'hover:border-brand/50'}`}>
       <Link href={`/app/propostas/${card.proposalId}`} draggable={false} onClick={e => { if (Date.now() - lastDrop < 400) e.preventDefault() }} className="block p-3">
         <span className="block font-medium text-ink">{card.name}</span>
         <span className="mt-0.5 block text-xs text-muted">{card.sub}</span>

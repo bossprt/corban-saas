@@ -15,6 +15,16 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Identidade visual "Boleto ipê" no sistema inteiro (07/11/2026)
+- Alterado: o dono achou que o sistema ainda parecia feito por IA (verde-petróleo, menu com ícones, caixas brancas arredondadas, fonte e textos). Das 3 identidades mostradas em maquete (Cheque, Razão açaí, Boleto ipê), ele escolheu a 3.
+- Alterado: preto sobre branco. Os botões principais ficam pretos e o amarelo-ipê (#f2c200) só marca a página atual e o "Fica na empresa". Os alertas usam vermelho #c8102e e laranja #c2410c. Não há mais o verde-petróleo.
+- Alterado: uma família de fonte só, Archivo variável, com o eixo de largura: títulos largos (`.wide`) e rótulos estreitos (`.narrow`). A IBM Plex saiu.
+- Alterado: nenhum canto arredondado e nenhuma sombra suave, configurado nos tokens do Tailwind (`--radius-*` 0; sombras grandes viram moldura preta). Os valores arbitrários `rounded-[Npx]` foram trocados por `rounded-none`.
+- Alterado: o menu lateral e o menu do celular ficam só com texto, sem ícone por item, e a página atual aparece com fundo amarelo. A barra lateral tem régua preta grossa. "Corban" aparece escrito em vez do quadrado com a letra.
+- Alterado: os componentes base viram seções. Card tem régua preta no topo e não tem moldura. Os botões têm borda preta de 2 px. O título da página é largo e pesado. O campo de formulário tem borda preta.
+- Alterado: na Visão geral, cada pendência mostra o número grande à esquerda e um botão de ação. "Fica na empresa" aparece em amarelo, as barras do gráfico são pretas e o subtítulo explicativo saiu.
+- Sem migration e sem mudança em dinheiro, permissão ou dados. O modo escuro não é usado por nenhuma tela e não foi revisado.
+
 ### Visão geral redesenhada, direção "Demonstrativo" (07/11/2026)
 - Alterado: a Visão geral do dono deixa de ser 4 caixas iguais. Pendências no topo como frases com valor e ação (Cobrar, Pagar, Conferir); "Resultado do período" como conta que fecha (produção paga, comissão prevista, impostos e comissões de supervisão/gerência, repasse, fica na empresa) com a comparação do período anterior; "Esteira agora" com quantidade, valor e atrasados por etapa; recebimento dos bancos com quanto falta; "Parados há mais tempo" (os 6 contratos além do prazo mais antigos); produção por dia; vendedores e bancos em tabela. Empresa sem dados vê o passo a passo (importar planilha, cadastrar vendedor).
 - Alterado: paleta clara do sistema em cinzas frios (fundo #f4f5f7, linhas #e2e5e9, texto #15191e) no lugar do creme; a cor de cada empresa continua igual.

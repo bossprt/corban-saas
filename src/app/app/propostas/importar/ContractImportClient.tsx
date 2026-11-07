@@ -89,7 +89,7 @@ export function ContractImportClient({ layouts, autoBevicred = false }: { layout
           </div>
         )}
         {!pdf && !api && model && (
-          <a href={`/api/propostas/importar/modelo?layout=${layout}`} className="inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-line px-4 font-medium text-ink-soft hover:bg-surface-muted">
+          <a href={`/api/propostas/importar/modelo?layout=${layout}`} className="inline-flex h-10 items-center gap-1.5 rounded-none border border-line px-4 font-medium text-ink-soft hover:bg-surface-muted">
             <Download size={16} aria-hidden />Baixar modelo
           </a>
         )}
@@ -98,10 +98,10 @@ export function ContractImportClient({ layouts, autoBevicred = false }: { layout
         </Button>
       </div>
 
-      {result?.notices?.map(n => <p key={n} role="alert" className="rounded-[10px] border border-line bg-surface-muted px-4 py-2 text-ink-soft">{n}</p>)}
-      {result?.error && <p role="alert" className="rounded-[10px] border border-diverged/40 bg-diverged/5 px-4 py-3 font-medium text-diverged">{result.error}</p>}
+      {result?.notices?.map(n => <p key={n} role="alert" className="rounded-none border border-line bg-surface-muted px-4 py-2 text-ink-soft">{n}</p>)}
+      {result?.error && <p role="alert" className="rounded-none border border-diverged/40 bg-diverged/5 px-4 py-3 font-medium text-diverged">{result.error}</p>}
       {result && result.fileIssues.length > 0 && (
-        <div role="alert" className="rounded-[10px] border border-diverged/40 bg-diverged/5 px-4 py-3 text-diverged">
+        <div role="alert" className="rounded-none border border-diverged/40 bg-diverged/5 px-4 py-3 text-diverged">
           <p className="font-semibold">A planilha não pode ser lida assim:</p>
           <ul className="mt-1 list-disc pl-5">{result.fileIssues.map(i => <li key={i}>{i}</li>)}</ul>
         </div>
@@ -111,7 +111,7 @@ export function ContractImportClient({ layouts, autoBevicred = false }: { layout
       {result?.tooMany && <p className="font-medium text-diverged">A planilha passa de 500 linhas: só as 500 primeiras foram lidas. Divida o arquivo.</p>}
 
       {done && (
-        <p role="status" className="rounded-[10px] border border-received/40 bg-received/5 px-4 py-3 font-medium text-ink">
+        <p role="status" className="rounded-none border border-received/40 bg-received/5 px-4 py-3 font-medium text-ink">
           Importação concluída: {done.created} cadastrado(s), {done.existed} já existia(m){done.updated ? ` (${done.updated} com a etapa atualizada pelo relatório)` : ''}, {done.failed} com erro.{' '}
           <Link href="/app/propostas" className="text-brand hover:text-brand-strong">Ver na esteira</Link>
         </p>
@@ -130,7 +130,7 @@ export function ContractImportClient({ layouts, autoBevicred = false }: { layout
             </div>
           )}
           {!done && errors > 0 && <p className="text-diverged">{api ? 'As linhas com erro ficam de fora; as outras são importadas.' : 'Corrija as linhas com erro na planilha e confira de novo. Nada foi gravado.'}</p>}
-          <div className="overflow-x-auto rounded-[10px] border border-line">
+          <div className="overflow-x-auto rounded-none border border-line">
             <table className="w-full min-w-[900px] text-left text-[13px]">
               <thead className="bg-surface-muted text-xs text-muted">
                 <tr>{['Linha', 'Cliente', 'CPF', 'Tabela', 'Prazo', 'Valor', 'ADE', 'Etapa', 'Vendedor', 'Situação'].map(h => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}</tr>

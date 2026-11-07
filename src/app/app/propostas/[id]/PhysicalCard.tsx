@@ -26,14 +26,14 @@ export async function PhysicalCard({ proposalId, p, canEdit }: { proposalId: str
         {STEPS.map(s => {
           const at = p[s.at], by = p[s.by]
           return (
-            <li key={s.key} className={`rounded-[12px] border px-4 py-3 text-sm ${at ? 'border-[#86EFAC] bg-[#F0FDF4]' : 'border-line'}`}>
+            <li key={s.key} className={`rounded-none border px-4 py-3 text-sm ${at ? 'border-[#86EFAC] bg-[#F0FDF4]' : 'border-line'}`}>
               <div className="flex items-center gap-1.5 font-medium text-ink">{at && <Check size={15} aria-hidden className="text-[#15803D]" />}{s.label}</div>
               {at ? <p className="mt-1 text-xs text-muted">{formatDateTimeSP(at)}{by ? ` · ${who.get(by) ?? 'usuário'}` : ''}</p>
                 : canEdit && next?.key === s.key ? (
                   <form action={setContractPhysical} className="mt-2 flex flex-wrap items-end gap-2">
                     <input type="hidden" name="proposal_id" value={proposalId} /><input type="hidden" name="step" value={s.key} />
                     <input type="datetime-local" name="at" required defaultValue={nowLocal()} aria-label={`${s.label} em`} className="field h-9 w-auto" />
-                    <SubmitButton className="h-9 rounded-[10px] bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="...">Registrar</SubmitButton>
+                    <SubmitButton className="h-9 rounded-none bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="...">Registrar</SubmitButton>
                   </form>
                 ) : <p className="mt-1 text-xs text-muted">Pendente</p>}
             </li>

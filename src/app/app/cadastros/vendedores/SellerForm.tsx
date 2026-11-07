@@ -72,8 +72,8 @@ export function SellerForm({ action, seller, prefill, signupId, mode = 'admin', 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-muted">{locked ? 'Para alterar, clique em Editar cadastro.' : 'Editando: altere o que precisar e clique em Salvar alterações.'}</p>
           {locked
-            ? <button type="button" onClick={() => setEditing(true)} className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line-strong bg-surface px-3 text-sm font-medium text-ink hover:bg-surface-muted"><Pencil size={15} aria-hidden />Editar cadastro</button>
-            : <button type="button" onClick={() => { setEditing(false); setRound(r => r + 1) }} className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line bg-surface px-3 text-sm text-ink-soft hover:bg-surface-muted"><X size={15} aria-hidden />Cancelar</button>}
+            ? <button type="button" onClick={() => setEditing(true)} className="inline-flex h-9 items-center gap-1.5 rounded-none border border-line-strong bg-surface px-3 text-sm font-medium text-ink hover:bg-surface-muted"><Pencil size={15} aria-hidden />Editar cadastro</button>
+            : <button type="button" onClick={() => { setEditing(false); setRound(r => r + 1) }} className="inline-flex h-9 items-center gap-1.5 rounded-none border border-line bg-surface px-3 text-sm text-ink-soft hover:bg-surface-muted"><X size={15} aria-hidden />Cancelar</button>}
         </div>
       )}
       <fieldset key={round} disabled={locked} className="grid gap-6">
@@ -122,10 +122,10 @@ export function SellerForm({ action, seller, prefill, signupId, mode = 'admin', 
       </fieldset>
       {editing && (
         <div className="grid gap-3">
-          {error && <p ref={errorRef} role="alert" className="rounded-[10px] border border-[#FCA5A5] bg-[#FEF2F2] px-3 py-2 text-sm text-[#991B1B]">{admin ? 'Não foi salvo' : 'Não foi enviado'}: {error} Seus dados continuam na tela; corrija e clique de novo.</p>}
+          {error && <p ref={errorRef} role="alert" className="rounded-none border border-[#FCA5A5] bg-[#FEF2F2] px-3 py-2 text-sm text-[#991B1B]">{admin ? 'Não foi salvo' : 'Não foi enviado'}: {error} Seus dados continuam na tela; corrija e clique de novo.</p>}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-muted">{!admin ? 'Obrigatórios: nome, CPF/CNPJ, categoria, celular e e-mail. Seu cadastro será conferido pela empresa antes de ser liberado.' : internal ? 'Obrigatórios: nome, categoria e grupo.' : 'Obrigatórios: nome, CPF/CNPJ, categoria, grupo, celular e e-mail.'}{admin && ' O resto pode ser completado depois.'}</p>
-            <button type="submit" disabled={pending} aria-busy={pending} className="h-10 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-60">{pending ? (admin ? 'Salvando...' : 'Enviando...') : !admin ? 'Enviar cadastro' : s ? 'Salvar alterações' : signupId ? 'Aprovar e cadastrar' : 'Cadastrar vendedor'}</button>
+            <button type="submit" disabled={pending} aria-busy={pending} className="h-10 rounded-none bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-60">{pending ? (admin ? 'Salvando...' : 'Enviando...') : !admin ? 'Enviar cadastro' : s ? 'Salvar alterações' : signupId ? 'Aprovar e cadastrar' : 'Cadastrar vendedor'}</button>
           </div>
         </div>
       )}

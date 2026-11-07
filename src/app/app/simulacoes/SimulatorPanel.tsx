@@ -163,7 +163,7 @@ export async function SimulatorPanel({ sp, keep = {}, client, back }: {
           <label className={`${label} lg:col-span-2`}>Saldo devedor (R$) <span className="font-normal text-muted">refin e portabilidade</span>
             <input name="saldo" defaultValue={sp.saldo ?? ''} inputMode="decimal" placeholder="0,00" className="field mt-1.5" /></label>
           <div className="flex items-end sm:col-span-2 lg:col-span-6">
-            <button className="inline-flex h-10 items-center justify-center gap-1.5 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong"><Calculator size={15} aria-hidden />Simular</button>
+            <button className="inline-flex h-10 items-center justify-center gap-1.5 rounded-none bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong"><Calculator size={15} aria-hidden />Simular</button>
           </div>
         </form>
       </Card>
@@ -197,7 +197,7 @@ export async function SimulatorPanel({ sp, keep = {}, client, back }: {
                             <form action={saveOffer}>
                               {[['customer_id', clienteId], ['table_version_id', o.table_version_id], ['condition_id', o.condition_id], ['agreement_id', agreement!.id], ['contract_type_id', type!.id],
                                 ['term', String(term)], ['mode', mode], ['value', String(value)], ['outstanding', balance ?? ''], ['back', back ?? '']].map(([n, v]) => <input key={n} type="hidden" name={n} value={v} />)}
-                              <SubmitButton className="inline-flex h-8 items-center rounded-[10px] bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-strong" pendingText="Gravando...">Usar esta</SubmitButton>
+                              <SubmitButton className="inline-flex h-8 items-center rounded-none bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-strong" pendingText="Gravando...">Usar esta</SubmitButton>
                             </form>
                           ) : <span className="text-xs text-muted">{negative ? 'saldo maior que o valor' : 'escolha o cliente'}</span>}
                         </td>

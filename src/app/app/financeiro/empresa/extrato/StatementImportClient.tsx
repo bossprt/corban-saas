@@ -69,9 +69,9 @@ export function StatementImportClient({ banks }: { banks: Bank[] }) {
     <div className="grid gap-3 sm:grid-cols-3">
       <label className={label}>Conta<select value={bank} onChange={e => { setBank(e.target.value); setCheck(null) }} aria-label="Conta bancária do extrato" className="field mt-1.5">{banks.map(b => <option key={b.id} value={b.id}>{b.label}{b.account_number ? ` · c/c ${b.account_number}` : ''}</option>)}</select></label>
       <div className={label}>Extrato (arquivo OFX)<div className="mt-1.5"><FileDrop compact accept=".ofx,.OFX" ariaLabel="Extrato OFX" onChange={fs => { setFile(fs[0] ?? null); setCheck(null) }} /></div></div>
-      <div className="flex items-end justify-end"><button type="button" onClick={start} disabled={busy || !file || !!check} className="h-10 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50">{busy && !check ? 'Importando...' : 'Importar extrato'}</button></div>
+      <div className="flex items-end justify-end"><button type="button" onClick={start} disabled={busy || !file || !!check} className="h-10 rounded-none bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50">{busy && !check ? 'Importando...' : 'Importar extrato'}</button></div>
       {check && (
-        <div role="alert" className="rounded-[10px] border border-[#FAC775] bg-[#FAEEDA] px-4 py-3 text-sm text-[#854F0B] sm:col-span-3">
+        <div role="alert" className="rounded-none border border-[#FAC775] bg-[#FAEEDA] px-4 py-3 text-sm text-[#854F0B] sm:col-span-3">
           <p className="font-semibold">Confira antes de importar</p>
           {otherAccount && <p className="mt-1">O arquivo é da conta {check.result.account}, mas você escolheu {chosen?.label} (c/c {chosen?.account_number}).</p>}
           {check.result.skipped.length > 0 && (
@@ -84,13 +84,13 @@ export function StatementImportClient({ banks }: { banks: Bank[] }) {
             </>
           )}
           <div className="mt-2 flex flex-wrap gap-2">
-            <button type="button" onClick={() => setCheck(null)} className="h-9 rounded-[10px] border border-[#BA7517] bg-surface px-3 text-sm text-ink">Trocar arquivo ou conta</button>
-            <button type="button" onClick={confirm} disabled={busy} className="h-9 rounded-[10px] bg-[#854F0B] px-3 text-sm font-semibold text-white disabled:opacity-60">{busy ? 'Importando...' : `Importar mesmo assim (${check.result.lines.length})`}</button>
+            <button type="button" onClick={() => setCheck(null)} className="h-9 rounded-none border border-[#BA7517] bg-surface px-3 text-sm text-ink">Trocar arquivo ou conta</button>
+            <button type="button" onClick={confirm} disabled={busy} className="h-9 rounded-none bg-[#854F0B] px-3 text-sm font-semibold text-white disabled:opacity-60">{busy ? 'Importando...' : `Importar mesmo assim (${check.result.lines.length})`}</button>
           </div>
         </div>
       )}
       {msg && <p role="status" className="text-sm text-[#15803D] sm:col-span-3">{msg}</p>}
-      {error && <div role="alert" className="rounded-[10px] border border-[#F5C2C0] bg-[#FDE2E1] px-4 py-3 text-sm text-[#991B1B] sm:col-span-3">{error}</div>}
+      {error && <div role="alert" className="rounded-none border border-[#F5C2C0] bg-[#FDE2E1] px-4 py-3 text-sm text-[#991B1B] sm:col-span-3">{error}</div>}
     </div>
   )
 }

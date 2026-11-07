@@ -11,8 +11,8 @@ import { SubmitButton } from '@/components/SubmitButton'
 import { SCOPE_LABEL, SCOPES } from '@/lib/access'
 import { formatDateSP, formatDateTimeSP } from '@/lib/dates'
 
-const btn = 'inline-flex h-8 items-center rounded-[10px] border border-line bg-surface px-2.5 text-xs text-ink hover:bg-surface-muted'
-const selectSm = 'rounded-[8px] border border-line-strong bg-surface px-2 py-1 text-xs text-ink outline-none focus:border-brand'
+const btn = 'inline-flex h-8 items-center rounded-none border border-line bg-surface px-2.5 text-xs text-ink hover:bg-surface-muted'
+const selectSm = 'rounded-none border border-line-strong bg-surface px-2 py-1 text-xs text-ink outline-none focus:border-brand'
 const ROLE_ORDER=['admin','manager','supervisor','agent']
 
 export default async function TeamPage({ searchParams }: { searchParams: Promise<{ erro?: string; ok?: string }> }) {
@@ -44,8 +44,8 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
 
   return <section>
     <PageHeader title="Equipe" description={<>{organization.name}: quem acessa esta organização e com qual papel (<Link href="/app/configuracao/papeis" className="text-brand hover:underline">ver papéis e permissões</Link>). Desativar um acesso bloqueia a pessoa imediatamente; o histórico é preservado.</>} />
-    {isTeamErrorCode(sp.erro) && <p role="alert" className="mb-4 rounded-[10px] border border-[#F3D9A4] bg-[#FDF3DC] px-4 py-3 text-sm text-[#92400E]">{TEAM_ERROR_MESSAGES[sp.erro]}</p>}
-    {isTeamOkCode(sp.ok) && <p role="status" className="mb-4 rounded-[10px] border border-[#BBE5C8] bg-[#E3F5E9] px-4 py-3 text-sm text-[#15803D]">{TEAM_OK_MESSAGES[sp.ok]}</p>}
+    {isTeamErrorCode(sp.erro) && <p role="alert" className="mb-4 rounded-none border border-[#F3D9A4] bg-[#FDF3DC] px-4 py-3 text-sm text-[#92400E]">{TEAM_ERROR_MESSAGES[sp.erro]}</p>}
+    {isTeamOkCode(sp.ok) && <p role="status" className="mb-4 rounded-none border border-[#BBE5C8] bg-[#E3F5E9] px-4 py-3 text-sm text-[#15803D]">{TEAM_OK_MESSAGES[sp.ok]}</p>}
 
     <Card className="mt-2 p-4">
       <h2 className="mb-3 text-base font-semibold text-ink">Criar acesso</h2>
@@ -54,7 +54,7 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
         <label className="text-xs text-muted">Perfil<select name="role" defaultValue="agent" className="field mt-1 block">{assignable.map(r => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}</select></label>
         <PasswordPair idPrefix="novo" />
         <label className="flex h-10 items-center gap-1.5 text-xs text-muted"><input type="checkbox" name="must_change" className="accent-[var(--brand)]" />Pedir nova senha no primeiro acesso</label>
-        <SubmitButton pendingText="Criando..." className="inline-flex h-10 items-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Criar acesso</SubmitButton>
+        <SubmitButton pendingText="Criando..." className="inline-flex h-10 items-center rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Criar acesso</SubmitButton>
         <p className="w-full text-xs text-muted">A pessoa entra já com este e-mail e esta senha, sem esperar e-mail. Passe a senha para ela pessoalmente ou por um canal seu. O acesso vale só para esta empresa.</p>
       </form>
     </Card>

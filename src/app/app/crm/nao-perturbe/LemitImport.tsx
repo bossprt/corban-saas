@@ -88,7 +88,7 @@ export function LemitImport() {
           <input type="file" accept=".zip,.csv,.txt" disabled={busy} onChange={e => { setFile(e.target.files?.[0] ?? null); setDone(null); setError(null) }} className="field mt-1.5" />
         </label>
         <label className={label}>DDDs<input value={ddds} onChange={e => setDdds(e.target.value)} disabled={busy} placeholder="68" className="field mt-1.5 w-32" /></label>
-        <button type="button" onClick={run} disabled={busy || !file} className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50">
+        <button type="button" onClick={run} disabled={busy || !file} className="inline-flex h-10 items-center gap-2 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50">
           <Upload size={16} aria-hidden />{busy ? 'Importando...' : 'Importar lista do Lemit'}
         </button>
       </div>
@@ -98,9 +98,9 @@ export function LemitImport() {
           <div className="h-2.5 overflow-hidden rounded-full bg-[#F3F1EC]"><div className="h-2.5 rounded-full bg-brand transition-all" style={{ width: `${progress.pct}%` }} /></div>
         </div>
       )}
-      {error && <p role="alert" className="rounded-[10px] border border-[#F5C2C0] bg-[#FDE2E1] px-4 py-2.5 text-sm text-[#991B1B]">{error}</p>}
+      {error && <p role="alert" className="rounded-none border border-[#F5C2C0] bg-[#FDE2E1] px-4 py-2.5 text-sm text-[#991B1B]">{error}</p>}
       {done && (
-        <p role="status" className="rounded-[10px] border border-[#BBE5C8] bg-[#E3F5E9] px-4 py-2.5 text-sm text-[#15803D]">
+        <p role="status" className="rounded-none border border-[#BBE5C8] bg-[#E3F5E9] px-4 py-2.5 text-sm text-[#15803D]">
           Lista do Lemit atualizada: {n(done.total)} telefones. {n(done.validNow)} já valem hoje; os demais a partir da data de validade de cada um.{done.removed ? ` ${n(done.removed)} da lista anterior saíram.` : ''}
         </p>
       )}

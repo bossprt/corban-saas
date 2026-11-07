@@ -69,7 +69,7 @@ export function LegacyImportClient() {
         </div>
       </div>
       <div className="flex justify-end">
-        <button type="button" onClick={readColumns} disabled={busy || !file} className="h-10 rounded-[10px] border border-line bg-surface px-4 text-sm font-medium hover:bg-surface-muted disabled:opacity-50">Ler colunas do arquivo</button>
+        <button type="button" onClick={readColumns} disabled={busy || !file} className="h-10 rounded-none border border-line bg-surface px-4 text-sm font-medium hover:bg-surface-muted disabled:opacity-50">Ler colunas do arquivo</button>
       </div>
 
       {sheet && (
@@ -86,13 +86,13 @@ export function LegacyImportClient() {
             ))}
           </div>
           <div className="flex justify-end">
-            <button type="button" onClick={send} disabled={busy || !cols.cpf} className="h-10 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50">{busy ? 'Enviando...' : 'Enviar para conferência'}</button>
+            <button type="button" onClick={send} disabled={busy || !cols.cpf} className="h-10 rounded-none bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50">{busy ? 'Enviando...' : 'Enviar para conferência'}</button>
           </div>
         </div>
       )}
 
       {progress && <p role="status" className="text-sm text-ink-soft">{progress}</p>}
-      {error && <div role="alert" className="rounded-[10px] border border-[#F5C2C0] bg-[#FDE2E1] px-4 py-3 text-sm text-[#991B1B]">{error}</div>}
+      {error && <div role="alert" className="rounded-none border border-[#F5C2C0] bg-[#FDE2E1] px-4 py-3 text-sm text-[#991B1B]">{error}</div>}
     </div>
   )
 }

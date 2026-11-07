@@ -37,7 +37,7 @@ export default async function BevicredPage() {
                   </span>
                   <form action={testBevicred}>
                     <input type="hidden" name="credential_id" value={c.id} />
-                    <SubmitButton pendingText="Testando..." className="h-9 rounded-[10px] border border-line px-3 font-medium text-ink-soft hover:bg-surface-muted">Testar</SubmitButton>
+                    <SubmitButton pendingText="Testando..." className="h-9 rounded-none border border-line px-3 font-medium text-ink-soft hover:bg-surface-muted">Testar</SubmitButton>
                   </form>
                 </div>
                 <details className="mt-2">

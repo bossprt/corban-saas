@@ -40,19 +40,19 @@ export default async function PrintBatchPage({ params, searchParams }: { params:
       <style>{PRINT_CSS}</style>
       <PrintBar back={`/app/repasse/lotes/${id}`}>
         {!only && (['tudo', 'resumo', 'demonstrativos'] as Part[]).map(p => (
-          <Link key={p} href={link(p)} className={`inline-flex h-9 items-center rounded-[10px] border px-3 text-sm ${p === part ? 'border-brand bg-brand/10 font-semibold text-brand' : 'border-line bg-surface hover:bg-surface-muted'}`}>
+          <Link key={p} href={link(p)} className={`inline-flex h-9 items-center rounded-none border px-3 text-sm ${p === part ? 'border-brand bg-brand/10 font-semibold text-brand' : 'border-line bg-surface hover:bg-surface-muted'}`}>
             {p === 'tudo' ? 'Lote completo' : p === 'resumo' ? 'Só o resumo' : 'Só os demonstrativos'}
           </Link>
         ))}
         {/* One seller of the batch (owner, 21/10/2026). */}
         <form method="get" className="flex items-center gap-1.5 text-sm">
           <label className="flex items-center gap-1.5">Vendedor
-            <select name="pessoa" defaultValue={only?.[0]?.payout_id ?? ''} className="h-9 rounded-[10px] border border-line bg-surface px-2.5 text-sm text-ink w-56">
+            <select name="pessoa" defaultValue={only?.[0]?.payout_id ?? ''} className="h-9 rounded-none border border-line bg-surface px-2.5 text-sm text-ink w-56">
               <option value="">Todos</option>
               {paid.map(l => <option key={l.payout_id} value={l.payout_id}>{l.holder}</option>)}
             </select>
           </label>
-          <button className="inline-flex h-9 items-center rounded-[10px] border border-line bg-surface px-3 hover:bg-surface-muted">Ver</button>
+          <button className="inline-flex h-9 items-center rounded-none border border-line bg-surface px-3 hover:bg-surface-muted">Ver</button>
         </form>
       </PrintBar>
 

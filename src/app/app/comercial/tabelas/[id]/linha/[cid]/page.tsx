@@ -79,7 +79,7 @@ export default async function LinePage({ params }: { params: Promise<{ id: strin
                 </tbody>
               </table>
             </div>
-            <div className="flex justify-end"><SubmitButton className="h-10 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Salvando...">Salvar comissão da linha</SubmitButton></div>
+            <div className="flex justify-end"><SubmitButton className="h-10 rounded-none bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Salvando...">Salvar comissão da linha</SubmitButton></div>
           </form>
         </Card>
       )}

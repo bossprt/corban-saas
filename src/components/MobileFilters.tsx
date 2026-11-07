@@ -10,7 +10,7 @@ export function MobileFilters({ active, children }: { active: number; children: 
   return (
     <>
       <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open}
-        className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] border border-line bg-surface px-3 text-sm text-ink-soft hover:bg-surface-muted sm:hidden">
+        className="inline-flex h-10 items-center justify-center gap-2 rounded-none border border-line bg-surface px-3 text-sm text-ink-soft hover:bg-surface-muted sm:hidden">
         <SlidersHorizontal size={15} aria-hidden />{open ? 'Esconder filtros' : 'Filtros'}{active > 0 && <span className="num rounded-full bg-brand-soft px-1.5 text-xs font-semibold text-brand">{active}</span>}
       </button>
       <div className={`${open ? 'grid gap-3' : 'hidden'} sm:contents`}>{children}</div>

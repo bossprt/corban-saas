@@ -39,7 +39,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
       <PageHeader
         title="Clientes"
         description="Um cliente por CPF. Cadastrar um CPF que já existe completa o cadastro em vez de duplicar."
-        actions={canCreate ? <Link href={sp.novo ? '/app/clientes' : '/app/clientes?novo=1'} className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-brand px-4 text-sm font-medium text-white hover:bg-brand-strong"><UserRoundPlus size={16} aria-hidden />{sp.novo ? 'Fechar cadastro' : 'Novo cliente'}</Link> : null}
+        actions={canCreate ? <Link href={sp.novo ? '/app/clientes' : '/app/clientes?novo=1'} className="inline-flex h-10 items-center gap-2 rounded-none bg-brand px-4 text-sm font-medium text-white hover:bg-brand-strong"><UserRoundPlus size={16} aria-hidden />{sp.novo ? 'Fechar cadastro' : 'Novo cliente'}</Link> : null}
       />
 
       {canCreate && sp.novo && (
@@ -50,11 +50,11 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
       )}
 
       <CpfSearchForm action="/app/clientes" mode="client" className="mb-4 flex gap-2">
-        <label className="flex h-10 flex-1 items-center gap-2 rounded-[10px] border border-line bg-surface px-3">
+        <label className="flex h-10 flex-1 items-center gap-2 rounded-none border border-line bg-surface px-3">
           <Search size={16} className="text-muted" aria-hidden />
           <input name="q" defaultValue={q ?? ''} placeholder="Nome, CPF ou telefone" className="h-full flex-1 bg-transparent text-sm outline-none placeholder:text-muted" aria-label="Filtrar clientes" />
         </label>
-        <button className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><Search size={15} aria-hidden />Filtrar</button>
+        <button className="inline-flex h-10 items-center gap-1.5 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><Search size={15} aria-hidden />Filtrar</button>
       </CpfSearchForm>
 
       {error ? (
@@ -79,7 +79,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
                 {!customers?.length && (
                   <tr><td colSpan={5} className="px-4 py-10 text-center text-sm text-muted">
                     {q ? 'Nenhum cliente encontrado com esse filtro.' : 'Nenhum cliente seu ainda. Converta um lead ou cadastre um cliente.'}
-                    {canCreate && <Link href="/app/clientes?novo=1" className="ml-3 inline-flex h-9 items-center rounded-[10px] bg-brand px-3 text-sm font-medium text-white hover:bg-brand-strong">Cadastrar novo cliente</Link>}
+                    {canCreate && <Link href="/app/clientes?novo=1" className="ml-3 inline-flex h-9 items-center rounded-none bg-brand px-3 text-sm font-medium text-white hover:bg-brand-strong">Cadastrar novo cliente</Link>}
                   </td></tr>
                 )}
               </tbody>

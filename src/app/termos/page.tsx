@@ -27,7 +27,7 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
         <p className="text-xs font-semibold uppercase tracking-[.2em] text-brand">{organization.name}</p>
         <h1 className="mt-1 text-2xl font-semibold text-ink">{s.title}</h1>
         <p className="mt-1 text-sm text-muted">Versão {s.version}. Para usar o Corban, a empresa precisa aceitar estes termos.</p>
-        <div className="mt-5 max-h-[55vh] overflow-y-auto whitespace-pre-wrap rounded-[12px] border border-line bg-surface-muted px-4 py-3 text-sm leading-relaxed text-ink-soft">{s.body}</div>
+        <div className="mt-5 max-h-[55vh] overflow-y-auto whitespace-pre-wrap rounded-none border border-line bg-surface-muted px-4 py-3 text-sm leading-relaxed text-ink-soft">{s.body}</div>
         {error && <p role="alert" className="mt-4 rounded-lg bg-[#FDE2E1] px-3 py-2 text-sm text-[#991B1B]">{error}</p>}
         {s.can_accept ? (
           <form action={acceptTerms} className="mt-5 grid gap-3">
@@ -38,7 +38,7 @@ export default async function TermsPage({ searchParams }: { searchParams: Promis
             </label>
             <p className="text-xs text-muted">O aceite fica registrado com seu usuário, data e hora, endereço de rede e navegador.</p>
             <div className="flex flex-wrap gap-3">
-              <SubmitButton pendingText="Registrando..." className="h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Aceitar e entrar</SubmitButton>
+              <SubmitButton pendingText="Registrando..." className="h-10 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Aceitar e entrar</SubmitButton>
             </div>
           </form>
         ) : (

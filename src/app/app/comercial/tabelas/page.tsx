@@ -11,7 +11,7 @@ import { PublishDraftsForm } from './PublishDraftsForm'
 type SP = Record<string, string | string[] | undefined>
 const one = (v: string | string[] | undefined) => (typeof v === 'string' ? v : '')
 const lbl = 'text-[13px] font-medium text-ink-soft'
-const iconBtn = 'inline-flex size-8 items-center justify-center rounded-md text-brand hover:bg-brand-soft'
+const iconBtn = 'inline-flex size-8 items-center justify-center rounded-md text-brand hover:bg-surface-muted'
 // Vigência dates are calendar days stored at 00:00 UTC: shown in UTC so 01/09 never becomes 31/08.
 const dateBr = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '—')
 
@@ -64,14 +64,14 @@ export default async function TablesSearchPage({ searchParams }: { searchParams:
           <label className={lbl}>Prazo (meses)<input name="prazo" defaultValue={f.prazo} inputMode="numeric" pattern="[0-9]*" maxLength={3} placeholder="84" className="field mt-1.5" /></label>
           <input type="hidden" name="n" value={size} />
           <div className="flex items-end gap-2 md:col-span-4">
-            <button className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><Search size={15} aria-hidden />Pesquisar</button>
-            <Link href="/api/comercial/tabelas/pesquisar" prefetch={false} className="inline-flex h-10 items-center rounded-[10px] border border-line px-4 text-sm text-ink-soft hover:bg-surface-muted">Limpar</Link>
+            <button className="inline-flex h-10 items-center gap-1.5 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><Search size={15} aria-hidden />Pesquisar</button>
+            <Link href="/api/comercial/tabelas/pesquisar" prefetch={false} className="inline-flex h-10 items-center rounded-none border border-line px-4 text-sm text-ink-soft hover:bg-surface-muted">Limpar</Link>
           </div>
         </form>
       </Card>
 
       {canEdit && drafts.length > 0 && (
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-3 rounded-[12px] border border-[#FDE68A] bg-[#FFFBEB] px-5 py-3">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3 rounded-none border border-[#FDE68A] bg-[#FFFBEB] px-5 py-3">
           <p className="text-[13px] text-[#92400E]"><strong>{drafts.length} tabela(s) em rascunho</strong> nestes filtros. Publique todas de uma vez com a mesma data de início.</p>
           {drafts.length <= 500
             ? <PublishDraftsForm ids={drafts.map(d => d.id)} defaultDate={draftStart} back={qs({})} />
@@ -82,7 +82,7 @@ export default async function TablesSearchPage({ searchParams }: { searchParams:
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4 text-sm text-ink-soft">
           <span className="flex flex-wrap items-center gap-3"><span><strong className="text-ink">{total}</strong> tabela(s){f.prazo && ` com prazo de ${f.prazo} meses`}</span>
-            {total > 0 && <a href={`/api/comercial/tabelas/exportar?${exportQs}`} className="inline-flex h-8 items-center gap-1.5 rounded-[10px] border border-line-strong bg-surface px-3 text-[13px] text-ink hover:bg-surface-muted"><Download size={14} aria-hidden />Exportar planilha ({total})</a>}</span>
+            {total > 0 && <a href={`/api/comercial/tabelas/exportar?${exportQs}`} className="inline-flex h-8 items-center gap-1.5 rounded-none border border-line-strong bg-surface px-3 text-[13px] text-ink hover:bg-surface-muted"><Download size={14} aria-hidden />Exportar planilha ({total})</a>}</span>
           <span className="flex items-center gap-1.5">Exibir {PAGE_SIZES.map(n => (
             <Link key={n} href={qs({ n, p: 1 })} aria-current={n === size ? 'true' : undefined}
               className={`rounded-md px-2 py-1 ${n === size ? 'bg-brand-soft font-semibold text-brand' : 'hover:bg-surface-muted'}`}>{n}</Link>

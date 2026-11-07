@@ -55,7 +55,7 @@ export function Board({ columns, showOwner, boardQuery = '' }: { columns: BoardC
 
   return (
     <div>
-      {message && <p role="alert" className="mb-3 rounded-[10px] border border-[#F3D9A4] bg-[#FDF3DC] px-4 py-2.5 text-sm text-[#92400E]">{message}</p>}
+      {message && <p role="alert" className="mb-3 rounded-none border border-[#F3D9A4] bg-[#FDF3DC] px-4 py-2.5 text-sm text-[#92400E]">{message}</p>}
       <div className="-mx-4 overflow-x-auto px-4 pb-2 md:mx-0 md:px-0" aria-busy={pending}>
         <div className="grid gap-2.5" style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(150px, 1fr))`, minWidth: `${columns.length * 155}px` }}>
           {columns.map(col => (
@@ -65,7 +65,7 @@ export function Board({ columns, showOwner, boardQuery = '' }: { columns: BoardC
               onDragOver={e => { if (dragging) { e.preventDefault(); setOver(col.key) } }}
               onDragLeave={() => setOver(o => (o === col.key ? null : o))}
               onDrop={e => { e.preventDefault(); drop(col) }}
-              className={`flex min-h-[320px] min-w-0 flex-col rounded-[12px] border bg-surface-muted/60 p-2 transition-colors ${over === col.key ? (DROPPABLE.has(col.base) ? 'border-brand bg-brand/5' : 'border-[#DC2626]/40') : 'border-line'}`}
+              className={`flex min-h-[320px] min-w-0 flex-col rounded-none border bg-surface-muted/60 p-2 transition-colors ${over === col.key ? (DROPPABLE.has(col.base) ? 'border-brand bg-brand/5' : 'border-[#DC2626]/40') : 'border-line'}`}
             >
               <header className="mb-2 flex items-center gap-2 px-1.5 pt-1">
                 <span className={`size-2 shrink-0 rounded-full ${ACCENT[col.base]}`} aria-hidden />
@@ -79,7 +79,7 @@ export function Board({ columns, showOwner, boardQuery = '' }: { columns: BoardC
                     draggable
                     onDragStart={e => { setDragging(c); e.dataTransfer.effectAllowed = 'move' }}
                     onDragEnd={() => { setDragging(null); setOver(null) }}
-                    className={`min-w-0 overflow-hidden rounded-[10px] border border-line bg-surface shadow-sm transition-opacity ${dragging?.id === c.id ? 'opacity-50' : ''}`}
+                    className={`min-w-0 overflow-hidden rounded-none border border-line bg-surface shadow-sm transition-opacity ${dragging?.id === c.id ? 'opacity-50' : ''}`}
                   >
                     <Link href={`/app/crm?${boardQuery ? `${boardQuery}&` : ''}lead=${c.id}`} scroll={false} title={c.name} className="block min-w-0 px-3 py-2.5 hover:bg-surface-muted/60">
                       <span className="line-clamp-2 break-words text-sm font-medium leading-snug text-ink">{c.name}</span>

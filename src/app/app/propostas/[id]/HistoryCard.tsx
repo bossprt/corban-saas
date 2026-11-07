@@ -67,7 +67,7 @@ export async function HistoryCard({ supabase, proposalId }: { supabase: Supa; pr
       <form action={addContractNote} className="flex flex-wrap items-end gap-2 px-5 pt-3">
         <input type="hidden" name="proposal_id" value={proposalId} />
         <label className="flex-1 text-[13px] font-medium text-ink-soft">Nova observação<textarea name="note" required maxLength={2000} rows={2} className="field mt-1.5 min-h-[44px]" /></label>
-        <SubmitButton className="h-10 rounded-[10px] border border-line-strong bg-surface px-4 text-sm text-ink hover:bg-surface-muted" pendingText="Salvando...">Registrar observação</SubmitButton>
+        <SubmitButton className="h-10 rounded-none border border-line-strong bg-surface px-4 text-sm text-ink hover:bg-surface-muted" pendingText="Salvando...">Registrar observação</SubmitButton>
       </form>
       <ol className="mt-4">
         {items.map(i => (

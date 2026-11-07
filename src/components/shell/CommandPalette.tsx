@@ -11,7 +11,7 @@ import type { NavItem } from './NavLinks'
 const KIND_LABEL: Record<SearchHit['kind'], string> = { client: 'Clientes', proposal: 'Propostas', seller: 'Vendedores' }
 const KIND_ICON = { client: UserRound, proposal: FileText, seller: Users }
 const GROUP = '[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:text-muted'
-const ITEM = 'flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-ink data-[selected=true]:bg-brand-soft'
+const ITEM = 'flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-ink data-[selected=true]:bg-highlight'
 
 export function CommandPalette({ nav }: { nav: NavItem[] }) {
   const router = useRouter()
@@ -61,7 +61,7 @@ export function CommandPalette({ nav }: { nav: NavItem[] }) {
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="flex h-10 max-w-[520px] flex-1 items-center gap-2.5 rounded-[10px] border border-line bg-surface px-3.5 text-left text-sm text-muted hover:border-line-strong">
+      <button type="button" onClick={() => setOpen(true)} className="flex h-10 min-w-0 max-w-[560px] flex-1 items-center gap-2.5 border-2 border-ink bg-surface px-3 text-left text-sm text-muted hover:bg-surface-muted">
         <Search size={16} aria-hidden />
         <span className="flex-1 truncate">Buscar CPF, ADE, cliente ou vendedor</span>
         <span className="hidden sm:inline"><Kbd>Ctrl K</Kbd></span>
@@ -73,7 +73,7 @@ export function CommandPalette({ nav }: { nav: NavItem[] }) {
         label="Busca global"
         shouldFilter={false}
         overlayClassName="fixed inset-0 z-40 bg-black/30"
-        contentClassName="fixed left-1/2 top-[12vh] z-50 w-[min(640px,calc(100vw-32px))] -translate-x-1/2 overflow-hidden rounded-[16px] border border-line bg-surface shadow-2xl"
+        contentClassName="fixed left-1/2 top-[12vh] z-50 w-[min(640px,calc(100vw-32px))] -translate-x-1/2 overflow-hidden border-2 border-ink bg-surface"
       >
         <div className="flex items-center gap-2.5 border-b border-line px-4">
           <Search size={17} className="text-muted" aria-hidden />

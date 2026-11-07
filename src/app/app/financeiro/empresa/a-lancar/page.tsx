@@ -32,7 +32,7 @@ export default async function PendingPostingsPage() {
         {membership.role === 'admin' && (
           <form action={setAutoPost}>
             <input type="hidden" name="auto" value={auto ? 'false' : 'true'} />
-            <SubmitButton className="h-10 rounded-[10px] border border-line-strong bg-surface px-4 text-sm text-ink hover:bg-surface-muted" pendingText="...">{auto ? 'Passar a lançar manualmente' : 'Voltar ao automático'}</SubmitButton>
+            <SubmitButton className="h-10 rounded-none border border-line-strong bg-surface px-4 text-sm text-ink hover:bg-surface-muted" pendingText="...">{auto ? 'Passar a lançar manualmente' : 'Voltar ao automático'}</SubmitButton>
           </form>
         )}
       </Card>

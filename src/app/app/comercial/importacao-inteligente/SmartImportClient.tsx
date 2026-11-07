@@ -16,8 +16,8 @@ type Preview={
  sample:{bank:string;agreement:string;table:string;contract:string;term:number;rate:string|null;factor:string|null;components:number;values?:string;groupValues:number}[]
 }
 const lbl='text-[13px] font-medium text-ink-soft'
-const primary='h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50'
-const ghost='h-10 rounded-[10px] border border-line bg-surface px-4 text-sm text-ink hover:bg-surface-muted disabled:opacity-50'
+const primary='h-10 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50'
+const ghost='h-10 rounded-none border border-line bg-surface px-4 text-sm text-ink hover:bg-surface-muted disabled:opacity-50'
 const IGNORE='__ignore__'
 // YYYY-MM-DD shown as DD/MM/YYYY (a calendar day: no time zone conversion).
 const dateBr=(d:string)=>d.split('-').reverse().join('/')
@@ -100,12 +100,12 @@ export function SmartImportClient({providers,banks}:{providers:Provider[];banks:
    <CardHeader title="2. Prévia" action={<span className="text-xs text-muted">{preview.fileName}</span>} />
    <div className="grid gap-3 px-5 pt-3 sm:grid-cols-4">
     {[['Linhas no arquivo',preview.summary.sourceRows],['Linhas após os prazos',preview.summary.expandedRows],['Tabelas',preview.summary.tables.length],['Grupos com valores',preview.summary.groups?.length??0]].map(([k,v])=>(
-     <div key={String(k)} className="rounded-[12px] border border-line px-4 py-3"><div className="text-xs text-muted">{k}</div><div className="num text-xl font-semibold text-ink">{v}</div></div>
+     <div key={String(k)} className="rounded-none border border-line px-4 py-3"><div className="text-xs text-muted">{k}</div><div className="num text-xl font-semibold text-ink">{v}</div></div>
     ))}
    </div>
    {!!preview.summary.groups?.length&&<p className="px-5 pt-3 text-[13px] text-ink-soft">Grupos: {preview.summary.groups.join(', ')}</p>}
 
-   {!!slotNames.length&&<div className="mx-5 mt-4 rounded-[12px] border border-[#FDE68A] bg-[#FFFBEB] p-4">
+   {!!slotNames.length&&<div className="mx-5 mt-4 rounded-none border border-[#FDE68A] bg-[#FFFBEB] p-4">
     <strong className="text-sm text-[#92400E]">A planilha usa colunas Repasse. De qual grupo é cada uma?</strong>
     <div className="mt-3 grid gap-3 sm:grid-cols-3">{slotNames.map(s=>{const k=s.replace(/\D/g,'');return(
      <label key={k} className={lbl}>{s}
@@ -119,7 +119,7 @@ export function SmartImportClient({providers,banks}:{providers:Provider[];banks:
     <button disabled={!allMapped||busy} onClick={()=>void runPreview()} className={`${ghost} mt-3`}>Aplicar e ver a prévia de novo</button>
    </div>}
 
-   {needsBank&&<div className="mx-5 mt-4 rounded-[12px] border border-[#FDE68A] bg-[#FFFBEB] p-4">
+   {needsBank&&<div className="mx-5 mt-4 rounded-none border border-[#FDE68A] bg-[#FFFBEB] p-4">
     <strong className="text-sm text-[#92400E]">A tabela da Bevicred não diz o banco. De qual banco são estas tabelas?</strong>
     <div className="mt-3 flex flex-wrap items-end gap-3">
      <label className={lbl}>Banco<select aria-label="Banco" value={bankId} onChange={e=>setBankId(e.target.value)} className="field mt-1.5"><option value="" disabled>Escolha</option>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
@@ -128,7 +128,7 @@ export function SmartImportClient({providers,banks}:{providers:Provider[];banks:
     {!banks.length&&<p className="mt-2 text-xs text-[#92400E]">Nenhum banco cadastrado: cadastre o banco em Cadastros antes.</p>}
    </div>}
 
-   {needsBase&&<div className="mx-5 mt-4 rounded-[12px] border border-[#FDE68A] bg-[#FFFBEB] p-4">
+   {needsBase&&<div className="mx-5 mt-4 rounded-none border border-[#FDE68A] bg-[#FFFBEB] p-4">
     <strong className="text-sm text-[#92400E]">A planilha não diz a base de cálculo. As comissões em % desta planilha são sobre qual valor?</strong>
     <div className="mt-3 flex flex-wrap items-end gap-3">
      <label className={lbl}>Base de cálculo<select aria-label="Base de cálculo" value={base} onChange={e=>setBase(e.target.value)} className="field mt-1.5"><option value="" disabled>Escolha</option><option value="BRUTO">Bruto (valor do contrato)</option><option value="LÍQUIDO">Líquido (valor liberado)</option></select></label>
@@ -136,7 +136,7 @@ export function SmartImportClient({providers,banks}:{providers:Provider[];banks:
     </div>
    </div>}
 
-   {!!blocking.length&&<div className="mx-5 mt-4 grid gap-2">{blocking.map((x,i)=><div key={i} role="alert" className="rounded-[10px] border border-[#FCA5A5] bg-[#FEF2F2] p-3 text-[13px] text-[#991B1B]">{x.line>1?`Linha ${x.line}: `:''}{x.message}{x.detail?` — ${x.detail}`:''}</div>)}</div>}
+   {!!blocking.length&&<div className="mx-5 mt-4 grid gap-2">{blocking.map((x,i)=><div key={i} role="alert" className="rounded-none border border-[#FCA5A5] bg-[#FEF2F2] p-3 text-[13px] text-[#991B1B]">{x.line>1?`Linha ${x.line}: `:''}{x.message}{x.detail?` — ${x.detail}`:''}</div>)}</div>}
 
    {!!preview.sample.length&&<div className="mt-4 overflow-x-auto px-2 pb-2"><table className="w-full min-w-[720px] text-left text-[13px]">
     <thead className="text-xs text-muted"><tr>{['Banco','Convênio','Tabela','Tipo','Prazo','Taxa','Fator','Valores empresa','Valores grupos'].map(h=><th key={h} className="px-3 py-2 font-medium">{h}</th>)}</tr></thead>
@@ -153,11 +153,11 @@ export function SmartImportClient({providers,banks}:{providers:Provider[];banks:
      <label className={lbl}>Origem da produção<select value={origin} onChange={e=>setOrigin(e.target.value as 'own'|'third_party')} className="field mt-1.5"><option value="own">Produção própria</option><option value="third_party">Por promotora parceira</option></select></label>
      <label className={lbl}>Promotora parceira<select disabled={origin==='own'} value={provider} onChange={e=>setProvider(e.target.value)} className="field mt-1.5"><option value="">—</option>{providers.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
     </div>}
-    {!!optionalQuestions.length&&<div className="rounded-[12px] border border-line p-4 text-sm">
+    {!!optionalQuestions.length&&<div className="rounded-none border border-line p-4 text-sm">
      <strong className="text-ink">Confirme os tipos de comissão encontrados</strong>
      <div className="mt-2 grid gap-1.5">{optionalQuestions.map(([k,label])=><label key={k} className="flex items-center gap-2 text-ink-soft"><input type="checkbox" checked={answers[k]} onChange={e=>setAnswers(a=>({...a,[k]:e.target.checked}))} className="accent-[var(--brand)]" />Confirmo que o <b className="text-ink">{label}</b> desta planilha deve entrar nas tabelas.</label>)}</div>
     </div>}
-    <div className="rounded-[12px] border border-line p-4">
+    <div className="rounded-none border border-line p-4">
      <label className="flex items-center gap-2 text-sm font-medium text-ink"><input type="checkbox" checked={publish} onChange={e=>setPublish(e.target.checked)} className="accent-[var(--brand)]" />Publicar já ao importar</label>
      {publish?<div className="mt-3 flex flex-wrap items-end gap-3">
       <label className={lbl}>Início da vigência<input type="date" min="2000-01-01" value={publishFrom} onChange={e=>setPublishFrom(e.target.value)} className="field mt-1.5 block w-44" /></label>
@@ -168,6 +168,6 @@ export function SmartImportClient({providers,banks}:{providers:Provider[];banks:
    </div>
   </Card>}
 
-  {message&&<div role="status" className="rounded-[12px] border border-line bg-surface p-4 text-sm text-ink">{message}{' '}{message.startsWith('Importação concluída')&&<Badge tone="received">ok</Badge>}</div>}
+  {message&&<div role="status" className="rounded-none border border-line bg-surface p-4 text-sm text-ink">{message}{' '}{message.startsWith('Importação concluída')&&<Badge tone="received">ok</Badge>}</div>}
  </div>
 }

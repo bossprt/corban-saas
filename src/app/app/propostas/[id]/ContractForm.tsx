@@ -33,8 +33,8 @@ export function ContractForm({ c, catalog, sellers, canEdit, paid, received }: {
         <CardHeader title="Contrato" action={received
           ? <span className="inline-flex items-center gap-1.5 text-xs text-muted"><Lock size={14} aria-hidden />Vendedor já recebeu: não muda mais</span>
           : canEdit ? (locked
-            ? <button type="button" onClick={() => setEditing(true)} className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line-strong bg-surface px-3 text-sm font-medium text-ink hover:bg-surface-muted"><Pencil size={15} aria-hidden />Editar contrato</button>
-            : <button type="button" onClick={() => { setEditing(false); setRound(r => r + 1) }} className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line bg-surface px-3 text-sm text-ink-soft hover:bg-surface-muted"><X size={15} aria-hidden />Cancelar</button>)
+            ? <button type="button" onClick={() => setEditing(true)} className="inline-flex h-9 items-center gap-1.5 rounded-none border border-line-strong bg-surface px-3 text-sm font-medium text-ink hover:bg-surface-muted"><Pencil size={15} aria-hidden />Editar contrato</button>
+            : <button type="button" onClick={() => { setEditing(false); setRound(r => r + 1) }} className="inline-flex h-9 items-center gap-1.5 rounded-none border border-line bg-surface px-3 text-sm text-ink-soft hover:bg-surface-muted"><X size={15} aria-hidden />Cancelar</button>)
             : undefined} />
         <fieldset key={round} disabled={locked} className="grid gap-3 px-5 pb-5 pt-3 md:grid-cols-4">
           <div className="grid gap-3 md:col-span-4"><ContractChoice catalog={catalog} initialVersion={c.table_version_id} initialType={c.contract_type_id} labelClass={lbl} gridClass="grid gap-3 md:grid-cols-3"
@@ -59,7 +59,7 @@ export function ContractForm({ c, catalog, sellers, canEdit, paid, received }: {
         {editing && (
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-3">
             <p className="text-xs text-muted">Salvar recalcula a comissão e fica no histórico (antes → depois).</p>
-            <SubmitButton className="h-10 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Salvando...">Salvar alterações</SubmitButton>
+            <SubmitButton className="h-10 rounded-none bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Salvando...">Salvar alterações</SubmitButton>
           </div>
         )}
       </form>

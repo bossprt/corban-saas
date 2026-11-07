@@ -44,9 +44,9 @@ export default async function ReceivablePage({ searchParams }: { searchParams: P
         <label className="text-[13px] font-medium text-ink-soft">Pagos
           <select name="dias" defaultValue={days ? '30' : ''} className="field mt-1.5"><option value="">Qualquer data</option><option value="30">Há mais de 30 dias</option></select>
         </label>
-        <button className="h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Filtrar</button>
+        <button className="h-10 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Filtrar</button>
       </form>
-      {error && <p role="alert" className="mb-4 rounded-[10px] bg-[#FDF3DC] px-4 py-2 text-sm text-[#92400E]">Não foi possível carregar a lista agora. Tente de novo em instantes.</p>}
+      {error && <p role="alert" className="mb-4 rounded-none bg-[#FDF3DC] px-4 py-2 text-sm text-[#92400E]">Não foi possível carregar a lista agora. Tente de novo em instantes.</p>}
       <p className="mb-3 text-sm text-ink-soft">{total} contrato(s) · esperado {brlText(rows[0]?.total_expected ?? '0')}</p>
       <ReceivableForm rows={rows.map(r => ({ proposal_id: r.proposal_id, reference: r.reference, client: r.client, source_name: r.source_name, paid_at: r.paid_at, expected_amount: r.expected_amount }))} canRecord={canRecord} banks={choice.banks} suggestedBank={choice.suggested}
         today={today} returnTo={qs(page > 1 ? { pagina: String(page) } : {})} />

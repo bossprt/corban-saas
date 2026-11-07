@@ -30,8 +30,8 @@ export default async function BankMovementsPage({ params, searchParams }: { para
       <form className="mb-4 flex flex-wrap items-end gap-2">
         <label className="text-[13px] font-medium text-ink-soft">De<input type="date" name="de" defaultValue={m.from} min={m.bank.opening_on} className="field mt-1.5 block h-9 w-auto py-1" /></label>
         <label className="text-[13px] font-medium text-ink-soft">Até<input type="date" name="ate" defaultValue={m.to} className="field mt-1.5 block h-9 w-auto py-1" /></label>
-        <button className="inline-flex h-9 items-center rounded-[10px] bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong">Filtrar</button>
-        <a href={`/api/financeiro/contas/${id}/movimentos?${query}`} download className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line-strong bg-surface px-3 text-sm text-ink hover:bg-surface-muted"><Download size={15} aria-hidden />Baixar Excel</a>
+        <button className="inline-flex h-9 items-center rounded-none bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong">Filtrar</button>
+        <a href={`/api/financeiro/contas/${id}/movimentos?${query}`} download className="inline-flex h-9 items-center gap-1.5 rounded-none border border-line-strong bg-surface px-3 text-sm text-ink hover:bg-surface-muted"><Download size={15} aria-hidden />Baixar Excel</a>
       </form>
 
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

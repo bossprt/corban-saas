@@ -26,10 +26,10 @@ export default async function FinanceAlertsPage({ searchParams }: { searchParams
         actions={<Link href="/app/financeiro" className="text-sm text-brand hover:underline">Voltar ao financeiro</Link>} />
       <nav className="mb-4 flex flex-wrap gap-1.5 text-sm">
         {Object.keys(ALERT_LABEL).map(k => k === 'paid_without_receipt'
-          ? <Link key={k} href="/app/financeiro/a-receber?dias=30" className="rounded-[10px] border border-line bg-surface px-3 py-1.5 text-ink-soft hover:bg-surface-muted">{ALERT_LABEL[k]}</Link>
-          : <Link key={k} href={href(k)} aria-current={k === kind ? 'page' : undefined} className={`rounded-[10px] border px-3 py-1.5 ${k === kind ? 'border-ink bg-ink text-white' : 'border-line bg-surface text-ink-soft hover:bg-surface-muted'}`}>{ALERT_LABEL[k]}</Link>)}
+          ? <Link key={k} href="/app/financeiro/a-receber?dias=30" className="rounded-none border border-line bg-surface px-3 py-1.5 text-ink-soft hover:bg-surface-muted">{ALERT_LABEL[k]}</Link>
+          : <Link key={k} href={href(k)} aria-current={k === kind ? 'page' : undefined} className={`rounded-none border px-3 py-1.5 ${k === kind ? 'border-ink bg-ink text-white' : 'border-line bg-surface text-ink-soft hover:bg-surface-muted'}`}>{ALERT_LABEL[k]}</Link>)}
       </nav>
-      {error && <p role="alert" className="mb-4 rounded-[10px] bg-[#FDF3DC] px-4 py-2 text-sm text-[#92400E]">Não foi possível carregar os alertas agora.</p>}
+      {error && <p role="alert" className="mb-4 rounded-none bg-[#FDF3DC] px-4 py-2 text-sm text-[#92400E]">Não foi possível carregar os alertas agora.</p>}
       <Card className="overflow-hidden">
         <CardHeader title={`${all.length} contrato(s)`} action={kind === 'divergence_open' ? <Link href="/app/financeiro/conciliacao" className="text-sm text-brand hover:underline">Conciliação por contrato</Link> : undefined} />
         <ul className="text-sm">

@@ -9,7 +9,7 @@ import { todaySP } from '@/lib/dates'
 const lbl = 'text-[13px] font-medium text-ink-soft'
 const legend = 'mb-2 text-sm font-semibold text-ink'
 const optional = 'ml-1 text-xs font-normal text-muted'
-const addBtn = 'inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line bg-surface px-3 text-sm text-ink hover:bg-surface-muted'
+const addBtn = 'inline-flex h-9 items-center gap-1.5 rounded-none border border-line bg-surface px-3 text-sm text-ink hover:bg-surface-muted'
 const removeBtn = 'inline-flex items-center gap-1 text-xs text-muted hover:text-[#991B1B]'
 const todayIso = () => todaySP()
 // Database numeric ("350" or "812.45") to the form's "350,00" / "812,45", on the text: money never goes through float.
@@ -47,7 +47,7 @@ export function BankAccountRows({ initial = [], locked = false }: { initial?: Ac
         {rows.map((r, i) => {
           const a = r.item
           return (
-            <div key={r.key} className={`grid gap-3 rounded-[12px] border border-line p-3 md:grid-cols-4 ${r.removed ? 'opacity-50' : ''}`} data-row="account">
+            <div key={r.key} className={`grid gap-3 rounded-none border border-line p-3 md:grid-cols-4 ${r.removed ? 'opacity-50' : ''}`} data-row="account">
               <input type="hidden" name="account_id" value={a?.id ?? ''} />
               <input type="hidden" name="remove_account" value={r.removed ? '1' : ''} />
               <div className="flex items-center justify-between md:col-span-4">
@@ -83,7 +83,7 @@ export function RegistrationRows({ agreements, initial = [], locked = false, can
         {rows.map((r, i) => {
           const m = r.item
           return (
-            <div key={r.key} className="grid gap-3 rounded-[12px] border border-line p-3 md:grid-cols-4" data-row="registration">
+            <div key={r.key} className="grid gap-3 rounded-none border border-line p-3 md:grid-cols-4" data-row="registration">
               <input type="hidden" name="registration_id" value={m?.id ?? ''} />
               <input type="hidden" name="clear_password" value={r.removed ? '1' : ''} />
               <div className="flex items-center justify-between md:col-span-4">

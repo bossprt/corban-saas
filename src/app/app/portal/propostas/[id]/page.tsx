@@ -71,7 +71,7 @@ export default async function PortalProposalPage({ params }: { params: Promise<{
             <input type="hidden" name="proposal_id" value={p.id} />
             <label className={label}>Documento<input name="label" required minLength={2} maxLength={60} placeholder="RG, contracheque..." className="field mt-1.5" /></label>
             <div className={label}>Arquivo (PDF, JPG, PNG ou WebP, até 4 MB)<div className="mt-1.5"><FileDrop compact required name="file" accept="application/pdf,image/jpeg,image/png,image/webp" ariaLabel="Arquivo do documento" /></div></div>
-            <SubmitButton className="h-10 rounded-[10px] border border-line bg-surface px-4 text-sm font-medium hover:bg-surface-muted" pendingText="Enviando...">Anexar</SubmitButton>
+            <SubmitButton className="h-10 rounded-none border border-line bg-surface px-4 text-sm font-medium hover:bg-surface-muted" pendingText="Enviando...">Anexar</SubmitButton>
           </form>
         )}
       </Card>

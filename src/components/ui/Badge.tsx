@@ -4,11 +4,11 @@ import { cn } from './cn'
 export type Tone = 'neutral' | 'brand' | 'received' | 'diverged' | 'reversed' | 'paid-out' | 'pending' | 'expected'
 
 const tones: Record<Tone, string> = {
-  neutral: 'bg-[#F1F0EC] text-ink-soft',
-  brand: 'bg-brand-soft text-brand-strong',
+  neutral: 'bg-surface-muted text-ink-soft',
+  brand: 'bg-highlight text-ink',
   received: 'bg-[#DCEFE6] text-[#064E3B]',
-  diverged: 'bg-[#FEF3C7] text-[#92400E]',
-  reversed: 'bg-[#FDE2E1] text-[#991B1B]',
+  diverged: 'bg-[#FFEDD5] text-[#9A3412]',
+  reversed: 'bg-[#FDE2E1] text-[#9F0D24]',
   'paid-out': 'bg-[#E8EEF7] text-[#1E3A8A]',
   pending: 'bg-[#EDE9FE] text-[#5B21B6]',
   expected: 'bg-[#EEF0F3] text-[#3B4656]',

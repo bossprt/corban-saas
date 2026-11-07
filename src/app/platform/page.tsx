@@ -11,7 +11,7 @@ import { PLAN_MODULE_LABEL, PLAN_MODULES } from '@/lib/access'
 import { Badge, Card } from '@/components/ui'
 import { BillingSection } from './BillingSection'
 
-const button='inline-flex h-10 items-center justify-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong'
+const button='inline-flex h-10 items-center justify-center rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong'
 
 export default async function PlatformPage({searchParams}:{searchParams:Promise<{ok?:string;erro?:string;sol?:string}>}) {
   const gate=await requirePlatformAdmin()
@@ -52,11 +52,11 @@ export default async function PlatformPage({searchParams}:{searchParams:Promise<
     <div className="mx-auto max-w-7xl">
       <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div><p className="text-xs font-semibold uppercase tracking-[.25em] text-brand">Corban OS Platform</p><h1 className="mt-1 text-3xl font-semibold text-ink">Administração da plataforma</h1><p className="mt-2 text-sm text-muted">Cadastre a base global que todas as organizações usam para montar suas rotas e tabelas comerciais.</p></div>
-        <form action={signOut}><button className="flex h-10 items-center gap-2 rounded-[10px] border border-line bg-surface px-4 text-sm hover:bg-surface-muted"><LogOut size={16}/>Sair</button></form>
+        <form action={signOut}><button className="flex h-10 items-center gap-2 rounded-none border border-line bg-surface px-4 text-sm hover:bg-surface-muted"><LogOut size={16}/>Sair</button></form>
       </header>
 
-      {sp.ok&&<p role="status" className="mb-5 rounded-[10px] border border-[#BBE5C8] bg-[#E3F5E9] px-4 py-3 text-sm text-[#15803D]">{sp.ok}</p>}
-      {sp.erro&&<p role="alert" className="mb-5 rounded-[10px] border border-[#F5C2C0] bg-[#FDE2E1] px-4 py-3 text-sm text-[#991B1B]">{sp.erro}</p>}
+      {sp.ok&&<p role="status" className="mb-5 rounded-none border border-[#BBE5C8] bg-[#E3F5E9] px-4 py-3 text-sm text-[#15803D]">{sp.ok}</p>}
+      {sp.erro&&<p role="alert" className="mb-5 rounded-none border border-[#F5C2C0] bg-[#FDE2E1] px-4 py-3 text-sm text-[#991B1B]">{sp.erro}</p>}
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="p-5"><Building2 className="text-brand"/><div className="mt-3 text-3xl font-semibold text-ink">{orgs.data?.length??0}</div><div className="text-sm text-muted">Organizações</div></Card>
@@ -144,7 +144,7 @@ export default async function PlatformPage({searchParams}:{searchParams:Promise<
         <h3 className="mt-6 text-lg font-semibold text-ink">Módulos por empresa</h3>
         <p className="mt-1 text-sm text-muted">Liga e desliga módulos de cada empresa conforme o plano. Módulo desligado some do menu e nenhuma permissão dele vale.</p>
         <div className="mt-3 space-y-3">{orgs.data?.map(o=>{const on=new Map((orgModules.data??[]).filter(m=>m.organization_id===o.id).map(m=>[m.module_key,m.enabled]));return <Card key={o.id} className="p-4"><details><summary className="cursor-pointer text-sm font-semibold text-ink">{o.name} <span className="font-normal text-muted">· {PLAN_MODULES.filter(k=>on.get(k)).length} de {PLAN_MODULES.length} módulos ligados</span></summary>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{PLAN_MODULES.map(k=>{const enabled=on.get(k)===true;return <form key={k} action={setOrganizationModule} className="flex items-center justify-between gap-2 rounded-[10px] border border-line px-3 py-2 text-sm"><input type="hidden" name="organization_id" value={o.id}/><input type="hidden" name="module_key" value={k}/><input type="hidden" name="enabled" value={enabled?'false':'true'}/><span className="text-ink-soft">{PLAN_MODULE_LABEL[k]}</span><button className={`rounded-[8px] px-2 py-1 text-xs font-semibold ${enabled?'bg-brand text-white':'border border-line text-muted'}`} aria-label={`${enabled?'Desligar':'Ligar'} ${PLAN_MODULE_LABEL[k]} em ${o.name}`}>{enabled?'Ligado':'Desligado'}</button></form>})}</div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{PLAN_MODULES.map(k=>{const enabled=on.get(k)===true;return <form key={k} action={setOrganizationModule} className="flex items-center justify-between gap-2 rounded-none border border-line px-3 py-2 text-sm"><input type="hidden" name="organization_id" value={o.id}/><input type="hidden" name="module_key" value={k}/><input type="hidden" name="enabled" value={enabled?'false':'true'}/><span className="text-ink-soft">{PLAN_MODULE_LABEL[k]}</span><button className={`rounded-none px-2 py-1 text-xs font-semibold ${enabled?'bg-brand text-white':'border border-line text-muted'}`} aria-label={`${enabled?'Desligar':'Ligar'} ${PLAN_MODULE_LABEL[k]} em ${o.name}`}>{enabled?'Ligado':'Desligado'}</button></form>})}</div>
         </details></Card>})}
         </div>
       </section>

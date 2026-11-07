@@ -5,8 +5,8 @@ import { SubmitButton } from '@/components/SubmitButton'
 import { Card, PageHeader, Badge } from '@/components/ui'
 import { createAgreement, enableAgreementTemplate, renameCatalogItem, setActive } from '../actions'
 
-const btn = 'inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong'
-const ghost = 'h-9 rounded-[10px] border border-line bg-surface px-3 text-xs hover:bg-surface-muted'
+const btn = 'inline-flex h-10 items-center gap-1.5 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong'
+const ghost = 'h-9 rounded-none border border-line bg-surface px-3 text-xs hover:bg-surface-muted'
 
 export default async function AgreementsPage() {
   const { supabase, membership } = await requireAppContext()
@@ -32,7 +32,7 @@ export default async function AgreementsPage() {
 
     <Card className="mt-4 p-5">
       <div className="mb-3 text-sm text-muted">{rows.filter(r => r.is_active).length} ativos · {rows.length} no total</div>
-      {!rows.length ? <p className="text-sm text-muted">Nenhum convênio habilitado.</p> : <div className="space-y-2">{rows.map(row => <div key={row.id} className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-line p-3">
+      {!rows.length ? <p className="text-sm text-muted">Nenhum convênio habilitado.</p> : <div className="space-y-2">{rows.map(row => <div key={row.id} className="flex flex-wrap items-center justify-between gap-3 rounded-none border border-line p-3">
         <div><strong className="text-ink">{row.name}</strong><span className="ml-2 text-xs text-muted">· {row.template_id ? 'nacional' : 'próprio'}</span><Badge tone={row.is_active ? 'received' : 'neutral'} className="ml-2">{row.is_active ? 'Ativo' : 'Inativo'}</Badge></div>
         {canEdit && <div className="flex items-center gap-3">
           {!row.template_id && <details><summary className="cursor-pointer text-xs text-brand underline">Editar nome</summary><form action={renameCatalogItem} className="mt-2 flex gap-2"><input type="hidden" name="return_to" value="/app/comercial/convenios" /><input type="hidden" name="kind" value="agreement" /><input type="hidden" name="id" value={row.id} /><input required name="name" defaultValue={row.name} className="field" /><SubmitButton className={ghost}>Salvar</SubmitButton></form></details>}

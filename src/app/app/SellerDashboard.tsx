@@ -47,7 +47,7 @@ export async function SellerDashboard({ supabase, organizationId }: { supabase: 
     <section className="mx-auto max-w-xl">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div><p className="text-sm text-ink-soft">Olá{first ? `, ${first.charAt(0)}${first.slice(1).toLowerCase()}` : ''}</p><h1 className="text-xl font-semibold text-ink">Seu mês</h1></div>
-        <Link href="/app/propostas/nova" className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong"><FilePlus2 size={16} aria-hidden />Novo contrato</Link>
+        <Link href="/app/propostas/nova" className="inline-flex h-10 items-center gap-1.5 rounded-none bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong"><FilePlus2 size={16} aria-hidden />Novo contrato</Link>
       </div>
 
       <Card className="mb-4 p-5">
@@ -69,9 +69,9 @@ export async function SellerDashboard({ supabase, organizationId }: { supabase: 
       <Card className="mb-4">
         <CardHeader title="Quanto você vai ganhar" />
         <div className="grid grid-cols-3 gap-2 px-5 pb-5 pt-3 text-center">
-          <div className="rounded-[12px] bg-surface-muted px-2 py-3"><p className="text-[11px] text-muted">Previsto</p><p className="num whitespace-nowrap text-[13px] font-semibold sm:text-base text-ink">{money(b.expected)}</p><p className="text-[10px] text-muted">contratos em andamento</p></div>
-          <div className="rounded-[12px] bg-surface-muted px-2 py-3"><p className="text-[11px] text-muted">Liberado</p><p className="num whitespace-nowrap text-[13px] font-semibold sm:text-base text-[#1D6E4F]">{money(b.released)}</p><p className="text-[10px] text-muted">no próximo pagamento</p></div>
-          <div className="rounded-[12px] bg-surface-muted px-2 py-3"><p className="text-[11px] text-muted">Recebido</p><p className="num whitespace-nowrap text-[13px] font-semibold sm:text-base text-ink">{money(b.received_month)}</p><p className="text-[10px] text-muted">neste mês</p></div>
+          <div className="rounded-none bg-surface-muted px-2 py-3"><p className="text-[11px] text-muted">Previsto</p><p className="num whitespace-nowrap text-[13px] font-semibold sm:text-base text-ink">{money(b.expected)}</p><p className="text-[10px] text-muted">contratos em andamento</p></div>
+          <div className="rounded-none bg-surface-muted px-2 py-3"><p className="text-[11px] text-muted">Liberado</p><p className="num whitespace-nowrap text-[13px] font-semibold sm:text-base text-[#1D6E4F]">{money(b.released)}</p><p className="text-[10px] text-muted">no próximo pagamento</p></div>
+          <div className="rounded-none bg-surface-muted px-2 py-3"><p className="text-[11px] text-muted">Recebido</p><p className="num whitespace-nowrap text-[13px] font-semibold sm:text-base text-ink">{money(b.received_month)}</p><p className="text-[10px] text-muted">neste mês</p></div>
         </div>
         <Link href="/app/repasse" className="flex items-center justify-between border-t border-line px-5 py-3 text-sm text-brand hover:bg-surface-muted">Ver meu extrato <ChevronRight size={16} aria-hidden /></Link>
       </Card>

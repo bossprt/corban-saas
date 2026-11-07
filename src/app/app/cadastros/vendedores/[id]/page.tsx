@@ -128,7 +128,7 @@ export default async function SellerPage({ params, searchParams }: { params: Pro
         ) : 'O código do vendedor é gerado automaticamente ao cadastrar.'}
       />
       <Card className="p-5">
-        {request && <p className="mb-4 rounded-[10px] bg-[#FAEEDA] px-3 py-2 text-sm text-[#854F0B]">Cadastro enviado pelo link. Confira os dados, ajuste o que precisar e clique em Aprovar e cadastrar.</p>}
+        {request && <p className="mb-4 rounded-none bg-[#FAEEDA] px-3 py-2 text-sm text-[#854F0B]">Cadastro enviado pelo link. Confira os dados, ajuste o que precisar e clique em Aprovar e cadastrar.</p>}
         <SellerForm key={s ? `${s.id}-${p.updated_at ?? ''}` : request ? request.id : 'novo'} action={saveSeller} seller={values} prefill={prefill} signupId={request?.id}
           accounts={request ? prefillAccounts : (accounts.data ?? []) as SellerAccount[]} contacts={request ? r?.contacts ?? [] : (contacts.data ?? []) as SellerContact[]}
           groups={groupOptions} branches={(branches ?? []).map(b => ({ id: b.id, name: b.name }))} canEdit={canEdit} canSeeBank={canSeeBank} />
@@ -143,14 +143,14 @@ export default async function SellerPage({ params, searchParams }: { params: Pro
                 <form action={linkSellerUser} className="grid gap-2">
                   <p className="text-ink-soft">Ligado ao usuário da equipe <strong className="text-ink">{emailOf.get(linked.id) ?? 'usuário'}</strong> ({linked.role}). A produção deste vendedor conta como dele; o papel e o que ele vê não mudam.</p>
                   <input type="hidden" name="id" value={s.id} /><input type="hidden" name="user_id" value="" />
-                  <SubmitButton pendingText="..." className="h-9 w-fit rounded-[10px] border border-line bg-surface px-3 text-sm text-ink hover:bg-surface-muted">Desfazer ligação</SubmitButton>
+                  <SubmitButton pendingText="..." className="h-9 w-fit rounded-none border border-line bg-surface px-3 text-sm text-ink hover:bg-surface-muted">Desfazer ligação</SubmitButton>
                 </form>
               ) : s.user_id ? <p className="text-ink-soft">Este vendedor já entra no portal do corretor.</p> : !s.is_active ? <p className="text-muted">Reative o vendedor para dar acesso.</p> : (<>
                 {sameEmail && (
-                  <form action={linkSellerUser} className="mb-4 grid gap-2 rounded-[10px] border border-[#FCD34D] bg-[#FFFBEB] p-3">
+                  <form action={linkSellerUser} className="mb-4 grid gap-2 rounded-none border border-[#FCD34D] bg-[#FFFBEB] p-3">
                     <p className="text-[#92400E]">O e-mail deste vendedor já é de um usuário da equipe ({sameEmail.role}). Ligue o vendedor a esse usuário em vez de criar outro login.</p>
                     <input type="hidden" name="id" value={s.id} /><input type="hidden" name="user_id" value={sameEmail.id} />
-                    <SubmitButton pendingText="Ligando..." className="h-9 w-fit rounded-[10px] bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong">Ligar a {emailOf.get(sameEmail.id)}</SubmitButton>
+                    <SubmitButton pendingText="Ligando..." className="h-9 w-fit rounded-none bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong">Ligar a {emailOf.get(sameEmail.id)}</SubmitButton>
                   </form>
                 )}
                 {free.length > 0 && (
@@ -162,7 +162,7 @@ export default async function SellerPage({ params, searchParams }: { params: Pro
                         {free.map(m => <option key={m.id} value={m.id}>{emailOf.get(m.id) ?? 'usuário'} · {m.role}</option>)}
                       </select>
                     </label>
-                    <SubmitButton pendingText="Ligando..." className="h-10 rounded-[10px] border border-line-strong bg-surface px-4 text-sm text-ink hover:bg-surface-muted">Ligar</SubmitButton>
+                    <SubmitButton pendingText="Ligando..." className="h-10 rounded-none border border-line-strong bg-surface px-4 text-sm text-ink hover:bg-surface-muted">Ligar</SubmitButton>
                   </form>
                 )}
                 <p className="mb-2 text-xs font-medium text-ink-soft">Ou crie um acesso novo ao portal do corretor:</p>
@@ -171,7 +171,7 @@ export default async function SellerPage({ params, searchParams }: { params: Pro
                   <label className="text-xs text-muted">E-mail do corretor<input required name="email" type="email" defaultValue={p.email ?? ''} className="field mt-1 block w-72" /></label>
                   <PasswordPair idPrefix="portal" />
                   <label className="flex h-10 items-center gap-1.5 text-xs text-muted"><input type="checkbox" name="must_change" className="accent-[var(--brand)]" />Pedir nova senha no primeiro acesso</label>
-                  <SubmitButton pendingText="Criando..." className="h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Criar acesso</SubmitButton>
+                  <SubmitButton pendingText="Criando..." className="h-10 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Criar acesso</SubmitButton>
                 </form>
               </>)}
               <p className="mt-2 text-xs text-muted">Entra com o papel Corretor: vê só as propostas e o extrato dele.</p>
@@ -184,8 +184,8 @@ export default async function SellerPage({ params, searchParams }: { params: Pro
               <input type="hidden" name="id" value={s.id} />
               <input type="hidden" name="active" value={s.is_active ? 'false' : 'true'} />
               {s.is_active
-                ? <ConfirmSubmit confirm={`Inativar ${s.name}? Ele deixa de aparecer em propostas novas; dá para reativar depois.`} className="h-9 rounded-[10px] border border-line bg-surface px-3 text-sm text-ink hover:bg-surface-muted">Inativar</ConfirmSubmit>
-                : <SubmitButton className="h-9 rounded-[10px] border border-line bg-surface px-3 text-sm text-ink hover:bg-surface-muted">Reativar</SubmitButton>}
+                ? <ConfirmSubmit confirm={`Inativar ${s.name}? Ele deixa de aparecer em propostas novas; dá para reativar depois.`} className="h-9 rounded-none border border-line bg-surface px-3 text-sm text-ink hover:bg-surface-muted">Inativar</ConfirmSubmit>
+                : <SubmitButton className="h-9 rounded-none border border-line bg-surface px-3 text-sm text-ink hover:bg-surface-muted">Reativar</SubmitButton>}
             </form>
           </Card>
         </div>

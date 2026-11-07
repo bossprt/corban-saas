@@ -37,7 +37,7 @@ export default async function RolesPage({ searchParams }: { searchParams: Promis
       <PageHeader
         title="Papéis e permissões"
         description="Cada pessoa da equipe tem um papel. O papel define o que ela pode fazer em cada módulo e quais dados ela enxerga."
-        actions={isAdmin ? <Link href={`?papel=${NEW}`} className="inline-flex h-10 items-center rounded-[10px] bg-brand px-4 text-sm font-medium text-white hover:bg-brand-strong">Novo papel</Link> : null}
+        actions={isAdmin ? <Link href={`?papel=${NEW}`} className="inline-flex h-10 items-center rounded-none bg-brand px-4 text-sm font-medium text-white hover:bg-brand-strong">Novo papel</Link> : null}
       />
       {isTeamErrorCode(sp.erro) && <p role="alert" className="mb-4 rounded-lg bg-[#FDE2E1] px-4 py-3 text-sm text-[#991B1B]">{TEAM_ERROR_MESSAGES[sp.erro]}</p>}
       {isTeamOkCode(sp.ok) && <p role="status" className="mb-4 rounded-lg bg-brand-soft px-4 py-3 text-sm text-brand-strong">{TEAM_OK_MESSAGES[sp.ok]}</p>}
@@ -83,7 +83,7 @@ export default async function RolesPage({ searchParams }: { searchParams: Promis
               </label>
             </div>
 
-            <div className="overflow-x-auto rounded-[12px] border border-line">
+            <div className="overflow-x-auto rounded-none border border-line">
               <table className="w-full text-sm">
                 <thead className="bg-surface-muted text-left text-xs font-semibold text-muted">
                   <tr><th className="px-4 py-2.5">Módulo</th>{ACTIONS.map(a => <th key={a} className="px-3 py-2.5 text-center">{ACTION_LABEL[a]}</th>)}</tr>

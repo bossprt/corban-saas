@@ -62,7 +62,7 @@ export async function SavedSimulations({ customerId, back, title = 'Simulações
                             {leadId && <input type="hidden" name="lead_id" value={leadId} />}
                             {leadId && sellerChoice && <select name="seller_id" required defaultValue="" aria-label="Vendedor da venda" className="field h-8 max-w-[180px] py-0 text-xs">
                               <option value="" disabled>Vendedor da venda</option>{sellerChoice.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}</select>}
-                            <SubmitButton className="inline-flex h-8 items-center whitespace-nowrap rounded-[10px] bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-strong" pendingText="Enviando...">{sendLabel}</SubmitButton>
+                            <SubmitButton className="inline-flex h-8 items-center whitespace-nowrap rounded-none bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-strong" pendingText="Enviando...">{sendLabel}</SubmitButton>
                           </form>}
                     </td>
                   </tr>

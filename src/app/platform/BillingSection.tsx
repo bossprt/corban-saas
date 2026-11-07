@@ -8,7 +8,7 @@ type Settings = { pix_key: string; pix_key_type: string; merchant_name: string; 
 type Sub = { organization_id: string; amount: string; due_day: number; grace_days: number; starts_on: string; is_active: boolean }
 type Charge = { id: string; organization_id: string; period: string; amount: string; due_on: string; block_on: string; state: string; paid_on: string | null }
 
-const button = 'inline-flex h-10 items-center justify-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong'
+const button = 'inline-flex h-10 items-center justify-center rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong'
 const KEY_TYPES: [string, string][] = [['cpf', 'CPF'], ['cnpj', 'CNPJ'], ['email', 'E-mail'], ['phone', 'Celular'], ['random', 'Aleatória']]
 
 // Monthly fee (03/11/2026): who receives the Pix, what each company pays, and the confirmation of each payment.
@@ -46,13 +46,13 @@ export function BillingSection({ settings, subs, charges, orgs, today }: { setti
           <form action={reverseCharge} className="ml-auto flex flex-wrap items-center gap-2">
             <input type="hidden" name="charge_id" value={c.id} /><input type="hidden" name="organization_id" value={c.organization_id} />
             <input name="note" required minLength={3} maxLength={500} placeholder="Motivo do estorno" className="field h-9 w-56" />
-            <SubmitButton pendingText="Estornando..." className="h-9 rounded-[10px] border border-line px-3 text-sm text-ink-soft hover:bg-surface-muted">Estornar</SubmitButton>
+            <SubmitButton pendingText="Estornando..." className="h-9 rounded-none border border-line px-3 text-sm text-ink-soft hover:bg-surface-muted">Estornar</SubmitButton>
           </form>
         ) : (
           <form action={markChargePaid} className="ml-auto flex flex-wrap items-center gap-2">
             <input type="hidden" name="charge_id" value={c.id} /><input type="hidden" name="organization_id" value={c.organization_id} />
             <label className="text-xs text-muted">Recebido em <input name="paid_on" type="date" required max={today} defaultValue={today} className="field ml-1 h-9 w-40" /></label>
-            <SubmitButton pendingText="Confirmando..." className="h-9 rounded-[10px] bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong">Recebido</SubmitButton>
+            <SubmitButton pendingText="Confirmando..." className="h-9 rounded-none bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong">Recebido</SubmitButton>
           </form>
         )}
       </div>

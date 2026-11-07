@@ -144,7 +144,7 @@ export default async function SalesBoardPage({ searchParams }: { searchParams: P
             {supervisor && <ButtonLink href="/app/crm/campanhas" variant="secondary"><Megaphone size={16} aria-hidden />Campanhas</ButtonLink>}
             <form action={takeNextLead}>
               {campaign && <input type="hidden" name="campaign_id" value={campaign} />}
-              <SubmitButton pendingText="Pegando..." className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">
+              <SubmitButton pendingText="Pegando..." className="inline-flex h-10 items-center gap-2 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">
                 Pegar próximo lead <span className="num rounded-md bg-white/20 px-1.5 text-xs">{waiting}</span>
               </SubmitButton>
             </form>
@@ -153,9 +153,9 @@ export default async function SalesBoardPage({ searchParams }: { searchParams: P
       />
 
       <nav aria-label="Ferramentas de vendas" className="mb-4 flex flex-wrap gap-2 text-sm">
-        <Link href="/app/crm/nao-perturbe" className="inline-flex items-center gap-1.5 rounded-[10px] border border-line bg-surface px-3 py-1.5 text-ink-soft hover:bg-surface-muted"><PhoneOff size={14} aria-hidden />Não perturbe</Link>
-        {supervisor && <Link href="/app/crm/parados" className="inline-flex items-center gap-1.5 rounded-[10px] border border-line bg-surface px-3 py-1.5 text-ink-soft hover:bg-surface-muted"><Hourglass size={14} aria-hidden />Leads parados</Link>}
-        {supervisor && <Link href="/app/crm/etapas" className="inline-flex items-center gap-1.5 rounded-[10px] border border-line bg-surface px-3 py-1.5 text-ink-soft hover:bg-surface-muted"><Columns3 size={14} aria-hidden />Etapas</Link>}
+        <Link href="/app/crm/nao-perturbe" className="inline-flex items-center gap-1.5 rounded-none border border-line bg-surface px-3 py-1.5 text-ink-soft hover:bg-surface-muted"><PhoneOff size={14} aria-hidden />Não perturbe</Link>
+        {supervisor && <Link href="/app/crm/parados" className="inline-flex items-center gap-1.5 rounded-none border border-line bg-surface px-3 py-1.5 text-ink-soft hover:bg-surface-muted"><Hourglass size={14} aria-hidden />Leads parados</Link>}
+        {supervisor && <Link href="/app/crm/etapas" className="inline-flex items-center gap-1.5 rounded-none border border-line bg-surface px-3 py-1.5 text-ink-soft hover:bg-surface-muted"><Columns3 size={14} aria-hidden />Etapas</Link>}
       </nav>
 
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -168,7 +168,7 @@ export default async function SalesBoardPage({ searchParams }: { searchParams: P
       </div>
 
       {can(access, 'leads.create') && (
-        <details id="novo-lead" open={sp.novo === '1'} className="mb-4 rounded-[12px] border border-line bg-surface">
+        <details id="novo-lead" open={sp.novo === '1'} className="mb-4 rounded-none border border-line bg-surface">
           <summary className="flex items-center gap-2 px-5 py-3.5 text-sm font-semibold text-ink"><UserPlus size={16} aria-hidden />Novo lead</summary>
           <form action={createSalesLead} className="grid gap-4 border-t border-line px-5 py-4 sm:grid-cols-2 lg:grid-cols-6">
             <label className={`${label} lg:col-span-2`}>Nome<input required name="full_name" minLength={2} maxLength={200} className="field mt-1.5" /></label>
@@ -182,7 +182,7 @@ export default async function SalesBoardPage({ searchParams }: { searchParams: P
             </label>
             <label className={`${label} lg:col-span-2`}>E-mail<input name="email" type="email" className="field mt-1.5" /></label>
             <div className="flex items-end lg:col-span-4">
-              <SubmitButton pendingText="Salvando..." className="inline-flex h-10 items-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Cadastrar lead</SubmitButton>
+              <SubmitButton pendingText="Salvando..." className="inline-flex h-10 items-center rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Cadastrar lead</SubmitButton>
               <span className="ml-3 text-xs text-muted">Informe o CPF ou um telefone. Se o CPF já for cliente, o lead fica ligado à ficha dele.</span>
             </div>
           </form>
@@ -208,11 +208,11 @@ export default async function SalesBoardPage({ searchParams }: { searchParams: P
             </select>
           </label>
         )}
-        <button className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><Search size={15} aria-hidden />Filtrar</button>
+        <button className="inline-flex h-10 items-center gap-1.5 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><Search size={15} aria-hidden />Filtrar</button>
       </BoardSearch>
 
-      {boardError && <p role="alert" className="mb-3 rounded-[10px] bg-[#FDF3DC] px-4 py-2 text-sm text-[#92400E]">Não foi possível carregar todo o quadro agora. Atualize a página em instantes.</p>}
-      {dndError && <p role="alert" className="mb-3 rounded-[10px] bg-[#FDF3DC] px-4 py-2 text-sm text-[#92400E]">Não foi possível conferir a lista &quot;Não perturbe&quot; agora: os cartões podem estar sem a marca.</p>}
+      {boardError && <p role="alert" className="mb-3 rounded-none bg-[#FDF3DC] px-4 py-2 text-sm text-[#92400E]">Não foi possível carregar todo o quadro agora. Atualize a página em instantes.</p>}
+      {dndError && <p role="alert" className="mb-3 rounded-none bg-[#FDF3DC] px-4 py-2 text-sm text-[#92400E]">Não foi possível conferir a lista &quot;Não perturbe&quot; agora: os cartões podem estar sem a marca.</p>}
       <Board columns={columns} showOwner={supervisor} boardQuery={boardQuery.toString()} />
 
       {openLead && (

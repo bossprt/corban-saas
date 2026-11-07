@@ -18,7 +18,7 @@ export default async function PayoutBatchesPage() {
   return (
     <section>
       <PageHeader title="Lotes de pagamento" description="Cada confirmação de pagamento de vendedores. Abra um lote para ver quem foi pago, baixar o Excel ou desfazer."
-        actions={<Link href="/app/repasse" className="inline-flex h-9 items-center rounded-[10px] border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted">Voltar</Link>} />
+        actions={<Link href="/app/repasse" className="inline-flex h-9 items-center rounded-none border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted">Voltar</Link>} />
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-sm">

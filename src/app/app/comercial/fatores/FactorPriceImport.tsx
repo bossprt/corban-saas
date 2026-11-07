@@ -4,8 +4,8 @@ import { Badge, Card } from '@/components/ui'
 import { FileDrop } from '@/components/FileDrop'
 import { importFactorPrice, previewFactorPrice, type FactorPricePreview } from './price-actions'
 
-const primary = 'h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50'
-const ghost = 'h-10 rounded-[10px] border border-line bg-surface px-4 text-sm text-ink hover:bg-surface-muted disabled:opacity-50'
+const primary = 'h-10 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50'
+const ghost = 'h-10 rounded-none border border-line bg-surface px-4 text-sm text-ink hover:bg-surface-muted disabled:opacity-50'
 const br = (d: string) => d.split('-').reverse().join('/')
 
 // The bank's Fator Price (one sheet per bank table, one line per business date): check, then import. The factor goes
@@ -43,7 +43,7 @@ export function FactorPriceImport({ banks, agreements }: { banks: { id: string; 
     </form>
     {message && <p className={`mt-3 text-sm ${message.ok ? 'text-brand-strong' : 'text-red-700'}`}>{message.text}</p>}
     {preview && <div className="mt-4 space-y-3">
-      {preview.issues.length > 0 && <div className="rounded-[10px] border border-red-200 bg-red-50 p-3 text-xs text-red-800"><p className="font-semibold">Avisos (corrija antes de importar)</p><ul className="mt-1 list-disc pl-4">{preview.issues.map((x, i) => <li key={i}>{x.sheet}: {x.message}</li>)}</ul></div>}
+      {preview.issues.length > 0 && <div className="rounded-none border border-red-200 bg-red-50 p-3 text-xs text-red-800"><p className="font-semibold">Avisos (corrija antes de importar)</p><ul className="mt-1 list-disc pl-4">{preview.issues.map((x, i) => <li key={i}>{x.sheet}: {x.message}</li>)}</ul></div>}
       <p className="text-sm text-ink">{linked.length} tabelas com fator e tabela no sistema{unlinked.length ? `; ${unlinked.length} sem tabela no sistema (não entram)` : ''}.</p>
       <div className="overflow-x-auto"><table className="w-full text-left text-xs">
         <thead className="text-muted"><tr><th className="py-2">Código</th><th>Dias</th><th>Prazos</th><th>Fator hoje</th><th>Tabelas no sistema (promotora)</th></tr></thead>

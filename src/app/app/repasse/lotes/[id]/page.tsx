@@ -14,8 +14,8 @@ import { payTo } from '@/app/imprimir/sheets'
 import { reverseBatch } from '../../actions'
 import { PayoutBreakdown } from '../../PayoutBreakdown'
 
-const box = 'rounded-[14px] border border-line bg-surface px-4 py-3'
-const btn = 'inline-flex h-9 items-center rounded-[10px] border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted print:hidden'
+const box = 'rounded-none border border-line bg-surface px-4 py-3'
+const btn = 'inline-flex h-9 items-center rounded-none border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted print:hidden'
 
 // One payment batch: header, one line per person paid with the contracts the payment paid (a payment from the balance
 // covers the oldest contracts first), Excel, print and "Desfazer lote".
@@ -49,7 +49,7 @@ export default async function PayoutBatchPage({ params }: { params: Promise<{ id
         <div className={box}><div className="text-xs text-muted">Comprovante · pago por</div><div className="mt-1 text-sm text-ink">{b.payment_reference ?? '—'} · {b.paid_by ?? '—'}</div></div>
         <div className={box}><div className="text-xs text-muted">Situação</div><div className="mt-1"><Badge tone={st.tone}>{st.label}</Badge></div></div>
       </div>
-      {b.reversed_at && <p className="mb-4 rounded-[10px] bg-surface-muted px-4 py-2 text-sm text-ink-soft">Desfeito por {b.reversed_by ?? '—'} em {dateBr(b.reversed_at.slice(0, 10))}. Motivo: {b.reversal_reason}</p>}
+      {b.reversed_at && <p className="mb-4 rounded-none bg-surface-muted px-4 py-2 text-sm text-ink-soft">Desfeito por {b.reversed_by ?? '—'} em {dateBr(b.reversed_at.slice(0, 10))}. Motivo: {b.reversal_reason}</p>}
 
       {/* One block per person (owner, 21/10/2026: the contracts as a table, not loose text). */}
       <div className="mb-4 grid gap-3">
@@ -81,7 +81,7 @@ export default async function PayoutBatchPage({ params }: { params: Promise<{ id
               <input type="hidden" name="batch_id" value={b.id} />
               <p className="text-sm text-ink-soft">Use quando os pagamentos foram registrados aqui mas não foram feitos no banco. Todos os pagamentos ainda pagos deste lote são desfeitos: os valores voltam ao saldo de cada pessoa e as saídas do banco são anuladas. Nada é apagado.</p>
               <input name="reason" required minLength={3} maxLength={300} placeholder="Motivo (ex.: PIX não foram feitos)" className="field" />
-              <button className="h-10 w-fit rounded-[10px] bg-[#991B1B] px-4 text-sm font-semibold text-white hover:opacity-90">Sim, desfazer o lote</button>
+              <button className="h-10 w-fit rounded-none bg-[#991B1B] px-4 text-sm font-semibold text-white hover:opacity-90">Sim, desfazer o lote</button>
             </form>
           </details>
         </Card>

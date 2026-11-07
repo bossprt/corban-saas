@@ -33,8 +33,8 @@ export function ClientForm({ mode, action, client, address, accounts = [], regis
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-muted">{locked ? 'Para alterar, clique em Editar cadastro.' : 'Editando: altere o que precisar e clique em Salvar alterações.'}</p>
           {locked
-            ? <button type="button" onClick={() => setEditing(true)} className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line-strong bg-surface px-3 text-sm font-medium text-ink hover:bg-surface-muted"><Pencil size={15} aria-hidden />Editar cadastro</button>
-            : <button type="button" onClick={() => { setEditing(false); setRound(r => r + 1) }} className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line bg-surface px-3 text-sm text-ink-soft hover:bg-surface-muted"><X size={15} aria-hidden />Cancelar</button>}
+            ? <button type="button" onClick={() => setEditing(true)} className="inline-flex h-9 items-center gap-1.5 rounded-none border border-line-strong bg-surface px-3 text-sm font-medium text-ink hover:bg-surface-muted"><Pencil size={15} aria-hidden />Editar cadastro</button>
+            : <button type="button" onClick={() => { setEditing(false); setRound(r => r + 1) }} className="inline-flex h-9 items-center gap-1.5 rounded-none border border-line bg-surface px-3 text-sm text-ink-soft hover:bg-surface-muted"><X size={15} aria-hidden />Cancelar</button>}
         </div>
       )}
       <fieldset key={round} disabled={locked} className="grid gap-5">
@@ -78,7 +78,7 @@ export function ClientForm({ mode, action, client, address, accounts = [], regis
         <p className="text-xs text-muted">{mode === 'create'
           ? 'Só nome, CPF e telefone são obrigatórios. CPF que já é cliente: os dados vazios são completados, nada é apagado.'
           : 'Telefone ou e-mail novo vira o principal; o anterior fica no histórico de contatos.'}</p>
-        <SubmitButton className="h-10 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Salvando...">{mode === 'create' ? 'Cadastrar cliente' : 'Salvar alterações'}</SubmitButton>
+        <SubmitButton className="h-10 rounded-none bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Salvando...">{mode === 'create' ? 'Cadastrar cliente' : 'Salvar alterações'}</SubmitButton>
       </div>}
     </form>
   )

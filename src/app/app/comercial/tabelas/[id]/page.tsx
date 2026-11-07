@@ -116,7 +116,7 @@ export default async function TablePage({ params, searchParams }: { params: Prom
         <Card id="vigencias">
           <CardHeader title="Vigências" action={canEdit && selected && !draft ? (
             <form action={cloneVersion}><input type="hidden" name="table_id" value={id} /><input type="hidden" name="version_id" value={selected.id} />
-              <SubmitButton className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line-strong bg-surface px-3 text-sm text-ink hover:bg-surface-muted" pendingText="Criando..."><CopyPlus size={15} aria-hidden className="mr-1 inline" />Nova vigência a partir da v{selected.version}</SubmitButton></form>
+              <SubmitButton className="inline-flex h-9 items-center gap-1.5 rounded-none border border-line-strong bg-surface px-3 text-sm text-ink hover:bg-surface-muted" pendingText="Criando..."><CopyPlus size={15} aria-hidden className="mr-1 inline" />Nova vigência a partir da v{selected.version}</SubmitButton></form>
           ) : undefined} />
           <ul className="mt-3">
             {vs.map(v => (
@@ -144,14 +144,14 @@ export default async function TablePage({ params, searchParams }: { params: Prom
             <form action={renameTable} className="flex flex-wrap items-end gap-2 px-5 pb-5 pt-3">
               <input type="hidden" name="table_id" value={id} />
               <label className={`${lbl} flex-1`}>Nome<input required name="name" defaultValue={table.name} maxLength={160} className="field mt-1.5" /></label>
-              <SubmitButton className="h-10 rounded-[10px] border border-line-strong bg-surface px-4 text-sm text-ink hover:bg-surface-muted" pendingText="Salvando...">Salvar nome</SubmitButton>
+              <SubmitButton className="h-10 rounded-none border border-line-strong bg-surface px-4 text-sm text-ink hover:bg-surface-muted" pendingText="Salvando...">Salvar nome</SubmitButton>
             </form>
           ) : <p className="px-5 pb-5 pt-3 text-sm text-ink">{table.name}</p>}
           {canEdit ? (
             <form action={setTableFormalization} className="flex flex-wrap items-end gap-2 border-t border-line px-5 pb-5 pt-3">
               <input type="hidden" name="table_id" value={id} />
               <label className={`${lbl} flex-1`}>Formalização dos contratos<select name="formalization" defaultValue={table.formalization} className="field mt-1.5"><option value="digital">Digital</option><option value="physical">Física (repasse só depois do físico)</option></select></label>
-              <SubmitButton className="h-10 rounded-[10px] border border-line-strong bg-surface px-4 text-sm text-ink hover:bg-surface-muted" pendingText="Salvando...">Salvar formalização</SubmitButton>
+              <SubmitButton className="h-10 rounded-none border border-line-strong bg-surface px-4 text-sm text-ink hover:bg-surface-muted" pendingText="Salvando...">Salvar formalização</SubmitButton>
             </form>
           ) : <p className="border-t border-line px-5 py-3 text-sm text-ink-soft">Formalização: {table.formalization === 'physical' ? 'Física' : 'Digital'}</p>}
           {canEdit ? (
@@ -159,7 +159,7 @@ export default async function TablePage({ params, searchParams }: { params: Prom
               <input type="hidden" name="table_id" value={id} />
               <label className={`${lbl} flex-1`}>Código da tabela no banco <span className="font-normal text-muted">(liga os fatores do banco, ex.: 745031; em branco = automático pelo nome)</span>
                 <input name="bank_table_code" maxLength={30} defaultValue={table.bank_table_code ?? ''} className="field mt-1.5" /></label>
-              <SubmitButton className="h-10 rounded-[10px] border border-line-strong bg-surface px-4 text-sm text-ink hover:bg-surface-muted" pendingText="Salvando...">Salvar código</SubmitButton>
+              <SubmitButton className="h-10 rounded-none border border-line-strong bg-surface px-4 text-sm text-ink hover:bg-surface-muted" pendingText="Salvando...">Salvar código</SubmitButton>
             </form>
           ) : <p className="border-t border-line px-5 py-3 text-sm text-ink-soft">Código da tabela no banco: {table.bank_table_code ?? '—'}</p>}
         </Card>
@@ -177,7 +177,7 @@ export default async function TablePage({ params, searchParams }: { params: Prom
           {selected && <input type="hidden" name="v" value={selected.id} />}<input type="hidden" name="ver" value={view} /><input type="hidden" name="n" value={size} />
           <label className={lbl}>Tipo de contrato<select name="tipo" defaultValue={tipo} className="field mt-1.5 min-w-44"><option value="">Todos</option>{[...usedTypeIds].map(t => <option key={t} value={t}>{typeName.get(t) ?? 'Tipo'}</option>)}</select></label>
           <label className={lbl}>Prazo (meses)<input name="prazo" defaultValue={prazo || ''} inputMode="numeric" className="field mt-1.5 w-28" /></label>
-          <button className="inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-line-strong px-3 text-sm text-ink hover:bg-surface-muted"><Search size={15} aria-hidden />Filtrar</button>
+          <button className="inline-flex h-10 items-center gap-1.5 rounded-none border border-line-strong px-3 text-sm text-ink hover:bg-surface-muted"><Search size={15} aria-hidden />Filtrar</button>
         </form>
 
         <div className="mt-3 overflow-x-auto">
@@ -206,7 +206,7 @@ export default async function TablePage({ params, searchParams }: { params: Prom
                     ? [{ id: 'empresa' }, ...payGroups].map(p => <td key={p.id} className="num px-3 py-2 text-right">{upfront ? cell(c.id, p.id, upfront.id) || '—' : '—'}</td>)
                     : usedTypes.map(t => <td key={t.id} className="num px-3 py-2 text-right">{cell(c.id, view, t.id) || <span className="text-muted">—</span>}</td>)}
                   {selected?.status === 'draft' && canEdit && <td className="px-3 py-1.5 text-right">
-                    <Link href={`/app/comercial/tabelas/${id}/linha/${c.id}`} className="inline-flex size-8 items-center justify-center rounded-md text-brand hover:bg-brand-soft" title="Alterar comissão" aria-label="Alterar comissão"><CircleDollarSign size={16} aria-hidden /></Link>
+                    <Link href={`/app/comercial/tabelas/${id}/linha/${c.id}`} className="inline-flex size-8 items-center justify-center rounded-md text-brand hover:bg-surface-muted" title="Alterar comissão" aria-label="Alterar comissão"><CircleDollarSign size={16} aria-hidden /></Link>
                   </td>}
                 </tr>
               ))}

@@ -66,7 +66,7 @@ export function ReceivableForm({ rows, canRecord, banks, suggestedBank, today, r
             <label className="min-w-[200px] flex-1 text-[13px] font-medium text-ink-soft">Observação<input name="note" maxLength={100} value={note} onChange={e => setNote(e.target.value)} placeholder="Ex.: caiu na conta, banco sem relatório" className="field mt-1.5 h-9 py-1" /></label>
             <span className="flex flex-col items-end gap-1">
               <span className="text-xs text-ink-soft">{picked.size} marcado(s) · <b className="num text-ink">{brlCents(total)}</b></span>
-              <SubmitButton disabled={!picked.size} pendingText="Registrando..." className="h-9 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Registrar recebidos</SubmitButton>
+              <SubmitButton disabled={!picked.size} pendingText="Registrando..." className="h-9 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Registrar recebidos</SubmitButton>
             </span>
             {state.error && <p role="alert" className="basis-full rounded-lg bg-[#FDF3DC] px-3 py-2 text-sm text-[#92400E]">{state.error}</p>}
             <p className="basis-full text-xs text-muted">Cada contrato entra igual a uma linha do relatório do banco: compara com o esperado e, se não bater, vai para a Conciliação. Se um falhar, nenhum é registrado.</p>

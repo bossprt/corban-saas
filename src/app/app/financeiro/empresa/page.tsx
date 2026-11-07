@@ -107,13 +107,13 @@ export default async function CompanyFinancePage({ searchParams }: { searchParam
   const kpi = (title: string, value: string, hint: string | null, tone: 'late' | 'soon' | 'plain', href?: string) => {
     const cls = tone === 'late' ? 'border-[#F7C1C1] bg-[#FCEBEB] text-[#991B1B]' : tone === 'soon' ? 'border-[#FAC775] bg-[#FAEEDA] text-[#854F0B]' : 'border-line bg-surface text-ink'
     const body = <><span className="text-[13px] font-medium opacity-90">{title}</span><span className="num text-[26px] font-semibold tracking-tight">{value}</span>{hint ? <span className="text-[13px] underline-offset-2 group-hover:underline">{hint}</span> : null}</>
-    return href ? <Link href={href} className={`group flex flex-col gap-1 rounded-[14px] border px-5 py-4 ${cls}`}>{body}</Link> : <div className={`flex flex-col gap-1 rounded-[14px] border px-5 py-4 ${cls}`}>{body}</div>
+    return href ? <Link href={href} className={`group flex flex-col gap-1 rounded-none border px-5 py-4 ${cls}`}>{body}</Link> : <div className={`flex flex-col gap-1 rounded-none border px-5 py-4 ${cls}`}>{body}</div>
   }
 
   return (
     <section>
       <PageHeader title="Financeiro da empresa" description="Contas a pagar e a receber, com a filial como centro de custo. Comissão recebida dos bancos e repasse pago entram sozinhos (ou pela lista a lançar)."
-        actions={edit ? <Link href={`${back}&novo=1#novo`} className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><Plus size={16} aria-hidden />Novo lançamento</Link> : null} />
+        actions={edit ? <Link href={`${back}&novo=1#novo`} className="inline-flex h-10 items-center gap-1.5 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><Plus size={16} aria-hidden />Novo lançamento</Link> : null} />
       <FinanceTabs current="/app/financeiro/empresa" />
 
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -135,7 +135,7 @@ export default async function CompanyFinancePage({ searchParams }: { searchParam
       <div className="mb-3 flex flex-wrap items-center gap-1.5">
         {Object.entries(VIEWS).map(([k, v]) => (
           <Link key={k} href={busca ? `${viewHref(k)}&busca=${encodeURIComponent(busca)}` : viewHref(k)} aria-current={k === view ? 'page' : undefined}
-            className={`rounded-[10px] border px-3 py-1.5 text-sm ${k === view ? 'border-ink bg-ink text-white' : 'border-line bg-surface text-ink-soft hover:bg-surface-muted'}`}>
+            className={`rounded-none border px-3 py-1.5 text-sm ${k === view ? 'border-ink bg-ink text-white' : 'border-line bg-surface text-ink-soft hover:bg-surface-muted'}`}>
             {v}{count[k] !== undefined ? ` · ${count[k]}` : ''}
           </Link>
         ))}
@@ -148,11 +148,11 @@ export default async function CompanyFinancePage({ searchParams }: { searchParam
             <Search size={15} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
             <input type="search" name="busca" defaultValue={busca} maxLength={80} placeholder="Buscar descrição, fornecedor, documento ou valor" aria-label="Buscar lançamentos" className="field h-9 w-full py-1 pl-9" />
           </span>
-          <button className="inline-flex h-9 items-center rounded-[10px] border border-line-strong bg-surface px-3 text-sm text-ink hover:bg-surface-muted">Buscar</button>
+          <button className="inline-flex h-9 items-center rounded-none border border-line-strong bg-surface px-3 text-sm text-ink hover:bg-surface-muted">Buscar</button>
           {busca && <Link href={`/app/financeiro/empresa?${new URLSearchParams(Object.entries({ ver: view, de: from ?? '', ate: to ?? '', filial: filial ?? '', conta: conta ?? '', cancelados: cancelled ? '1' : '' }).filter(([, v]) => v)).toString()}`} className="inline-flex h-9 items-center px-1 text-sm text-muted underline">Limpar</Link>}
         </form>
         <details className="ml-auto" open={moreFilters}>
-          <summary className="inline-flex cursor-pointer items-center gap-1.5 rounded-[10px] border border-line bg-surface px-3 py-1.5 text-sm text-ink-soft hover:bg-surface-muted"><SlidersHorizontal size={14} aria-hidden />Mais filtros</summary>
+          <summary className="inline-flex cursor-pointer items-center gap-1.5 rounded-none border border-line bg-surface px-3 py-1.5 text-sm text-ink-soft hover:bg-surface-muted"><SlidersHorizontal size={14} aria-hidden />Mais filtros</summary>
           <form className="mt-2 flex flex-wrap items-end gap-2" action="/app/financeiro/empresa">
             <input type="hidden" name="ver" value={view} />
             {busca && <input type="hidden" name="busca" value={busca} />}
@@ -161,7 +161,7 @@ export default async function CompanyFinancePage({ searchParams }: { searchParam
             <select name="filial" defaultValue={filial ?? ''} aria-label="Filial" className="field h-9 w-auto py-1"><option value="">Todas as filiais</option>{(branches ?? []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select>
             <select name="conta" defaultValue={conta ?? ''} aria-label="Conta bancária" className="field h-9 w-auto py-1"><option value="">Todas as contas</option>{bankOptions}</select>
             {view === 'todos' && <label className="flex h-9 items-center gap-1.5 text-sm text-ink-soft"><input type="checkbox" name="cancelados" value="1" defaultChecked={cancelled} className="size-4" />Mostrar cancelados</label>}
-            <button className="inline-flex h-9 items-center rounded-[10px] bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong">Filtrar</button>
+            <button className="inline-flex h-9 items-center rounded-none bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong">Filtrar</button>
             {moreFilters && <Link href={viewHref(view)} className="inline-flex h-9 items-center px-2 text-sm text-muted underline">Limpar</Link>}
           </form>
         </details>
@@ -230,7 +230,7 @@ export default async function CompanyFinancePage({ searchParams }: { searchParam
                     </tr>,
                     isEditing && (
                       <tr key={`${e.id}-edit`} className="bg-surface-muted/60"><td colSpan={6} className="px-4 pb-4">
-                        <form action={updateEntry} className="grid gap-3 rounded-[12px] border border-brand bg-surface p-4 sm:grid-cols-3">
+                        <form action={updateEntry} className="grid gap-3 rounded-none border border-brand bg-surface p-4 sm:grid-cols-3">
                           <input type="hidden" name="return_to" value={back} /><input type="hidden" name="entry_id" value={e.id} />
                           <p className="text-sm font-semibold text-ink sm:col-span-3">Alterar lançamento · {e.description}</p>
                           <label className={label}>Valor (R$)<input name="amount" required inputMode="decimal" defaultValue={moneyField(e.amount)} readOnly={e.source !== 'manual'} className="field mt-1.5" />
@@ -245,15 +245,15 @@ export default async function CompanyFinancePage({ searchParams }: { searchParam
                           <label className={label}>Motivo da alteração<input name="reason" required minLength={3} maxLength={200} placeholder="Reajuste do plano" className="field mt-1.5" /></label>
                           <p className="self-end text-xs text-muted sm:col-span-2">O valor antes e depois fica no histórico do lançamento.</p>
                           <div className="flex items-end justify-end gap-2">
-                            <Link href={`${back}#l-${e.id}`} className="inline-flex h-10 items-center rounded-[10px] border border-line px-4 text-sm text-ink-soft">Fechar</Link>
-                            <SubmitButton className="h-10 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Salvando...">Salvar</SubmitButton>
+                            <Link href={`${back}#l-${e.id}`} className="inline-flex h-10 items-center rounded-none border border-line px-4 text-sm text-ink-soft">Fechar</Link>
+                            <SubmitButton className="h-10 rounded-none bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Salvando...">Salvar</SubmitButton>
                           </div>
                         </form>
                       </td></tr>
                     ),
                     history === e.id && (
                       <tr key={`${e.id}-hist`} className="bg-surface-muted/60"><td colSpan={6} className="px-4 pb-4">
-                        <div className="rounded-[12px] border border-line bg-surface p-4 text-sm">
+                        <div className="rounded-none border border-line bg-surface p-4 text-sm">
                           <div className="mb-2 flex items-center justify-between"><p className="font-semibold text-ink">Histórico · {e.description}</p><Link href={`${back}#l-${e.id}`} className="text-xs text-muted underline">Fechar</Link></div>
                           {!(events ?? []).length ? <p className="text-muted">Sem registros.</p> : (
                             <ul className="space-y-1.5">
@@ -287,7 +287,7 @@ export default async function CompanyFinancePage({ searchParams }: { searchParam
             <div className="flex flex-wrap items-center gap-1.5">
               <input type="date" name="settled_on" required defaultValue={t} max={t} aria-label="Data da baixa" className="field h-9 w-auto py-1 text-sm" />
               <select name="bank_account_id" defaultValue={defaultBank} aria-label="Conta bancária" className="field h-9 w-auto py-1 text-sm"><option value="">Conta?</option>{bankOptions}</select>
-              <SubmitButton className="h-9 rounded-[10px] border border-line-strong bg-surface px-3 text-sm font-semibold text-ink hover:bg-surface-muted" pendingText="Baixando...">Pagar ou receber selecionadas</SubmitButton>
+              <SubmitButton className="h-9 rounded-none border border-line-strong bg-surface px-3 text-sm font-semibold text-ink hover:bg-surface-muted" pendingText="Baixando...">Pagar ou receber selecionadas</SubmitButton>
             </div>
           </form>
         )}

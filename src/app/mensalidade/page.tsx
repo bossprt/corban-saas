@@ -51,7 +51,7 @@ export default async function FeePage() {
               </> : <p className="mt-4 text-sm text-muted">O Pix para pagamento ainda não foi configurado. Fale com a Corban.</p>}
             </div>
             {/* eslint-disable-next-line @next/next/no-img-element -- data URL generated on the server */}
-            {qr && <img src={qr} alt="QR Code Pix da mensalidade" width={240} height={240} className="rounded-[12px] border border-line" />}
+            {qr && <img src={qr} alt="QR Code Pix da mensalidade" width={240} height={240} className="rounded-none border border-line" />}
           </div>
         )}
 

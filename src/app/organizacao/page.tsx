@@ -27,7 +27,7 @@ export default async function OrganizationPickerPage({ searchParams }: { searchP
         {memberships.map(m => (
           <form key={m.organization_id} action={selectOrganization}>
             <input type="hidden" name="organization_id" value={m.organization_id} />
-            <button className="flex w-full items-center justify-between rounded-[10px] border border-line bg-surface px-4 py-3 text-left text-sm text-ink hover:border-brand hover:bg-surface-muted">
+            <button className="flex w-full items-center justify-between rounded-none border border-line bg-surface px-4 py-3 text-left text-sm text-ink hover:border-brand hover:bg-surface-muted">
               <span className="font-medium">{name.get(m.organization_id) ?? 'Empresa'}</span><span className="text-xs text-muted">{ROLE[m.role] ?? m.role}</span>
             </button>
           </form>

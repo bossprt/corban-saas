@@ -37,9 +37,9 @@ export function CpfSearchForm({ action, mode, className, children }: { action: s
     <>
       <form action={action} method="get" onSubmit={onSubmit} className={className} role="search" aria-busy={busy}>{children}</form>
       {notFound && (
-        <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-[10px] border border-line bg-surface px-4 py-3 text-sm text-ink-soft">
+        <div role="status" className="mb-4 flex flex-wrap items-center gap-3 rounded-none border border-line bg-surface px-4 py-3 text-sm text-ink-soft">
           Nenhum cliente com este CPF.
-          <Link href="/app/clientes?novo=1" className="inline-flex h-9 items-center rounded-[10px] bg-brand px-3 text-sm font-medium text-white hover:bg-brand-strong">Cadastrar novo cliente</Link>
+          <Link href="/app/clientes?novo=1" className="inline-flex h-9 items-center rounded-none bg-brand px-3 text-sm font-medium text-white hover:bg-brand-strong">Cadastrar novo cliente</Link>
         </div>
       )}
     </>

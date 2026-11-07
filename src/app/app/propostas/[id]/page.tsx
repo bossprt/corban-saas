@@ -78,7 +78,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
 
   const sellerOptions = (sellers ?? []).filter(s => s.is_active || s.id === proposal.seller_id).map(s => ({ id: s.id, label: `${s.code ? `${String(s.code).padStart(3, '0')} · ` : ''}${s.name}` }))
   const pendingRequired = (requirements ?? []).filter(r => r.required_snapshot && !['validated', 'waived'].includes(r.status))
-  const ghost = 'h-9 rounded-[10px] border border-line-strong bg-surface px-3 text-sm text-ink hover:bg-surface-muted'
+  const ghost = 'h-9 rounded-none border border-line-strong bg-surface px-3 text-sm text-ink hover:bg-surface-muted'
 
   return (
     <section>
@@ -98,7 +98,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
       </div>
 
       {submission && submission.status !== 'validated' && (
-        <div className="mt-4 rounded-[14px] border border-line bg-surface px-5 py-3 text-sm text-ink">
+        <div className="mt-4 rounded-none border border-line bg-surface px-5 py-3 text-sm text-ink">
           {submission.status === 'pending'
             ? <>Enviada pelo portal do corretor e <strong>aguardando validação</strong>: ainda não está na esteira e não tem comissão. <Link href="/app/propostas/validacao" className="text-brand underline">Validar ou recusar</Link></>
             : <>Recusada na validação do portal: {submission.decision_reason}</>}
@@ -130,7 +130,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
                 .map(l => ({ id: l.customer_document_id, name: (Array.isArray(l.customer_documents) ? l.customer_documents[0] : l.customer_documents)?.original_file_name ?? 'arquivo' }))
               const compatible = (customerDocuments ?? []).filter(d => d.document_type_id === r.document_type_id && !files.some(f => f.id === d.id))
               return (
-                <div key={r.id} className="rounded-[10px] border border-line p-3 text-sm">
+                <div key={r.id} className="rounded-none border border-line p-3 text-sm">
                   <div className="flex items-center justify-between gap-3"><span className="text-ink">{r.label_snapshot}{r.required_snapshot ? ' *' : ''}</span><span className={`text-xs ${r.status === 'validated' ? 'font-medium text-[#166534]' : 'text-muted'}`}>{REQUIREMENT_STATUS[r.status] ?? r.status}</span></div>
                   {files.length > 0 && <ul className="mt-1 text-xs text-ink-soft">{files.map(f => <li key={f.id}>{f.name}</li>)}</ul>}
                   {!['validated', 'waived'].includes(r.status) && compatible.length > 0 && (
@@ -154,7 +154,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
               )
             })}
             {!requirements?.length && (missingDocumentList
-              ? <p className="rounded-[10px] bg-[#FEF3C7] px-3 py-2 text-sm text-[#92400E]">Este contrato está em &quot;Antes da fila&quot; porque o banco e convênio dele não têm lista de documentos. Próximo passo: cadastre a lista em <Link href={DOCUMENT_LISTS_HREF} className="font-medium underline">Cadastros › Documentos por banco</Link> e volte aqui para preparar o checklist.</p>
+              ? <p className="rounded-none bg-[#FEF3C7] px-3 py-2 text-sm text-[#92400E]">Este contrato está em &quot;Antes da fila&quot; porque o banco e convênio dele não têm lista de documentos. Próximo passo: cadastre a lista em <Link href={DOCUMENT_LISTS_HREF} className="font-medium underline">Cadastros › Documentos por banco</Link> e volte aqui para preparar o checklist.</p>
               : <p className="text-sm text-muted">Checklist ainda não preparado para este contrato.</p>)}
           </div>
         </Card>

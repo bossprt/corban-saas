@@ -8,7 +8,7 @@ export default function NotFound() {
         <p className="text-sm font-semibold text-brand">Erro 404</p>
         <h1 className="mt-1 text-xl font-semibold text-ink">Página não encontrada</h1>
         <p className="mt-2 text-sm text-ink-soft">O endereço pode estar errado ou a página pode ter sido removida.</p>
-        <Link href="/app" className="mt-5 inline-flex h-10 items-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Voltar ao início</Link>
+        <Link href="/app" className="mt-5 inline-flex h-10 items-center rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Voltar ao início</Link>
       </section>
     </main>
   )

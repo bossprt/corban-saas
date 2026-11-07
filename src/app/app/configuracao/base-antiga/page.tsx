@@ -32,7 +32,7 @@ export default async function LegacyBasePage() {
           <label className="text-[13px] font-medium text-ink-soft">Início do uso do Corban
             <input type="date" name="cutoff_on" required defaultValue={settings?.cutoff_on ?? ''} disabled={!owner} className="field mt-1.5 w-auto" />
           </label>
-          {owner && <SubmitButton className="h-10 rounded-[10px] border border-line-strong bg-surface px-4 text-sm text-ink hover:bg-surface-muted" pendingText="Salvando...">Salvar data de corte</SubmitButton>}
+          {owner && <SubmitButton className="h-10 rounded-none border border-line-strong bg-surface px-4 text-sm text-ink hover:bg-surface-muted" pendingText="Salvando...">Salvar data de corte</SubmitButton>}
           <p className="w-full text-xs text-muted">Contratos a partir desta data não entram como antigos: eles são da esteira.</p>
         </form>
       </Card>

@@ -67,7 +67,7 @@ export default async function PayoutPage() {
   return (
     <section>
       <PageHeader title="Repasse" description="Conta corrente de cada pessoa: comissões conciliadas, estornos, vales, bônus e descontos. Todo pagamento é aprovado por outra pessoa."
-        actions={can(access, 'repasse.view') ? <Link href="/app/repasse/lotes" className="inline-flex h-9 items-center rounded-[10px] border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted">Lotes de pagamento</Link> : null} />
+        actions={can(access, 'repasse.view') ? <Link href="/app/repasse/lotes" className="inline-flex h-9 items-center rounded-none border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted">Lotes de pagamento</Link> : null} />
 
       {canApprove && (
         <Card className="mb-4" id="pagar">
@@ -85,7 +85,7 @@ export default async function PayoutPage() {
                 <select name="frequency" defaultValue="daily" aria-label="Frequência do fechamento" className="field mt-1.5"><option value="daily">Diário</option><option value="weekly">Semanal</option><option value="biweekly">Quinzenal</option><option value="monthly">Mensal</option></select>
               </label>
               <label className="text-[13px] font-medium text-ink-soft">Fechar período até<input type="date" name="period_end" defaultValue={todayIso()} max={todayIso()} className="field mt-1.5" /></label>
-              <button className="h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Fechar período</button>
+              <button className="h-10 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Fechar período</button>
             </form>
             <form action={openAccount} className="flex items-end gap-2">
               <label className="text-[13px] font-medium text-ink-soft">Abrir conta de
@@ -95,7 +95,7 @@ export default async function PayoutPage() {
                   <optgroup label="Equipe">{(members ?? []).map(m => <option key={m.user_id} value={`member:${m.user_id}`}>{emails.get(m.user_id) ?? 'Membro'}</option>)}</optgroup>
                 </select>
               </label>
-              <button className="h-10 rounded-[10px] border border-line bg-surface px-4 text-sm hover:bg-surface-muted">Abrir</button>
+              <button className="h-10 rounded-none border border-line bg-surface px-4 text-sm hover:bg-surface-muted">Abrir</button>
             </form>
           </div>
           <p className="mt-3 text-xs text-muted">O fechamento gera o extrato de quem está no modelo de fechamento: lançamentos aprovados até a data. Saldo negativo passa adiante e cada extrato desconta no máximo o limite configurado.</p>

@@ -11,9 +11,9 @@ import { SellerDashboard } from './SellerDashboard'
 // Switch between the dashboard of the role and the person's own seller view, for whoever is linked to a seller record
 // and is not only a seller (a manager or admin who also sells, 06/10/2026).
 function ViewTabs({ seller }: { seller: boolean }) {
-  const tab = (active: boolean) => `rounded-[9px] px-3 py-1.5 text-sm ${active ? 'bg-brand-soft font-semibold text-brand' : 'text-ink-soft hover:bg-surface-muted'}`
+  const tab = (active: boolean) => `rounded-none px-3 py-1.5 text-sm ${active ? 'bg-brand-soft font-semibold text-brand' : 'text-ink-soft hover:bg-surface-muted'}`
   return (
-    <nav aria-label="Painel" className="mb-4 flex w-fit gap-1 rounded-[12px] border border-line bg-surface p-1">
+    <nav aria-label="Painel" className="mb-4 flex w-fit gap-1 rounded-none border border-line bg-surface p-1">
       <Link href="/app" aria-current={!seller ? 'page' : undefined} className={tab(!seller)}>Visão geral</Link>
       <Link href="/app?visao=vendedor" aria-current={seller ? 'page' : undefined} className={tab(seller)}>Meu painel de vendedor</Link>
     </nav>

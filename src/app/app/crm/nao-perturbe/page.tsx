@@ -68,7 +68,7 @@ export default async function DoNotDisturbPage() {
               <form action={addDndPhone} className="grid gap-3 px-5 pb-5 pt-3">
                 <label className={label}>Telefone com DDD<input name="phone" required inputMode="tel" placeholder="(68) 99999-0000" className="field mt-1.5" /></label>
                 <label className={label}>Observação (opcional)<input name="note" maxLength={300} className="field mt-1.5" /></label>
-                <SubmitButton pendingText="Salvando..." className="inline-flex h-10 w-fit items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><PhoneOff size={16} aria-hidden />Marcar &quot;Não perturbe&quot;</SubmitButton>
+                <SubmitButton pendingText="Salvando..." className="inline-flex h-10 w-fit items-center gap-1.5 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><PhoneOff size={16} aria-hidden />Marcar &quot;Não perturbe&quot;</SubmitButton>
               </form>
             </Card>
           )}

@@ -34,7 +34,7 @@ export function SettleForm({ action, entryId, returnTo, amountCents, direction, 
   const verb = direction === 'in' ? 'entra na' : 'sai da'
   const lbl = 'text-xs text-ink-soft'
   return (
-    <form action={action} className="mt-1 grid w-[min(30rem,85vw)] gap-2 rounded-[12px] border border-line bg-surface p-3 text-left sm:grid-cols-3">
+    <form action={action} className="mt-1 grid w-[min(30rem,85vw)] gap-2 rounded-none border border-line bg-surface p-3 text-left sm:grid-cols-3">
       <input type="hidden" name="return_to" value={returnTo} /><input type="hidden" name="entry_id" value={entryId} />
       <label className={lbl}>Data<input type="date" name="settled_on" required defaultValue={today} max={today} className="field mt-1 h-8 py-0 text-xs" /></label>
       <label className={lbl}>Conta bancária<select name="bank_account_id" defaultValue={defaultBank} className="field mt-1 h-8 py-0 text-xs"><option value="">Conta?</option>{bankOptions}</select></label>

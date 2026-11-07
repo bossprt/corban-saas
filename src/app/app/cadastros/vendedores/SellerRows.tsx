@@ -8,7 +8,7 @@ import { formatTaxId, PIX_TYPE_LABEL } from '@/lib/sellers'
 const lbl = 'text-[13px] font-medium text-ink-soft'
 const legend = 'mb-2 text-sm font-semibold text-ink'
 const optional = 'ml-1 text-xs font-normal text-muted'
-const addBtn = 'inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line bg-surface px-3 text-sm text-ink hover:bg-surface-muted'
+const addBtn = 'inline-flex h-9 items-center gap-1.5 rounded-none border border-line bg-surface px-3 text-sm text-ink hover:bg-surface-muted'
 const removeBtn = 'inline-flex items-center gap-1 text-xs text-muted hover:text-[#991B1B]'
 
 export type SellerAccount = {
@@ -41,7 +41,7 @@ function AccountRow({ a, index, primary, removed, locked, onRemove, canDrop }: {
   // bank, branch and account (TED) are asked before sending, instead of the database refusing the whole save.
   const need = payee && !removed
   return (
-    <div className={`grid gap-3 rounded-[12px] border border-line p-3 md:grid-cols-4 ${removed ? 'opacity-50' : ''}`} data-row="seller-account">
+    <div className={`grid gap-3 rounded-none border border-line p-3 md:grid-cols-4 ${removed ? 'opacity-50' : ''}`} data-row="seller-account">
       <input type="hidden" name="account_id" value={a?.id ?? ''} />
       <input type="hidden" name="remove_account" value={removed ? '1' : ''} />
       <input type="hidden" name="has_payee" value={payee ? '1' : ''} />
@@ -115,7 +115,7 @@ export function SellerContactRows({ initial, locked }: { initial: SellerContact[
         {rows.map((r, i) => {
           const c = r.item
           return (
-            <div key={r.key} className="grid gap-3 rounded-[12px] border border-line p-3 md:grid-cols-4" data-row="seller-contact">
+            <div key={r.key} className="grid gap-3 rounded-none border border-line p-3 md:grid-cols-4" data-row="seller-contact">
               <div className="flex items-center justify-between md:col-span-4">
                 <span className="text-xs font-semibold text-muted">Contato {i + 1}</span>
                 {!locked && <button type="button" onClick={() => drop(r.key)} className={removeBtn}><X size={13} aria-hidden />Remover</button>}

@@ -80,7 +80,7 @@ const STATE_LABEL: Record<string, string> = {
 // Server-rendered per request.
 const requestTime = () => Date.now()
 
-const panel = 'rounded-[10px] border border-line bg-surface px-5 py-5 sm:px-6'
+const panel = 'border-t-[3px] border-ink pb-2 pt-4'
 const rowLink = 'hover:underline decoration-line-strong underline-offset-4'
 
 // The owner's dashboard, "Demonstrativo" (redesign 07/11/2026, research on Stripe, Mercury, Ramp, Linear, Attio):
@@ -99,14 +99,14 @@ export async function OwnerDashboard({ supabase, organizationId, organizationNam
 
   const header = (
     <PageHeader title="Visão geral" description={organizationName ? `${organizationName} · ${periodText(period, range.from, range.to)}` : periodText(period, range.from, range.to)}
-      actions={<nav aria-label="Período" className="flex gap-0.5 rounded-[8px] border border-line bg-surface p-0.5">
+      actions={<nav aria-label="Período" className="flex gap-1">
         {(Object.keys(PERIODS) as PeriodKey[]).map(k => (
           <Link key={k} href={`/app?periodo=${k}`} aria-current={k === period ? 'page' : undefined}
-            className={`rounded-[6px] px-3 py-1 text-[13px] ${k === period ? 'bg-ink font-medium text-surface' : 'text-muted hover:text-ink'}`}>{PERIODS[k]}</Link>
+            className={`border-2 border-ink px-3 py-1 text-[13px] font-bold ${k === period ? 'bg-ink text-canvas' : 'text-ink hover:bg-surface-muted'}`}>{PERIODS[k]}</Link>
         ))}
       </nav>} />
   )
-  if (error || !board) return <section>{header}<div className={`${panel} text-sm text-[#92400E]`}>Não foi possível carregar os números agora. Tente de novo em instantes.</div></section>
+  if (error || !board) return <section>{header}<div className={`${panel} text-sm text-[#9A3412]`}>Não foi possível carregar os números agora. Tente de novo em instantes.</div></section>
 
   const { current: cur, previous: prev, attention: at } = board
   const open = (openData ?? { open: 0, rows: [] }) as OpenList
@@ -173,7 +173,7 @@ export async function OwnerDashboard({ supabase, organizationId, organizationNam
     <section>
       {header}
       <div className={`${panel} max-w-xl`}>
-        <h2 className="text-[15px] font-semibold text-ink">Resultado do período</h2>
+        <h2 className="wide text-xl font-extrabold text-ink">Resultado do período</h2>
         <p className="mt-2 text-[15px] text-ink">Nenhum contrato pago ainda.</p>
         <p className="mt-1 text-[13px] text-muted">Importe a planilha de produção do banco e o resultado aparece aqui, já com a comissão prevista e o repasse de cada vendedor.</p>
         <table className="mt-4 w-full border-collapse text-sm text-muted">
@@ -182,8 +182,8 @@ export async function OwnerDashboard({ supabase, organizationId, organizationNam
           ))}</tbody>
         </table>
         <div className="mt-5 flex flex-wrap gap-2">
-          <Link href="/app/propostas/importar" className="rounded-[7px] bg-brand px-4 py-2 text-[13.5px] font-medium text-white hover:bg-brand-strong">Importar planilha do banco</Link>
-          <Link href="/app/cadastros/vendedores" className="rounded-[7px] border border-brand px-4 py-2 text-[13.5px] font-medium text-brand hover:bg-brand-soft">Cadastrar vendedor</Link>
+          <Link href="/app/propostas/importar" className="border-2 border-ink bg-ink px-4 py-2 text-[13.5px] font-bold text-canvas hover:bg-ink-soft">Importar planilha do banco</Link>
+          <Link href="/app/cadastros/vendedores" className="border-2 border-ink px-4 py-2 text-[13.5px] font-bold text-ink hover:bg-surface-muted">Cadastrar vendedor</Link>
         </div>
       </div>
     </section>
@@ -193,20 +193,22 @@ export async function OwnerDashboard({ supabase, organizationId, organizationNam
     <section>
       {header}
 
-      <div aria-label="Pendências" className="mb-7 border-t border-line">
+      <div aria-labelledby="t-pendencias" className="mb-8 border-t-[3px] border-ink pt-4">
+        <h2 id="t-pendencias" className="wide mb-1 text-xl font-extrabold text-ink">Pendências</h2>
         {tasks.length === 0 ? (
           <p className="flex items-center justify-between gap-3 border-b border-line px-1 py-3 text-sm text-muted">
             Nada fora do normal no dinheiro e nos contratos.
-            <Link href={allAlertsHref} className="shrink-0 text-[13px] font-medium text-brand hover:underline">Ver leads e tarefas</Link>
+            <Link href={allAlertsHref} className="shrink-0 text-[13px] font-bold text-ink underline underline-offset-4">Ver leads e tarefas</Link>
           </p>
         ) : tasks.map(t => (
           <div key={t.text} className="flex items-center gap-3 border-b border-line px-1 py-2.5">
-            <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full ${t.tone === 'danger' ? 'bg-[#B42318]' : 'bg-[#B45309]'}`} />
+            <span className={`wide w-10 shrink-0 text-right text-[26px] font-extrabold leading-none ${t.tone === 'danger' ? 'text-reversed' : 'text-warn'}`}>{t.n}</span>
             <span className="flex min-w-0 flex-1 flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5">
-              <Link href={t.href} className="text-sm text-ink hover:underline">{t.text}</Link>
+              {/* The count is already shown large on the left; drop it from the start of the sentence. */}
+              <Link href={t.href} className="text-[15px] text-ink hover:underline">{t.text.replace(/^\d+ /, '')}</Link>
               {t.value !== null ? <span className="text-sm text-ink-soft"><Money v={t.value} /></span> : null}
             </span>
-            <Link href={t.href} className="w-24 shrink-0 text-right text-[13px] font-medium text-brand hover:underline">{t.action}</Link>
+            <Link href={t.href} className="w-28 shrink-0 border-2 border-ink py-1.5 text-center text-[13px] font-extrabold text-ink hover:bg-ink hover:text-canvas">{t.action}</Link>
           </div>
         ))}
         {tasks.length > 0 ? <p className="px-1 pt-2 text-right"><Link href={allAlertsHref} className="text-[12.5px] text-muted hover:text-ink hover:underline">Leads e tarefas ficam em todos os alertas</Link></p> : null}
@@ -214,17 +216,16 @@ export async function OwnerDashboard({ supabase, organizationId, organizationNam
 
       <div className="mb-7 grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         <section className={panel} aria-labelledby="t-resultado">
-          <h2 id="t-resultado" className="text-[15px] font-semibold text-ink">Resultado do período</h2>
-          <p className="mb-3 text-[12.5px] text-muted">Dos contratos pagos ao cliente até o que fica na empresa</p>
-          <table className="w-full border-collapse text-sm text-ink">
+          <h2 id="t-resultado" className="wide text-xl font-extrabold text-ink">Resultado do período</h2>
+                    <table className="w-full border-collapse text-sm text-ink">
             <tbody>
               {line('Produção paga', <Money v={cur.production} />, { href: paidLink(), note: plural(cur.contracts, 'contrato', 'contratos') })}
               {line('Comissão prevista dos bancos', <Money v={expected} />, { href: paidLink() })}
               {!isZero(costs) ? line('Impostos, IR e comissões de supervisão e gerência', <Money v={costs} minus />, { minor: true, href: paidLink() }) : null}
               {line('Repasse aos vendedores', <Money v={sellers} minus />, { href: '/app/repasse' })}
               <tr>
-                <td className="border-t-2 border-ink pt-3 text-base font-semibold">Fica na empresa</td>
-                <td className="border-t-2 border-ink pt-3 text-right text-[22px] font-semibold"><Link href={paidLink()} className={rowLink}><Money v={margin} /></Link></td>
+                <td className="border-t-2 border-ink bg-highlight px-2 py-2.5 text-base font-extrabold">Fica na empresa</td>
+                <td className="wide border-t-2 border-ink bg-highlight px-2 py-2.5 text-right text-[24px] font-extrabold"><Link href={paidLink()} className={rowLink}><Money v={margin} /></Link></td>
               </tr>
             </tbody>
           </table>
@@ -234,7 +235,7 @@ export async function OwnerDashboard({ supabase, organizationId, organizationNam
         </section>
 
         <section className={panel} aria-labelledby="t-esteira">
-          <h2 id="t-esteira" className="text-[15px] font-semibold text-ink">Esteira agora</h2>
+          <h2 id="t-esteira" className="wide text-xl font-extrabold text-ink">Esteira agora</h2>
           <p className="mb-3 text-[12.5px] text-muted">Contratos em andamento, por etapa</p>
           {states.length === 0 ? <p className="text-sm text-muted">Nenhum contrato em andamento.</p> : (
             <table className="w-full border-collapse text-[13.5px] text-ink">
@@ -250,7 +251,7 @@ export async function OwnerDashboard({ supabase, organizationId, organizationNam
                     <td className="border-b border-line py-2"><Link href={`/app/propostas?estado=${s}`} className={rowLink}>{STATE_LABEL[s] ?? s}</Link></td>
                     <td className="num border-b border-line py-2 text-right"><Link href={`/app/propostas?estado=${s}`} className={rowLink}>{board.pipeline[s]}</Link></td>
                     <td className="border-b border-line py-2 text-right">{openComplete ? <Money v={rows.reduce((a, c) => add(a, amountOf(c)), ZERO)} round /> : '—'}</td>
-                    <td className={`num border-b border-line py-2 text-right ${late ? 'text-[#B42318]' : 'text-muted'}`}>{openComplete ? (late ? <Link href="/app/propostas?atrasado=1" className={rowLink}>{late}</Link> : '0') : '—'}</td>
+                    <td className={`num border-b border-line py-2 text-right ${late ? 'text-[#C8102E]' : 'text-muted'}`}>{openComplete ? (late ? <Link href="/app/propostas?atrasado=1" className={rowLink}>{late}</Link> : '0') : '—'}</td>
                   </tr>
                 )
               })}</tbody>
@@ -262,8 +263,8 @@ export async function OwnerDashboard({ supabase, organizationId, organizationNam
           <p className="mt-1 flex justify-between gap-3 text-[13px]"><Link href={`/app/financeiro/conciliacao?${new URLSearchParams({ de: range.from, ate: range.to })}`} className={`text-ink-soft ${rowLink}`}>Recebido no período</Link><Money v={cur.received} /></p>
           {receivedPct !== null ? (
             <>
-              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-line" role="img" aria-label={`${receivedPct}% da comissão prevista destes contratos já recebida`}>
-                <span className="block h-full bg-brand" style={{ width: `${Math.min(100, Math.max(0, receivedPct))}%` }} />
+              <div className="mt-3 h-3.5 overflow-hidden border-2 border-ink bg-surface" role="img" aria-label={`${receivedPct}% da comissão prevista destes contratos já recebida`}>
+                <span className="block h-full bg-ink" style={{ width: `${Math.min(100, Math.max(0, receivedPct))}%` }} />
               </div>
               <p className="mt-1.5 text-[12.5px] text-muted">
                 {isZero(missing) ? 'Os bancos já pagaram toda a comissão dos contratos pagos no período.' : <>
@@ -280,10 +281,10 @@ export async function OwnerDashboard({ supabase, organizationId, organizationNam
         <section className={`${panel} mb-7`} aria-labelledby="t-parados">
           <div className="mb-3 flex items-baseline justify-between gap-3">
             <div>
-              <h2 id="t-parados" className="text-[15px] font-semibold text-ink">Parados há mais tempo</h2>
+              <h2 id="t-parados" className="wide text-xl font-extrabold text-ink">Parados há mais tempo</h2>
               <p className="text-[12.5px] text-muted">Contratos além do prazo da etapa, os mais antigos primeiro</p>
             </div>
-            <Link href="/app/propostas?atrasado=1" className="shrink-0 text-[13px] font-medium text-brand hover:underline">Ver todos</Link>
+            <Link href="/app/propostas?atrasado=1" className="shrink-0 text-[13px] font-bold text-ink underline underline-offset-4">Ver todos</Link>
           </div>
           <ul>{stuck.map(c => (
             <li key={c.id}>
@@ -291,7 +292,7 @@ export async function OwnerDashboard({ supabase, organizationId, organizationNam
                 <span className="truncate text-sm text-ink">{c.full_name ?? 'Cliente sem nome'}</span>
                 <span className="order-3 truncate text-[12.5px] text-muted sm:order-none">{[STATE_LABEL[c.canonical_state] ?? c.canonical_state, c.bank, c.seller_name].filter(Boolean).join(', ')}</span>
                 <span className="text-right text-sm text-ink"><Money v={amountOf(c)} /></span>
-                <span className="order-4 text-right text-[12.5px] font-medium text-[#B42318] sm:order-none">{plural(daysIn(c), 'dia', 'dias')} na etapa</span>
+                <span className="order-4 text-right text-[12.5px] font-medium text-[#C8102E] sm:order-none">{plural(daysIn(c), 'dia', 'dias')} na etapa</span>
               </Link>
             </li>
           ))}</ul>
@@ -299,15 +300,15 @@ export async function OwnerDashboard({ supabase, organizationId, organizationNam
       ) : null}
 
       <section className={`${panel} mb-7`} aria-labelledby="t-producao">
-        <h2 id="t-producao" className="text-[15px] font-semibold text-ink">Produção paga por {board.period.by_month ? 'mês' : 'dia'}</h2>
+        <h2 id="t-producao" className="wide text-xl font-extrabold text-ink">Produção paga por {board.period.by_month ? 'mês' : 'dia'}</h2>
         <p className="mb-4 text-[12.5px] text-muted">Toque em uma barra para ver os contratos daquele {board.period.by_month ? 'mês' : 'dia'}</p>
         {cur.contracts === 0 ? <p className="text-sm text-muted">Nenhum contrato pago ao cliente neste período.</p> : (
           <>
-            <div className="flex h-44 items-end gap-0.5 border-b border-line-strong sm:gap-1.5" role="img" aria-label="Produção paga por período">
+            <div className="flex h-44 items-end gap-0.5 border-b-2 border-ink sm:gap-1.5" role="img" aria-label="Produção paga por período">
               {series.map(s => (
                 <Link key={s.day} href={board.period.by_month ? paidLink() : paidLink({ pago_de: s.day, pago_ate: s.day })} title={`${dayLabel(s.day, board.period.by_month)}: ${money(s.production)}, ${plural(s.contracts, 'contrato', 'contratos')}`}
                   className="group flex h-full min-w-0 flex-1 flex-col items-center justify-end">
-                  <span className={`block w-full max-w-10 rounded-t-[2px] ${s.contracts ? 'bg-brand/75 group-hover:bg-brand' : ''}`} style={{ height: s.contracts ? `${pct(s.production, maxDay)}%` : '0' }} />
+                  <span className={`block w-full max-w-10 ${s.contracts ? 'bg-ink group-hover:bg-highlight group-hover:outline-2 group-hover:outline-ink' : ''}`} style={{ height: s.contracts ? `${pct(s.production, maxDay)}%` : '0' }} />
                 </Link>
               ))}
             </div>
@@ -318,7 +319,7 @@ export async function OwnerDashboard({ supabase, organizationId, organizationNam
 
       <div className="grid gap-6 xl:grid-cols-2">
         <section className={panel} aria-labelledby="t-vendedores">
-          <h2 id="t-vendedores" className="mb-3 text-[15px] font-semibold text-ink">Vendedores no período</h2>
+          <h2 id="t-vendedores" className="mb-3 wide text-xl font-extrabold text-ink">Vendedores no período</h2>
           {board.sellers.length === 0 ? <p className="text-sm text-muted">Sem produção paga neste período.</p> : (
             <table className="w-full border-collapse text-[13.5px] text-ink">
               <thead><tr className="text-[12px] text-muted"><th className="pb-1.5 text-left font-medium">Vendedor</th><th className="pb-1.5 text-right font-medium">Produção</th><th className="pb-1.5 text-right font-medium">Recebe</th></tr></thead>
@@ -333,7 +334,7 @@ export async function OwnerDashboard({ supabase, organizationId, organizationNam
           )}
         </section>
         <section className={panel} aria-labelledby="t-bancos">
-          <h2 id="t-bancos" className="mb-3 text-[15px] font-semibold text-ink">Bancos no período</h2>
+          <h2 id="t-bancos" className="mb-3 wide text-xl font-extrabold text-ink">Bancos no período</h2>
           {board.banks.length === 0 ? <p className="text-sm text-muted">Sem produção paga neste período.</p> : (
             <table className="w-full border-collapse text-[13.5px] text-ink">
               <thead><tr className="text-[12px] text-muted"><th className="pb-1.5 text-left font-medium">Banco</th><th className="pb-1.5 text-right font-medium">Produção</th><th className="pb-1.5 text-right font-medium">Comissão</th><th className="pb-1.5 text-right font-medium">Falta receber</th></tr></thead>
@@ -342,7 +343,7 @@ export async function OwnerDashboard({ supabase, organizationId, organizationNam
                   <td className="border-b border-line py-2 pr-3"><Link href={paidLink({ banco: b.id ?? 'none' })} className={rowLink}>{b.name}</Link> <span className="text-[12px] text-muted">{plural(b.contracts, 'contrato', 'contratos')}</span></td>
                   <td className="border-b border-line py-2 text-right"><Money v={b.production} round /></td>
                   <td className="border-b border-line py-2 text-right text-ink-soft"><Money v={b.expected} /></td>
-                  <td className={`border-b border-line py-2 text-right ${cmp(R(b.missing), ZERO) > 0 ? 'text-[#92400E]' : 'text-muted'}`}>{cmp(R(b.missing), ZERO) > 0 ? <Money v={b.missing} /> : 'nada'}</td>
+                  <td className={`border-b border-line py-2 text-right ${cmp(R(b.missing), ZERO) > 0 ? 'text-[#9A3412]' : 'text-muted'}`}>{cmp(R(b.missing), ZERO) > 0 ? <Money v={b.missing} /> : 'nada'}</td>
                 </tr>
               ))}</tbody>
             </table>

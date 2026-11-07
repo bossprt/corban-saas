@@ -22,7 +22,7 @@ export function CreateKeyForm() {
       </form>
       {state.error && <p role="alert" className="rounded-lg bg-[#FDE2E1] px-3 py-2 text-sm text-[#991B1B]">{state.error}</p>}
       {state.key && (
-        <div role="status" className="rounded-[12px] border border-brand/30 bg-brand-soft p-4">
+        <div role="status" className="rounded-none border border-brand/30 bg-brand-soft p-4">
           <p className="text-sm font-semibold text-brand-strong">Copie a chave agora. Ela não será mostrada de novo.</p>
           <code className="mt-2 block break-all rounded-lg bg-surface px-3 py-2 font-mono text-[13px] text-ink" data-testid="new-api-key">{state.key}</code>
         </div>

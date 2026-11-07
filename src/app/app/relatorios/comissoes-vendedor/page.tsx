@@ -34,7 +34,7 @@ export default async function SellerCommissionReportPage() {
             </select>
           </label>
           <PeriodFields from={monthStart()} to={today()} />
-          <button className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><FileText size={16} aria-hidden />Gerar relatório</button>
+          <button className="inline-flex h-10 items-center gap-1.5 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><FileText size={16} aria-hidden />Gerar relatório</button>
         </form>
       </Card>
     </section>

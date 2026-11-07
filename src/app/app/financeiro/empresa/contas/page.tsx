@@ -45,7 +45,7 @@ export default async function BankAccountsPage() {
       <label className={label}>Data do saldo inicial<input type="date" name="opening_on" defaultValue={b?.opening_on ?? ''} className="field mt-1.5" /></label>
       {b && <label className={label}>Situação<select name="is_active" defaultValue={b.is_active ? 'true' : 'false'} className="field mt-1.5"><option value="true">Ativa</option><option value="false">Desativada</option></select></label>}
       {b && <label className={`${label} sm:col-span-3`}>Motivo <span className="font-normal text-muted">(obrigatório só quando muda o saldo inicial ou a data dele)</span><input name="reason" maxLength={200} className="field mt-1.5" /></label>}
-      <div className="flex items-end justify-end"><SubmitButton className="h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Salvando...">{b ? 'Salvar' : 'Cadastrar conta'}</SubmitButton></div>
+      <div className="flex items-end justify-end"><SubmitButton className="h-10 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Salvando...">{b ? 'Salvar' : 'Cadastrar conta'}</SubmitButton></div>
     </form>
   )
 

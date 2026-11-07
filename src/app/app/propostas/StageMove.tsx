@@ -56,9 +56,9 @@ function StageDialog({ pending, busy, onCancel, onConfirm }: { pending: Pending;
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onCancel}>
       <form role="dialog" aria-modal="true" aria-label={`Mover para ${pending.stage.name}`} onClick={e => e.stopPropagation()}
         onSubmit={e => { e.preventDefault(); onConfirm(paid ? { paidOn, note } : pendency ? { note, pendencyDue: due } : { note }) }}
-        className="w-full max-w-sm space-y-3 rounded-[14px] bg-surface p-5 text-sm shadow-xl">
+        className="w-full max-w-sm space-y-3 rounded-none bg-surface p-5 text-sm shadow-xl">
         <h2 className="text-base font-semibold text-ink">Mover para {pending.stage.name}</h2>
-        {closing && <p className="rounded-[10px] border border-[#FCD34D] bg-[#FFFBEB] px-3 py-2 text-[13px] text-[#92400E]">O contrato sai da esteira como {pending.stage.name}. Confirme e diga o motivo.</p>}
+        {closing && <p className="rounded-none border border-[#FCD34D] bg-[#FFFBEB] px-3 py-2 text-[13px] text-[#92400E]">O contrato sai da esteira como {pending.stage.name}. Confirme e diga o motivo.</p>}
         {paid && (
           <label className="block text-[13px] font-medium text-ink-soft">Pago ao cliente em
             <input type="date" required max={todayBr()} value={paidOn} onChange={e => setPaidOn(e.target.value)} className="field mt-1.5" />
@@ -80,8 +80,8 @@ function StageDialog({ pending, busy, onCancel, onConfirm }: { pending: Pending;
           </label>
         )}
         <div className="flex justify-end gap-2 pt-1">
-          <button type="button" onClick={onCancel} className="h-10 rounded-[10px] border border-line px-4 font-medium text-ink-soft hover:bg-surface-muted">Cancelar</button>
-          <button disabled={busy} className="h-10 rounded-[10px] bg-brand px-4 font-semibold text-white hover:bg-brand-strong disabled:opacity-60">{closing ? `Sim, mover para ${pending.stage.name}` : 'Confirmar'}</button>
+          <button type="button" onClick={onCancel} className="h-10 rounded-none border border-line px-4 font-medium text-ink-soft hover:bg-surface-muted">Cancelar</button>
+          <button disabled={busy} className="h-10 rounded-none bg-brand px-4 font-semibold text-white hover:bg-brand-strong disabled:opacity-60">{closing ? `Sim, mover para ${pending.stage.name}` : 'Confirmar'}</button>
         </div>
       </form>
     </div>
@@ -105,7 +105,7 @@ export function StageSelect({ caseId, proposalId, stages, currentStageId, label 
         </select>
         <button type="button" disabled={!changed || busy}
           onClick={() => target && move({ caseId, proposalId, stage: target, onDone: ok => { if (!ok) setValue(currentStageId) } })}
-          className={`shrink-0 rounded-[10px] bg-brand px-3 font-semibold text-white hover:bg-brand-strong disabled:opacity-40 ${compact ? 'h-8 text-xs' : 'h-10 text-sm'}`}>
+          className={`shrink-0 rounded-none bg-brand px-3 font-semibold text-white hover:bg-brand-strong disabled:opacity-40 ${compact ? 'h-8 text-xs' : 'h-10 text-sm'}`}>
           Salvar
         </button>
       </div>

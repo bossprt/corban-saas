@@ -58,13 +58,13 @@ export default async function RankingPage({ searchParams }: { searchParams: Prom
   const content = (
     <>
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <nav aria-label="Período" className="flex gap-1 rounded-[12px] border border-line bg-surface p-1">
+        <nav aria-label="Período" className="flex gap-1 rounded-none border border-line bg-surface p-1">
           {(Object.keys(PERIODS) as PeriodKey[]).map(k => <Link key={k} href={href({ periodo: k })} aria-current={k === period ? 'page' : undefined} className={pill(k === period)}>{PERIODS[k]}</Link>)}
         </nav>
-        <nav aria-label="Métrica" className="flex gap-1 rounded-[12px] border border-line bg-surface p-1">
+        <nav aria-label="Métrica" className="flex gap-1 rounded-none border border-line bg-surface p-1">
           {(Object.keys(METRICS) as Metric[]).map(k => <Link key={k} href={href({ metrica: k })} aria-current={k === metric ? 'page' : undefined} className={pill(k === metric)}>{METRICS[k]}</Link>)}
         </nav>
-        <Link href={tv ? `/app/ranking?${new URLSearchParams({ periodo: period, metrica: metric })}` : href({ tv: '1' })} className="ml-auto inline-flex items-center gap-1.5 rounded-[10px] border border-line bg-surface px-3 py-1.5 text-sm text-ink-soft hover:bg-surface-muted">
+        <Link href={tv ? `/app/ranking?${new URLSearchParams({ periodo: period, metrica: metric })}` : href({ tv: '1' })} className="ml-auto inline-flex items-center gap-1.5 rounded-none border border-line bg-surface px-3 py-1.5 text-sm text-ink-soft hover:bg-surface-muted">
           {tv ? <><Minimize2 size={14} aria-hidden />Sair do modo TV</> : <><Maximize2 size={14} aria-hidden />Modo TV</>}
         </Link>
       </div>

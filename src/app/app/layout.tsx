@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { LogOut } from 'lucide-react'
 import { Suspense } from 'react'
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast, canManageTeam } from '@/lib/rbac'
@@ -78,39 +77,33 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ...(key === 'vendas' ? { children: SALES_PAGES } : {}),
     ...(key === 'hoje' ? { children: hoje.length ? hoje : undefined } : {}),
   }))
-  const initial = (organization.name ?? 'C').trim().charAt(0).toUpperCase()
 
   return (
     <div className="min-h-screen bg-canvas text-ink md:flex">
-      <aside className="hidden w-[232px] shrink-0 flex-col gap-1 border-r border-line bg-surface px-3.5 py-5 md:sticky md:top-0 md:flex md:h-screen">
-        <div className="mb-4 flex items-center gap-2.5 px-2">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-brand text-[15px] font-bold text-white" aria-hidden>C</div>
-          <div className="min-w-0">
-            <div className="text-[15px] font-bold tracking-tight">Corban</div>
-            <div className="truncate text-[11px] text-muted" title={organization.name}>{organization.name}</div>
-          </div>
+      <aside className="hidden w-[224px] shrink-0 flex-col border-r-4 border-ink bg-surface pb-5 pt-5 md:sticky md:top-0 md:flex md:h-screen md:overflow-y-auto">
+        <div className="mb-3 border-b-4 border-ink px-5 pb-4">
+          <div className="wide text-[22px] font-extrabold leading-tight">Corban</div>
+          <div className="truncate text-[13px] text-muted" title={organization.name}>{organization.name}</div>
         </div>
-        <SideNav items={items} />
-        <div className="mt-auto border-t border-line px-2 pt-3 text-xs text-muted">
+        <div className="px-3"><SideNav items={items} /></div>
+        <div className="mx-3 mt-auto border-t-2 border-ink px-2 pt-3 text-[13px] text-ink-soft">
           <div>{access?.roleName ?? ROLE_LABEL[membership.role] ?? membership.role}</div>
           {membershipCount > 1 && <Link href="/organizacao" className="underline hover:text-ink">Trocar empresa</Link>}
           {isAdmin && <div><Link href="/mensalidade" className="underline hover:text-ink">Mensalidade</Link></div>}
           {platformAdmin && <div><Link href="/platform" className="underline hover:text-ink">Plataforma</Link></div>}
           {!portal && <div className="mt-2"><ImprovementLink /></div>}
           <form action={signOut}>
-            <button type="submit" className="flex items-center gap-2 rounded-lg py-1.5 text-sm text-ink-soft hover:text-ink">
-              <LogOut size={15} aria-hidden />Sair
-            </button>
+            <button type="submit" className="py-1.5 text-sm font-bold text-ink hover:underline underline-offset-4">Sair</button>
           </form>
         </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-line bg-canvas/90 px-4 backdrop-blur md:px-8">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-brand text-sm font-bold text-white md:hidden" aria-hidden>{initial}</div>
+        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-ink bg-canvas px-4 md:h-16 md:px-10">
+          <div className="wide text-[19px] font-extrabold md:hidden">Corban</div>
           <CommandPalette nav={items} />
         </header>
-        <main className="min-w-0 flex-1 px-4 pb-24 pt-6 md:px-8 md:pb-10">
+        <main className="min-w-0 flex-1 px-4 pb-24 pt-6 md:px-10 md:pb-12 md:pt-8">
           <Suspense fallback={null}><FlashBanner /></Suspense>
           {membership.role === 'admin' && billing?.period && <BillingNotice billing={billing} />}
           {children}
@@ -125,7 +118,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           {platformAdmin && <div><Link href="/platform" className="flex min-h-11 items-center text-[15px] text-ink">Plataforma</Link></div>}
           {!portal && <div className="mt-3"><ImprovementLink className="flex min-h-11 items-center gap-2 text-[15px] text-ink" /></div>}
           <form action={signOut}>
-            <button type="submit" className="flex min-h-11 items-center gap-2 text-[15px] text-ink"><LogOut size={18} aria-hidden />Sair</button>
+            <button type="submit" className="flex min-h-11 items-center text-[15px] font-bold text-ink">Sair</button>
           </form>
         </div>
       } />

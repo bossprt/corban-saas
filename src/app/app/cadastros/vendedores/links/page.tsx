@@ -22,7 +22,7 @@ export default async function SignupLinksPage() {
   const byGroup = new Map((links ?? []).map(l => [l.commission_group_id, l]))
   const h = await headers()
   const origin = (await siteOrigin()) ?? `${h.get('x-forwarded-proto') ?? 'http'}://${h.get('x-forwarded-host') ?? h.get('host') ?? ''}`
-  const btn = 'h-9 rounded-[10px] border border-line-strong bg-surface px-3 text-sm text-ink hover:bg-surface-muted'
+  const btn = 'h-9 rounded-none border border-line-strong bg-surface px-3 text-sm text-ink hover:bg-surface-muted'
 
   return (
     <section>

@@ -17,7 +17,7 @@ export default async function RegistrationsHubPage() {
       <PageHeader title="Cadastros" description="Tudo o que a empresa cadastra: bancos, convênios, tabelas, grupos de vendedores, vendedores e equipe." />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {items.map(r => (
-          <Link key={r.href} href={r.href} className="group flex items-start justify-between gap-3 rounded-[14px] border border-line bg-surface p-4 hover:border-line-strong hover:bg-surface-muted">
+          <Link key={r.href} href={r.href} className="group flex items-start justify-between gap-3 rounded-none border border-line bg-surface p-4 hover:border-line-strong hover:bg-surface-muted">
             <span><span className="block text-sm font-semibold text-ink">{r.label}</span><span className="mt-1 block text-[13px] text-ink-soft">{r.hint}</span></span>
             <ChevronRight size={16} aria-hidden className="mt-0.5 shrink-0 text-muted group-hover:text-ink" />
           </Link>

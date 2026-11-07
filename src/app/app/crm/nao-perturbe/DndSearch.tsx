@@ -28,7 +28,7 @@ export function DndSearch() {
         <label className="min-w-[200px] flex-1 text-[13px] font-medium text-ink-soft">Conferir um telefone
           <input value={phone} onChange={e => setPhone(e.target.value)} inputMode="tel" placeholder="(68) 99999-0000" className="field mt-1.5" />
         </label>
-        <button disabled={pending} className="inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-line bg-surface px-3 text-sm hover:bg-surface-muted disabled:opacity-60"><Search size={15} aria-hidden />{pending ? 'Conferindo...' : 'Conferir'}</button>
+        <button disabled={pending} className="inline-flex h-10 items-center gap-1.5 rounded-none border border-line bg-surface px-3 text-sm hover:bg-surface-muted disabled:opacity-60"><Search size={15} aria-hidden />{pending ? 'Conferindo...' : 'Conferir'}</button>
       </div>
       {answer && <p role="status" className="text-sm text-ink">{answer}</p>}
     </form>

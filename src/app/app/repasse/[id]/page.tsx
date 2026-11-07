@@ -55,13 +55,13 @@ export default async function PayoutAccountPage({ params }: { params: Promise<{ 
   return (
     <section>
       <PageHeader title={account.holder_name} description={<>Modelo: {MODEL_LABEL[account.model]}. {finance && <Link href="/app/repasse" className="text-brand hover:underline">Voltar ao repasse</Link>}</>}
-        actions={<Link href={`/imprimir/pessoa/${id}`} className="inline-flex h-9 items-center rounded-[10px] border border-line bg-surface px-3 text-sm font-medium text-ink hover:bg-surface-muted">Relatório de comissões pagas</Link>} />
+        actions={<Link href={`/imprimir/pessoa/${id}`} className="inline-flex h-9 items-center rounded-none border border-line bg-surface px-3 text-sm font-medium text-ink hover:bg-surface-muted">Relatório de comissões pagas</Link>} />
 
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-[14px] border border-line bg-surface px-5 py-4"><div className="text-[13px] text-muted">Saldo da conta</div><div className={`num mt-1 text-2xl font-semibold ${String(account.balance).startsWith('-') ? 'text-[#991B1B]' : 'text-ink'}`}>{brlText(account.balance)}</div></div>
-        {account.model === 'account' && <div className="rounded-[14px] border border-line bg-surface px-5 py-4"><div className="text-[13px] text-muted">Disponível para saque hoje</div><div className="num mt-1 text-2xl font-semibold text-ink">{brlText(account.available)}</div></div>}
+        <div className="rounded-none border border-line bg-surface px-5 py-4"><div className="text-[13px] text-muted">Saldo da conta</div><div className={`num mt-1 text-2xl font-semibold ${String(account.balance).startsWith('-') ? 'text-[#991B1B]' : 'text-ink'}`}>{brlText(account.balance)}</div></div>
+        {account.model === 'account' && <div className="rounded-none border border-line bg-surface px-5 py-4"><div className="text-[13px] text-muted">Disponível para saque hoje</div><div className="num mt-1 text-2xl font-semibold text-ink">{brlText(account.available)}</div></div>}
         {canApprove && payAmount && (
-          <form action={payNow} className="grid gap-2 rounded-[14px] border-2 border-brand/40 bg-surface px-5 py-4 sm:col-span-2">
+          <form action={payNow} className="grid gap-2 rounded-none border-2 border-brand/40 bg-surface px-5 py-4 sm:col-span-2">
             <input type="hidden" name="account_id" value={id} />
             <input type="hidden" name="expected" value={payAmount} />
             <div className="text-sm font-semibold text-ink">Pagar {firstName}: <span className="num">{brlText(payAmount)}</span></div>
@@ -72,15 +72,15 @@ export default async function PayoutAccountPage({ params }: { params: Promise<{ 
               <BankAccountSelect banks={payBanks.banks} suggested={payBanks.suggested} label="Conta que pagou" labelClass="text-xs text-muted" selectClass="field mt-1 block h-10" />
               {/* Confirmation step (audit 06/11/2026): the first click records nothing. */}
               <details className="group">
-                <summary className="inline-flex h-10 cursor-pointer list-none items-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong group-open:hidden">Pagar {brlText(payAmount)}</summary>
-                <div className="flex flex-wrap items-center gap-2 rounded-[10px] border border-brand/40 bg-surface-muted px-3 py-2">
+                <summary className="inline-flex h-10 cursor-pointer list-none items-center rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong group-open:hidden">Pagar {brlText(payAmount)}</summary>
+                <div className="flex flex-wrap items-center gap-2 rounded-none border border-brand/40 bg-surface-muted px-3 py-2">
                   <span className="text-sm text-ink">Confirmar pagamento de <strong className="num">{brlText(payAmount)}</strong> para {account.holder_name}?</span>
-                  <SubmitButton pendingText="Registrando..." className="h-9 rounded-[10px] bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong">Sim, registrar</SubmitButton>
+                  <SubmitButton pendingText="Registrando..." className="h-9 rounded-none bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong">Sim, registrar</SubmitButton>
                 </div>
               </details>
             </div>
             {preview && (
-              <details className="rounded-[10px] border border-line">
+              <details className="rounded-none border border-line">
                 <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-brand">Ver contratos deste pagamento</summary>
                 {!sameAmount(preview.total, payAmount) && <p className="px-3 text-xs font-semibold text-[#991B1B]">O valor mudou para {brlText(preview.total)}. Atualize a página antes de pagar.</p>}
                 <PayoutBreakdown b={preview} total={preview.total} empty="Sem contratos: o valor vem só de outros lançamentos." />
@@ -99,7 +99,7 @@ export default async function PayoutAccountPage({ params }: { params: Promise<{ 
               <input type="hidden" name="account_id" value={id} />
               <label className={label}>Valor (R$)<input name="amount" inputMode="decimal" required placeholder="0,00" className="field mt-1.5 w-40" /></label>
               <label className={label}>Observação<input name="note" className="field mt-1.5 w-56" /></label>
-              <button className="h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Pedir saque</button>
+              <button className="h-10 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Pedir saque</button>
             </form>
           </Card>
         )}
@@ -114,7 +114,7 @@ export default async function PayoutAccountPage({ params }: { params: Promise<{ 
               <label className={`${label} sm:col-span-2`}>Descrição<input name="description" required minLength={3} maxLength={180} className="field mt-1.5" /></label>
               <label className={label}>Parcelas <span className="font-normal text-muted">vale ou desconto</span><input name="installments" type="number" min={1} max={48} defaultValue={1} className="field mt-1.5" /></label>
               <label className={label}>A partir de<input name="effective_on" type="date" defaultValue={todayIso()} className="field mt-1.5" /></label>
-              <div className="flex items-end justify-end sm:col-span-2"><button className="h-10 rounded-[10px] border border-line bg-surface px-4 text-sm font-medium hover:bg-surface-muted">Lançar</button></div>
+              <div className="flex items-end justify-end sm:col-span-2"><button className="h-10 rounded-none border border-line bg-surface px-4 text-sm font-medium hover:bg-surface-muted">Lançar</button></div>
             </form>
             </details>
           </Card>
@@ -125,7 +125,7 @@ export default async function PayoutAccountPage({ params }: { params: Promise<{ 
             <form action={setAccountModel} className="flex flex-wrap items-end gap-2">
               <input type="hidden" name="account_id" value={id} />
               <select name="model" defaultValue="" className="field w-64"><option value="">Padrão da empresa</option><option value="closing">Fechamento periódico</option><option value="account">Conta interna (saque)</option></select>
-              <button className="h-10 rounded-[10px] border border-line bg-surface px-4 text-sm hover:bg-surface-muted">Salvar</button>
+              <button className="h-10 rounded-none border border-line bg-surface px-4 text-sm hover:bg-surface-muted">Salvar</button>
             </form>
             <p className="mt-2 text-xs text-muted">Ao passar para fechamento, o saldo atual vira o saldo de abertura: nada é pago duas vezes.</p>
           </Card>

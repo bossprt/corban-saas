@@ -63,24 +63,24 @@ export function CampaignImport({ campaignId, alreadyImported }: { campaignId: st
   const cols = sheet?.headers ?? []
   return (
     <div className="grid gap-4">
-      <label onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); pick(e.dataTransfer.files?.[0] ?? null) }} className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[12px] border border-dashed border-line-strong bg-surface-muted/50 px-4 py-6 text-center text-sm text-ink-soft hover:bg-surface-muted">
+      <label onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); pick(e.dataTransfer.files?.[0] ?? null) }} className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-none border border-dashed border-line-strong bg-surface-muted/50 px-4 py-6 text-center text-sm text-ink-soft hover:bg-surface-muted">
         <FileSpreadsheet size={22} className="text-brand" aria-hidden />
-        <span className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white"><Upload size={16} aria-hidden />Escolher planilha do computador</span>
+        <span className="inline-flex h-10 items-center gap-2 rounded-none bg-brand px-4 text-sm font-semibold text-white"><Upload size={16} aria-hidden />Escolher planilha do computador</span>
         <span>ou arraste o arquivo aqui (XLSX, XLS ou CSV)</span>
         <span className="text-xs text-muted">{file ? file.name : 'Precisa ter pelo menos o nome e o CPF ou telefone.'}</span>
         <input type="file" accept=".xlsx,.xls,.csv,.txt" aria-label="Planilha da campanha" className="sr-only" onChange={e => pick(e.target.files?.[0] ?? null)} />
       </label>
 
-      {error && <p role="alert" className="rounded-[10px] border border-[#F5C2C2] bg-[#FDECEC] px-4 py-2.5 text-sm text-[#991B1B]">{error}</p>}
+      {error && <p role="alert" className="rounded-none border border-[#F5C2C2] bg-[#FDECEC] px-4 py-2.5 text-sm text-[#991B1B]">{error}</p>}
       {done && (
-        <p role="status" className="rounded-[10px] border border-[#BBE5C8] bg-[#E9F7EE] px-4 py-2.5 text-sm text-[#166534]">
+        <p role="status" className="rounded-none border border-[#BBE5C8] bg-[#E9F7EE] px-4 py-2.5 text-sm text-[#166534]">
           Importação concluída: {done.created} lead(s) novo(s), dos quais {done.linked} já eram clientes. {done.duplicates} já estavam na campanha e {done.invalid} linha(s) sem nome ou sem CPF/telefone ficaram de fora.
         </p>
       )}
 
       {sheet && (
         <div className="grid gap-4">
-          {repeated && <p className="rounded-[10px] border border-[#F3D9A4] bg-[#FDF3DC] px-4 py-2.5 text-sm text-[#92400E]">Este arquivo já foi importado nesta campanha. Pode enviar de novo: quem já está na campanha não é repetido.</p>}
+          {repeated && <p className="rounded-none border border-[#F3D9A4] bg-[#FDF3DC] px-4 py-2.5 text-sm text-[#92400E]">Este arquivo já foi importado nesta campanha. Pode enviar de novo: quem já está na campanha não é repetido.</p>}
           <p className="text-sm text-ink-soft">{sheet.body.length.toLocaleString('pt-BR')} linha(s) no arquivo (títulos na linha {sheet.headerRow}). Confira qual coluna é cada campo:</p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {CAMPAIGN_FIELDS.map(f => (
@@ -103,7 +103,7 @@ export function CampaignImport({ campaignId, alreadyImported }: { campaignId: st
             </div>
           </fieldset>
           <div className="flex flex-wrap items-center gap-3">
-            <button type="button" disabled={!ready || !!progress} onClick={send} className="inline-flex h-10 items-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-60">
+            <button type="button" disabled={!ready || !!progress} onClick={send} className="inline-flex h-10 items-center rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-60">
               {progress ? `Enviando ${progress.sent.toLocaleString('pt-BR')} de ${progress.total.toLocaleString('pt-BR')}...` : `Importar ${rows.length.toLocaleString('pt-BR')} lead(s)`}
             </button>
             {!ready && <span className="text-xs text-[#92400E]">Escolha a coluna do nome e a do CPF ou do telefone.</span>}

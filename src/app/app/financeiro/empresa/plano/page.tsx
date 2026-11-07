@@ -32,7 +32,7 @@ export default async function ChartPage() {
             <label className={label}>Tipo<select name="kind" className="field mt-1.5">{kinds.map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
             <div className="flex items-end justify-between gap-2">
               <label className="flex items-center gap-2 text-sm text-ink-soft"><input type="checkbox" name="is_group" className="size-4 accent-[var(--brand)]" />Grupo</label>
-              <SubmitButton className="h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="...">Adicionar</SubmitButton>
+              <SubmitButton className="h-10 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="...">Adicionar</SubmitButton>
             </div>
           </form>
         </Card>

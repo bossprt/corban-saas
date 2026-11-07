@@ -16,7 +16,7 @@ export function PublishDraftsForm({ ids, defaultDate, back }: { ids: string[]; d
       {ids.map(id => <input key={id} type="hidden" name="version_id" value={id} />)}
       <label className="text-xs font-medium text-[#92400E]">Início da vigência
         <input type="date" name="effective_from" required min="2000-01-01" value={date} onChange={e => setDate(e.target.value)} className="field mt-1 block h-9 w-40 py-0 text-sm" /></label>
-      <SubmitButton className="h-9 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Publicando...">Publicar todas ({n})</SubmitButton>
+      <SubmitButton className="h-9 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Publicando...">Publicar todas ({n})</SubmitButton>
     </form>
   )
 }

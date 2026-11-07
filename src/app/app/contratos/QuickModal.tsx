@@ -20,8 +20,8 @@ const TITLE: Record<QuickAction, string> = {
 }
 const COMPONENT_LABEL: Record<string, string> = { upfront: 'À vista', deferred: 'Diferido', bonus_1: 'Bônus 1', bonus_2: 'Bônus 2', bonus_3: 'Bônus 3', plastic: 'Plástico', insurance_fixed: 'Seguro', gratification: 'Gratificação' }
 const lbl = 'block text-[13px] font-medium text-ink-soft'
-const primary = 'inline-flex h-10 items-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong'
-const ghost = 'inline-flex h-10 items-center rounded-[10px] border border-line bg-surface px-4 text-sm text-ink hover:bg-surface-muted'
+const primary = 'inline-flex h-10 items-center rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong'
+const ghost = 'inline-flex h-10 items-center rounded-none border border-line bg-surface px-4 text-sm text-ink hover:bg-surface-muted'
 const money = (v: unknown) => (v === null || v === undefined || v === '' ? '—' : brlText(String(v)))
 const DOC_STATUS: Record<string, string> = { pending: 'Falta', attached: 'Anexado, falta validar', validated: 'Validado', rejected: 'Recusado', waived: 'Dispensado' }
 
@@ -117,7 +117,7 @@ export async function QuickModal({ id, acao, back, canEdit, finance, owner, canM
           </form>)
       }
       body = <div className="grid gap-3">
-        <p role="alert" className="rounded-[10px] border border-[#FCD34D] bg-[#FFFBEB] px-3 py-2 text-sm text-[#92400E]">Comissão não calculada{code ? `: ${CALC_FAILURE[code] ?? 'erro no cálculo'}` : ''}.</p>
+        <p role="alert" className="rounded-none border border-[#FCD34D] bg-[#FFFBEB] px-3 py-2 text-sm text-[#92400E]">Comissão não calculada{code ? `: ${CALC_FAILURE[code] ?? 'erro no cálculo'}` : ''}.</p>
         {fix}
       </div>
     } else {
@@ -148,7 +148,7 @@ export async function QuickModal({ id, acao, back, canEdit, finance, owner, canM
             <span className="num font-semibold text-ink">{money(x.payable)}</span>{x.overridden && owner && <Badge tone="pending">Alterado · regra {money(x.rule_amount)}</Badge>}{x.locked && <Badge tone="received">Já pago ao vendedor</Badge>}</div>)}
         </dl>
         {owner && payouts.filter(x => !x.locked).map(x => (
-          <details key={x.component_key} open={payouts.filter(y => !y.locked).length === 1} className="rounded-[10px] border border-line p-3">
+          <details key={x.component_key} open={payouts.filter(y => !y.locked).length === 1} className="rounded-none border border-line p-3">
           <summary className="cursor-pointer text-sm font-medium text-ink">Alterar repasse do vendedor — {COMPONENT_LABEL[x.component_key] ?? x.component_key}</summary>
           <form action={quickPayout} className="mt-3 grid gap-3">{hidden}<input type="hidden" name="component" value={x.component_key} />
             <div className="grid gap-3 sm:grid-cols-2">
@@ -162,7 +162,7 @@ export async function QuickModal({ id, acao, back, canEdit, finance, owner, canM
         ))}
         {!owner && <p className="text-xs text-muted">Só o Administrador altera o repasse do vendedor.</p>}
         {owner && (
-          <details open={manual.length > 0} className="rounded-[10px] border border-line p-3">
+          <details open={manual.length > 0} className="rounded-none border border-line p-3">
             <summary className="cursor-pointer text-sm font-medium text-ink">Comissão recebida lançada à mão (ex.: Gratificação)</summary>
             {manual.map(m => (
               <form key={m.component_type_id} action={quickManualCommission} className="mt-3 flex flex-wrap items-end gap-2 border-b border-line pb-3">{hidden}
@@ -221,15 +221,15 @@ export async function QuickModal({ id, acao, back, canEdit, finance, owner, canM
   return (
     <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto p-4 sm:p-8">
       <Link href={back} scroll={false} aria-label="Fechar" className="fixed inset-0 bg-ink/30" />
-      <div role="dialog" aria-modal="true" aria-label={TITLE[acao]} className="relative w-full max-w-lg rounded-[14px] border border-line bg-surface p-5 shadow-2xl">
+      <div role="dialog" aria-modal="true" aria-label={TITLE[acao]} className="relative w-full max-w-lg rounded-none border border-line bg-surface p-5 shadow-2xl">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-lg font-semibold text-ink">{TITLE[acao]}</h2>
             {p && <p className="mt-0.5 text-sm text-ink-soft"><span className="font-medium text-ink">{p.customer_snapshot?.full_name ?? 'Cliente'}</span>{p.external_proposal_id ? ` · ADE ${p.external_proposal_id}` : ''} · {money(p.requested_amount ?? p.released_amount)}{p.term ? ` em ${p.term}x` : ''}</p>}
           </div>
           <span className="flex items-center gap-1">
-            <Link href={`/app/propostas/${id}`} aria-label="Abrir contrato completo" className="inline-flex size-9 items-center justify-center rounded-[10px] text-muted hover:bg-surface-muted hover:text-ink"><ExternalLink size={16} aria-hidden /></Link>
-            <Link href={back} scroll={false} aria-label="Fechar" className="inline-flex size-9 items-center justify-center rounded-[10px] border border-line text-ink-soft hover:bg-surface-muted"><X size={16} aria-hidden /></Link>
+            <Link href={`/app/propostas/${id}`} aria-label="Abrir contrato completo" className="inline-flex size-9 items-center justify-center rounded-none text-muted hover:bg-surface-muted hover:text-ink"><ExternalLink size={16} aria-hidden /></Link>
+            <Link href={back} scroll={false} aria-label="Fechar" className="inline-flex size-9 items-center justify-center rounded-none border border-line text-ink-soft hover:bg-surface-muted"><X size={16} aria-hidden /></Link>
           </span>
         </div>
         <Suspense fallback={null}><FlashBanner /></Suspense>

@@ -40,7 +40,7 @@ export default async function PortalNewProposalPage() {
             <label className={`${label} sm:col-span-2`}>Número da proposta no banco (ADE) <span className="font-normal text-muted">se já digitou</span><input name="ade" maxLength={60} className="field mt-1.5 font-mono" /></label>
           </fieldset>
           <div className="flex justify-end sm:col-span-2">
-            <SubmitButton className="h-11 w-full rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong sm:w-auto" pendingText="Enviando...">Enviar para validação</SubmitButton>
+            <SubmitButton className="h-11 w-full rounded-none bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong sm:w-auto" pendingText="Enviando...">Enviar para validação</SubmitButton>
           </div>
         </form>
       </Card>

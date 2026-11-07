@@ -27,8 +27,8 @@ export default async function AccessPendingPage() {
           <li>Se o seu acesso foi desativado, fale com o administrador da organização.</li>
         </ul>
         <div className="mt-6 flex gap-3">
-          <a href="/access-pending" className="h-10 rounded-[10px] border border-line bg-surface px-4 py-2 text-sm hover:bg-surface-muted">Verificar novamente</a>
-          <form action={signOut}><button className="rounded-[10px] px-4 py-2 text-sm text-muted hover:bg-surface-muted hover:text-ink">Sair</button></form>
+          <a href="/access-pending" className="h-10 rounded-none border border-line bg-surface px-4 py-2 text-sm hover:bg-surface-muted">Verificar novamente</a>
+          <form action={signOut}><button className="rounded-none px-4 py-2 text-sm text-muted hover:bg-surface-muted hover:text-ink">Sair</button></form>
         </div>
       </Card>
     </main>

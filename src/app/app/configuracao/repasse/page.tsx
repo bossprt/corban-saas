@@ -35,7 +35,7 @@ export default async function PayoutSettingsPage() {
             <input name="debt_limit_pct" inputMode="decimal" defaultValue={limit} className="field mt-1.5" />
           </label>
           <p className="text-xs text-muted sm:col-span-3">Exemplo com 30%: quem está com −100,00 e ganha 253,80 no período recebe 177,66 (desconto de 76,14) e continua com −23,86 para o próximo.</p>
-          <div className="flex justify-end sm:col-span-3"><button className="h-10 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong">Salvar</button></div>
+          <div className="flex justify-end sm:col-span-3"><button className="h-10 rounded-none bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong">Salvar</button></div>
         </form>
       </Card>
     </section>

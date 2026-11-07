@@ -65,7 +65,7 @@ export default async function CampaignsPage() {
                     <td className="num px-3 py-2.5 text-right">{s.proposal}</td>
                     <td className="num px-3 py-2.5 text-right font-medium text-ink">{s.won}</td>
                     <td className="num px-3 py-2.5 text-right">{pct(s.won, s.total)}</td>
-                    <td className="px-5 py-2.5 text-right">{c.status === 'active' && <Link href={`/app/crm/campanhas/${c.id}#planilha`} className="inline-flex h-8 items-center rounded-[10px] bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-strong">Subir planilha</Link>}</td>
+                    <td className="px-5 py-2.5 text-right">{c.status === 'active' && <Link href={`/app/crm/campanhas/${c.id}#planilha`} className="inline-flex h-8 items-center rounded-none bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-strong">Subir planilha</Link>}</td>
                   </tr>
                 )
               })}

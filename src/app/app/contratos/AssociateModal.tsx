@@ -30,16 +30,16 @@ export async function AssociateModal({ back }: { back: string }) {
   return (
     <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto p-4 sm:p-8">
       <Link href={back} scroll={false} aria-label="Fechar" className="fixed inset-0 bg-ink/30" />
-      <div role="dialog" aria-modal="true" aria-label="Associar proposta" className="relative w-full max-w-2xl rounded-[14px] border border-line bg-surface p-5 shadow-2xl">
+      <div role="dialog" aria-modal="true" aria-label="Associar proposta" className="relative w-full max-w-2xl rounded-none border border-line bg-surface p-5 shadow-2xl">
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold text-ink">Associar proposta</h2>
             <p className="mt-0.5 text-sm text-ink-soft">Digitou uma proposta no banco? Diga quem vendeu. Quando o contrato chegar ao Corban (importação ou cadastro), o vendedor entra sozinho, no lugar do vendedor da planilha.</p>
           </div>
-          <Link href={back} scroll={false} aria-label="Fechar" className="inline-flex size-9 shrink-0 items-center justify-center rounded-[10px] border border-line text-ink-soft hover:bg-surface-muted"><X size={16} aria-hidden /></Link>
+          <Link href={back} scroll={false} aria-label="Fechar" className="inline-flex size-9 shrink-0 items-center justify-center rounded-none border border-line text-ink-soft hover:bg-surface-muted"><X size={16} aria-hidden /></Link>
         </div>
         <Suspense fallback={null}><FlashBanner /></Suspense>
-        <form action={linkSeller} className="grid gap-3 rounded-[12px] border border-line p-4 sm:grid-cols-2">
+        <form action={linkSeller} className="grid gap-3 rounded-none border border-line p-4 sm:grid-cols-2">
           <input type="hidden" name="back" value={back} />
           <label className={lbl}>Banco<select name="bank_id" required defaultValue="" className="field mt-1.5"><option value="" disabled>Escolha</option>{(banks ?? []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
           <label className={lbl}>Nº da proposta / ADE<input name="ade" maxLength={40} placeholder="Ex.: 143413" className="field mt-1.5" /></label>
@@ -48,7 +48,7 @@ export async function AssociateModal({ back }: { back: string }) {
           <label className={`${lbl} sm:col-span-2`}>Vendedor<select name="seller_id" required defaultValue="" className="field mt-1.5"><option value="" disabled>Escolha</option>
             {(sellers ?? []).map(s => <option key={s.id} value={s.id}>{s.code ? `${String(s.code).padStart(3, '0')} · ` : ''}{s.name}</option>)}</select></label>
           <p className="text-xs text-muted sm:col-span-2">Informe o nº da proposta/ADE, o CPF ou os dois. Pelo nº o contrato é achado mesmo se já estiver no Corban; pelo CPF, só um contrato novo desse cliente nesse banco (contratos antigos dele não mudam).</p>
-          <div className="sm:col-span-2"><SubmitButton className="inline-flex h-10 items-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Associando...">Associar</SubmitButton></div>
+          <div className="sm:col-span-2"><SubmitButton className="inline-flex h-10 items-center rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Associando...">Associar</SubmitButton></div>
         </form>
 
         <h3 className="mt-5 text-sm font-semibold text-ink">Associações <span className="font-normal text-muted">· {waiting} aguardando · {links.length - waiting} usadas ou canceladas (últimas 100)</span></h3>
@@ -56,7 +56,7 @@ export async function AssociateModal({ back }: { back: string }) {
           {links.map(l => {
             const [st, tone] = STATUS[l.status] ?? [l.status, 'neutral']
             return (
-              <li key={l.id} className="rounded-[10px] border border-line px-3 py-2 text-sm">
+              <li key={l.id} className="rounded-none border border-line px-3 py-2 text-sm">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                   <span className="font-medium text-ink">{l.client_name ?? 'Cliente'}</span>
                   <span className="text-ink-soft">{bankName.get(l.org_bank_id) ?? 'Banco'}{l.ade ? ` · nº ${l.ade}` : ''}{l.cpf ? ` · CPF ${formatCpf(l.cpf)}` : ''}</span>
@@ -72,7 +72,7 @@ export async function AssociateModal({ back }: { back: string }) {
                     <form action={cancelLink} className="mt-2 flex flex-wrap items-end gap-2">
                       <input type="hidden" name="link_id" value={l.id} /><input type="hidden" name="back" value={back} />
                       <label className="flex-1 text-xs text-ink-soft">Motivo<input name="reason" required minLength={3} maxLength={300} className="field mt-1" /></label>
-                      <SubmitButton className="inline-flex h-10 items-center rounded-[10px] border border-line bg-surface px-3 text-sm text-[#B91C1C] hover:bg-surface-muted" pendingText="...">Cancelar</SubmitButton>
+                      <SubmitButton className="inline-flex h-10 items-center rounded-none border border-line bg-surface px-3 text-sm text-[#B91C1C] hover:bg-surface-muted" pendingText="...">Cancelar</SubmitButton>
                     </form>
                   </details>
                 )}

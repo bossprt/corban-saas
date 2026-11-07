@@ -78,7 +78,7 @@ export default async function SellersPage({ searchParams }: { searchParams: Prom
         </Card>
       )}
       {refusedRows.length > 0 && (
-        <details className="mb-4 rounded-[14px] border border-line bg-surface">
+        <details className="mb-4 rounded-none border border-line bg-surface">
           <summary className="cursor-pointer px-5 py-3 text-sm font-semibold text-ink">Recusados nos últimos 30 dias <Badge tone="neutral">{refusedRows.length}</Badge></summary>
           <ul>
             {refusedRows.map(r => (
@@ -98,7 +98,7 @@ export default async function SellersPage({ searchParams }: { searchParams: Prom
           <label className="text-[13px] font-medium text-ink-soft">Situação
             <select name="situacao" defaultValue={status} className="field mt-1.5"><option value="">Todos</option><option value="ativos">Ativos</option><option value="inativos">Inativos</option></select>
           </label>
-          <button className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><Search size={15} aria-hidden />Buscar</button>
+          <button className="inline-flex h-10 items-center gap-1.5 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><Search size={15} aria-hidden />Buscar</button>
           {(q || status) && <Link href="/app/cadastros/vendedores" className="h-10 px-2 text-sm leading-10 text-brand hover:underline">Limpar</Link>}
         </form>
         <ul className="mt-3">

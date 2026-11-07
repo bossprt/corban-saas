@@ -12,12 +12,12 @@ export function AuthShell({ subtitle, children }: { subtitle: string; children: 
             <p className="text-sm text-muted">{subtitle}</p>
           </div>
         </div>
-        <div className="rounded-[16px] border border-line bg-surface p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">{children}</div>
+        <div className="rounded-none border border-line bg-surface p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">{children}</div>
       </div>
     </main>
   )
 }
 
 export const authLabel = 'mb-1.5 block text-[13px] font-medium text-ink-soft'
-export const authButton = 'h-11 w-full rounded-[10px] bg-brand text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-60'
+export const authButton = 'h-11 w-full rounded-none bg-brand text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-60'
 export const authError = 'rounded-lg bg-[#FDE2E1] px-3 py-2 text-sm text-[#991B1B]'

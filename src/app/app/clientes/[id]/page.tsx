@@ -214,7 +214,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
                   {(docTypes ?? []).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
                 <FileDrop compact required name="file" accept=".pdf,image/jpeg,image/png,image/webp" ariaLabel="Arquivo do documento" hint="ou arraste o documento aqui" />
-                <SubmitButton pendingText="Enviando..." className="inline-flex h-9 items-center justify-center rounded-[10px] bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong">Enviar documento</SubmitButton>
+                <SubmitButton pendingText="Enviando..." className="inline-flex h-9 items-center justify-center rounded-none bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong">Enviar documento</SubmitButton>
                 <span className="text-xs text-muted">PDF, JPG, PNG ou WebP até 4 MB. Um novo envio do mesmo tipo vira nova versão.</span>
               </form>
             )}

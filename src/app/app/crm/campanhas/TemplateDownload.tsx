@@ -32,7 +32,7 @@ export function TemplateDownload({ className }: { className?: string }) {
     XLSX.writeFile(wb, 'modelo-campanha-corban.xlsx')
   }
   return (
-    <button type="button" onClick={download} className={className ?? 'inline-flex h-10 items-center gap-2 rounded-[10px] border border-line bg-surface px-4 text-sm font-medium text-ink hover:bg-surface-muted'}>
+    <button type="button" onClick={download} className={className ?? 'inline-flex h-10 items-center gap-2 rounded-none border border-line bg-surface px-4 text-sm font-medium text-ink hover:bg-surface-muted'}>
       <Download size={16} aria-hidden />Baixar modelo em Excel
     </button>
   )

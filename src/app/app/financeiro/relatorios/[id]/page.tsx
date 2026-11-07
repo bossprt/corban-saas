@@ -58,7 +58,7 @@ export default async function ReceiptReportPage({ params, searchParams }: { para
 
       <div className="mb-4 grid gap-3 sm:grid-cols-4">
         {[['Linhas', String(rep.line_count)], ['Total das linhas', brlText(rep.lines_total)], ['Total informado', rep.declared_total === null ? 'não informado' : brlText(rep.declared_total)], ['A resolver', String(open)]].map(([k, v]) => (
-          <div key={k} className="rounded-[14px] border border-line bg-surface px-5 py-4"><div className="text-[13px] text-muted">{k}</div><div className="num mt-1 text-xl font-semibold text-ink">{v}</div></div>
+          <div key={k} className="rounded-none border border-line bg-surface px-5 py-4"><div className="text-[13px] text-muted">{k}</div><div className="num mt-1 text-xl font-semibold text-ink">{v}</div></div>
         ))}
       </div>
 
@@ -70,9 +70,9 @@ export default async function ReceiptReportPage({ params, searchParams }: { para
             {' '}Divergências entram como recebidas e ficam em aberto na conciliação até alguém aceitar com o motivo.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
-            {canEdit && <form action={reportAction}><input type="hidden" name="report_id" value={id} /><input type="hidden" name="op" value="rematch" /><button className="h-9 rounded-[10px] border border-line bg-surface px-3 text-sm hover:bg-surface-muted">Comparar de novo</button></form>}
-            {canConfirm && <form action={reportAction}><input type="hidden" name="report_id" value={id} /><input type="hidden" name="op" value="confirm" /><button disabled={open > 0 || !totalOk} className="h-9 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50">Confirmar e lançar recebimentos</button></form>}
-            {canEdit && <form action={reportAction}><input type="hidden" name="report_id" value={id} /><input type="hidden" name="op" value="discard" /><button className="h-9 rounded-[10px] px-3 text-sm text-ink-soft hover:bg-surface-muted">Descartar relatório</button></form>}
+            {canEdit && <form action={reportAction}><input type="hidden" name="report_id" value={id} /><input type="hidden" name="op" value="rematch" /><button className="h-9 rounded-none border border-line bg-surface px-3 text-sm hover:bg-surface-muted">Comparar de novo</button></form>}
+            {canConfirm && <form action={reportAction}><input type="hidden" name="report_id" value={id} /><input type="hidden" name="op" value="confirm" /><button disabled={open > 0 || !totalOk} className="h-9 rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50">Confirmar e lançar recebimentos</button></form>}
+            {canEdit && <form action={reportAction}><input type="hidden" name="report_id" value={id} /><input type="hidden" name="op" value="discard" /><button className="h-9 rounded-none px-3 text-sm text-ink-soft hover:bg-surface-muted">Descartar relatório</button></form>}
           </div>
         </Card>
       )}

@@ -108,7 +108,7 @@ export default async function BankChecklistPage({ searchParams }: { searchParams
                     </fieldset>
                     <fieldset>
                       <legend className="mb-2 text-[13px] font-medium text-ink-soft">Documentos que o banco pede</legend>
-                      <div className="overflow-hidden rounded-[10px] border border-line">
+                      <div className="overflow-hidden rounded-none border border-line">
                         <table className="w-full text-left text-sm">
                           <thead className="bg-surface-muted text-xs text-muted"><tr><th className="w-16 px-4 py-2 font-medium">Pede</th><th className="px-3 py-2 font-medium">Documento</th><th className="w-44 px-4 py-2 font-medium">Como</th></tr></thead>
                           <tbody>
@@ -132,7 +132,7 @@ export default async function BankChecklistPage({ searchParams }: { searchParams
                       </div>
                     </fieldset>
                     <div className="flex flex-wrap items-center gap-3">
-                      <SubmitButton pendingText="Salvando..." className="inline-flex h-10 items-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Salvar lista</SubmitButton>
+                      <SubmitButton pendingText="Salvando..." className="inline-flex h-10 items-center rounded-none bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Salvar lista</SubmitButton>
                       <span className="text-xs text-muted">Salvar cria uma nova versão. Propostas que já prepararam o checklist continuam com a lista da época.</span>
                     </div>
                   </form>
