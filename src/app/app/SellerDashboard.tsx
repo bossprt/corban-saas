@@ -3,6 +3,7 @@ import { ChevronRight, FilePlus2 } from 'lucide-react'
 import { Badge, Card, CardHeader } from '@/components/ui'
 import { cmp, div, fromDecimalString, isZero, mul, sub, toDecimalString } from '@/lib/commission/money'
 import { brlText } from '@/lib/receipts/format'
+import { contractSituation, situationLabel } from '@/lib/contractStatus'
 
 type Supa = Awaited<ReturnType<typeof import('@/lib/appContext').requireAppContext>>['supabase']
 type Num = string | number
@@ -26,7 +27,6 @@ const WAITING: Record<string, string> = {
   client: 'aguardando pagamento ao cliente', physical: 'aguardando o físico', calculation: 'aguardando cálculo',
   bank: 'aguardando comissão do banco', divergent: 'comissão do banco em análise', no_payout: 'sem comissão para você',
 }
-const STATUS: Record<string, string> = { paid: 'Pago ao cliente', cancelled: 'Cancelado', rejected: 'Recusado' }
 
 // The seller's dashboard (06/10/2026, model F, mobile first): the month's goal, what they will earn (expected, released
 // for the next payment, received this month), their bank pendencies and latest contracts. Only their own numbers.
@@ -98,7 +98,7 @@ export async function SellerDashboard({ supabase, organizationId }: { supabase: 
           <ul className="mt-2">{b.recent.map(r => (
             <li key={r.id}><Link href={`/app/propostas/${r.id}`} className="flex items-center justify-between gap-3 border-t border-line px-5 py-3 hover:bg-surface-muted">
               <span className="min-w-0"><span className="block truncate text-sm font-medium text-ink">{r.client ?? 'Contrato'}</span>
-                <span className="block truncate text-[12px] text-ink-soft">{money(r.amount)} · {STATUS[r.status] ?? r.stage ?? 'Em andamento'}</span></span>
+                <span className="block truncate text-[12px] text-ink-soft">{money(r.amount)} · {situationLabel(contractSituation(r.status), { stageName: r.stage })}</span></span>
               <span className="shrink-0 text-right"><span className="num block text-sm font-semibold text-ink">{money(r.payable)}</span>
                 <span className="block text-[11px] text-muted">{r.paid_on ? `recebido em ${dateBr(r.paid_on)}` : r.waiting ? WAITING[r.waiting] ?? r.waiting : 'liberado'}</span></span>
             </Link></li>

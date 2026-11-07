@@ -1,5 +1,6 @@
 'use server'
 
+import { SITUATION_LABEL } from '@/lib/contractStatus'
 import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
 import { canImportBevicred, canImportContracts } from '@/lib/access'
@@ -53,10 +54,7 @@ const HEADER_MESSAGE: Record<HeaderIssue['code'], (c: string) => string> = {
   duplicate_column: c => `Coluna repetida: "${c}"`,
   unknown_money_column: c => `Coluna de valor não reconhecida: "${c}" (apague ou renomeie para um campo do modelo)`,
 }
-const STAGE_LABEL: Record<string, string> = {
-  digitization_queue: 'Aguardando digitação', digitizing: 'Em digitação', submitted: 'Em análise no banco', pending_external: 'Pendência',
-  approved: 'Aprovada', paid: 'Paga', rejected: 'Recusada', cancelled: 'Cancelada',
-}
+const STAGE_LABEL: Record<string, string> = SITUATION_LABEL
 
 // Same as a contract typed on the screen: without a seller the commission waits until one is set in the contract.
 const NO_SELLER = 'Sem vendedor: a comissão é calculada quando você informar o vendedor no contrato'

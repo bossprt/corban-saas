@@ -77,6 +77,14 @@ export async function LeadDetail({ id, tab, sp, href, keep, close }: {
       : Promise.resolve({ data: [] as { phone: string; source: string; valid_from: string | null; created_at: string }[] }),
   ])
   const dndPhones = new Set((dndRows ?? []) as string[])
+  // "Venda fechada": the sale's seller is the seller record of the lead's owner, else the user's own; none -> the form asks.
+  // The proposal's pipeline case gives its situation with the same name as the Esteira.
+  const [{ data: sellerRows }, { data: proposalCase }] = await Promise.all([
+    tab === 'propostas' ? supabase.from('commercial_sellers').select('id,name,code,user_id').eq('is_active', true).order('name') : Promise.resolve({ data: [] }),
+    proposal ? supabase.from('operational_cases').select('canonical_state').eq('proposal_id', proposal.id).maybeSingle() : Promise.resolve({ data: null }),
+  ])
+  const saleSellers = (sellerRows ?? []) as { id: string; name: string; code: number | null; user_id: string | null }[]
+  const saleSeller = saleSellers.find(s => !!lead.owner_user_id && s.user_id === lead.owner_user_id) ?? saleSellers.find(s => s.user_id === user.id) ?? null
   const dndSources = (dndInfo ?? []).filter(d => dndPhones.has(d.phone))
   const dndSoon = (dndInfo ?? []).find(d => !dndPhones.has(d.phone) && d.valid_from)
   const fromLemit = dndSources.find(d => d.source === 'lemit')
@@ -158,8 +166,11 @@ export async function LeadDetail({ id, tab, sp, href, keep, close }: {
 
       {tab === 'propostas' && (client ? (
         <div className="grid gap-3">
+          {saleSeller ? <p className="text-sm text-ink-soft">Vendedor da venda: <strong className="text-ink">{saleSeller.name}</strong>{saleSeller.user_id === lead.owner_user_id ? ' (vendedor do lead)' : ' (você)'}.</p>
+            : <p className="text-sm text-[#92400E]">Este lead não tem vendedor com cadastro de vendedor. Escolha o vendedor da venda ao lado da proposta: sem vendedor a comissão não é calculada.</p>}
           <p className="text-sm text-ink-soft">As simulações gravadas são as propostas negociadas com o cliente. Venda combinada? Clique em <strong>Venda fechada: enviar para a esteira</strong>: a proposta vai para a digitação com os dados da simulação e o lead passa para Proposta.</p>
-          <SavedSimulations customerId={client.id} back={here} title="Propostas negociadas" sendLabel="Venda fechada: enviar para a esteira" />
+          <SavedSimulations customerId={client.id} back={here} title="Propostas negociadas" sendLabel="Venda fechada: enviar para a esteira" leadId={lead.id}
+            sellerChoice={saleSeller ? null : saleSellers.map(s => ({ id: s.id, label: `${s.code ? `${String(s.code).padStart(3, '0')} · ` : ''}${s.name}` }))} />
           <Link href={href('simular')} className={`${secondary} w-fit gap-1.5`}><Calculator size={15} aria-hidden />Nova simulação</Link>
         </div>
       ) : needClient('propostas', 'gravar propostas'))}
@@ -176,7 +187,7 @@ export async function LeadDetail({ id, tab, sp, href, keep, close }: {
                 <div><dt className="text-xs text-muted">Vendedor</dt><dd className="text-ink">{lead.owner_user_id ? who(lead.owner_user_id) : 'Sem vendedor'}</dd></div>
                 <div><dt className="text-xs text-muted">Próximo contato</dt><dd className={`text-ink ${lead.next_contact_at && isPast(lead.next_contact_at) && !closed ? 'font-semibold text-[#B91C1C]' : ''}`}>{lead.next_contact_at ? dateTime(lead.next_contact_at) : '—'}</dd></div>
                 <div><dt className="text-xs text-muted">Cliente</dt><dd className="text-ink">{client ? <Link href={href('ficha')} className="inline-flex items-center gap-1 text-brand hover:underline"><UserRound size={13} aria-hidden />{client.full_name}</Link> : 'Ainda não é cliente'}</dd></div>
-                {proposal && <div><dt className="text-xs text-muted">Proposta</dt><dd className="text-ink">{proposal.external_proposal_id ?? 'Sem ADE'} · {proposalStatusLabel(proposal.status).label}</dd></div>}
+                {proposal && <div><dt className="text-xs text-muted">Proposta</dt><dd className="text-ink">{proposal.external_proposal_id ?? 'Sem ADE'} · {proposalStatusLabel(proposal.status, (proposalCase as { canonical_state?: string } | null)?.canonical_state).label}</dd></div>}
                 {stage === 'lost' && <div className="sm:col-span-2"><dt className="text-xs text-muted">Motivo da perda</dt><dd className="text-ink">{lead.lost_reason}</dd></div>}
               </dl>
               {can(access, 'leads.edit') && mainPhone && !dndPhones.has(mainPhone) && (

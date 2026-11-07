@@ -12,8 +12,10 @@ const money = (v: number | string | null | undefined) => (v === null || v === un
 
 // Saved simulations (the negotiated offers). customerId: only that client's (the lead panel); back: where the
 // "send to the typing queue" returns. Sending creates the proposal from the simulation (the lead follows it).
-export async function SavedSimulations({ customerId, back, title = 'Simulações gravadas', sendLabel = 'Enviar para a esteira' }: {
-  customerId?: string; back?: string; title?: string; sendLabel?: string
+// leadId: sent from a lead ("Venda fechada"), the proposal remembers it and takes its seller. sellerChoice: the lead has
+// no seller to take (nor the user closing), so the form asks which seller made the sale.
+export async function SavedSimulations({ customerId, back, title = 'Simulações gravadas', sendLabel = 'Enviar para a esteira', leadId, sellerChoice }: {
+  customerId?: string; back?: string; title?: string; sendLabel?: string; leadId?: string; sellerChoice?: { id: string; label: string }[] | null
 }) {
   const { supabase } = await requireAppContext()
   let q = supabase.from('simulations')
@@ -55,8 +57,11 @@ export async function SavedSimulations({ customerId, back, title = 'Simulações
                     <td className="px-5 py-2.5 text-right">
                       {proposalId
                         ? <Link href={`/app/propostas/${proposalId}`} className="text-sm font-medium text-brand hover:underline">Abrir proposta</Link>
-                        : <form action={createProposalFromSimulation}>
+                        : <form action={createProposalFromSimulation} className="flex flex-wrap items-center justify-end gap-2">
                             <input type="hidden" name="simulation_id" value={s.id} />{back && <input type="hidden" name="back" value={back} />}
+                            {leadId && <input type="hidden" name="lead_id" value={leadId} />}
+                            {leadId && sellerChoice && <select name="seller_id" required defaultValue="" aria-label="Vendedor da venda" className="field h-8 max-w-[180px] py-0 text-xs">
+                              <option value="" disabled>Vendedor da venda</option>{sellerChoice.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}</select>}
                             <SubmitButton className="inline-flex h-8 items-center whitespace-nowrap rounded-[10px] bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-strong" pendingText="Enviando...">{sendLabel}</SubmitButton>
                           </form>}
                     </td>

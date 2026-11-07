@@ -11,6 +11,7 @@ import { brlText } from '@/lib/receipts/format'
 import { formatCpf } from '@/lib/cpf'
 import { isUuid } from '@/lib/team'
 import { CpfSearchForm } from '@/components/CpfSearchForm'
+import { contractSituation, matchesSituation, situationFilter, situationLabel, situationOptions } from '@/lib/contractStatus'
 import { recalcContracts } from './actions'
 import { bulkSeller } from './quick-actions'
 import { QUICK_ACTIONS, QuickModal, type QuickAction } from './QuickModal'
@@ -22,11 +23,6 @@ import { formatDateSP } from '@/lib/dates'
 type SP = Record<string, string | string[] | undefined>
 const one = (v: string | string[] | undefined) => (typeof v === 'string' ? v : '')
 const lbl = 'text-[13px] font-medium text-ink-soft'
-const STATUS_LABEL: Record<string, string> = {
-  digitization_queue: 'Aguardando digitação', digitizing: 'Em digitação', submitted: 'Em análise', pending_external: 'Pendência',
-  approved: 'Aprovado', paid: 'Pago ao cliente', rejected: 'Recusado', cancelled: 'Cancelado',
-  draft: 'Rascunho', documents_pending: 'Documentos pendentes', ready_for_digitization: 'Pronta para digitação', digitization: 'Em digitação',
-}
 const STATUS_TONE: Record<string, Tone> = { paid: 'received', approved: 'received', pending_external: 'diverged', rejected: 'reversed', cancelled: 'neutral' }
 const CPF_LIKE = /^\s*\d{3}\.?\d{3}\.?\d{3}-?\d{2}\s*$/
 const ZERO = fromDecimalString('0')
@@ -53,7 +49,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
   const text = one(sp.q).trim()
   const f = {
     de: one(sp.de), ate: one(sp.ate), banco: one(sp.banco), convenio: one(sp.convenio), vendedor: one(sp.vendedor), grupo: one(sp.grupo),
-    situacao: one(sp.situacao), cliente: isUuid(one(sp.cliente)) ? one(sp.cliente) : '', comissao: one(sp.comissao), alterado: one(sp.alterado), repasse: one(sp.repasse), desatualizado: one(sp.desatualizado),
+    situacao: situationFilter(one(sp.situacao)), cliente: isUuid(one(sp.cliente)) ? one(sp.cliente) : '', comissao: one(sp.comissao), alterado: one(sp.alterado), repasse: one(sp.repasse), desatualizado: one(sp.desatualizado),
     // Paid to the client between these dates (the dashboard opens the contracts behind each number).
     pago_de: one(sp.pago_de), pago_ate: one(sp.pago_ate),
     // Cancelled and rejected contracts are hidden unless asked for (owner, MEL-2026-0001, 09/10/2026).
@@ -63,7 +59,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
     q: CPF_LIKE.test(text) ? '' : text.toLowerCase(),
   }
 
-  const [contracts, { data: versions }, { data: tables }, { data: routes }, { data: banks }, { data: agreements }, { data: sellers }, { data: groups }, cases] = await Promise.all([
+  const [contracts, { data: versions }, { data: tables }, { data: routes }, { data: banks }, { data: agreements }, { data: sellers }, { data: groups }, cases, { data: stages }] = await Promise.all([
     fetchAll<Contract>((a, b) => supabase.from('proposals_v2').select('id,external_proposal_id,status,requested_amount,released_amount,term,customer_snapshot,customer_id,seller_id,product_table_version_id,created_at,paid_to_client_on,formalization,physical_received_at,physical_bank_at')
       .order('created_at', { ascending: false }).order('id').range(a, b)),
     supabase.from('product_table_versions').select('id,product_table_id,version'),
@@ -73,10 +69,16 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
     supabase.from('organization_agreements').select('id,name').order('name'),
     supabase.from('commercial_sellers').select('id,name,code,commission_group_id').order('name'),
     supabase.from('commission_groups').select('id,name').order('sort_order').order('name'),
-    // Open pendencies of the pipeline (the row's "Pendência" label).
-    fetchAll<{ proposal_id: string; pendency_reason: string | null }>((a, b) => supabase.from('operational_cases').select('proposal_id,pendency_reason').not('pendency_reason', 'is', null).order('id').range(a, b)),
+    // The pipeline case of each contract: its stage is the situation shown (the same name as the Esteira), and an open
+    // pendency adds the "Pendência" label.
+    fetchAll<{ proposal_id: string; current_stage_id: string; canonical_state: string; pendency_reason: string | null }>((a, b) => supabase.from('operational_cases').select('proposal_id,current_stage_id,canonical_state,pendency_reason').order('id').range(a, b)),
+    supabase.from('operational_stages').select('id,name,canonical_state,is_active').order('sort_order'),
   ])
-  const pendencyOf = new Map(cases.map(c => [c.proposal_id, c.pendency_reason]))
+  const caseOf = new Map(cases.map(c => [c.proposal_id, c]))
+  const pendencyOf = new Map(cases.filter(c => c.pendency_reason).map(c => [c.proposal_id, c.pendency_reason]))
+  const stageName = new Map((stages ?? []).map(s => [s.id, s.name]))
+  const situationOf = (c: Contract) => contractSituation(c.status, caseOf.get(c.id)?.canonical_state)
+  const situationText = (c: Contract) => { const k = caseOf.get(c.id); return situationLabel(situationOf(c), { stageName: k ? stageName.get(k.current_stage_id) : null }) }
   const lines = finance ? await fetchAll<CalcLine>((a, b) => supabase.from('proposal_commission_lines')
     .select('line_kind,amount,multiplier,proposal_commission_calcs!inner(proposal_id,status)').eq('proposal_commission_calcs.status', 'active')
     .order('id').range(a, b)) : []
@@ -131,13 +133,13 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
   // Day the contract was registered, in Brasília: a contract typed after 21h is still that day, not the next (UTC).
   const brDayFmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' })
   const brDay = (iso: string) => brDayFmt.format(new Date(iso))
-  const CLOSED_STATUSES = ['cancelled', 'rejected']
+  const CLOSED_STATUSES: string[] = ['cancelled', 'rejected']
   const showClosed = !!f.encerradas || CLOSED_STATUSES.includes(f.situacao)
   const matching = contracts.map(c => ({ c, w: where(c), s: c.seller_id ? sellerOf.get(c.seller_id) : undefined })).filter(({ c, w, s }) =>
     (!f.de || brDay(c.created_at) >= f.de) && (!f.ate || brDay(c.created_at) <= f.ate)
     && (!f.banco || w.bank === (f.banco === 'none' ? '' : f.banco)) && (!f.convenio || w.agreement === f.convenio)
     && (!f.vendedor || (f.vendedor === 'none' ? !c.seller_id : c.seller_id === f.vendedor)) && (!f.grupo || s?.commission_group_id === f.grupo)
-    && (!f.situacao || c.status === f.situacao) && (!f.cliente || c.customer_id === f.cliente)
+    && matchesSituation(f.situacao, c.status, caseOf.get(c.id)?.canonical_state) && (!f.cliente || c.customer_id === f.cliente)
     && (!f.comissao || (f.comissao === 'calculada') === totals.has(c.id))
     && (!f.alterado || !!payout.get(c.id)?.overridden)
     && (!f.desatualizado || stale(c))
@@ -194,7 +196,7 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
           {f.pago_de && <input type="hidden" name="pago_de" value={f.pago_de} />}{f.pago_ate && <input type="hidden" name="pago_ate" value={f.pago_ate} />}
           <label className={lbl}>De<input type="date" name="de" defaultValue={f.de} className="field mt-1.5" /></label>
           <label className={lbl}>Até<input type="date" name="ate" defaultValue={f.ate} className="field mt-1.5" /></label>
-          <label className={lbl}>Situação<select name="situacao" defaultValue={f.situacao} className="field mt-1.5"><option value="">Todas</option>{Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+          <label className={lbl}>Situação<select name="situacao" defaultValue={f.situacao} className="field mt-1.5"><option value="">Todas</option>{situationOptions((stages ?? []).filter(s => s.is_active)).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label>
           <label className={lbl}>Banco<select name="banco" defaultValue={f.banco} className="field mt-1.5"><option value="">Todos</option><option value="none">Sem banco</option>{(banks ?? []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
           <label className={lbl}>Convênio<select name="convenio" defaultValue={f.convenio} className="field mt-1.5"><option value="">Todos</option>{(agreements ?? []).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
           <label className={lbl}>Vendedor<select name="vendedor" defaultValue={f.vendedor} className="field mt-1.5"><option value="">Todos</option><option value="none">Sem vendedor</option>{(sellers ?? []).map(s => <option key={s.id} value={s.id}>{s.code ? `${String(s.code).padStart(3, '0')} · ` : ''}{s.name}</option>)}</select></label>
@@ -269,10 +271,10 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
                     <td className="px-3 py-2.5"><span className="block text-ink">{bankName.get(w.bank) ?? '—'} · {agreementName.get(w.agreement) ?? '—'}</span><span className="text-xs text-muted">{w.table}{c.term ? ` · ${termText(c.term, c.term, c.term)}` : ''}</span></td>
                     <td className="num whitespace-nowrap px-3 py-2.5 text-right">{brlText(String(c.requested_amount ?? c.released_amount ?? '0'))}{c.released_amount && c.released_amount !== c.requested_amount && <span className="block text-xs text-muted">líq. {brlText(String(c.released_amount))}</span>}</td>
                     <td className="px-3 py-2.5"><span className="flex max-w-[180px] flex-wrap gap-1">
-                      <Badge tone={STATUS_TONE[c.status] ?? 'neutral'}>{STATUS_LABEL[c.status] ?? c.status}</Badge>
+                      <Badge tone={STATUS_TONE[situationOf(c) ?? ''] ?? 'neutral'}>{situationText(c)}</Badge>
                       {finance && (() => { const r = repasseOf(c.id); return r === 'pago' ? <Badge tone="received">Pago ao vendedor</Badge> : r === 'creditado' ? <Badge tone="pending">A pagar ao vendedor</Badge> : r === 'aguardando' ? <Badge tone="neutral">Não pago ao vendedor</Badge> : r === 'sem_repasse' ? <Badge tone="neutral">Sem repasse</Badge> : null })()}
                       {c.formalization === 'physical' && <Badge tone={c.physical_received_at ? 'received' : 'pending'}>{c.physical_bank_at ? 'Físico no banco' : c.physical_received_at ? 'Físico recebido' : 'Físico pendente'}</Badge>}
-                      {pendencyOf.get(c.id) && <span title={pendencyOf.get(c.id) ?? ''}><Badge tone="diverged">Pendência</Badge></span>}
+                      {pendencyOf.get(c.id) && situationOf(c) !== 'pending_external' && <span title={pendencyOf.get(c.id) ?? ''}><Badge tone="diverged">Pendência</Badge></span>}
                     </span></td>
                     {finance && (t ? <>
                       <td className="num whitespace-nowrap px-3 py-2.5 text-right">{money(t.get('received'))}</td>

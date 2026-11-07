@@ -145,10 +145,12 @@ test('no page or action puts a CPF in a URL', () => {
 })
 
 // ---- labels, nulls, navigation
-test('proposal statuses have labels and a next step; paid is evidence-only', () => {
+test('proposal statuses have labels and a next step; paid says evidence only when it is', () => {
   for (const s of ['draft', 'documents_pending', 'ready_for_digitization', 'digitization', 'submitted', 'approved', 'rejected', 'cancelled', 'paid']) assert.ok(proposalStatusLabel(s).label && proposalStatusLabel(s).next, s)
   assert.equal(proposalStatusLabel('zzz').label, 'Situação desconhecida')
-  assert.match(proposalStatusLabel('paid').label, /evidência/)
+  assert.equal(proposalStatusLabel('paid').label, 'Paga')
+  assert.equal(proposalStatusLabel('paid', null, 'manual').label, 'Paga')
+  assert.match(proposalStatusLabel('paid', null, 'import').label, /confirmada por evidência/)
 })
 test('unknown money is "Não calculado", never R$ 0,00', () => {
   assert.match(read('src/app/app/simulacoes/SavedSimulations.tsx'), /installment_amount === null \? 'Não calculada'/)
