@@ -334,7 +334,7 @@ $$;
 revoke all on function public.payout_pay_preview(uuid) from public, anon;
 grant execute on function public.payout_pay_preview(uuid) to authenticated;
 
--- Batch detail: as 20261106234355_payout_safe_payment_v1; each line carries the breakdown of its payment.
+-- Batch detail: as 20261107043940_payout_safe_payment_v1; each line carries the breakdown of its payment.
 create or replace function public.payout_batch_detail(p_batch uuid)
 returns jsonb
 language plpgsql

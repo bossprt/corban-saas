@@ -1,4 +1,4 @@
--- Contract test for 20261105204708_seller_signup_links_v1 and 20261106234117_seller_signup_hardening_v1: registration
+-- Contract test for 20261105204708_seller_signup_links_v1 and 20261107043841_seller_signup_hardening_v1: registration
 -- link per seller group. A waiting document is never overwritten by a second submission; at most 20 per link per hour;
 -- the queue can be refused in bulk, keeping the record. Anonymous callers reach
 -- only the link info and the submit, by token; the queue is read and decided only by admin/manager of the company; an

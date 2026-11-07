@@ -1,4 +1,4 @@
--- Contract test for 20261106234453_document_validation_role_guard_v1: only Supervisor, Gerente or Administrador decide a
+-- Contract test for 20261107043958_document_validation_role_guard_v1: only Supervisor, Gerente or Administrador decide a
 -- document of the contract checklist ("Validar", recusar, dispensar), also when the API is called directly. A seller
 -- who sees the contract attaches a file but cannot validate it, cannot create a checklist item already validated or
 -- waived, and cannot rewrite the reason of a waiver; a supervisor and an admin validate. One transaction, rolled back.

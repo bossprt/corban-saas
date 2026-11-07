@@ -1,4 +1,4 @@
--- Contract test for 20261107001308_finance_crm_queues_v1: the commission receivable queue (any age, expected à vista),
+-- Contract test for 20261107044307_finance_crm_queues_v1: the commission receivable queue (any age, expected à vista),
 -- several receipts at once in one transaction (one failure undoes all), the reconciliation by contract computed in the
 -- database (period, open divergences, totals), the open lead with the same CPF (id only for who can work it) and the
 -- service-only e-mail lookup. Finance only; sellers refused.

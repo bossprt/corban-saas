@@ -1,4 +1,4 @@
--- Contract test for 20261106234355_payout_safe_payment_v1 (audit 06/11/2026: G1, G2, E2, E9).
+-- Contract test for 20261107043940_payout_safe_payment_v1 (audit 06/11/2026: G1, G2, E2, E9).
 --   * payout_pay_now_amount returns exactly what the pay RPC pays (the pay list amount); null for the own account;
 --     refused to whoever may not pay.
 --   * pay_account_confirmed refuses a different amount and an invalid bank account, records nothing then; with the

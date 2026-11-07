@@ -1,4 +1,4 @@
--- Contract test for 20261106235416_lead_proposal_link_v1: "Venda fechada" from a lead (close_lead_sale) creates the
+-- Contract test for 20261107044031_lead_proposal_link_v1: "Venda fechada" from a lead (close_lead_sale) creates the
 -- proposal with the lead's seller (or the closing user's, or the one chosen in the dialog; none -> seller_required), links
 -- it to that lead (origin_lead_id, immutable) and the lead follows that proposal only. Proposals without an origin lead
 -- keep following the client as before. One transaction, rolled back.

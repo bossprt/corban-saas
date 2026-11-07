@@ -17,17 +17,17 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ### Plataforma > Cobrança: valor com ponto e primeiro mês no passado (06/11/2026)
 - Corrigido: "399.90" no valor da assinatura era gravado como R$ 39.990,00; agora usa `parseMoneyInput` ("399,90", "399.90", "1.234,56"), mostra "R$ X por mês" ao digitar e pede confirmação antes de salvar.
-- Corrigido: assinatura nova com primeiro mês anterior ao mês atual criava mensalidades já vencidas e bloqueava a empresa na hora. O banco recusa (`platform_set_subscription`, migration `20261106234256_billing_starts_on_guard_v1`); assinatura existente mantém o primeiro mês que já tem, só não volta para antes. A tela começa no mês atual e explica o motivo.
+- Corrigido: assinatura nova com primeiro mês anterior ao mês atual criava mensalidades já vencidas e bloqueava a empresa na hora. O banco recusa (`platform_set_subscription`, migration `20261107043855_billing_starts_on_guard_v1`); assinatura existente mantém o primeiro mês que já tem, só não volta para antes. A tela começa no mês atual e explica o motivo.
 - Corrigido: usuário comum que abre /platform vê "Sem acesso" em vez de ir para o login.
 ### Segurança do link de cadastro de vendedor (06/11/2026)
 - Segurança: um segundo envio com CPF/CNPJ que já está em análise na empresa é recusado ("Já existe um cadastro em análise para este CPF. Fale com a empresa.") e não troca mais os dados (nem PIX/banco) do primeiro pedido.
 - Segurança: no máximo 20 envios por link por hora (era 30); o teto de 200 pedidos em análise por empresa continua. Nova função `seller_signup_reject_many` (recusa em lote, só admin/gerente da empresa).
 - Alterado: "Recusar" pede confirmação; "Recusar selecionados" com "Marcar todos"; lista "Recusados nos últimos 30 dias" com nome, CPF, quem recusou e quando (os dados enviados continuam apagados na recusa).
 - Corrigido: o aviso do topo (ex.: "Cadastro recusado") não aparece mais na próxima tela; abrir "Ver e aprovar" de um pedido já decidido mostra "Este pedido já foi decidido" em vez de um "Novo vendedor" em branco.
-- Migration `20261106234117_seller_signup_hardening_v1` local; aplicar em produção antes do merge.
+- Migration `20261107043841_seller_signup_hardening_v1` aplicada em produção em 07/11 antes do merge.
 ### Importar contratos e validação de documentos: travas de permissão (06/11/2026)
 - Segurança: Esteira > Importar contratos exige também "Editar propostas" (Vendedor e Corretor externo não abrem a tela, a ação nem o modelo). A busca na Bevicred (produção da empresa toda) e o vínculo "código do parceiro → vendedor" ficam só para Administrador, Gerente ou papel com escopo "toda a empresa", conferidos no servidor antes de usar a chave de serviço.
-- Segurança: migration `20261106234453_document_validation_role_guard_v1` (local; aplicar em produção antes do merge): item do checklist de documentos sempre nasce "faltando" (ninguém cria já validado ou dispensado pela API); motivo e aprovador da dispensa não mudam depois; usuário sem papel de Supervisor ou acima é recusado mesmo sem vínculo ativo. Contrato `tests/security/document-validation-role-contract.sql`.
+- Segurança: migration `20261107043958_document_validation_role_guard_v1` (aplicada em produção em 07/11 antes do merge): item do checklist de documentos sempre nasce "faltando" (ninguém cria já validado ou dispensado pela API); motivo e aprovador da dispensa não mudam depois; usuário sem papel de Supervisor ou acima é recusado mesmo sem vínculo ativo. Contrato `tests/security/document-validation-role-contract.sql`.
 ### Menu, navegação e páginas de erro (06/11/2026)
 - Alterado: menu do computador na ordem do dinheiro: Hoje · Visão geral · Clientes · Vendas · Esteira · Contratos · Financeiro · Repasse · Metas · Cadastros · Relatórios · Configurações. "Dashboard" passa a se chamar "Visão geral". Barra do celular: Hoje · Esteira · Contratos · Repasse · Mais (Vendas e Clientes só ocupam lugar se um módulo estiver desligado).
 - Adicionado: Central de atenção (supervisor ou acima) e Operação (módulo Esteira) dentro de Hoje; Mensalidade (administrador) e Plataforma (administrador da plataforma) no rodapé do menu.
@@ -40,7 +40,7 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 - Corrigido: quadro de Vendas busca cada coluna no banco (mais urgentes e mais novos primeiro) com contagens reais; lead manual com CPF já aberto abre o lead existente; aviso "Lead registrado" não aparece mais duas vezes; "Novo lead" no topo.
 - Adicionado: busca (nome, código ou CPF/CNPJ, sem CPF na URL) e páginas na lista de vendedores; e-mails da equipe buscados numa chamada só.
 - Alterado: confirmação antes de Revogar chave de API (agora com mensagem de sucesso ou erro), Trocar link, Desativar acesso, Inativar vendedor e Recusar cadastro.
-- Migration `20261107001308_finance_crm_queues_v1` (local; aplicar em produção antes do merge).
+- Migration `20261107044307_finance_crm_queues_v1` (aplicada em produção em 07/11 antes do merge).
 ### Datas e horas no horário de Brasília (06/11/2026)
 - Corrigido: "hoje", "este mês" e "este ano" das telas vêm do horário de Brasília (`src/lib/dates.ts`), não do relógio do servidor (UTC na Vercel). Depois das 21h, "Fechar período até" e "Marcar pago" não abrem mais em amanhã (o banco recusava), Metas não abre no mês seguinte e o fluxo de caixa não abre no ano seguinte.
 - Corrigido: horários da ficha do contrato, Esteira, Hoje, Operação, Atenção, Equipe, Validação, Portal e outras telas saem no horário de Brasília (antes: fuso do servidor, 3 horas adiantado em produção).
@@ -50,25 +50,25 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 - Adicionado: "Ver contratos" em cada linha de Repasses (conta da pessoa e tela do repasse), também para "Pagar agora" e "Marcar pago" fora de lote: página com os contratos (ADE, cliente, banco · convênio · produto, liberado, pago ao cliente, comissão, link) e a composição: Soma dos contratos + outros lançamentos (vale, bônus, desconto, saldo anterior, desconto do negativo, negativo que passa para o próximo) = Total pago. Diferença aparece em vermelho, nunca escondida.
 - Adicionado: "ver contratos" em cada linha de "Pagar vendedores" e no botão "Pagar" da conta da pessoa, antes de pagar (mesmo valor que será gravado).
 - Alterado: impressos (lote, pessoa, vendedores) e Excel do lote separam "Soma dos contratos", "Outros lançamentos" (listados) e "Total pago".
-- Migration `20261107000504_payout_breakdown_v1` (local; aplicar em produção antes do merge): `payout_breakdown`, `payout_pay_preview`; `payout_batch_detail` e `payout_account_report` trazem a composição. Contrato `tests/security/payout-breakdown-contract.sql`.
+- Migration `20261107044136_payout_breakdown_v1` (aplicada em produção em 07/11 antes do merge): `payout_breakdown`, `payout_pay_preview`; `payout_batch_detail` e `payout_account_report` trazem a composição. Contrato `tests/security/payout-breakdown-contract.sql`.
 
 ### Pagamento seguro do repasse (06/11/2026)
 - Corrigido: "Pagar" na conta da pessoa mostrava o saldo, mas o banco pagava outro valor (repasse em aberto, limite do negativo ou disponível hoje). Agora mostra o valor exato que será gravado, pede confirmação e o banco recusa se o valor mudou.
 - Corrigido: "Pagar vendedores" abre sem ninguém marcado; "Marcar todos" não marca quem não tem chave PIX nem conta (e avisa quem ficou de fora); a confirmação mostra quantidade e total.
 - Corrigido: confirmar o lote é uma operação só, tudo ou nada, com a conta bancária gravada junto; se um valor mudou, nada é registrado e a tela diz quem. "Marcar pago" ganhou o campo da conta bancária e confirmação; falha ao gravar a conta não passa mais em silêncio.
 - Corrigido: total do lote (lista, detalhe e Excel) conta só os pagamentos feitos, como o impresso; desfeitos aparecem à parte.
-- Migration `20261106234355_payout_safe_payment_v1` (local; aplicar em produção antes do merge).
+- Migration `20261107043940_payout_safe_payment_v1` (aplicada em produção em 07/11 antes do merge).
 ### Esteira e Contratos para o uso diário com base grande (06/11/2026)
 - Corrigido: a Esteira lia só os 500 casos mais antigos (inclusive fechados); agora busca no banco os abertos (Kanban: mais os fechados dos últimos 7 dias), mais novos primeiro, com contadores das abas calculados no banco e aviso "Mostrando X de Y" quando passa de 500. Sem lista de ids na URL (E6).
 - Corrigido: totais de comissão de Contratos (Empresa recebe, Vendedores recebem, Margem, Ganho) somados no banco em numeric, sem o teto silencioso de 50.000 linhas (G3). Filtros e páginas também no banco: cada clique lê só a página e os totais.
 - Adicionado: busca sem acento por nome e ADE em Contratos e na Esteira (CPF pela busca já existente, sem ir para a URL) e no nome em Clientes; filtro por vendedor na Esteira; nome do cliente abre o contrato; "Mover etapa" no menu da linha de Contratos; filtros recolhidos e lista em cartões no celular.
 - Corrigido: mover para Pendência, Recusada ou Cancelada pede o motivo (vai para o histórico da etapa); Recusada e Cancelada pedem confirmação (E7). Nova proposta recusa prazo fora da tabela e mostra os prazos aceitos (E2).
-- Migration `20261107001252_contract_pipeline_lists_v1` (funções `pipeline_case_list` e `contract_list`, security invoker; coluna gerada `clients.search_name`). Migration local; aplicar em produção antes do merge. Depende do PR #204.
+- Migration `20261107044229_contract_pipeline_lists_v1` (funções `pipeline_case_list` e `contract_list`, security invoker; coluna gerada `clients.search_name`). Migration aplicada em produção em 07/11 antes do merge. Depende do PR #204.
 
 ### Vendas, Esteira e Contratos com a mesma situação e a venda fechada com vendedor (06/11/2026)
 - Corrigido: um único dicionário de situações (`src/lib/contractStatus.ts`) para Esteira, Contratos, ficha do contrato, histórico, cliente, lead, painel do vendedor e Operacional. O contrato que está na Esteira mostra a etapa dela (mesmo nome); "Paga (confirmada por evidência)" só quando veio de arquivo do banco (importação ou relatório de comissão); à mão é "Paga".
 - Corrigido: filtro "Situação" de Contratos com cada situação uma vez (sem "Em digitação" duplicado) e todas encontram contratos ("Aguardando digitação" e "Pendência" agora acham pela etapa da Esteira).
-- Corrigido: "Venda fechada" no lead leva o vendedor (do dono do lead, senão de quem fecha; sem nenhum, a tela pede) e a comissão é calculada. A proposta guarda o lead de origem e o lead acompanha só essa proposta. Migration `20261106235416_lead_proposal_link_v1` (coluna `proposals_v2.origin_lead_id`, função `close_lead_sale`, gatilho `leads_follow_proposal`). Migration local; aplicar em produção antes do merge.
+- Corrigido: "Venda fechada" no lead leva o vendedor (do dono do lead, senão de quem fecha; sem nenhum, a tela pede) e a comissão é calculada. A proposta guarda o lead de origem e o lead acompanha só essa proposta. Migration `20261107044031_lead_proposal_link_v1` (coluna `proposals_v2.origin_lead_id`, função `close_lead_sale`, gatilho `leads_follow_proposal`). Migration aplicada em produção em 07/11 antes do merge.
 - Adicionado: em "Antes da fila" e na ficha, a proposta parada por falta de lista de documentos diz o motivo e leva a Cadastros › Documentos por banco. Ficha do contrato com links para o cliente, o lead e a conta de Repasse do vendedor (só para quem vê Repasse).
 
 ### Filtro por prazo em Cadastros > Tabelas (06/11/2026)

@@ -24,7 +24,7 @@ insert into public.organizations (id, name, document, plan_type, is_active)
 select org_b, 'Empresa B Cobranca', 'cobranca-' || gen_random_uuid(), 'starter', true from ids;
 
 -- Receiver and a subscription that started last month, due day 1, grace 0: last month's charge is blocking.
--- (20261106234256_billing_starts_on_guard_v1: a new subscription can no longer start in a past month through the
+-- (20261107043855_billing_starts_on_guard_v1: a new subscription can no longer start in a past month through the
 -- function, so this pre-existing one is written directly, as if created before the guard.)
 select public.platform_set_billing_settings(null, '12345678909', 'cpf', 'Fulano de Tal', 'Rio Branco');
 insert into public.organization_subscriptions (organization_id, amount, due_day, grace_days, starts_on, is_active)

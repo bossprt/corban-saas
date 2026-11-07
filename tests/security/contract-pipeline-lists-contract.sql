@@ -1,4 +1,4 @@
--- Contract test for 20261107001252_contract_pipeline_lists_v1: Esteira (pipeline_case_list) and Contratos (contract_list)
+-- Contract test for 20261107044229_contract_pipeline_lists_v1: Esteira (pipeline_case_list) and Contratos (contract_list)
 -- read, filter, page and sum in the database through the caller's RLS; money leaves as text; the search ignores accents;
 -- commission values only reach finance; a seller without financeiro.view still lists contracts (no error); another
 -- company's id returns nothing; clients.search_name is folded. One transaction, rolled back.

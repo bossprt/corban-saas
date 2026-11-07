@@ -30,7 +30,7 @@ const dec = (v: string | null | undefined) => (v ? fromDecimalString(v) : ZERO)
 const money = (v: Rational | undefined) => brlText(toDecimalString(v ?? ZERO, 2))
 const CLOSED_STATUSES = ['cancelled', 'rejected']
 
-// One row of contract_list (migration 20261107001252): filtered, paged and summed in the database through the caller's
+// One row of contract_list (migration 20261107044229): filtered, paged and summed in the database through the caller's
 // RLS. Money comes as text (numeric::text) and is only parsed with the exact decimal helpers.
 type Row = {
   id: string; external_proposal_id: string | null; status: string; requested_amount: string | null; released_amount: string | null; term: number | null

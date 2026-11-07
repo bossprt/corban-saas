@@ -12,7 +12,7 @@ import { PipelineBoard, type BoardCard } from './PipelineBoard'
 import { StageSelect } from './StageMove'
 import { PreQueue } from './PreQueue'
 
-// One case of pipeline_case_list (migration 20261107001252): read in the database, newest first, joined with the
+// One case of pipeline_case_list (migration 20261107044229): read in the database, newest first, joined with the
 // proposal and the seller. Amounts come as text.
 type CaseRow = {
   id: string; proposal_id: string; current_stage_id: string; canonical_state: string; entered_stage_at: string; due_at: string | null; pendency_due_at: string | null; pendency_reason: string | null

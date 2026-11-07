@@ -1,5 +1,5 @@
 // Filters of the Contratos and Esteira lists, read from the address and checked before they reach the database
-// (contract_list / pipeline_case_list, migration 20261107001252). Anything malformed is dropped, so a bad link shows the
+// (contract_list / pipeline_case_list, migration 20261107044229). Anything malformed is dropped, so a bad link shows the
 // list without that filter instead of an error. The search text is folded in the database (no accents, no case).
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/
