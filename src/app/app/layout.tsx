@@ -106,7 +106,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-line bg-canvas/90 px-4 backdrop-blur md:px-8">
+        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-line bg-surface px-4 md:h-[58px] md:px-8">
           <div className="flex size-8 items-center justify-center rounded-lg bg-brand text-sm font-bold text-white md:hidden" aria-hidden>{initial}</div>
           <CommandPalette nav={items} />
         </header>
