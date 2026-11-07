@@ -15,6 +15,12 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Vendas, Esteira e Contratos com a mesma situação e a venda fechada com vendedor (06/11/2026)
+- Corrigido: um único dicionário de situações (`src/lib/contractStatus.ts`) para Esteira, Contratos, ficha do contrato, histórico, cliente, lead, painel do vendedor e Operacional. O contrato que está na Esteira mostra a etapa dela (mesmo nome); "Paga (confirmada por evidência)" só quando veio de arquivo do banco (importação ou relatório de comissão); à mão é "Paga".
+- Corrigido: filtro "Situação" de Contratos com cada situação uma vez (sem "Em digitação" duplicado) e todas encontram contratos ("Aguardando digitação" e "Pendência" agora acham pela etapa da Esteira).
+- Corrigido: "Venda fechada" no lead leva o vendedor (do dono do lead, senão de quem fecha; sem nenhum, a tela pede) e a comissão é calculada. A proposta guarda o lead de origem e o lead acompanha só essa proposta. Migration `20261106235416_lead_proposal_link_v1` (coluna `proposals_v2.origin_lead_id`, função `close_lead_sale`, gatilho `leads_follow_proposal`). Migration local; aplicar em produção antes do merge.
+- Adicionado: em "Antes da fila" e na ficha, a proposta parada por falta de lista de documentos diz o motivo e leva a Cadastros › Documentos por banco. Ficha do contrato com links para o cliente, o lead e a conta de Repasse do vendedor (só para quem vê Repasse).
+
 ### Filtro por prazo em Cadastros > Tabelas (06/11/2026)
 - Adicionado: filtro "Prazo (meses)" na pesquisa de tabelas: mostra as tabelas que têm alguma linha cujo prazo (mínimo a máximo) inclui o número digitado; vale junto com os outros filtros, na exportação e na "Nova pesquisa". Nova coluna "Prazos" com a faixa da versão mostrada. Sem mudança no banco.
 

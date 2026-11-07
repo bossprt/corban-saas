@@ -45,6 +45,9 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
   ])
   if (!customer) notFound()
   const open = (proposals ?? []).filter(p => !DONE.includes(p.status))
+  // The pipeline case of each proposal: its situation reads the same as in the Esteira and Contratos.
+  const { data: caseRows } = (proposals ?? []).length ? await supabase.from('operational_cases').select('proposal_id,canonical_state').in('proposal_id', (proposals ?? []).map(p => p.id)) : { data: [] }
+  const caseState = new Map(((caseRows ?? []) as { proposal_id: string; canonical_state: string }[]).map(c => [c.proposal_id, c.canonical_state]))
   const accounts = (accountRows ?? []) as BankAccount[]
   const registrations = (registrationRows ?? []) as Registration[]
   const profile = customer as unknown as ProfileFields
@@ -132,7 +135,7 @@ export default async function CustomerDetail({ params }: { params: Promise<{ id:
                       <tr key={p.id} className="border-t border-line hover:bg-surface-muted">
                         <td className="num px-3 py-2 text-muted"><Link href={`/app/propostas/${p.id}`} className="hover:text-brand">{day(p.created_at)}</Link></td>
                         <td className="px-3 py-2 font-mono text-[13px] text-ink-soft">{p.external_proposal_id ?? '—'}</td>
-                        <td className="px-3 py-2"><Badge tone={p.status === 'paid' ? 'received' : DONE.includes(p.status) ? 'neutral' : 'paid-out'}>{proposalStatusLabel(p.status).label}</Badge></td>
+                        <td className="px-3 py-2"><Badge tone={p.status === 'paid' ? 'received' : DONE.includes(p.status) ? 'neutral' : 'paid-out'}>{proposalStatusLabel(p.status, caseState.get(p.id)).label}</Badge></td>
                         <td className="num px-3 py-2 text-right text-ink">{brl(p.released_amount ?? p.requested_amount)}</td>
                         <td className="num px-3 py-2 text-right text-ink-soft">{p.installment_amount ? `${brl(p.installment_amount)}${p.term ? ` × ${p.term}` : ''}` : '—'}</td>
                       </tr>

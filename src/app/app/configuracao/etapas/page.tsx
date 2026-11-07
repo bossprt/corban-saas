@@ -3,11 +3,9 @@ import { requireAppContext } from '@/lib/appContext'
 import { canManageTeam } from '@/lib/rbac'
 import { createDefaultStages, saveStage } from './actions'
 import { missingStages } from '@/lib/catalog'
+import { SITUATION_LABEL } from '@/lib/contractStatus'
 
-const STATE_LABEL: Record<string, string> = {
-  digitization_queue: 'Aguardando digitação', digitizing: 'Em digitação', submitted: 'Em análise', pending_external: 'Pendência',
-  approved: 'Aprovada', paid: 'Paga', rejected: 'Recusada', cancelled: 'Cancelada',
-}
+const STATE_LABEL: Record<string, string> = SITUATION_LABEL
 
 // Pipeline stages of the company: the name, order and time limit are the owner's; the underlying state is fixed
 // because payment, commission and reports depend on it.

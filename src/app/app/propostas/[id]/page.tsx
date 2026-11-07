@@ -8,7 +8,8 @@ import { requireAppContext } from '@/lib/appContext'
 import { can } from '@/lib/access'
 import { atLeast } from '@/lib/rbac'
 import { isUuid } from '@/lib/team'
-import { proposalStatusLabel } from '@/lib/operational'
+import { SITUATION_NEXT, contractSituation, situationLabel } from '@/lib/contractStatus'
+import { DOCUMENT_LISTS_HREF, versionsWithoutDocumentList } from '@/lib/proposals/checklist'
 import { decimalBr } from '@/lib/commission/tableValues'
 import { attachDocument, prepareDocuments, sendToDigitization, uploadForRequirement, validateRequirement } from './actions'
 
@@ -31,14 +32,14 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
   const { supabase, membership, access, organization } = await requireAppContext()
 
   const { data: proposal } = await supabase.from('proposals_v2')
-    .select('id,status,customer_id,seller_id,product_table_version_id,contract_type_id,outstanding_balance,origin_bank_name,origin_contract_number,requested_amount,released_amount,installment_amount,term,external_proposal_id,customer_snapshot,commercial_snapshot,created_at,formalization,paid_to_client_on,physical_received_at,physical_received_by,physical_sent_at,physical_sent_by,physical_bank_at,physical_bank_by')
+    .select('id,status,customer_id,seller_id,product_table_version_id,contract_type_id,outstanding_balance,origin_bank_name,origin_contract_number,requested_amount,released_amount,installment_amount,term,external_proposal_id,customer_snapshot,commercial_snapshot,created_at,formalization,paid_to_client_on,physical_received_at,physical_received_by,physical_sent_at,physical_sent_by,physical_bank_at,physical_bank_by,origin_lead_id')
     .eq('id', id).maybeSingle()
   if (!proposal) notFound()
 
   const [{ data: requirements }, { data: job }, { data: operationalCase }, { data: customerDocuments }, { data: externalIds }, { data: submission }, { data: sellers }, catalog] = await Promise.all([
     supabase.from('proposal_document_requirements').select('id,document_type_id,label_snapshot,required_snapshot,status,exception_reason,proposal_document_links(customer_document_id,customer_documents(original_file_name))').eq('proposal_id', id).order('created_at'),
     supabase.from('digitization_jobs').select('id,status').eq('proposal_id', id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-    supabase.from('operational_cases').select('id,canonical_state,external_status_raw').eq('proposal_id', id).maybeSingle(),
+    supabase.from('operational_cases').select('id,canonical_state,current_stage_id,external_status_raw').eq('proposal_id', id).maybeSingle(),
     supabase.from('customer_documents').select('id,document_type_id,original_file_name,version,status').eq('customer_id', proposal.customer_id).eq('status', 'active').order('created_at', { ascending: false }),
     supabase.from('proposal_external_identities').select('institution_key,external_proposal_number,source,first_seen_at').eq('proposal_id', id).order('first_seen_at'),
     supabase.from('proposal_submissions').select('status,decision_reason').eq('proposal_id', id).maybeSingle(),
@@ -47,7 +48,25 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
   ])
 
   const customer = (proposal.customer_snapshot ?? {}) as Record<string, unknown>
-  const status = proposalStatusLabel(proposal.status)
+  // Where the contract connects (audit 06/11/2026): the lead it came from (the origin lead, or for older proposals the
+  // lead following it), the seller's Repasse account (only for who sees Repasse; RLS also limits payout_accounts), the
+  // Esteira stage name and how "Paga" was set (only an imported file or commission report is "confirmada por evidência").
+  const seeRepasse = can(access, 'repasse.view')
+  const [{ data: stageRow }, { data: paidEvidence }, { data: leadRow }, { data: payoutAccount }, noList] = await Promise.all([
+    operationalCase?.current_stage_id ? supabase.from('operational_stages').select('name').eq('id', operationalCase.current_stage_id).maybeSingle() : Promise.resolve({ data: null }),
+    proposal.status === 'paid' ? supabase.from('proposal_status_evidence').select('source').eq('proposal_id', id).eq('canonical_status', 'paid').order('evidenced_at', { ascending: false }).limit(1).maybeSingle() : Promise.resolve({ data: null }),
+    proposal.origin_lead_id ? supabase.from('leads').select('id,full_name').eq('id', proposal.origin_lead_id).maybeSingle()
+      : supabase.from('leads').select('id,full_name').eq('proposal_id', id).order('created_at').limit(1).maybeSingle(),
+    seeRepasse && proposal.seller_id ? supabase.from('payout_accounts').select('id').eq('seller_id', proposal.seller_id).limit(1).maybeSingle() : Promise.resolve({ data: null }),
+    proposal.status === 'draft' ? versionsWithoutDocumentList(supabase, [proposal.product_table_version_id]) : Promise.resolve(new Set<string>()),
+  ])
+  const missingDocumentList = noList.has(proposal.product_table_version_id)
+  const sellerName = (sellers ?? []).find(s => s.id === proposal.seller_id)?.name
+  const situation = contractSituation(proposal.status, operationalCase?.canonical_state)
+  const status = {
+    label: situationLabel(situation, { stageName: (stageRow as { name?: string } | null)?.name, paidSource: (paidEvidence as { source?: string } | null)?.source }),
+    next: missingDocumentList ? 'Cadastre a lista de documentos deste banco e convênio.' : situation ? SITUATION_NEXT[situation] : '',
+  }
   const paid = proposal.status === 'paid'
   const closed = ['rejected', 'cancelled'].includes(proposal.status)
   const finance = can(access, 'financeiro.view')
@@ -68,6 +87,11 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
           <div className="text-sm text-brand">Contrato {proposal.external_proposal_id ? `nº ${proposal.external_proposal_id}` : proposal.id.slice(0, 8)}</div>
           <h1 className="mt-1 text-2xl font-semibold text-ink"><Link href={`/app/clientes/${proposal.customer_id}`} className="hover:text-brand">{String(customer.full_name ?? 'Cliente')}</Link></h1>
           <p className="mt-1 text-sm text-muted">Criado em {new Date(proposal.created_at).toLocaleString('pt-BR')}{proposal.paid_to_client_on ? ` · pago ao cliente em ${new Date(`${proposal.paid_to_client_on}T12:00:00Z`).toLocaleDateString('pt-BR')}` : ''}</p>
+          <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            <Link href={`/app/clientes/${proposal.customer_id}`} className="text-brand hover:underline">Ficha do cliente</Link>
+            {leadRow && <Link href={`/app/crm/leads/${leadRow.id}`} className="text-brand hover:underline">Veio do lead {leadRow.full_name}</Link>}
+            {payoutAccount && <Link href={`/app/repasse/${payoutAccount.id}`} className="text-brand hover:underline">Repasse de {sellerName ?? 'vendedor'}</Link>}
+          </p>
         </div>
         <div className="text-right"><Badge tone={paid ? 'received' : closed ? 'neutral' : 'pending'}>{status.label}</Badge><p className="mt-2 max-w-xs text-xs text-muted">{status.next}</p></div>
       </div>
@@ -96,7 +120,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
         <Card>
           <CardHeader title={<span className="flex items-center gap-2">Documentos <Badge tone={pendingRequired.length ? 'pending' : 'neutral'}>{pendingRequired.length} obrigatório(s) pendente(s)</Badge></span>}
-            action={['draft', 'documents_pending'].includes(proposal.status) ? <form action={prepareDocuments}><input type="hidden" name="proposal_id" value={proposal.id} /><SubmitButton className={ghost} pendingText="...">Preparar checklist</SubmitButton></form>
+            action={missingDocumentList ? undefined : ['draft', 'documents_pending'].includes(proposal.status) ? <form action={prepareDocuments}><input type="hidden" name="proposal_id" value={proposal.id} /><SubmitButton className={ghost} pendingText="...">Preparar checklist</SubmitButton></form>
               : proposal.status === 'ready_for_digitization' ? <form action={sendToDigitization}><input type="hidden" name="proposal_id" value={proposal.id} /><SubmitButton className={ghost} pendingText="...">Enviar para digitação</SubmitButton></form> : undefined} />
           <div className="grid gap-2 p-5 pt-3">
             {requirements?.map(r => {
@@ -128,7 +152,9 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
                 </div>
               )
             })}
-            {!requirements?.length && <p className="text-sm text-muted">Checklist ainda não preparado para este contrato.</p>}
+            {!requirements?.length && (missingDocumentList
+              ? <p className="rounded-[10px] bg-[#FEF3C7] px-3 py-2 text-sm text-[#92400E]">Este contrato está em &quot;Antes da fila&quot; porque o banco e convênio dele não têm lista de documentos. Próximo passo: cadastre a lista em <Link href={DOCUMENT_LISTS_HREF} className="font-medium underline">Cadastros › Documentos por banco</Link> e volte aqui para preparar o checklist.</p>
+              : <p className="text-sm text-muted">Checklist ainda não preparado para este contrato.</p>)}
           </div>
         </Card>
         <Card>

@@ -1,6 +1,7 @@
 import { Card, CardHeader } from '@/components/ui'
 import { SubmitButton } from '@/components/SubmitButton'
 import { brlText } from '@/lib/receipts/format'
+import { SITUATION_LABEL } from '@/lib/contractStatus'
 import { decimalBr } from '@/lib/commission/tableValues'
 import { memberEmails } from '@/lib/team.server'
 import { addContractNote } from './contract-actions'
@@ -10,10 +11,7 @@ type Supa = Awaited<ReturnType<typeof import('@/lib/appContext').requireAppConte
 type ContractEvent = { id: string; kind: string; detail: Record<string, unknown>; reason: string | null; actor_user_id: string | null; created_at: string }
 type StageEvent = { id: string; from_state: string | null; to_state: string | null; actor_user_id: string | null; metadata: Record<string, unknown> | null; occurred_at: string }
 
-const STATE: Record<string, string> = {
-  digitization_queue: 'Aguardando digitação', digitizing: 'Em digitação', submitted: 'Em análise', pending_external: 'Pendência',
-  approved: 'Aprovado', paid: 'Pago ao cliente', rejected: 'Recusado', cancelled: 'Cancelado',
-}
+const STATE: Record<string, string> = SITUATION_LABEL
 const FIELD: Record<string, string> = { external_proposal_id: 'ADE', table_version_id: 'Tabela', seller_id: 'Vendedor', requested_amount: 'Valor bruto', released_amount: 'Valor líquido', installment_amount: 'Parcela', term: 'Prazo', formalization: 'Formalização', paid_to_client_on: 'Pago ao cliente em' }
 const COMPONENT: Record<string, string> = { upfront: 'à vista', deferred: 'diferido', bonus_1: 'bônus 1', bonus_2: 'bônus 2', bonus_3: 'bônus 3', plastic: 'plástico', insurance_fixed: 'seguro', gratification: 'gratificação' }
 const money = (v: unknown) => (v === null || v === undefined || v === '' ? '—' : brlText(String(v)))
