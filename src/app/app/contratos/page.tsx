@@ -4,14 +4,15 @@ import { Badge, Card, CardHeader, PageHeader, type Tone } from '@/components/ui'
 import { can } from '@/lib/access'
 import { atLeast } from '@/lib/rbac'
 import { requireAppContext } from '@/lib/appContext'
-import { fetchAll } from '@/lib/fetchAll'
-import { add, fromDecimalString, mul, sub, toDecimalString, type Rational } from '@/lib/commission/money'
+import { add, fromDecimalString, sub, toDecimalString, type Rational } from '@/lib/commission/money'
 import { PAGE_SIZES, pageSize, termText } from '@/lib/commission/tableValues'
 import { brlText } from '@/lib/receipts/format'
 import { formatCpf } from '@/lib/cpf'
+import { situationFilter, situationLabel, situationOptions, type Situation } from '@/lib/contractStatus'
+import { activeCount, contractFilters } from '@/lib/contracts/listFilters'
 import { isUuid } from '@/lib/team'
 import { CpfSearchForm } from '@/components/CpfSearchForm'
-import { contractSituation, matchesSituation, situationFilter, situationLabel, situationOptions } from '@/lib/contractStatus'
+import { MobileFilters } from '@/components/MobileFilters'
 import { recalcContracts } from './actions'
 import { bulkSeller } from './quick-actions'
 import { QUICK_ACTIONS, QuickModal, type QuickAction } from './QuickModal'
@@ -24,13 +25,24 @@ type SP = Record<string, string | string[] | undefined>
 const one = (v: string | string[] | undefined) => (typeof v === 'string' ? v : '')
 const lbl = 'text-[13px] font-medium text-ink-soft'
 const STATUS_TONE: Record<string, Tone> = { paid: 'received', approved: 'received', pending_external: 'diverged', rejected: 'reversed', cancelled: 'neutral' }
-const CPF_LIKE = /^\s*\d{3}\.?\d{3}\.?\d{3}-?\d{2}\s*$/
 const ZERO = fromDecimalString('0')
+const dec = (v: string | null | undefined) => (v ? fromDecimalString(v) : ZERO)
 const money = (v: Rational | undefined) => brlText(toDecimalString(v ?? ZERO, 2))
+const CLOSED_STATUSES = ['cancelled', 'rejected']
 
-type Contract = { id: string; external_proposal_id: string | null; status: string; requested_amount: string | null; released_amount: string | null; term: number | null; customer_snapshot: { full_name?: string; cpf?: string } | null; customer_id: string | null; seller_id: string | null; product_table_version_id: string | null; created_at: string; paid_to_client_on: string | null; formalization: string | null; physical_received_at: string | null; physical_bank_at: string | null }
-// The embedded calculation comes back as one object (many-to-one); typed loosely by the untyped client.
-type CalcLine = { line_kind: string; amount: string; multiplier: number; proposal_commission_calcs: { proposal_id: string } | { proposal_id: string }[] }
+// One row of contract_list (migration 20261107001252): filtered, paged and summed in the database through the caller's
+// RLS. Money comes as text (numeric::text) and is only parsed with the exact decimal helpers.
+type Row = {
+  id: string; external_proposal_id: string | null; status: string; requested_amount: string | null; released_amount: string | null; term: number | null
+  full_name: string | null; cpf: string | null; customer_id: string | null; seller_id: string | null; created_at: string; paid_to_client_on: string | null
+  formalization: string | null; physical_received_at: string | null; physical_bank_at: string | null
+  case_id: string | null; current_stage_id: string | null; canonical_state: string | null; pendency_reason: string | null; situation: Situation | null
+  bank_id: string | null; agreement_id: string | null; table_name: string | null; commission_group_id: string | null
+  has_calc: boolean; received: string | null; company: string | null; originator: string | null
+  has_po: boolean; rule_amount: string | null; payable: string | null; overridden: boolean; waiting: string | null; paid_on: string | null; grat_pending: boolean
+  stale: boolean; repasse: string
+}
+type ListResult = { total: number; page: number; hidden_closed: number; any: boolean; sums: Record<'requested' | 'released' | 'received' | 'payable' | 'gain' | 'margin', string>; rows: Row[] }
 
 // Contratos (part C1, ADR-0037): search every contract with the commission of each one. Finance sees what the company
 // receives, what the seller gets and the margin; everyone else sees the contracts their scope allows (RLS), without
@@ -45,120 +57,45 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
   const owner = atLeast(membership.role, 'admin')
   // Recalculating is for whoever can recalculate a contract on its page (owner request 06/10/2026: several at once).
   const canRecalc = can(access, 'propostas.edit') || can(access, 'financeiro.edit')
+  const canMove = can(access, 'esteira.edit')
   const sp = await searchParams
-  const text = one(sp.q).trim()
-  const f = {
-    de: one(sp.de), ate: one(sp.ate), banco: one(sp.banco), convenio: one(sp.convenio), vendedor: one(sp.vendedor), grupo: one(sp.grupo),
-    situacao: situationFilter(one(sp.situacao)), cliente: isUuid(one(sp.cliente)) ? one(sp.cliente) : '', comissao: one(sp.comissao), alterado: one(sp.alterado), repasse: one(sp.repasse), desatualizado: one(sp.desatualizado),
-    // Paid to the client between these dates (the dashboard opens the contracts behind each number).
-    pago_de: one(sp.pago_de), pago_ate: one(sp.pago_ate),
-    // Cancelled and rejected contracts are hidden unless asked for (owner, MEL-2026-0001, 09/10/2026).
-    encerradas: one(sp.encerradas) === '1' ? '1' : '',
-    // A CPF typed in the search is looked up by POST (CpfSearchForm) and becomes cliente=<id>; a CPF that still reaches
-    // the URL is ignored.
-    q: CPF_LIKE.test(text) ? '' : text.toLowerCase(),
-  }
+  // A CPF typed in the search is looked up by POST (CpfSearchForm) and becomes cliente=<id>; a CPF that still reaches
+  // the URL is ignored. Cancelled and rejected contracts are hidden unless asked for (owner, MEL-2026-0001, 09/10/2026).
+  const f = contractFilters(k => one(sp[k]), situationFilter(one(sp.situacao)))
+  const size = pageSize(one(sp.n), 25)
+  const askedPage = Math.max(1, Number(one(sp.p)) || 1)
 
-  const [contracts, { data: versions }, { data: tables }, { data: routes }, { data: banks }, { data: agreements }, { data: sellers }, { data: groups }, cases, { data: stages }] = await Promise.all([
-    fetchAll<Contract>((a, b) => supabase.from('proposals_v2').select('id,external_proposal_id,status,requested_amount,released_amount,term,customer_snapshot,customer_id,seller_id,product_table_version_id,created_at,paid_to_client_on,formalization,physical_received_at,physical_bank_at')
-      .order('created_at', { ascending: false }).order('id').range(a, b)),
-    supabase.from('product_table_versions').select('id,product_table_id,version'),
-    supabase.from('product_tables').select('id,name,route_id'),
-    supabase.from('organization_product_routes').select('id,org_bank_id,org_agreement_id'),
+  // Filters, page and totals are worked out in the database: a click on a filter, a page or a row menu reads only the
+  // rows shown and the sums, never every contract and commission line of the company (audit 06/11/2026, G3).
+  const [{ data: listData, error: listError }, { data: banks }, { data: agreements }, { data: sellers }, { data: groups }, { data: stages }] = await Promise.all([
+    supabase.rpc('contract_list', { p_org: membership.organization_id, p_filters: f, p_limit: size, p_page: askedPage }),
     supabase.from('organization_banks').select('id,name').order('name'),
     supabase.from('organization_agreements').select('id,name').order('name'),
     supabase.from('commercial_sellers').select('id,name,code,commission_group_id').order('name'),
     supabase.from('commission_groups').select('id,name').order('sort_order').order('name'),
-    // The pipeline case of each contract: its stage is the situation shown (the same name as the Esteira), and an open
-    // pendency adds the "Pendência" label.
-    fetchAll<{ proposal_id: string; current_stage_id: string; canonical_state: string; pendency_reason: string | null }>((a, b) => supabase.from('operational_cases').select('proposal_id,current_stage_id,canonical_state,pendency_reason').order('id').range(a, b)),
     supabase.from('operational_stages').select('id,name,canonical_state,is_active').order('sort_order'),
   ])
-  const caseOf = new Map(cases.map(c => [c.proposal_id, c]))
-  const pendencyOf = new Map(cases.filter(c => c.pendency_reason).map(c => [c.proposal_id, c.pendency_reason]))
+  const list = (listData ?? { total: 0, page: 1, hidden_closed: 0, any: false, sums: {}, rows: [] }) as ListResult
+  const rows = list.rows ?? []
+  const total = list.total ?? 0
+  const page = list.page ?? 1
+  const pages = Math.max(1, Math.ceil(total / size))
   const stageName = new Map((stages ?? []).map(s => [s.id, s.name]))
-  const situationOf = (c: Contract) => contractSituation(c.status, caseOf.get(c.id)?.canonical_state)
-  const situationText = (c: Contract) => { const k = caseOf.get(c.id); return situationLabel(situationOf(c), { stageName: k ? stageName.get(k.current_stage_id) : null }) }
-  const lines = finance ? await fetchAll<CalcLine>((a, b) => supabase.from('proposal_commission_lines')
-    .select('line_kind,amount,multiplier,proposal_commission_calcs!inner(proposal_id,status)').eq('proposal_commission_calcs.status', 'active')
-    .order('id').range(a, b)) : []
-  // What is payable to the seller (the owner's or a manager's change, part C2) per contract.
-  const { data: payoutRows } = finance ? await supabase.rpc('contract_payout_totals', { p_org: membership.organization_id }) : { data: [] }
-  // Seller and group each calculation used: when the contract's seller or that seller's group changed since, the
-  // commission is out of date and the row says so (recalculate to apply the current group).
-  const { data: calcRows } = finance ? await supabase.from('proposal_commission_calcs').select('proposal_id,seller_id,group_id').eq('status', 'active') : { data: [] }
-  const calcOf = new Map(((calcRows ?? []) as { proposal_id: string; seller_id: string | null; group_id: string | null }[]).map(r => [r.proposal_id, r]))
-  const payout = new Map(((payoutRows ?? []) as { proposal_id: string; rule_amount: string; payable: string; overridden: boolean; waiting: string | null; credited: string; paid_on: string | null; gratification_pending: boolean }[]).map(r => [r.proposal_id, r]))
-  // The company still waits for the Gratificação, which is paid apart (03/11/2026): the contract is not concluded.
-  const gratPending = (id: string) => { const po = payout.get(id); return !!po?.gratification_pending && (!po.waiting || po.waiting === 'no_payout') }
-  const repasseOf = (id: string) => { const po = payout.get(id); return !po ? '' : gratPending(id) && (po.paid_on || po.waiting === 'no_payout') ? 'aguardando' : po.paid_on ? 'pago' : po.waiting === 'no_payout' ? 'sem_repasse' : po.waiting ? 'aguardando' : 'creditado' }
-  const waitingOf = (id: string) => payout.get(id)?.waiting ?? ''
-  const totals = new Map<string, Map<string, Rational>>()
-  for (const l of lines) {
-    const calc = Array.isArray(l.proposal_commission_calcs) ? l.proposal_commission_calcs[0] : l.proposal_commission_calcs
-    const pid = calc?.proposal_id
-    if (!pid) continue
-    const m = totals.get(pid) ?? new Map<string, Rational>()
-    m.set(l.line_kind, add(m.get(l.line_kind) ?? ZERO, mul(fromDecimalString(String(l.amount)), fromDecimalString(String(l.multiplier)))))
-    totals.set(pid, m)
-  }
-
-  // Seller = payable; margin = company margin by the rule + what the change kept in the company.
-  for (const [pid, m] of totals) {
-    const po = payout.get(pid)
-    if (!po) continue
-    const gain = sub(fromDecimalString(String(po.rule_amount)), fromDecimalString(String(po.payable)))
-    m.set('payable', fromDecimalString(String(po.payable)))
-    m.set('gain', gain)
-    m.set('margin', add(m.get('company') ?? ZERO, gain))
-  }
-  const versionOf = new Map((versions ?? []).map(v => [v.id, v]))
-  const tableOf = new Map((tables ?? []).map(t => [t.id, t]))
-  const routeOf = new Map((routes ?? []).map(r => [r.id, r]))
+  const situationText = (c: Row) => situationLabel(c.situation, { stageName: c.case_id && c.current_stage_id ? stageName.get(c.current_stage_id) : null })
   const bankName = new Map((banks ?? []).map(b => [b.id, b.name]))
   const agreementName = new Map((agreements ?? []).map(a => [a.id, a.name]))
   const sellerOf = new Map((sellers ?? []).map(s => [s.id, s]))
   const groupName = new Map((groups ?? []).map(g => [g.id, g.name]))
-  const stale = (c: Contract) => {
-    const k = calcOf.get(c.id)
-    return !!k && (k.seller_id !== c.seller_id || k.group_id !== (c.seller_id ? sellerOf.get(c.seller_id)?.commission_group_id ?? null : null))
-  }
-  const where = (c: Contract) => {
-    const v = c.product_table_version_id ? versionOf.get(c.product_table_version_id) : undefined
-    const t = v ? tableOf.get(v.product_table_id) : undefined
-    const r = t ? routeOf.get(t.route_id) : undefined
-    return { table: t?.name ?? '—', bank: r?.org_bank_id ?? '', agreement: r?.org_agreement_id ?? '' }
-  }
-
-  // Day the contract was registered, in Brasília: a contract typed after 21h is still that day, not the next (UTC).
-  const brDayFmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' })
-  const brDay = (iso: string) => brDayFmt.format(new Date(iso))
-  const CLOSED_STATUSES: string[] = ['cancelled', 'rejected']
+  // Seller = payable; margin = company margin by the rule + what the change kept in the company.
+  const sellerGets = (c: Row) => (c.has_po ? dec(c.payable) : dec(c.originator))
+  const marginOf = (c: Row) => (c.has_po ? add(dec(c.company), sub(dec(c.rule_amount), dec(c.payable))) : dec(c.company))
   const showClosed = !!f.encerradas || CLOSED_STATUSES.includes(f.situacao)
-  const matching = contracts.map(c => ({ c, w: where(c), s: c.seller_id ? sellerOf.get(c.seller_id) : undefined })).filter(({ c, w, s }) =>
-    (!f.de || brDay(c.created_at) >= f.de) && (!f.ate || brDay(c.created_at) <= f.ate)
-    && (!f.banco || w.bank === (f.banco === 'none' ? '' : f.banco)) && (!f.convenio || w.agreement === f.convenio)
-    && (!f.vendedor || (f.vendedor === 'none' ? !c.seller_id : c.seller_id === f.vendedor)) && (!f.grupo || s?.commission_group_id === f.grupo)
-    && matchesSituation(f.situacao, c.status, caseOf.get(c.id)?.canonical_state) && (!f.cliente || c.customer_id === f.cliente)
-    && (!f.comissao || (f.comissao === 'calculada') === totals.has(c.id))
-    && (!f.alterado || !!payout.get(c.id)?.overridden)
-    && (!f.desatualizado || stale(c))
-    && (!f.pago_de || (!!c.paid_to_client_on && c.paid_to_client_on >= f.pago_de)) && (!f.pago_ate || (!!c.paid_to_client_on && c.paid_to_client_on <= f.pago_ate))
-    && (!f.repasse || repasseOf(c.id) === f.repasse || (f.repasse === 'concluido' && ['pago', 'sem_repasse'].includes(repasseOf(c.id)))
-      || (f.repasse === 'gratificacao' && gratPending(c.id)) || (f.repasse === 'banco' && waitingOf(c.id) === 'bank') || (f.repasse === 'divergente' && waitingOf(c.id) === 'divergent'))
-    && (!f.q || String(c.customer_snapshot?.full_name ?? '').toLowerCase().includes(f.q) || String(c.external_proposal_id ?? '').toLowerCase().includes(f.q)))
-  const hiddenClosed = showClosed ? 0 : matching.filter(x => CLOSED_STATUSES.includes(x.c.status)).length
-  const filtered = showClosed ? matching : matching.filter(x => !CLOSED_STATUSES.includes(x.c.status))
-  const size = pageSize(one(sp.n), 25), pages = Math.max(1, Math.ceil(filtered.length / size))
-  const page = Math.min(Math.max(1, Number(one(sp.p)) || 1), pages)
-  const rows = filtered.slice((page - 1) * size, page * size)
-  const sum = (kind: string) => filtered.reduce((acc, x) => add(acc, totals.get(x.c.id)?.get(kind) ?? ZERO), ZERO)
-  // Owner, 08/10/2026: the filtered contracts' total (gross and net), as in the bank systems.
-  const sumOf = (k: 'requested_amount' | 'released_amount') => filtered.reduce((acc, x) => add(acc, x.c[k] ? fromDecimalString(String(x.c[k])) : ZERO), ZERO)
+  const sumText = (k: keyof ListResult['sums']) => money(dec(list.sums?.[k]))
+
   // The quick-change window (?contrato=&acao=) over the list; forms return to the list with its filters.
   const quick = isUuid(one(sp.contrato)) && (QUICK_ACTIONS as readonly string[]).includes(one(sp.acao)) ? { id: one(sp.contrato), acao: one(sp.acao) as QuickAction } : null
   const qs = (patch: Record<string, string | number>) => {
-    const q = new URLSearchParams(Object.entries({ ...f, q: f.q ? text : '', n: size, p: page, ...patch }).filter(([, x]) => x !== '' && x !== undefined).map(([k, x]) => [k, String(x)]))
+    const q = new URLSearchParams(Object.entries({ ...f, n: size, p: page, ...patch }).filter(([, x]) => x !== '' && x !== undefined).map(([k, x]) => [k, String(x)]))
     return `/app/contratos?${q.toString()}`
   }
 
@@ -168,44 +105,57 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
 
   // The arrow menu of each row: what this user may do, each item opening its window over this same list.
   const canEditContract = canRecalc
-  const menuOf = (id: string): RowMenuItem[] => {
-    const at = (acao: string) => `${qs({})}&contrato=${id}&acao=${acao}`
+  const menuOf = (c: Row): RowMenuItem[] => {
+    const at = (acao: string) => `${qs({})}&contrato=${c.id}&acao=${acao}`
     const items: RowMenuItem[] = []
+    if (canMove && c.case_id) items.push({ acao: 'etapa', label: 'Mover etapa', href: at('etapa') })
     if (canEditContract) items.push({ acao: 'vendedor', label: 'Alterar vendedor', href: at('vendedor') })
-    if (finance) items.push({ acao: 'comissao', label: totals.has(id) ? (owner ? 'Alterar comissão' : 'Ver comissão') : 'Cadastrar comissão', href: at(totals.has(id) ? 'comissao' : 'calcular') })
+    if (finance) items.push({ acao: 'comissao', label: c.has_calc ? (owner ? 'Alterar comissão' : 'Ver comissão') : 'Cadastrar comissão', href: at(c.has_calc ? 'comissao' : 'calcular') })
     if (canEditContract) items.push({ acao: 'dados', label: 'Dados do contrato', href: at('dados') }, { acao: 'ade', label: 'Alterar ADE', href: at('ade') })
     items.push({ acao: 'documentos', label: 'Documentos', href: at('documentos') }, { acao: 'observacoes', label: 'Observações', href: at('observacoes') },
-      { acao: 'abrir', label: 'Abrir contrato completo', href: `/app/propostas/${id}` })
+      { acao: 'abrir', label: 'Abrir contrato completo', href: `/app/propostas/${c.id}` })
     return items
   }
+  const payoutText = (c: Row) => !c.has_po ? '' : (c.paid_on ? `pago em ${new Date(`${c.paid_on}T12:00:00Z`).toLocaleDateString('pt-BR')}` : c.waiting === 'physical' ? 'aguardando físico' : c.waiting === 'client' ? 'aguardando pagamento ao cliente' : c.waiting === 'bank' ? 'aguardando comissão do banco' : c.waiting === 'divergent' ? 'comissão do banco divergente' : c.waiting === 'calculation' ? 'aguardando cálculo' : c.waiting === 'no_payout' ? (c.grat_pending ? 'aguardando Gratificação' : 'concluído · sem repasse') : 'liberado, a pagar')
+    + (c.grat_pending && c.waiting !== 'no_payout' ? ' · aguardando Gratificação' : '')
+  const badges = (c: Row) => <>
+    <Badge tone={STATUS_TONE[c.situation ?? ''] ?? 'neutral'}>{situationText(c)}</Badge>
+    {finance && (c.repasse === 'pago' ? <Badge tone="received">Pago ao vendedor</Badge> : c.repasse === 'creditado' ? <Badge tone="pending">A pagar ao vendedor</Badge> : c.repasse === 'aguardando' ? <Badge tone="neutral">Não pago ao vendedor</Badge> : c.repasse === 'sem_repasse' ? <Badge tone="neutral">Sem repasse</Badge> : null)}
+    {c.formalization === 'physical' && <Badge tone={c.physical_received_at ? 'received' : 'pending'}>{c.physical_bank_at ? 'Físico no banco' : c.physical_received_at ? 'Físico recebido' : 'Físico pendente'}</Badge>}
+    {c.pendency_reason && c.situation !== 'pending_external' && <span title={c.pendency_reason}><Badge tone="diverged">Pendência</Badge></span>}
+  </>
+  const emptyText = f.cliente ? 'Este cliente ainda não tem contrato.' : list.any ? 'Nenhum contrato com esses filtros.' : 'Nenhum contrato cadastrado ainda.'
+  const filtersOn = activeCount({ ...f, cliente: '', pago_de: '', pago_ate: '', encerradas: '' }, ['q'])
 
   return (
     <section>
       {canRecalc && one(sp.acao) === 'associar' && <AssociateModal back={qs({})} />}
-      {quick && <QuickModal id={quick.id} acao={quick.acao} back={qs({})} canEdit={canEditContract} finance={finance} owner={owner} />}
+      {quick && <QuickModal id={quick.id} acao={quick.acao} back={qs({})} canEdit={canEditContract} finance={finance} owner={owner} canMove={canMove} />}
       <PageHeader title="Contratos" description="Busque os contratos e veja a comissão de cada um: o que a empresa recebe, o que o vendedor recebe pela tabela e o grupo dele, e a margem."
         actions={<>{canRecalc && <Link href={`${qs({})}&acao=associar`} scroll={false} className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-line-strong bg-surface px-4 text-sm font-medium text-ink hover:bg-surface-muted"><Link2 size={16} aria-hidden />Associar proposta</Link>}{newButton('Novo contrato')}</>} />
 
       <Card className="mb-4">
-        <CpfSearchForm action="/app/contratos" mode="filter" className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-4">
+        <CpfSearchForm action="/app/contratos" mode="filter" className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5 lg:grid-cols-4">
           <label className={lbl}>Cliente (nome ou CPF) ou nº do contrato
-            <input name="q" defaultValue={f.q ? text : ''} maxLength={80} placeholder="Nome, CPF ou nº do contrato" className="field mt-1.5" />
+            <input name="q" defaultValue={f.q} maxLength={80} placeholder="Nome, CPF ou nº do contrato" className="field mt-1.5" />
           </label>
           {f.cliente && <input type="hidden" name="cliente" value={f.cliente} />}
           {f.encerradas && <input type="hidden" name="encerradas" value="1" />}
           {f.pago_de && <input type="hidden" name="pago_de" value={f.pago_de} />}{f.pago_ate && <input type="hidden" name="pago_ate" value={f.pago_ate} />}
-          <label className={lbl}>De<input type="date" name="de" defaultValue={f.de} className="field mt-1.5" /></label>
-          <label className={lbl}>Até<input type="date" name="ate" defaultValue={f.ate} className="field mt-1.5" /></label>
-          <label className={lbl}>Situação<select name="situacao" defaultValue={f.situacao} className="field mt-1.5"><option value="">Todas</option>{situationOptions((stages ?? []).filter(s => s.is_active)).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label>
-          <label className={lbl}>Banco<select name="banco" defaultValue={f.banco} className="field mt-1.5"><option value="">Todos</option><option value="none">Sem banco</option>{(banks ?? []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
-          <label className={lbl}>Convênio<select name="convenio" defaultValue={f.convenio} className="field mt-1.5"><option value="">Todos</option>{(agreements ?? []).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
-          <label className={lbl}>Vendedor<select name="vendedor" defaultValue={f.vendedor} className="field mt-1.5"><option value="">Todos</option><option value="none">Sem vendedor</option>{(sellers ?? []).map(s => <option key={s.id} value={s.id}>{s.code ? `${String(s.code).padStart(3, '0')} · ` : ''}{s.name}</option>)}</select></label>
-          <label className={lbl}>Grupo do vendedor<select name="grupo" defaultValue={f.grupo} className="field mt-1.5"><option value="">Todos</option>{(groups ?? []).map(g => <option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
-          {finance && <label className={lbl}>Comissão<select name="comissao" defaultValue={f.comissao} className="field mt-1.5"><option value="">Todas</option><option value="calculada">Calculada</option><option value="pendente">Não calculada</option></select></label>}
-          {finance && <label className={lbl}>Repasse ao vendedor<select name="repasse" defaultValue={f.repasse} className="field mt-1.5"><option value="">Todos</option><option value="aguardando">Aguardando (cliente, físico ou banco)</option><option value="banco">Aguardando comissão do banco</option><option value="gratificacao">Aguardando Gratificação</option><option value="divergente">Comissão do banco divergente</option><option value="creditado">Liberado, a pagar</option><option value="pago">Pago ao vendedor</option><option value="sem_repasse">Sem repasse (vendedor recebe R$ 0)</option><option value="concluido">Concluído (pago ou sem repasse)</option></select></label>}
-          {finance && <label className={`${lbl} flex items-center gap-2 self-end pb-2`}><input type="checkbox" name="desatualizado" value="1" defaultChecked={!!f.desatualizado} className="accent-[var(--brand)]" />Só comissão desatualizada</label>}
-          {owner && <label className={`${lbl} flex items-center gap-2 self-end pb-2`}><input type="checkbox" name="alterado" value="1" defaultChecked={!!f.alterado} className="accent-[var(--brand)]" />Só repasse alterado</label>}
           <input type="hidden" name="n" value={size} />
+          <MobileFilters active={filtersOn}>
+            <label className={lbl}>Cadastrado de<input type="date" name="de" defaultValue={f.de} className="field mt-1.5" /></label>
+            <label className={lbl}>Cadastrado até<input type="date" name="ate" defaultValue={f.ate} className="field mt-1.5" /></label>
+            <label className={lbl}>Situação<select name="situacao" defaultValue={f.situacao} className="field mt-1.5"><option value="">Todas</option>{situationOptions((stages ?? []).filter(s => s.is_active)).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label>
+            <label className={lbl}>Banco<select name="banco" defaultValue={f.banco} className="field mt-1.5"><option value="">Todos</option><option value="none">Sem banco</option>{(banks ?? []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
+            <label className={lbl}>Convênio<select name="convenio" defaultValue={f.convenio} className="field mt-1.5"><option value="">Todos</option>{(agreements ?? []).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
+            <label className={lbl}>Vendedor<select name="vendedor" defaultValue={f.vendedor} className="field mt-1.5"><option value="">Todos</option><option value="none">Sem vendedor</option>{(sellers ?? []).map(s => <option key={s.id} value={s.id}>{s.code ? `${String(s.code).padStart(3, '0')} · ` : ''}{s.name}</option>)}</select></label>
+            <label className={lbl}>Grupo do vendedor<select name="grupo" defaultValue={f.grupo} className="field mt-1.5"><option value="">Todos</option>{(groups ?? []).map(g => <option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
+            {finance && <label className={lbl}>Comissão<select name="comissao" defaultValue={f.comissao} className="field mt-1.5"><option value="">Todas</option><option value="calculada">Calculada</option><option value="pendente">Não calculada</option></select></label>}
+            {finance && <label className={lbl}>Repasse ao vendedor<select name="repasse" defaultValue={f.repasse} className="field mt-1.5"><option value="">Todos</option><option value="aguardando">Aguardando (cliente, físico ou banco)</option><option value="banco">Aguardando comissão do banco</option><option value="gratificacao">Aguardando Gratificação</option><option value="divergente">Comissão do banco divergente</option><option value="creditado">Liberado, a pagar</option><option value="pago">Pago ao vendedor</option><option value="sem_repasse">Sem repasse (vendedor recebe R$ 0)</option><option value="concluido">Concluído (pago ou sem repasse)</option></select></label>}
+            {finance && <label className={`${lbl} flex items-center gap-2 self-end pb-2`}><input type="checkbox" name="desatualizado" value="1" defaultChecked={!!f.desatualizado} className="accent-[var(--brand)]" />Só comissão desatualizada</label>}
+            {owner && <label className={`${lbl} flex items-center gap-2 self-end pb-2`}><input type="checkbox" name="alterado" value="1" defaultChecked={!!f.alterado} className="accent-[var(--brand)]" />Só repasse alterado</label>}
+          </MobileFilters>
           <div className="flex items-end gap-2 lg:col-span-3">
             <button className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><Search size={15} aria-hidden />Buscar</button>
             <Link href="/app/contratos" className="inline-flex h-10 items-center rounded-[10px] border border-line px-3 text-sm text-ink-soft hover:bg-surface-muted">Limpar</Link>
@@ -225,24 +175,54 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
         )}
       </Card>
 
-      <div className="mb-3 grid gap-3 sm:grid-cols-2">
-        {[['Total líquido', sumOf('released_amount')], ['Total bruto', sumOf('requested_amount')]].map(([k, v]) => (
-          <Card key={String(k)} className="px-5 py-4"><div className="text-xs text-muted">{String(k)} · contratos filtrados</div><div className="num mt-1 text-xl font-semibold text-ink">{money(v as Rational)}</div></Card>
+      {listError && <p role="alert" className="mb-4 rounded-[10px] border border-[#FCA5A5] bg-[#FEF2F2] px-4 py-3 text-sm text-[#991B1B]">Não foi possível carregar os contratos agora. Tente de novo em instantes.</p>}
+
+      <div className="mb-3 grid grid-cols-2 gap-3">
+        {[['Total líquido', sumText('released')], ['Total bruto', sumText('requested')]].map(([k, v]) => (
+          <Card key={k} className="px-4 py-3 sm:px-5 sm:py-4"><div className="text-xs text-muted">{k} · contratos filtrados</div><div className="num mt-1 text-lg font-semibold text-ink sm:text-xl">{v}</div></Card>
         ))}
       </div>
 
-      {finance && <div className={`mb-4 grid gap-3 sm:grid-cols-2 ${owner ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
-        {[['Empresa recebe', sum('received')], ['Vendedores recebem', sum('payable')], ['Margem', sum('margin')], ...(owner ? [['Ganho com alterações de repasse', sum('gain')]] : [])].map(([k, v]) => (
-          <Card key={String(k)} className="px-5 py-4"><div className="text-xs text-muted">{String(k)} · contratos filtrados</div><div className="num mt-1 text-xl font-semibold text-ink">{money(v as Rational)}</div></Card>
+      {finance && <div className={`mb-4 grid grid-cols-2 gap-3 ${owner ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
+        {[['Empresa recebe', sumText('received')], ['Vendedores recebem', sumText('payable')], ['Margem', sumText('margin')], ...(owner ? [['Ganho com alterações de repasse', sumText('gain')]] : [])].map(([k, v]) => (
+          <Card key={k} className="px-4 py-3 sm:px-5 sm:py-4"><div className="text-xs text-muted">{k} · contratos filtrados</div><div className="num mt-1 text-lg font-semibold text-ink sm:text-xl">{v}</div></Card>
         ))}
       </div>}
 
       <Card>
-        <CardHeader title={<span className="flex items-center gap-2">Contratos <Badge tone="neutral">{filtered.length}</Badge></span>}
+        <CardHeader title={<span className="flex items-center gap-2">Contratos <Badge tone="neutral">{total}</Badge></span>}
           action={CLOSED_STATUSES.includes(f.situacao) ? undefined : <Link href={qs({ encerradas: f.encerradas ? '' : '1', p: 1 })} scroll={false} className="inline-flex h-9 items-center rounded-[10px] border border-line bg-surface px-3 text-sm text-ink-soft hover:bg-surface-muted">
-            {f.encerradas ? 'Esconder canceladas e recusadas' : `Mostrar canceladas e recusadas (${hiddenClosed})`}</Link>} />
-        {canRecalc && <div className="mt-3"><RecalcBar action={recalcContracts} sellerAction={bulkSeller} sellers={(sellers ?? []).map(s => ({ id: s.id, name: `${s.code ? `${String(s.code).padStart(3, '0')} · ` : ''}${s.name}` }))} /></div>}
-        <div className="mt-3 overflow-x-auto">
+            {f.encerradas ? 'Esconder canceladas e recusadas' : `Mostrar canceladas e recusadas (${showClosed ? 0 : list.hidden_closed ?? 0})`}</Link>} />
+        {canRecalc && <div className="mt-3 hidden md:block"><RecalcBar action={recalcContracts} sellerAction={bulkSeller} sellers={(sellers ?? []).map(s => ({ id: s.id, name: `${s.code ? `${String(s.code).padStart(3, '0')} · ` : ''}${s.name}` }))} /></div>}
+
+        {/* Phone: one card per contract (client, situation, value), no sideways scrolling. */}
+        <ul className="mt-3 grid gap-2 px-3 md:hidden" aria-label="Contratos">
+          {rows.map(c => {
+            const s = c.seller_id ? sellerOf.get(c.seller_id) : undefined
+            return (
+              <li key={c.id} className="relative rounded-[12px] border border-line bg-surface p-3.5">
+                <div className="flex items-start gap-2">
+                  <Link href={`/app/propostas/${c.id}`} className="min-w-0 flex-1">
+                    <span className="block font-medium text-ink">{c.full_name ?? '—'}</span>
+                    <span className="block truncate text-xs text-muted">{formatCpf(c.cpf)}{c.external_proposal_id ? ` · nº ${c.external_proposal_id}` : ''}</span>
+                  </Link>
+                  <RowMenu label={c.full_name ?? 'contrato'} items={menuOf(c)} />
+                </div>
+                <span className="mt-2 flex flex-wrap gap-1">{badges(c)}</span>
+                <span className="mt-2 flex items-center justify-between gap-2 text-[13px]">
+                  <span className="num font-semibold text-ink">{brlText(String(c.requested_amount ?? c.released_amount ?? '0'))}</span>
+                  <span className="min-w-0 truncate text-xs text-ink-soft">{s?.name ?? ''}</span>
+                </span>
+                {finance && (c.has_calc
+                  ? <span className="mt-1 block text-xs text-ink-soft">Empresa {money(dec(c.received))} · Vendedor {money(sellerGets(c))} · Margem {money(marginOf(c))}</span>
+                  : <span className="mt-1 block"><Badge tone="pending">Comissão não calculada</Badge></span>)}
+              </li>
+            )
+          })}
+          {!rows.length && <li className="rounded-[12px] border border-line bg-surface px-4 py-8 text-center text-sm text-muted">{emptyText}{canCreate && <span className="mt-3 block">{newButton(f.cliente ? 'Cadastrar contrato para este cliente' : 'Cadastrar novo contrato')}</span>}</li>}
+        </ul>
+
+        <div className="mt-3 hidden overflow-x-auto md:block">
           <table className="w-full min-w-[940px] text-left text-[13px]">
             <thead className="border-y border-line bg-surface-muted text-xs text-muted">
               <tr>
@@ -254,47 +234,44 @@ export default async function ContractsPage({ searchParams }: { searchParams: Pr
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ c, w, s }) => {
-                const t = totals.get(c.id)
-                const margin = t ? toDecimalString(t.get('margin') ?? t.get('company') ?? ZERO, 2) : ''
+              {rows.map(c => {
+                const s = c.seller_id ? sellerOf.get(c.seller_id) : undefined
+                const margin = c.has_calc ? toDecimalString(marginOf(c), 2) : ''
                 return (
                   <tr key={c.id} className="border-t border-line hover:bg-surface-muted/60">
                     <td className="pl-5 pr-1 py-2.5 align-top">
-                      {canRecalc && <input type="checkbox" form="recalc-form" name="ids" value={c.id} data-stale={stale(c) ? '1' : ''} aria-label={`Marcar ${c.customer_snapshot?.full_name ?? 'contrato'}`} className="accent-[var(--brand)]" />}
-                      <RowMenu label={c.customer_snapshot?.full_name ?? 'contrato'} items={menuOf(c.id)} />
+                      {canRecalc && <input type="checkbox" form="recalc-form" name="ids" value={c.id} data-stale={c.stale ? '1' : ''} aria-label={`Marcar ${c.full_name ?? 'contrato'}`} className="accent-[var(--brand)]" />}
+                      <RowMenu label={c.full_name ?? 'contrato'} items={menuOf(c)} />
                     </td>
                     <td className="px-5 py-2.5">
-                      <span className="block font-medium text-ink">{c.customer_snapshot?.full_name ?? '—'}</span>
-                      <span className="text-xs text-muted">{formatCpf(c.customer_snapshot?.cpf)}{c.external_proposal_id ? ` · nº ${c.external_proposal_id}` : ''} · {formatDateSP(c.created_at)}</span>
+                      <Link href={`/app/propostas/${c.id}`} className="group block">
+                        <span className="block font-medium text-ink group-hover:text-brand">{c.full_name ?? '—'}</span>
+                        <span className="text-xs text-muted">{formatCpf(c.cpf)}{c.external_proposal_id ? ` · nº ${c.external_proposal_id}` : ''} · {formatDateSP(c.created_at)}</span>
+                      </Link>
                     </td>
-                    <td className="px-3 py-2.5"><span className="block text-ink">{s?.name ?? '—'}</span><span className="text-xs text-muted">{s?.commission_group_id ? groupName.get(s.commission_group_id) ?? '' : 'sem grupo'}</span>{stale(c) && <Badge tone="pending" className="ml-1.5">Comissão desatualizada</Badge>}</td>
-                    <td className="px-3 py-2.5"><span className="block text-ink">{bankName.get(w.bank) ?? '—'} · {agreementName.get(w.agreement) ?? '—'}</span><span className="text-xs text-muted">{w.table}{c.term ? ` · ${termText(c.term, c.term, c.term)}` : ''}</span></td>
+                    <td className="px-3 py-2.5"><span className="block text-ink">{s?.name ?? '—'}</span><span className="text-xs text-muted">{c.commission_group_id ? groupName.get(c.commission_group_id) ?? '' : 'sem grupo'}</span>{c.stale && <Badge tone="pending" className="ml-1.5">Comissão desatualizada</Badge>}</td>
+                    <td className="px-3 py-2.5"><span className="block text-ink">{bankName.get(c.bank_id ?? '') ?? '—'} · {agreementName.get(c.agreement_id ?? '') ?? '—'}</span><span className="text-xs text-muted">{c.table_name ?? '—'}{c.term ? ` · ${termText(c.term, c.term, c.term)}` : ''}</span></td>
                     <td className="num whitespace-nowrap px-3 py-2.5 text-right">{brlText(String(c.requested_amount ?? c.released_amount ?? '0'))}{c.released_amount && c.released_amount !== c.requested_amount && <span className="block text-xs text-muted">líq. {brlText(String(c.released_amount))}</span>}</td>
-                    <td className="px-3 py-2.5"><span className="flex max-w-[180px] flex-wrap gap-1">
-                      <Badge tone={STATUS_TONE[situationOf(c) ?? ''] ?? 'neutral'}>{situationText(c)}</Badge>
-                      {finance && (() => { const r = repasseOf(c.id); return r === 'pago' ? <Badge tone="received">Pago ao vendedor</Badge> : r === 'creditado' ? <Badge tone="pending">A pagar ao vendedor</Badge> : r === 'aguardando' ? <Badge tone="neutral">Não pago ao vendedor</Badge> : r === 'sem_repasse' ? <Badge tone="neutral">Sem repasse</Badge> : null })()}
-                      {c.formalization === 'physical' && <Badge tone={c.physical_received_at ? 'received' : 'pending'}>{c.physical_bank_at ? 'Físico no banco' : c.physical_received_at ? 'Físico recebido' : 'Físico pendente'}</Badge>}
-                      {pendencyOf.get(c.id) && situationOf(c) !== 'pending_external' && <span title={pendencyOf.get(c.id) ?? ''}><Badge tone="diverged">Pendência</Badge></span>}
-                    </span></td>
-                    {finance && (t ? <>
-                      <td className="num whitespace-nowrap px-3 py-2.5 text-right">{money(t.get('received'))}</td>
-                      <td className="num whitespace-nowrap px-3 py-2.5 text-right">{money(t.get('payable') ?? t.get('originator'))}{owner && payout.get(c.id)?.overridden && <Badge tone="pending" className="ml-1.5">Alterado</Badge>}
-                        <span className="block text-[11px] text-muted">{(() => { const po = payout.get(c.id); return !po ? '' : po.paid_on ? `pago em ${new Date(`${po.paid_on}T12:00:00Z`).toLocaleDateString('pt-BR')}` : po.waiting === 'physical' ? 'aguardando físico' : po.waiting === 'client' ? 'aguardando pagamento ao cliente' : po.waiting === 'bank' ? 'aguardando comissão do banco' : po.waiting === 'divergent' ? 'comissão do banco divergente' : po.waiting === 'calculation' ? 'aguardando cálculo' : po.waiting === 'no_payout' ? (gratPending(c.id) ? 'aguardando Gratificação' : 'concluído · sem repasse') : 'liberado, a pagar' })()}{gratPending(c.id) && payout.get(c.id)?.waiting !== 'no_payout' ? ' · aguardando Gratificação' : ''}</span></td>
+                    <td className="px-3 py-2.5"><span className="flex max-w-[180px] flex-wrap gap-1">{badges(c)}</span></td>
+                    {finance && (c.has_calc ? <>
+                      <td className="num whitespace-nowrap px-3 py-2.5 text-right">{money(dec(c.received))}</td>
+                      <td className="num whitespace-nowrap px-3 py-2.5 text-right">{money(sellerGets(c))}{owner && c.overridden && <Badge tone="pending" className="ml-1.5">Alterado</Badge>}
+                        <span className="block text-[11px] text-muted">{payoutText(c)}</span></td>
                       <td className={`num whitespace-nowrap px-3 py-2.5 text-right font-medium ${margin.startsWith('-') ? 'text-[#B91C1C]' : 'text-ink'}`}>{brlText(margin)}</td>
                     </> : <td colSpan={3} className="px-3 py-2.5 text-right"><Badge tone="pending">Comissão não calculada</Badge></td>)}
-                    <td className="px-3 py-2.5 text-right"><Link href={`/app/propostas/${c.id}`} aria-label={`Abrir contrato de ${c.customer_snapshot?.full_name ?? 'cliente'}`} className="inline-flex size-8 items-center justify-center rounded-md text-muted hover:bg-surface-muted hover:text-ink"><ChevronRight size={16} aria-hidden /></Link></td>
+                    <td className="px-3 py-2.5 text-right"><Link href={`/app/propostas/${c.id}`} aria-label={`Abrir contrato de ${c.full_name ?? 'cliente'}`} className="inline-flex size-8 items-center justify-center rounded-md text-muted hover:bg-surface-muted hover:text-ink"><ChevronRight size={16} aria-hidden /></Link></td>
                   </tr>
                 )
               })}
               {!rows.length && <tr><td colSpan={10} className="px-5 py-8 text-center text-muted">
-                <span className="block">{f.cliente ? 'Este cliente ainda não tem contrato.' : contracts.length ? 'Nenhum contrato com esses filtros.' : 'Nenhum contrato cadastrado ainda.'}</span>
+                <span className="block">{emptyText}</span>
                 {canCreate && <span className="mt-3 inline-block">{newButton(f.cliente ? 'Cadastrar contrato para este cliente' : 'Cadastrar novo contrato')}</span>}
               </td></tr>}
             </tbody>
           </table>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-sm text-ink-soft">
-          <span>{filtered.length ? `${(page - 1) * size + 1}–${Math.min(page * size, filtered.length)} de ${filtered.length}` : '0 contratos'}</span>
+          <span>{total ? `${(page - 1) * size + 1}–${Math.min(page * size, total)} de ${total}` : '0 contratos'}</span>
           <span className="flex items-center gap-1.5">Exibir {PAGE_SIZES.map(n => <Link key={n} href={qs({ n, p: 1 })} className={`rounded-md px-2 py-1 ${n === size ? 'bg-brand-soft font-semibold text-brand' : 'hover:bg-surface-muted'}`}>{n}</Link>)}
             <Link href={qs({ p: Math.max(1, page - 1) })} className={`ml-2 rounded-md border border-line px-2.5 py-1 ${page === 1 ? 'pointer-events-none opacity-40' : 'hover:bg-surface-muted'}`}>Anterior</Link>
             <span className="px-1">{page}/{pages}</span>

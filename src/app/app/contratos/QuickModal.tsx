@@ -9,13 +9,14 @@ import { brlText } from '@/lib/receipts/format'
 import { decimalBr } from '@/lib/commission/tableValues'
 import { add, fromDecimalString, mul, toDecimalString } from '@/lib/commission/money'
 import { CALC_FAILURE } from '@/app/app/propostas/[id]/CommissionCard'
+import { StageSelect } from '@/app/app/propostas/StageMove'
 import { quickAde, quickCalc, quickData, quickManualCommission, quickNote, quickPayout, quickSeller } from './quick-actions'
 
-export const QUICK_ACTIONS = ['vendedor', 'comissao', 'calcular', 'dados', 'ade', 'documentos', 'observacoes'] as const
+export const QUICK_ACTIONS = ['vendedor', 'comissao', 'calcular', 'dados', 'ade', 'documentos', 'observacoes', 'etapa'] as const
 export type QuickAction = (typeof QUICK_ACTIONS)[number]
 const TITLE: Record<QuickAction, string> = {
   vendedor: 'Alterar vendedor', comissao: 'Comissão', calcular: 'Cadastrar comissão', dados: 'Dados do contrato', ade: 'Alterar ADE',
-  documentos: 'Documentos', observacoes: 'Observações',
+  documentos: 'Documentos', observacoes: 'Observações', etapa: 'Mover etapa',
 }
 const COMPONENT_LABEL: Record<string, string> = { upfront: 'À vista', deferred: 'Diferido', bonus_1: 'Bônus 1', bonus_2: 'Bônus 2', bonus_3: 'Bônus 3', plastic: 'Plástico', insurance_fixed: 'Seguro', gratification: 'Gratificação' }
 const lbl = 'block text-[13px] font-medium text-ink-soft'
@@ -29,7 +30,7 @@ type P = { id: string; external_proposal_id: string | null; status: string; requ
 
 // One quick change of one contract, as a window over the Contratos list (owner, 08/10/2026). The contract is always
 // spelled out on top, so it is clear which one is being changed. back: the list with its filters (forms return there).
-export async function QuickModal({ id, acao, back, canEdit, finance, owner }: { id: string; acao: QuickAction; back: string; canEdit: boolean; finance: boolean; owner: boolean }) {
+export async function QuickModal({ id, acao, back, canEdit, finance, owner, canMove = false }: { id: string; acao: QuickAction; back: string; canEdit: boolean; finance: boolean; owner: boolean; canMove?: boolean }) {
   const { supabase } = await requireAppContext()
   const { data } = await supabase.from('proposals_v2')
     .select('id,external_proposal_id,status,requested_amount,released_amount,installment_amount,term,paid_to_client_on,customer_snapshot,seller_id,product_table_version_id,contract_type_id')
@@ -186,6 +187,19 @@ export async function QuickModal({ id, acao, back, canEdit, finance, owner }: { 
         <form action={quickCalc}>{hidden}<SubmitButton className={ghost} pendingText="Recalculando...">Recalcular pela tabela</SubmitButton></form>
       </div>
     }
+  } else if (p && acao === 'etapa') {
+    // Same move as the Esteira (audit 06/11/2026): Pendência, Recusada and Cancelada ask the reason; Paga asks the day.
+    const [{ data: kase }, { data: stages }] = await Promise.all([
+      supabase.from('operational_cases').select('id,current_stage_id').eq('proposal_id', id).maybeSingle(),
+      supabase.from('operational_stages').select('id,name,canonical_state').eq('is_active', true).order('sort_order'),
+    ])
+    body = !canMove ? <p className="text-sm text-muted">Sem permissão para mover a etapa.</p>
+      : !kase ? <p className="text-sm text-muted">Este contrato ainda não está na esteira. <Link href={`/app/propostas/${id}`} className="text-brand hover:underline">Abrir o contrato</Link>.</p>
+      : <div className="grid gap-3">
+          <StageSelect caseId={kase.id} proposalId={id} stages={stages ?? []} currentStageId={kase.current_stage_id} label="Nova etapa" />
+          <p className="text-xs text-muted">A mudança fica no histórico do contrato.</p>
+          <div><Link href={back} scroll={false} className={ghost}>Voltar</Link></div>
+        </div>
   } else if (p && acao === 'documentos') {
     const { data: reqs } = await supabase.from('proposal_document_requirements').select('id,label_snapshot,required_snapshot,status').eq('proposal_id', id).order('label_snapshot')
     body = <div className="grid gap-3">

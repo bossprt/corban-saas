@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
 import { classifyDbFeedback, type FeedbackCode } from '@/lib/feedback'
 import { isUuid } from '@/lib/team'
+import { needsReason, validReason } from '@/lib/pipeline/stageReason'
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/
 
@@ -15,6 +16,9 @@ export async function moveToStage(input: { caseId: string; stageId: string; note
   const due = String(input.pendencyDue ?? '')
   const paidOn = String(input.paidOn ?? '')
   if (!isUuid(input.caseId) || !isUuid(input.stageId) || note.length > 500 || (due && !DAY.test(due)) || (paidOn && !DAY.test(paidOn))) return 'erro:requisicao_invalida'
+  // Pendência, Recusada and Cancelada need the reason (it goes to the stage history and, for a Pendência, to Contratos).
+  const { data: target } = await supabase.from('operational_stages').select('canonical_state').eq('id', input.stageId).maybeSingle()
+  if (needsReason(target?.canonical_state) && !validReason(note)) return 'erro:motivo_etapa'
 
   const { error } = await supabase.rpc('move_case_to_stage', {
     p_case_id: input.caseId, p_stage_id: input.stageId, p_note: note || null,

@@ -14,7 +14,7 @@ const label = 'text-[13px] font-medium text-ink-soft'
 
 // New proposal without a simulation: pick the client, the bank table and the values; either it waits for
 // digitization or it was already digitized (then the bank number/ADE is required).
-export default async function NewProposalPage({ searchParams }: { searchParams: Promise<{ cliente?: string }> }) {
+export default async function NewProposalPage({ searchParams }: { searchParams: Promise<{ cliente?: string; prazos?: string }> }) {
   const { supabase, access, organization } = await requireAppContext()
   const sp = await searchParams
   if (!can(access, 'propostas.create')) {
@@ -22,6 +22,8 @@ export default async function NewProposalPage({ searchParams }: { searchParams: 
   }
 
   const clienteId = /^[0-9a-f-]{36}$/.test(sp.cliente ?? '') ? sp.cliente! : null
+  // The terms of the table chosen in the refused try ("12 a 120" or "84"): only digits reach the screen.
+  const prazos = /^\d{1,3}( a \d{1,3})?$/.test(sp.prazos ?? '') ? sp.prazos! : null
   const [{ data: initialClient }, { data: sellers }, catalog] = await Promise.all([
     clienteId ? supabase.from('clients').select('id,full_name,cpf').eq('id', clienteId).is('deleted_at', null).maybeSingle() : Promise.resolve({ data: null }),
     supabase.from('commercial_sellers').select('id,name').eq('is_active', true).order('name'),
@@ -42,7 +44,7 @@ export default async function NewProposalPage({ searchParams }: { searchParams: 
           <label className={label}>Valor solicitado (R$)<input name="requested_amount" inputMode="decimal" placeholder="10.000,00" className="field mt-1.5" /></label>
           <label className={label}>Valor liberado (R$)<input name="released_amount" inputMode="decimal" placeholder="9.500,00" className="field mt-1.5" /></label>
           <label className={label}>Parcela (R$)<input name="installment_amount" inputMode="decimal" placeholder="250,00" className="field mt-1.5" /></label>
-          <label className={label}>Prazo (meses)<input name="term" inputMode="numeric" placeholder="84" className="field mt-1.5" /></label>
+          <label className={label}>Prazo (meses)<input name="term" inputMode="numeric" placeholder="84" aria-invalid={prazos ? true : undefined} className="field mt-1.5" />{prazos && <span role="alert" className="mt-1 block text-xs font-normal text-diverged">A tabela escolhida aceita prazo de {prazos} meses.</span>}</label>
           <label className={label}>Vendedor
             <select name="seller_id" defaultValue="" className="field mt-1.5">
               <option value="">Sem vendedor atribuído</option>
