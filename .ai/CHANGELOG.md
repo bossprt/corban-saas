@@ -28,6 +28,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 ### Importar contratos e validação de documentos: travas de permissão (06/11/2026)
 - Segurança: Esteira > Importar contratos exige também "Editar propostas" (Vendedor e Corretor externo não abrem a tela, a ação nem o modelo). A busca na Bevicred (produção da empresa toda) e o vínculo "código do parceiro → vendedor" ficam só para Administrador, Gerente ou papel com escopo "toda a empresa", conferidos no servidor antes de usar a chave de serviço.
 - Segurança: migration `20261106234453_document_validation_role_guard_v1` (local; aplicar em produção antes do merge): item do checklist de documentos sempre nasce "faltando" (ninguém cria já validado ou dispensado pela API); motivo e aprovador da dispensa não mudam depois; usuário sem papel de Supervisor ou acima é recusado mesmo sem vínculo ativo. Contrato `tests/security/document-validation-role-contract.sql`.
+### Menu, navegação e páginas de erro (06/11/2026)
+- Alterado: menu do computador na ordem do dinheiro: Hoje · Visão geral · Clientes · Vendas · Esteira · Contratos · Financeiro · Repasse · Metas · Cadastros · Relatórios · Configurações. "Dashboard" passa a se chamar "Visão geral". Barra do celular: Hoje · Esteira · Contratos · Repasse · Mais (Vendas e Clientes só ocupam lugar se um módulo estiver desligado).
+- Adicionado: Central de atenção (supervisor ou acima) e Operação (módulo Esteira) dentro de Hoje; Mensalidade (administrador) e Plataforma (administrador da plataforma) no rodapé do menu.
+- Corrigido: Visão geral não contradiz mais a tela Hoje: o quadro passa a se chamar "Dinheiro e contratos" e tem link "Ver todos os alertas".
+- Corrigido: página de erro legível no tema claro e sem prometer que nada foi alterado; página 404 e de erro geral em português, também fora de /app; /organizacao com uma empresa só vai direto para /app; Operação pede confirmação antes de "Rejeitado" e "Cancelar". Sem mudança no banco.
 
 ### Filtro por prazo em Cadastros > Tabelas (06/11/2026)
 - Adicionado: filtro "Prazo (meses)" na pesquisa de tabelas: mostra as tabelas que têm alguma linha cujo prazo (mínimo a máximo) inclui o número digitado; vale junto com os outros filtros, na exportação e na "Nova pesquisa". Nova coluna "Prazos" com a faixa da versão mostrada. Sem mudança no banco.
