@@ -7,6 +7,7 @@ import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedba
 import { bankAccountOf } from '@/lib/finBankAccounts'
 import { expectedAmount, sumAmounts } from '@/lib/payout/pay-safety'
 import { isUuid } from '@/lib/team'
+import type { Breakdown } from '@/lib/payout/batches'
 import { parseMoneyInput } from '@/lib/money-input'
 import { parsePercentInput } from '@/lib/percent-input'
 
@@ -224,6 +225,16 @@ export async function payBatch(formData: FormData): Promise<PayBatchResult> {
   const r = (data ?? {}) as { batch_id?: string; paid?: number; total?: string }
   revalidatePath('/app/repasse'); revalidatePath('/app/repasse/lotes'); revalidatePath('/app/financeiro/empresa')
   return { ok: Number(r.paid ?? 0), total: sumAmounts([r.total]), failed: [], batchId: r.batch_id }
+}
+
+// "ver contratos" in "Pagar vendedores" (owner, 06/11/2026): what paying this account now would pay, before paying.
+// Read only; the database checks who may see it (repasse.approve, never the own account).
+export async function loadPayPreview(account: string): Promise<{ data?: Breakdown & { total: string }; error?: string }> {
+  if (!isUuid(account)) return { error: 'Conta inválida.' }
+  const { supabase } = await requireAppContext()
+  const { data, error } = await supabase.rpc('payout_pay_preview', { p_account: account })
+  if (error || !data) return { error: 'Não foi possível carregar os contratos.' }
+  return { data: data as Breakdown & { total: string } }
 }
 
 // "Desfazer lote": every payment of the batch still paid, at once (administrators; the database checks).

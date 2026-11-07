@@ -41,6 +41,12 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 - Adicionado: busca (nome, código ou CPF/CNPJ, sem CPF na URL) e páginas na lista de vendedores; e-mails da equipe buscados numa chamada só.
 - Alterado: confirmação antes de Revogar chave de API (agora com mensagem de sucesso ou erro), Trocar link, Desativar acesso, Inativar vendedor e Recusar cadastro.
 - Migration `20261107001308_finance_crm_queues_v1` (local; aplicar em produção antes do merge).
+### Contratos de cada pagamento de vendedor (06/11/2026)
+- Adicionado: "Ver contratos" em cada linha de Repasses (conta da pessoa e tela do repasse), também para "Pagar agora" e "Marcar pago" fora de lote: página com os contratos (ADE, cliente, banco · convênio · produto, liberado, pago ao cliente, comissão, link) e a composição: Soma dos contratos + outros lançamentos (vale, bônus, desconto, saldo anterior, desconto do negativo, negativo que passa para o próximo) = Total pago. Diferença aparece em vermelho, nunca escondida.
+- Adicionado: "ver contratos" em cada linha de "Pagar vendedores" e no botão "Pagar" da conta da pessoa, antes de pagar (mesmo valor que será gravado).
+- Alterado: impressos (lote, pessoa, vendedores) e Excel do lote separam "Soma dos contratos", "Outros lançamentos" (listados) e "Total pago".
+- Migration `20261107000504_payout_breakdown_v1` (local; aplicar em produção antes do merge): `payout_breakdown`, `payout_pay_preview`; `payout_batch_detail` e `payout_account_report` trazem a composição. Contrato `tests/security/payout-breakdown-contract.sql`.
+
 ### Pagamento seguro do repasse (06/11/2026)
 - Corrigido: "Pagar" na conta da pessoa mostrava o saldo, mas o banco pagava outro valor (repasse em aberto, limite do negativo ou disponível hoje). Agora mostra o valor exato que será gravado, pede confirmação e o banco recusa se o valor mudou.
 - Corrigido: "Pagar vendedores" abre sem ninguém marcado; "Marcar todos" não marca quem não tem chave PIX nem conta (e avisa quem ficou de fora); a confirmação mostra quantidade e total.

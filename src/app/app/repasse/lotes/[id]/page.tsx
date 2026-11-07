@@ -6,12 +6,13 @@ import { requireAppContext } from '@/lib/appContext'
 import { isUuid } from '@/lib/team'
 import { brlText } from '@/lib/receipts/format'
 import { dateBr, PAYOUT_STATUS_LABEL, PAYOUT_STATUS_TONE } from '@/lib/payout/format'
-import { batchItemLabel, batchStatus, type BatchDetail } from '@/lib/payout/batches'
+import { batchStatus, type BatchDetail } from '@/lib/payout/batches'
 import { batchTotals } from '@/lib/payout/pay-safety'
 import { Printer } from 'lucide-react'
 import { formatTaxId } from '@/lib/sellers'
 import { payTo } from '@/app/imprimir/sheets'
 import { reverseBatch } from '../../actions'
+import { PayoutBreakdown } from '../../PayoutBreakdown'
 
 const box = 'rounded-[14px] border border-line bg-surface px-4 py-3'
 const btn = 'inline-flex h-9 items-center rounded-[10px] border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted print:hidden'
@@ -66,27 +67,8 @@ export default async function PayoutBatchPage({ params }: { params: Promise<{ id
               </div>
             </div>
             {l.reversal_reason && <p className="px-4 pt-2 text-xs text-muted">Motivo: {l.reversal_reason}</p>}
-            {l.contracts.length ? (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[720px] text-left text-[13px]">
-                  <thead className="bg-surface-muted text-xs font-semibold text-muted">
-                    <tr><th className="px-4 py-2">Contrato</th><th className="px-4 py-2">Cliente</th><th className="px-4 py-2">Banco · convênio · produto</th><th className="px-4 py-2 text-right">Liberado</th><th className="px-4 py-2">Pago ao cliente</th><th className="px-4 py-2 text-right">Comissão</th></tr>
-                  </thead>
-                  <tbody>
-                    {l.contracts.map((c, k) => (
-                      <tr key={`${c.proposal_id ?? c.kind}-${k}`} className="border-t border-line">
-                        <td className="px-4 py-2">{c.proposal_id ? <Link href={`/app/propostas/${c.proposal_id}`} className="hover:underline">{batchItemLabel(c)}</Link> : batchItemLabel(c)}</td>
-                        <td className="px-4 py-2 text-ink-soft">{c.client ?? ''}</td>
-                        <td className="px-4 py-2 text-ink-soft">{[c.bank, c.agreement, c.product].filter(Boolean).join(' · ')}</td>
-                        <td className="num px-4 py-2 text-right text-ink-soft">{c.released ? brlText(c.released) : '—'}</td>
-                        <td className="px-4 py-2 text-ink-soft">{c.paid_to_client_on ? dateBr(c.paid_to_client_on) : '—'}</td>
-                        <td className="num px-4 py-2 text-right font-medium text-ink">{brlText(c.amount)}{c.partial && <span className="ml-1 text-xs text-[#92400E]">(em parte)</span>}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : <p className="px-4 py-3 text-sm text-muted">{l.kind === 'withdrawal' ? 'Saque do saldo' : l.status === 'reversed' ? 'Contratos voltaram para o próximo pagamento' : 'Sem contratos'}</p>}
+            {l.status === 'reversed' ? <p className="px-4 py-3 text-sm text-muted">Contratos voltaram para o próximo pagamento</p>
+              : <PayoutBreakdown b={l} total={l.amount} empty={l.kind === 'withdrawal' ? 'Saque do saldo sem contratos' : 'Sem contratos'} />}
           </Card>
         ))}
       </div>

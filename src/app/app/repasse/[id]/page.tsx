@@ -12,6 +12,8 @@ import { bankAccountChoice } from '@/lib/finBankAccounts'
 import { isPositiveAmount, sameAmount } from '@/lib/payout/pay-safety'
 import { addEntry, decideEntry, payNow, requestWithdrawal, setAccountModel } from '../actions'
 import { PayoutRows, type PayoutRow } from '../PayoutRows'
+import { PayoutBreakdown } from '../PayoutBreakdown'
+import type { Breakdown } from '@/lib/payout/batches'
 
 type Entry = { id: string; kind: string; amount: string; effective_on: string; description: string | null; status: string; proposal_id: string | null; beneficiary_role: string | null; created_at: string; decision_note: string | null; statement_id: string | null; payout_id: string | null }
 type Summary = { account_id: string; holder_name: string; model: string; balance: string; available: string }
@@ -44,6 +46,9 @@ export default async function PayoutAccountPage({ params }: { params: Promise<{ 
   // balance limit, or the amount available today. Not the balance. Null for one's own account.
   const { data: payAmountRaw } = canApprove ? await supabase.rpc('payout_pay_now_amount', { p_account: id }) : { data: null }
   const payAmount = isPositiveAmount(payAmountRaw as string | null) ? String(payAmountRaw) : null
+  // The contracts inside that amount, before paying (owner, 06/11/2026).
+  const { data: previewRaw } = payAmount ? await supabase.rpc('payout_pay_preview', { p_account: id }) : { data: null }
+  const preview = previewRaw as (Breakdown & { total: string }) | null
   const firstName = account.holder_name.split(' ')[0]
   const back = `/app/repasse/${id}`
 
@@ -74,6 +79,13 @@ export default async function PayoutAccountPage({ params }: { params: Promise<{ 
                 </div>
               </details>
             </div>
+            {preview && (
+              <details className="rounded-[10px] border border-line">
+                <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-brand">Ver contratos deste pagamento</summary>
+                {!sameAmount(preview.total, payAmount) && <p className="px-3 text-xs font-semibold text-[#991B1B]">O valor mudou para {brlText(preview.total)}. Atualize a página antes de pagar.</p>}
+                <PayoutBreakdown b={preview} total={preview.total} empty="Sem contratos: o valor vem só de outros lançamentos." />
+              </details>
+            )}
             <p className="text-xs text-muted">Faça o PIX de {brlText(payAmount)} pelo banco e registre aqui. O valor sai do saldo e entra no financeiro da empresa. Se ele mudar antes de confirmar, nada é registrado.</p>
           </form>
         )}
