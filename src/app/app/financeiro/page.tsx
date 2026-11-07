@@ -20,6 +20,8 @@ export default async function FinancePage() {
   const names = new Map([...(banks ?? []), ...(providers ?? [])].map(x => [x.id, x.name]))
   const list = (alerts ?? []) as Alert[]
   const count = (k: string) => list.filter(a => a.kind === k).length
+  // Each number opens its full list (06/11/2026); "paga sem recebimento" opens the receivable queue, where it can be settled.
+  const alertHref = (k: string) => k === 'paid_without_receipt' ? '/app/financeiro/a-receber?dias=30' : `/app/financeiro/alertas?tipo=${k}`
 
   return (
     <section>
@@ -27,12 +29,12 @@ export default async function FinancePage() {
         actions={can(access, 'financeiro.edit') ? <ButtonLink href="/app/financeiro/importar">Importar relatório</ButtonLink> : undefined} />
 
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {Object.keys(ALERT_LABEL).map(k => <Kpi key={k} label={ALERT_LABEL[k]} value={count(k)} />)}
+        {Object.keys(ALERT_LABEL).map(k => <Kpi key={k} label={ALERT_LABEL[k]} value={count(k)} href={alertHref(k)} hint={count(k) ? 'ver todos' : undefined} />)}
       </div>
 
       {list.length > 0 && (
         <Card className="mb-4">
-          <CardHeader title="Precisa de atenção" action={<Link href="/app/financeiro/conciliacao" className="text-sm text-brand hover:underline">Conciliação por contrato</Link>} />
+          <CardHeader title="Precisa de atenção" action={<span className="flex flex-wrap gap-3 text-sm"><Link href="/app/financeiro/a-receber" className="text-brand hover:underline">A receber dos bancos</Link><Link href="/app/financeiro/conciliacao" className="text-brand hover:underline">Conciliação por contrato</Link></span>} />
           <ul className="px-2 pb-3 text-sm">
             {list.slice(0, 20).map((a, i) => (
               <li key={`${a.kind}-${a.proposal_id}-${i}`} className="flex flex-wrap items-center justify-between gap-2 border-t border-line px-3 py-2 first:border-t-0">
@@ -41,11 +43,13 @@ export default async function FinancePage() {
               </li>
             ))}
           </ul>
+          {list.length > 20 && <p className="border-t border-line px-5 py-3 text-sm text-ink-soft">Mostrando 20 de {list.length}. Clique em um dos números acima para ver a lista completa.</p>}
         </Card>
       )}
 
       <Card className="overflow-hidden">
         <CardHeader title="Relatórios importados" />
+        <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="bg-surface-muted text-xs font-semibold text-muted"><tr><th className="px-4 py-2.5">Fonte</th><th className="px-4 py-2.5">Tipo</th><th className="px-4 py-2.5">Mês</th><th className="px-4 py-2.5">Arquivo</th><th className="px-4 py-2.5 text-right">Linhas</th><th className="px-4 py-2.5 text-right">Total</th><th className="px-4 py-2.5">Situação</th></tr></thead>
           <tbody>
@@ -63,6 +67,7 @@ export default async function FinancePage() {
             {!(reports ?? []).length && <tr><td colSpan={7} className="px-4 py-8 text-center text-muted">Nenhum relatório importado ainda.</td></tr>}
           </tbody>
         </table>
+        </div>
       </Card>
     </section>
   )

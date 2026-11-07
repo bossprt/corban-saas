@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ConfirmSubmit } from '@/components/ConfirmSubmit'
 import { Card, PageHeader } from '@/components/ui'
 import { requireAppContext } from '@/lib/appContext'
 import { canManageMemberRole, canManageTeam, rolesAssignableBy } from '@/lib/rbac'
@@ -85,7 +86,7 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
           </details>
           <form action={changeMemberStatus}><input type="hidden" name="membership_id" value={m.id} />
             {m.status === 'active'
-              ? <><input type="hidden" name="status" value="inactive" /><button className={btn} title="Bloqueia o acesso imediatamente; pode ser reativado">Desativar acesso</button></>
+              ? <><input type="hidden" name="status" value="inactive" /><ConfirmSubmit confirm={`Desativar o acesso de ${emails.get(m.user_id) ?? 'esta pessoa'}? Ela perde o acesso na hora; dá para reativar depois.`} className={btn} pendingText="..." title="Bloqueia o acesso imediatamente; pode ser reativado">Desativar acesso</ConfirmSubmit></>
               : <><input type="hidden" name="status" value="active" /><button className={btn}>Reativar acesso</button></>}</form>
         </div>}
       </Card>

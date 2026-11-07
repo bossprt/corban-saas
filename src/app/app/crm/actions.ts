@@ -54,6 +54,14 @@ export async function createSalesLead(formData: FormData) {
   if (cpf && !isValidCpf(cpf)) return go('/app/crm', 'erro:cpf_invalido')
   if (!cpf && phone.replace(/\D/g, '').length < 10) return go('/app/crm', 'erro:lead_sem_contato')
   if (campaign && !UUID.test(campaign)) return go('/app/crm', 'erro:requisicao_invalida')
+  // Same CPF already in an open lead (audit 06/11/2026): open that lead instead of creating a second one. A lead of another
+  // seller is only reported. Campaigns keep their own rule (the same person may be in several campaigns).
+  if (cpf && !campaign) {
+    const { data: found } = await supabase.rpc('open_lead_with_cpf', { p_org: organization.id, p_cpf: cpf })
+    const hit = ((found ?? []) as { lead_id: string | null; workable: boolean }[])[0]
+    if (hit?.lead_id && UUID.test(hit.lead_id)) return go(panelPath(hit.lead_id), 'erro:lead_cpf_existente')
+    if (hit && !hit.workable) return go('/app/crm', 'erro:lead_cpf_outro_vendedor')
+  }
   const { data, error } = await supabase.rpc('create_sales_lead', {
     p_organization_id: organization.id, p_full_name: name, p_phone: phone || null, p_cpf: cpf || null,
     p_email: text(formData, 'email') || null, p_campaign_id: campaign || null,

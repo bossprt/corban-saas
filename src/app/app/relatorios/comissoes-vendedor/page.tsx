@@ -4,6 +4,7 @@ import { ArrowLeft, FileText } from 'lucide-react'
 import { Card, PageHeader } from '@/components/ui'
 import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
+import { PeriodFields } from './PeriodFields'
 
 const label = 'grid gap-1.5 text-[13px] font-medium text-ink-soft'
 const today = () => new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10)
@@ -31,8 +32,7 @@ export default async function SellerCommissionReportPage() {
               {people.map(p => <option key={p.account_id} value={p.account_id}>{p.holder_name}</option>)}
             </select>
           </label>
-          <label className={label}>De<input type="date" name="de" required defaultValue={monthStart()} className="field" /></label>
-          <label className={label}>Até<input type="date" name="ate" required defaultValue={today()} className="field" /></label>
+          <PeriodFields from={monthStart()} to={today()} />
           <button className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><FileText size={16} aria-hidden />Gerar relatório</button>
         </form>
       </Card>

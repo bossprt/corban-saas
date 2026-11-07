@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { createHash, randomUUID } from 'crypto'
 import { requireAppContext } from '@/lib/appContext'
 import { can } from '@/lib/access'
-import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedback'
+import { classifyDbFeedback, FEEDBACK, feedbackUrl, type FeedbackCode } from '@/lib/feedback'
 import { isUuid } from '@/lib/team'
 import { parseMoneyInput } from '@/lib/money-input'
 import type { OfxLine } from '@/lib/finance/ofx'
@@ -42,10 +42,15 @@ const intervalDays = (f: FormData): number | null => {
   return null
 }
 
-export async function createEntry(f: FormData) {
-  const ctx = await editor(); if (!ctx) return back(safePath(f), 'erro:sem_permissao')
+// New entry (06/11/2026): on a refusal the form stays open with what was typed and the reason; only success redirects.
+export type NewEntryState = { message: string | null; values: Record<string, string>; nonce: number }
+export async function createEntry(prev: NewEntryState, f: FormData): Promise<NewEntryState> {
+  const values = Object.fromEntries([...f.entries()].filter(([, v]) => typeof v === 'string').map(([k, v]) => [k, String(v)]))
+  const fail = (code: FeedbackCode | string): NewEntryState => ({ message: code in FEEDBACK ? FEEDBACK[code as FeedbackCode] : code, values, nonce: prev.nonce + 1 })
+  const ctx = await editor(); if (!ctx) return fail('erro:sem_permissao')
   const amount = parseMoneyInput(f.get('amount'))
-  if (amount === null || amount === 'invalid') return back(safePath(f), 'erro:fin_valor')
+  if (amount === null || amount === 'invalid') return fail('erro:fin_valor')
+  if (amount === '0.00') return fail('O valor precisa ser maior que zero.')
   const settled = f.get('settled') === 'on'
   const { error } = await ctx.supabase.rpc('fin_create_entry', {
     p_org: ctx.organization.id, p_direction: text(f, 'direction') === 'in' ? 'in' : 'out', p_description: text(f, 'description'),
@@ -58,7 +63,8 @@ export async function createEntry(f: FormData) {
     p_interval_days: intervalDays(f),
     p_settled_on: settled ? dateOrNull(f, 'due_on') : null, p_bank_account: settled ? uuidOrNull(f, 'bank_account_id') : null,
   })
-  return back(safePath(f), error ? finError(error) : 'ok:fin_lancado')
+  if (error) return fail(finError(error))
+  return back(safePath(f), 'ok:fin_lancado')
 }
 
 // Settle with paid value, interest, discount and an optional receipt (04/11/2026). Paid below the amount leaves the rest

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ConfirmSubmit } from '@/components/ConfirmSubmit'
 import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { Badge, Card, CardHeader, PageHeader } from '@/components/ui'
@@ -166,7 +167,9 @@ export default async function SellerPage({ params, searchParams }: { params: Pro
               <span className="text-ink-soft">{s.is_active ? 'Ativo: aparece nas propostas e recebe comissão.' : 'Inativo: não aparece em propostas novas.'}</span>
               <input type="hidden" name="id" value={s.id} />
               <input type="hidden" name="active" value={s.is_active ? 'false' : 'true'} />
-              <SubmitButton className="h-9 rounded-[10px] border border-line bg-surface px-3 text-sm text-ink hover:bg-surface-muted">{s.is_active ? 'Inativar' : 'Reativar'}</SubmitButton>
+              {s.is_active
+                ? <ConfirmSubmit confirm={`Inativar ${s.name}? Ele deixa de aparecer em propostas novas; dá para reativar depois.`} className="h-9 rounded-[10px] border border-line bg-surface px-3 text-sm text-ink hover:bg-surface-muted">Inativar</ConfirmSubmit>
+                : <SubmitButton className="h-9 rounded-[10px] border border-line bg-surface px-3 text-sm text-ink hover:bg-surface-muted">Reativar</SubmitButton>}
             </form>
           </Card>
         </div>

@@ -17,7 +17,26 @@ export const DRE_ORDER: { kind: string; label: string; subtotal?: string }[] = [
   { kind: 'financial_expense', label: '(-) Despesas financeiras', subtotal: 'Resultado do período' },
 ]
 
+// Money without floating point (RULES 2.4): numeric(15,2) text is read as integer cents and written back as decimal text.
+export const toCents = (v: string | number | null | undefined): number => {
+  const m = /^([-+]?)(\d*)(?:\.(\d*))?$/.exec(String(v ?? '').trim())
+  if (!m) return 0
+  const c = Number(m[2] || '0') * 100 + Number((m[3] ?? '').padEnd(2, '0').slice(0, 2))
+  return m[1] === '-' ? -c : c
+}
+export const centsToDecimal = (c: number): string => {
+  const a = Math.abs(Math.trunc(c))
+  return `${c < 0 && a > 0 ? '-' : ''}${Math.floor(a / 100)}.${String(a % 100).padStart(2, '0')}`
+}
+const decimalText = (s: string) => {
+  const m = /^(-?)(\d+)(?:\.(\d+))?$/.exec(s)
+  if (!m) return null
+  const int = m[2].replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return `${m[1]}R$ ${int},${(m[3] ?? '').padEnd(2, '0').slice(0, 2)}`
+}
+// Decimal text is formatted digit by digit; a number (legacy callers) still goes through toLocaleString.
 export const brl = (v: number | string | null | undefined) =>
-  v === null || v === undefined || v === '' ? '—' : Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+  v === null || v === undefined || v === '' ? '—' : (typeof v === 'string' && decimalText(v.trim())) || Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+export const brlCents = (c: number) => brl(centsToDecimal(c))
 export const monthLabel = (iso: string) => new Date(`${iso.slice(0, 10)}T12:00:00Z`).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })
 export const dayLabel = (iso: string | null) => (iso ? new Date(`${iso.slice(0, 10)}T12:00:00Z`).toLocaleDateString('pt-BR') : '—')
