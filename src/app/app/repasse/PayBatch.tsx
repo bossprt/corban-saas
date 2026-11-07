@@ -7,6 +7,7 @@ import QRCode from 'qrcode'
 import { Check, ChevronLeft, ChevronRight, Copy, Download, QrCode, X } from 'lucide-react'
 import { pixCopyPaste } from '@/lib/pix/brcode'
 import type { PayLine } from '@/lib/payout/pay-list'
+import { markAll } from '@/lib/payout/pay-safety'
 import { PIX_TYPE_LABEL, formatTaxId } from '@/lib/sellers'
 import { brlText } from '@/lib/receipts/format'
 import type { PayBatchResult } from './actions'
@@ -36,7 +37,12 @@ function CopyButton({ text, label }: { text: string; label: string }) {
 // recorded until "Confirmar"; an amount that changed meanwhile is refused, so the record always matches the bank.
 export function PayBatch({ lines, action, today, banks = [], suggestedBank = '' }: { lines: PayLine[]; action: (f: FormData) => Promise<PayBatchResult>; today: string; banks?: BankOption[]; suggestedBank?: string }) {
   const router = useRouter()
-  const [checked, setChecked] = useState<Set<string>>(() => new Set(lines.filter(l => l.method).map(l => l.account)))
+  // Nobody is ticked when the list opens (audit 06/11/2026): forgetting to untick recorded payments never made.
+  const [checked, setChecked] = useState<Set<string>>(() => new Set())
+  // People "Marcar todos" left out because they have no PIX key or bank account.
+  const [skipped, setSkipped] = useState<string[]>([])
+  // Confirmation step: the first "Confirmar" shows how many and how much; only "Sim, registrar" sends.
+  const [confirming, setConfirming] = useState(false)
   const [qr, setQr] = useState<number | null>(null)
   // The QR Code sequence is fixed when it opens: only the checked sellers (owner, 13/10/2026: with 5 of 6 checked it
   // showed all 6, so an unchecked seller could be paid by mistake).
@@ -67,16 +73,20 @@ export function PayBatch({ lines, action, today, banks = [], suggestedBank = '' 
     if (l && !ids.includes(l.account)) { setQrList([l.account]); setQr(0); return }
     setQrList(ids); setQr(l ? ids.indexOf(l.account) : 0)
   }
-  const toggle = (id: string) => setChecked(s => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n })
+  const toggle = (id: string) => { setConfirming(false); setChecked(s => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n }) }
+  const tickAll = () => { const r = markAll(lines); setConfirming(false); setChecked(r.checked); setSkipped(r.skipped.map(l => l.name)) }
+  const untickAll = () => { setConfirming(false); setChecked(new Set()); setSkipped([]) }
 
   const submit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (!confirming) { setResult(null); setConfirming(true); return }
     const data = new FormData(e.currentTarget)
     setResult(null)
     start(async () => {
       const r = await action(data)
       setResult(r)
-      if (!r.error && r.ok) router.refresh()
+      setConfirming(false)
+      if (!r.error && r.ok) { setChecked(new Set()); setSkipped([]); router.refresh() }
     })
   }
 
@@ -87,12 +97,13 @@ export function PayBatch({ lines, action, today, banks = [], suggestedBank = '' 
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 pb-3 text-sm">
         <span className="text-ink-soft">{lines.length} a pagar · <strong className="text-ink">{brlText(totalAll)}</strong> · marcados {chosen.length} · <strong className="text-ink">{brlText(totalChosen)}</strong></span>
         <span className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => setChecked(new Set(lines.map(l => l.account)))} className="h-9 rounded-[10px] border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted">Marcar todos</button>
-          <button type="button" onClick={() => setChecked(new Set())} className="h-9 rounded-[10px] border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted">Desmarcar</button>
+          <button type="button" onClick={tickAll} className="h-9 rounded-[10px] border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted">Marcar todos</button>
+          <button type="button" onClick={untickAll} className="h-9 rounded-[10px] border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted">Desmarcar</button>
           {lines.some(l => codeOf(l)) && <button type="button" onClick={() => openQr()} disabled={!chosenPix.length} className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted disabled:opacity-50"><QrCode size={15} aria-hidden />Pagar marcados com QR Code ({chosenPix.length})</button>}
           <a href="/api/repasse/pagamentos" download className="inline-flex h-9 items-center gap-1.5 rounded-[10px] border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted"><Download size={15} aria-hidden />Baixar Excel</a>
         </span>
       </div>
+      {!!skipped.length && <p role="status" className="mx-5 mb-3 rounded-[10px] bg-[#FEF2F2] px-3 py-2 text-xs text-[#991B1B]">Não marcados por falta de chave PIX ou conta no cadastro: {skipped.join(', ')}.</p>}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[760px] text-left text-[13px]">
           <thead className="border-y border-line bg-surface-muted text-xs text-muted"><tr>
@@ -104,7 +115,8 @@ export function PayBatch({ lines, action, today, banks = [], suggestedBank = '' 
               return (
                 <tr key={l.account} className="border-t border-line align-top">
                   <td className="py-2.5 pl-5 pr-1">
-                    <input type="checkbox" name="account" value={l.account} checked={checked.has(l.account)} onChange={() => toggle(l.account)} aria-label={`Pagar ${l.name}`} className="accent-[var(--brand)]" />
+                    <input type="checkbox" name="account" value={l.account} checked={checked.has(l.account)} onChange={() => toggle(l.account)} disabled={!l.method}
+                      aria-label={`Pagar ${l.name}`} title={l.method ? undefined : 'Sem chave PIX nem conta no cadastro'} className="accent-[var(--brand)] disabled:opacity-40" />
                     <input type="hidden" name={`amount_${l.account}`} value={l.amount} /><input type="hidden" name={`name_${l.account}`} value={l.name} />
                   </td>
                   <td className="px-3 py-2.5"><Link href={`/app/repasse/${l.account}`} className="font-medium text-ink hover:underline">{l.name}</Link></td>
@@ -125,17 +137,30 @@ export function PayBatch({ lines, action, today, banks = [], suggestedBank = '' 
         </table>
       </div>
       <div className="grid gap-3 border-t border-line bg-surface-muted/50 px-5 py-4">
-        <p className="text-xs text-ink-soft">Faça os pagamentos no banco e depois deixe marcados só os que você pagou. Nada é registrado antes de Confirmar.</p>
+        <p className="text-xs text-ink-soft">Faça os pagamentos no banco e marque só os que você pagou. Nada é registrado antes de confirmar, e é tudo ou nada: se um valor mudou, ninguém é registrado.</p>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <span className="flex flex-wrap items-end gap-3">
             <label className="text-[13px] font-medium text-ink-soft">Pago em<input type="date" name="paid_on" required defaultValue={today} max={today} className="field mt-1.5" /></label>
             <label className="text-[13px] font-medium text-ink-soft">Comprovante <span className="font-normal text-muted">opcional</span><input name="reference" maxLength={120} placeholder="PIX 06/10" className="field mt-1.5 w-48" /></label>
             <BankAccountSelect banks={banks} suggested={suggestedBank} label="Conta que pagou" />
           </span>
-          <button type="submit" disabled={pending || !chosen.length} aria-busy={pending} className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50">
-            <Check size={16} aria-hidden />{pending ? 'Registrando...' : `Confirmar ${chosen.length} pago(s) · ${brlText(totalChosen)}`}
-          </button>
+          {!confirming && (
+            <button type="submit" disabled={pending || !chosen.length} className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50">
+              <Check size={16} aria-hidden />{`Confirmar ${chosen.length} pago(s) · ${brlText(totalChosen)}`}
+            </button>
+          )}
         </div>
+        {confirming && (
+          <div role="alertdialog" aria-label="Confirmar pagamentos" className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-brand/40 bg-surface px-3 py-2">
+            <span className="text-sm text-ink">Registrar <strong>{chosen.length}</strong> pagamento(s), total <strong className="num">{brlText(totalChosen)}</strong>? Confira se pagou cada um no banco.</span>
+            <span className="flex gap-2">
+              <button type="button" onClick={() => setConfirming(false)} disabled={pending} className="h-9 rounded-[10px] border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted">Voltar</button>
+              <button type="submit" disabled={pending || !chosen.length} aria-busy={pending} className="inline-flex h-9 items-center gap-1.5 rounded-[10px] bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong disabled:opacity-50">
+                <Check size={16} aria-hidden />{pending ? 'Registrando...' : 'Sim, registrar'}
+              </button>
+            </span>
+          </div>
+        )}
         {result && (
           <div role="status" className={`rounded-[10px] border px-3 py-2 text-sm ${result.error || result.failed.length ? 'border-[#FCD34D] bg-[#FFFBEB] text-[#92400E]' : 'border-[#86EFAC] bg-[#F0FDF4] text-[#166534]'}`}>
             {result.error ?? `${result.ok} pagamento(s) registrado(s) · ${brlText(result.total)}.${result.failed.length ? ` ${result.failed.length} não registrado(s):` : ''}`}

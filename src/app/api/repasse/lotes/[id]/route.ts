@@ -4,6 +4,7 @@ import { can } from '@/lib/access'
 import { isUuid } from '@/lib/team'
 import { PAYOUT_STATUS_LABEL } from '@/lib/payout/format'
 import { batchItemLabel, type BatchDetail } from '@/lib/payout/batches'
+import { batchTotals } from '@/lib/payout/pay-safety'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,7 +39,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     ]))
   }
   ws.addRow([])
-  ws.addRow(['Total', '', '', '', '', '', '', null, '', null, Number(b.total)]).font = { bold: true }
+  // Same rule as the screen and the print (06/11/2026): the total counts only what was paid; undone apart.
+  const totals = batchTotals(b.lines)
+  ws.addRow(['Total pago', '', '', '', '', '', '', null, '', null, Number(totals.paidTotal)]).font = { bold: true }
+  if (totals.undoneCount) ws.addRow([`Desfeito (${totals.undoneCount}, não entra no total)`, '', '', '', '', '', '', null, '', null, Number(totals.undoneTotal)])
   for (const c of [8, 10, 11]) ws.getColumn(c).numFmt = '#,##0.00'
   ws.getColumn(3).numFmt = '@'
   ws.views = [{ state: 'frozen', ySplit: 1 }]

@@ -9,6 +9,7 @@ import { dateBr, ENTRY_KIND_LABEL, ENTRY_STATUS_LABEL, MODEL_LABEL } from '@/lib
 import { SubmitButton } from '@/components/SubmitButton'
 import { BankAccountSelect } from '@/components/BankAccountSelect'
 import { bankAccountChoice } from '@/lib/finBankAccounts'
+import { isPositiveAmount, sameAmount } from '@/lib/payout/pay-safety'
 import { addEntry, decideEntry, payNow, requestWithdrawal, setAccountModel } from '../actions'
 import { PayoutRows, type PayoutRow } from '../PayoutRows'
 
@@ -38,7 +39,12 @@ export default async function PayoutAccountPage({ params }: { params: Promise<{ 
   const entries = ((entryRows ?? []) as Entry[]).filter(e => finance || !e.payout_id || !undone.has(e.payout_id))
   const canCreate = can(access, 'repasse.create') || can(access, 'repasse.edit')
   const canApprove = can(access, 'repasse.approve')
-  const payBanks = canApprove ? await bankAccountChoice(supabase, 'payout') : { banks: [], suggested: '' }
+  const payBanks = canApprove || canCreate ? await bankAccountChoice(supabase, 'payout') : { banks: [], suggested: '' }
+  // The exact amount "Pagar" records (audit 06/11/2026): an open statement, a closing up to today with the negative
+  // balance limit, or the amount available today. Not the balance. Null for one's own account.
+  const { data: payAmountRaw } = canApprove ? await supabase.rpc('payout_pay_now_amount', { p_account: id }) : { data: null }
+  const payAmount = isPositiveAmount(payAmountRaw as string | null) ? String(payAmountRaw) : null
+  const firstName = account.holder_name.split(' ')[0]
   const back = `/app/repasse/${id}`
 
   return (
@@ -49,17 +55,26 @@ export default async function PayoutAccountPage({ params }: { params: Promise<{ 
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
         <div className="rounded-[14px] border border-line bg-surface px-5 py-4"><div className="text-[13px] text-muted">Saldo da conta</div><div className={`num mt-1 text-2xl font-semibold ${String(account.balance).startsWith('-') ? 'text-[#991B1B]' : 'text-ink'}`}>{brlText(account.balance)}</div></div>
         {account.model === 'account' && <div className="rounded-[14px] border border-line bg-surface px-5 py-4"><div className="text-[13px] text-muted">Disponível para saque hoje</div><div className="num mt-1 text-2xl font-semibold text-ink">{brlText(account.available)}</div></div>}
-        {canApprove && Number(account.balance) > 0 && (
+        {canApprove && payAmount && (
           <form action={payNow} className="grid gap-2 rounded-[14px] border-2 border-brand/40 bg-surface px-5 py-4 sm:col-span-2">
             <input type="hidden" name="account_id" value={id} />
-            <div className="text-sm font-semibold text-ink">Pagar {account.holder_name.split(' ')[0]}</div>
+            <input type="hidden" name="expected" value={payAmount} />
+            <div className="text-sm font-semibold text-ink">Pagar {firstName}: <span className="num">{brlText(payAmount)}</span></div>
+            {!sameAmount(payAmount, account.balance) &&<p className="text-xs text-[#92400E]">O valor a pagar hoje é {brlText(payAmount)}, não o saldo de {brlText(account.balance)} (repasse em aberto, limite de desconto do negativo ou só o disponível hoje).</p>}
             <div className="flex flex-wrap items-end gap-2">
-              <label className="text-xs text-muted">Pago em<input name="paid_on" type="date" required defaultValue={todayIso()} className="field mt-1 block h-10" /></label>
+              <label className="text-xs text-muted">Pago em<input name="paid_on" type="date" required defaultValue={todayIso()} max={todayIso()} className="field mt-1 block h-10" /></label>
               <label className="text-xs text-muted">Comprovante <span className="font-normal">(opcional)</span><input name="reference" maxLength={120} placeholder="ID do PIX, se quiser" className="field mt-1 block h-10 w-64" /></label>
               <BankAccountSelect banks={payBanks.banks} suggested={payBanks.suggested} label="Conta que pagou" labelClass="text-xs text-muted" selectClass="field mt-1 block h-10" />
-              <SubmitButton pendingText="Registrando..." className="h-10 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Pagar {brlText(account.balance)}</SubmitButton>
+              {/* Confirmation step (audit 06/11/2026): the first click records nothing. */}
+              <details className="group">
+                <summary className="inline-flex h-10 cursor-pointer list-none items-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong group-open:hidden">Pagar {brlText(payAmount)}</summary>
+                <div className="flex flex-wrap items-center gap-2 rounded-[10px] border border-brand/40 bg-surface-muted px-3 py-2">
+                  <span className="text-sm text-ink">Confirmar pagamento de <strong className="num">{brlText(payAmount)}</strong> para {account.holder_name}?</span>
+                  <SubmitButton pendingText="Registrando..." className="h-9 rounded-[10px] bg-brand px-3 text-sm font-semibold text-white hover:bg-brand-strong">Sim, registrar</SubmitButton>
+                </div>
+              </details>
             </div>
-            <p className="text-xs text-muted">Faça o PIX pelo banco e registre aqui. O saldo é baixado e o valor entra no financeiro da empresa.</p>
+            <p className="text-xs text-muted">Faça o PIX de {brlText(payAmount)} pelo banco e registre aqui. O valor sai do saldo e entra no financeiro da empresa. Se ele mudar antes de confirmar, nada é registrado.</p>
           </form>
         )}
       </div>
@@ -107,7 +122,7 @@ export default async function PayoutAccountPage({ params }: { params: Promise<{ 
 
       <Card className="mb-4 overflow-hidden">
         <CardHeader title="Repasses" />
-        <PayoutRows rows={payouts} back={back} canApprove={canApprove} canPay={canCreate || canApprove} canReverse={membership.role === 'admin'} />
+        <PayoutRows rows={payouts} back={back} canApprove={canApprove} canPay={canCreate || canApprove} canReverse={membership.role === 'admin'} banks={payBanks} />
       </Card>
 
       <Card className="overflow-hidden">

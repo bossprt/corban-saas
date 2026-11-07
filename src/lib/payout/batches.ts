@@ -4,7 +4,8 @@ import type { PayTarget } from '@/lib/sellers'
 
 export type BatchRow = {
   id: string; paid_on: string; payment_reference: string | null; origin: string; created_at: string; paid_by: string | null
-  payouts: number; total: string; undone: number; bank_accounts: string | null; reversed_at: string | null; reversal_reason: string | null
+  // total: effective (paid) payments only; undone_total: the undone ones, apart (06/11/2026).
+  payouts: number; total: string; undone: number; undone_total?: string; bank_accounts: string | null; reversed_at: string | null; reversal_reason: string | null
 }
 
 // partial: this payment paid only part of the contract (payment from the balance, oldest contracts first, 17/10/2026).
@@ -25,7 +26,7 @@ export type BatchLine = {
 export type Company = { name: string; document: string | null }
 export type BatchDetail = {
   id: string; paid_on: string; payment_reference: string | null; origin: string; created_at: string; paid_by: string | null
-  reversed_at: string | null; reversal_reason: string | null; reversed_by: string | null; bank_accounts: string | null; total: string; lines: BatchLine[]
+  reversed_at: string | null; reversal_reason: string | null; reversed_by: string | null; bank_accounts: string | null; total: string; undone_total?: string; lines: BatchLine[]
   company?: Company
 }
 // One person over a period (payout_account_report).

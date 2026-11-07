@@ -41,6 +41,12 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 - Adicionado: busca (nome, código ou CPF/CNPJ, sem CPF na URL) e páginas na lista de vendedores; e-mails da equipe buscados numa chamada só.
 - Alterado: confirmação antes de Revogar chave de API (agora com mensagem de sucesso ou erro), Trocar link, Desativar acesso, Inativar vendedor e Recusar cadastro.
 - Migration `20261107001308_finance_crm_queues_v1` (local; aplicar em produção antes do merge).
+### Pagamento seguro do repasse (06/11/2026)
+- Corrigido: "Pagar" na conta da pessoa mostrava o saldo, mas o banco pagava outro valor (repasse em aberto, limite do negativo ou disponível hoje). Agora mostra o valor exato que será gravado, pede confirmação e o banco recusa se o valor mudou.
+- Corrigido: "Pagar vendedores" abre sem ninguém marcado; "Marcar todos" não marca quem não tem chave PIX nem conta (e avisa quem ficou de fora); a confirmação mostra quantidade e total.
+- Corrigido: confirmar o lote é uma operação só, tudo ou nada, com a conta bancária gravada junto; se um valor mudou, nada é registrado e a tela diz quem. "Marcar pago" ganhou o campo da conta bancária e confirmação; falha ao gravar a conta não passa mais em silêncio.
+- Corrigido: total do lote (lista, detalhe e Excel) conta só os pagamentos feitos, como o impresso; desfeitos aparecem à parte.
+- Migration `20261106234355_payout_safe_payment_v1` (local; aplicar em produção antes do merge).
 
 ### Filtro por prazo em Cadastros > Tabelas (06/11/2026)
 - Adicionado: filtro "Prazo (meses)" na pesquisa de tabelas: mostra as tabelas que têm alguma linha cujo prazo (mínimo a máximo) inclui o número digitado; vale junto com os outros filtros, na exportação e na "Nova pesquisa". Nova coluna "Prazos" com a faixa da versão mostrada. Sem mudança no banco.

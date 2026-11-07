@@ -361,6 +361,7 @@ export const FEEDBACK = {
   'erro:lead_cpf_existente': 'Já existe um lead aberto com este CPF. Abrimos ele para você em vez de criar outro.',
   'erro:lead_cpf_outro_vendedor': 'Já existe um lead aberto com este CPF, de outro vendedor. Fale com o supervisor antes de cadastrar de novo.',
   'erro:vendedor_cpf_nao_encontrado': 'Nenhum vendedor com este CPF ou CNPJ.',
+  'erro:repasse_valor_mudou': 'O valor a pagar mudou desde que a página foi aberta. Nada foi registrado: confira o novo valor e pague de novo.',
   'ok:recebimento_registrado': 'Recebimento registrado. Se o valor não bate com o esperado, ele aparece como divergente na Conciliação.',
   'erro:recebimento_valor': 'Valor inválido. Use o formato 1.234,56.',
   'erro:recebimento_data': 'Data inválida: use a data em que o dinheiro caiu, até hoje.',
