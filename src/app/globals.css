@@ -10,14 +10,15 @@
   --brand-strong: #0a4744;
   --brand-soft: #e8f0ef;
 
-  --canvas: #f6f5f1;
+  /* Cool neutral grays (Visão geral redesign 07/11/2026, direction "Demonstrativo"): the warm cream read as a template. */
+  --canvas: #f4f5f7;
   --surface: #ffffff;
-  --surface-muted: #faf9f6;
-  --line: #e4e2db;
-  --line-strong: #d9d6cc;
-  --ink: #1b1d1f;
-  --ink-soft: #3c4043;
-  --muted: #5f6368;
+  --surface-muted: #f8f9fa;
+  --line: #e2e5e9;
+  --line-strong: #cfd4da;
+  --ink: #15191e;
+  --ink-soft: #3a414a;
+  --muted: #646b75;
 
   /* Money and pipeline states: differ in lightness as well as hue. */
   --expected: #5b6b7f;
@@ -114,6 +115,16 @@ body {
 
 .num {
   font-variant-numeric: tabular-nums;
+}
+
+/* Money in statements: the "R$" and the cents step back so the reais read first. */
+.money-cur {
+  color: var(--muted);
+  font-size: 0.86em;
+  margin-right: 0.2em;
+}
+.money-cents {
+  color: var(--muted);
 }
 
 /* Tailwind 4 leaves buttons with the default arrow; everything clickable shows the hand. */
