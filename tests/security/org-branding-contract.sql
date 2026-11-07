@@ -1,4 +1,4 @@
--- Contract test for 20261107200000_org_branding_v1: only an active admin of the company sets its colors and logo;
+-- Contract test for 20261107203756_org_branding_v1: only an active admin of the company sets its colors and logo;
 -- a seller of the same company and the admin of another company cannot; colors must be #rrggbb; a logo must be a file
 -- of the company's own folder in 'org-branding'; storage has no UPDATE/DELETE policy for the bucket; anon cannot call.
 -- One transaction, rolled back.
