@@ -15,6 +15,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Visão geral redesenhada, direção "Demonstrativo" (07/11/2026)
+- Alterado: a Visão geral do dono deixa de ser 4 caixas iguais. Pendências no topo como frases com valor e ação (Cobrar, Pagar, Conferir); "Resultado do período" como conta que fecha (produção paga, comissão prevista, impostos e comissões de supervisão/gerência, repasse, fica na empresa) com a comparação do período anterior; "Esteira agora" com quantidade, valor e atrasados por etapa; recebimento dos bancos com quanto falta; "Parados há mais tempo" (os 6 contratos além do prazo mais antigos); produção por dia; vendedores e bancos em tabela. Empresa sem dados vê o passo a passo (importar planilha, cadastrar vendedor).
+- Alterado: paleta clara do sistema em cinzas frios (fundo #f4f5f7, linhas #e2e5e9, texto #15191e) no lugar do creme; a cor de cada empresa continua igual.
+- Sem migration e sem cálculo novo de dinheiro: tudo vem de `owner_dashboard` e `pipeline_case_list` (texto numérico, aritmética exata); a única linha derivada é impostos e comissões = comissão prevista − repasse − fica na empresa, nos mesmos termos da margem.
+
 ### Plataforma > Cobrança: valor com ponto e primeiro mês no passado (06/11/2026)
 - Corrigido: "399.90" no valor da assinatura era gravado como R$ 39.990,00; agora usa `parseMoneyInput` ("399,90", "399.90", "1.234,56"), mostra "R$ X por mês" ao digitar e pede confirmação antes de salvar.
 - Corrigido: assinatura nova com primeiro mês anterior ao mês atual criava mensalidades já vencidas e bloqueava a empresa na hora. O banco recusa (`platform_set_subscription`, migration `20261107043855_billing_starts_on_guard_v1`); assinatura existente mantém o primeiro mês que já tem, só não volta para antes. A tela começa no mês atual e explica o motivo.
