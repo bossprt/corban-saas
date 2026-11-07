@@ -57,6 +57,22 @@ export default async function SellerPage({ params, searchParams }: { params: Pro
   const { data: request } = isNew && pedido && isUuid(pedido)
     ? await supabase.from('seller_signup_requests').select('id,commission_group_id,payload').eq('id', pedido).eq('status', 'pending').maybeSingle()
     : { data: null }
+  // An old "Ver e aprovar" link, or another manager decided first: say so instead of opening a blank new seller.
+  if (isNew && pedido && !request) {
+    const { data: decided } = isUuid(pedido)
+      ? await supabase.from('seller_signup_requests').select('status,seller_id').eq('id', pedido).maybeSingle()
+      : { data: null }
+    return (
+      <section>
+        <Link href="/app/cadastros/vendedores" className="mb-3 inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink"><ArrowLeft size={15} aria-hidden />Vendedores</Link>
+        <PageHeader title="Cadastro do link" />
+        <Card className="p-5 text-sm text-ink-soft">
+          {decided ? <>Este pedido já foi decidido: {decided.status === 'approved' ? 'aprovado' : 'recusado'}.</> : 'Pedido não encontrado.'}
+          {decided?.seller_id && <> <Link href={`/app/cadastros/vendedores/${decided.seller_id}`} className="text-brand hover:text-brand-strong">Abrir o vendedor</Link>.</>}
+        </Card>
+      </section>
+    )
+  }
   const r = (request?.payload ?? null) as SignupPayload | null
   const rp = r?.profile ?? {}
   const prefill: Partial<SellerValues> | undefined = request && r ? {

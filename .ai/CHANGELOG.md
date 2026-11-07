@@ -19,6 +19,12 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 - Corrigido: "399.90" no valor da assinatura era gravado como R$ 39.990,00; agora usa `parseMoneyInput` ("399,90", "399.90", "1.234,56"), mostra "R$ X por mês" ao digitar e pede confirmação antes de salvar.
 - Corrigido: assinatura nova com primeiro mês anterior ao mês atual criava mensalidades já vencidas e bloqueava a empresa na hora. O banco recusa (`platform_set_subscription`, migration `20261106234256_billing_starts_on_guard_v1`); assinatura existente mantém o primeiro mês que já tem, só não volta para antes. A tela começa no mês atual e explica o motivo.
 - Corrigido: usuário comum que abre /platform vê "Sem acesso" em vez de ir para o login.
+### Segurança do link de cadastro de vendedor (06/11/2026)
+- Segurança: um segundo envio com CPF/CNPJ que já está em análise na empresa é recusado ("Já existe um cadastro em análise para este CPF. Fale com a empresa.") e não troca mais os dados (nem PIX/banco) do primeiro pedido.
+- Segurança: no máximo 20 envios por link por hora (era 30); o teto de 200 pedidos em análise por empresa continua. Nova função `seller_signup_reject_many` (recusa em lote, só admin/gerente da empresa).
+- Alterado: "Recusar" pede confirmação; "Recusar selecionados" com "Marcar todos"; lista "Recusados nos últimos 30 dias" com nome, CPF, quem recusou e quando (os dados enviados continuam apagados na recusa).
+- Corrigido: o aviso do topo (ex.: "Cadastro recusado") não aparece mais na próxima tela; abrir "Ver e aprovar" de um pedido já decidido mostra "Este pedido já foi decidido" em vez de um "Novo vendedor" em branco.
+- Migration `20261106234117_seller_signup_hardening_v1` local; aplicar em produção antes do merge.
 
 ### Filtro por prazo em Cadastros > Tabelas (06/11/2026)
 - Adicionado: filtro "Prazo (meses)" na pesquisa de tabelas: mostra as tabelas que têm alguma linha cujo prazo (mínimo a máximo) inclui o número digitado; vale junto com os outros filtros, na exportação e na "Nova pesquisa". Nova coluna "Prazos" com a faixa da versão mostrada. Sem mudança no banco.

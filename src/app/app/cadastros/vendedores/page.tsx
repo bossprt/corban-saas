@@ -5,24 +5,35 @@ import { requireAppContext } from '@/lib/appContext'
 import { formatPhone } from '@/lib/cpf'
 import { atLeast } from '@/lib/rbac'
 import { CATEGORY_LABEL, formatTaxId, originText, sellerCode } from '@/lib/sellers'
-import { SubmitButton } from '@/components/SubmitButton'
+import { memberEmails } from '@/lib/team.server'
 import { rejectSignup } from './actions'
+import { SignupQueue } from './SignupQueue'
+
+// Refused requests listed for the last 30 days.
+function refusedSince() { return new Date(Date.now() - 30 * 86_400_000).toISOString() }
+const when = (d: string) => new Date(d).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' })
 
 // Sellers: each one belongs to one seller group and is paid by that group's rule. The row opens the seller file.
 export default async function SellersPage() {
   const { supabase, membership } = await requireAppContext()
   if (!atLeast(membership.role, 'supervisor')) return <section><PageHeader title="Vendedores" /><Card className="p-5 text-sm text-ink-soft">Sem permissão.</Card></section>
   const canEdit = atLeast(membership.role, 'manager')
-  const [groups, sellers, profiles, requests] = await Promise.all([
+  const since = refusedSince()
+  const [groups, sellers, profiles, requests, refused] = await Promise.all([
     supabase.from('commission_groups').select('id,name'),
     supabase.from('commercial_sellers').select('id,code,name,tax_id,seller_category,commission_group_id,is_active,user_id,origin,is_internal').order('code'),
     supabase.from('seller_profiles').select('seller_id,phone,email'),
     // Requests from the registration links (05/11/2026), visible to admin and manager only (the database enforces it).
     canEdit ? supabase.from('seller_signup_requests').select('id,name,tax_id,commission_group_id,created_at').eq('status', 'pending').order('created_at') : Promise.resolve({ data: [] }),
+    // Refused in the last 30 days: only name, document, who refused and when are kept (the data sent was erased).
+    canEdit ? supabase.from('seller_signup_requests').select('id,name,tax_id,decided_by,decided_at').eq('status', 'rejected').gte('decided_at', since).order('decided_at', { ascending: false }).limit(200) : Promise.resolve({ data: [] }),
   ])
   const docs = new Set((sellers.data ?? []).map(s => s.tax_id?.replace(/\D/g, '')).filter(Boolean))
   const groupName = new Map((groups.data ?? []).map(x => [x.id, x.name]))
   const profile = new Map((profiles.data ?? []).map(p => [p.seller_id, p]))
+  const refusedRows = (refused.data ?? []) as { id: string; name: string; tax_id: string; decided_by: string | null; decided_at: string }[]
+  const refusedBy = refusedRows.length ? await memberEmails(refusedRows.flatMap(r => r.decided_by ? [r.decided_by] : [])) : new Map<string, string>()
+  const docLabel = (t: string) => `${t.length === 11 ? 'CPF' : 'CNPJ'} ${formatTaxId(t)}`
 
   return (
     <section>
@@ -37,21 +48,25 @@ export default async function SellersPage() {
       {!!(requests.data ?? []).length && (
         <Card className="mb-4">
           <CardHeader title={<span className="flex items-center gap-2">Aguardando aprovação <Badge tone="pending">{requests.data?.length}</Badge></span>} />
-          <ul className="mt-3">
-            {(requests.data ?? []).map(r => (
-              <li key={r.id} className="flex flex-wrap items-center gap-3 border-t border-line px-5 py-3">
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold text-ink">{r.name}</span>
-                  <span className="block text-[13px] text-ink-soft">{r.tax_id.length === 11 ? 'CPF' : 'CNPJ'} {formatTaxId(r.tax_id)} · Grupo: {groupName.get(r.commission_group_id) ?? '—'} · enviado em {new Date(r.created_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' })}</span>
-                </span>
-                {docs.has(r.tax_id) && <Badge tone="pending">Já é vendedor</Badge>}
-                <ButtonLink href={`/app/cadastros/vendedores/novo?pedido=${r.id}`} size="sm">Ver e aprovar</ButtonLink>
-                <form action={rejectSignup}><input type="hidden" name="signup_id" value={r.id} />
-                  <SubmitButton className="h-8 rounded-lg border border-line-strong px-3 text-xs text-ink hover:bg-surface-muted" pendingText="...">Recusar</SubmitButton></form>
+          <div className="mt-3">
+            <SignupQueue key={(requests.data ?? []).map(r => r.id).join()} reject={rejectSignup} rows={(requests.data ?? []).map(r => ({
+              id: r.id, name: r.name, alreadySeller: docs.has(r.tax_id),
+              detail: `${docLabel(r.tax_id)} · Grupo: ${groupName.get(r.commission_group_id) ?? '—'} · enviado em ${when(r.created_at)}`,
+            }))} />
+          </div>
+        </Card>
+      )}
+      {refusedRows.length > 0 && (
+        <details className="mb-4 rounded-[14px] border border-line bg-surface">
+          <summary className="cursor-pointer px-5 py-3 text-sm font-semibold text-ink">Recusados nos últimos 30 dias <Badge tone="neutral">{refusedRows.length}</Badge></summary>
+          <ul>
+            {refusedRows.map(r => (
+              <li key={r.id} className="border-t border-line px-5 py-2 text-[13px] text-ink-soft">
+                <span className="font-semibold text-ink">{r.name}</span> · {docLabel(r.tax_id)} · recusado em {when(r.decided_at)}{r.decided_by && refusedBy.get(r.decided_by) ? ` por ${refusedBy.get(r.decided_by)}` : ''}
               </li>
             ))}
           </ul>
-        </Card>
+        </details>
       )}
       <Card>
         <CardHeader title={<span className="flex items-center gap-2">Vendedores <Badge tone="neutral">{sellers.data?.length ?? 0}</Badge></span>} />
