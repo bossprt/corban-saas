@@ -80,14 +80,15 @@ export function SideNav({ items }: { items: NavItem[] }) {
 }
 
 // Phone navigation: the most used destinations and "Mais", which opens the whole menu (every item, its sub-pages and Sair).
-const PHONE_MAIN = ['hoje', 'vendas', 'clientes', 'esteira', 'portal', 'portal_nova', 'repasse']
+// Order of preference (owner, 06/11/2026): Hoje · Esteira · Contratos · Repasse; Vendas and Clientes only fill a slot left by a module that is off.
+const PHONE_MAIN: NavKey[] = ['portal', 'portal_nova', 'hoje', 'esteira', 'contratos', 'repasse', 'vendas', 'clientes']
 export function BottomNav({ items, footer }: { items: NavItem[]; footer?: ReactNode }) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [at, setAt] = useState(pathname)
   // Close the menu after navigating (state reset on path change, no effect needed).
   if (at !== pathname) { setAt(pathname); setOpen(false) }
-  const main = items.filter(i => PHONE_MAIN.includes(i.key)).slice(0, 4)
+  const main = items.filter(i => PHONE_MAIN.includes(i.key)).sort((x, y) => PHONE_MAIN.indexOf(x.key) - PHONE_MAIN.indexOf(y.key)).slice(0, 4)
   const hasMore = items.some(i => !main.includes(i)) || !!footer
   const cols = main.length + (hasMore ? 1 : 0)
   return (

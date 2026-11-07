@@ -13,6 +13,8 @@ export default async function OrganizationPickerPage({ searchParams }: { searchP
   await acceptInvitationsFor(user) // an existing user invited to a second organization sees it here
   const { data: memberships } = await supabase.from('organization_memberships').select('organization_id, role').eq('user_id', user.id).eq('status', 'active')
   if (!memberships?.length) redirect('/access-pending')
+  // One company only: nothing to choose (requireAppContext opens the single active membership on its own).
+  if (new Set(memberships.map(m => m.organization_id)).size === 1) redirect('/app')
   const ids = memberships.map(m => m.organization_id)
   const { data: orgs } = await supabase.from('organizations').select('id, name').in('id', ids)
   const name = new Map((orgs ?? []).map(o => [o.id, o.name]))

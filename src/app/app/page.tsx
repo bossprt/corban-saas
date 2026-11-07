@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { requireAppContext } from '@/lib/appContext'
 import { isPortalUser } from '@/lib/portal'
 import { can } from '@/lib/access'
+import { atLeast } from '@/lib/rbac'
 import { OwnerDashboard, PERIODS, type PeriodKey } from './OwnerDashboard'
 import { OperatorDashboard } from './OperatorDashboard'
 import { SellerDashboard } from './SellerDashboard'
@@ -33,7 +34,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   if (can(access, 'financeiro.view')) {
     const raw = sp.periodo
     const period = (typeof raw === 'string' && raw in PERIODS ? raw : 'mes') as PeriodKey
-    return <>{tabs}<OwnerDashboard supabase={supabase} organizationId={membership.organization_id} organizationName={organization?.name} period={period} /></>
+    return <>{tabs}<OwnerDashboard supabase={supabase} organizationId={membership.organization_id} organizationName={organization?.name} period={period}
+      allAlertsHref={atLeast(membership.role, 'supervisor') ? '/app/atencao' : '/app/hoje'} /></>
   }
   return <>{tabs}<OperatorDashboard supabase={supabase} organizationId={membership.organization_id} organizationName={organization?.name}
     onlyUserId={membership.role === 'agent' ? user.id : undefined} /></>

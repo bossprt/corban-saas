@@ -12,3 +12,13 @@ export async function requirePlatformAdmin(): Promise<{ ok: true; userId: string
   if (error || !data) return { ok: false, status: 403 }
   return { ok: true, userId: user.id }
 }
+
+// Menu only (the /platform page checks again with requirePlatformAdmin): true for an active platform administrator. Any failure answers false.
+export async function isPlatformAdmin(userId: string): Promise<boolean> {
+  try {
+    const { data, error } = await createAdminClient().from('platform_administrators').select('user_id').eq('user_id', userId).eq('status', 'active').maybeSingle()
+    return !error && !!data
+  } catch {
+    return false
+  }
+}

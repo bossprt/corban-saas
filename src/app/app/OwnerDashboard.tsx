@@ -63,7 +63,8 @@ const STATE_LABEL: Record<string, string> = {
 
 // The owner's dashboard (06/10/2026, models A + D + B + E): the month in big numbers with the comparison, what needs
 // attention first, production per day, sellers, banks and the pipeline. Every number opens the list behind it.
-export async function OwnerDashboard({ supabase, organizationId, organizationName, period }: { supabase: Supa; organizationId: string; organizationName?: string; period: PeriodKey }) {
+// `allAlertsHref`: where the other alerts (leads, tasks, operation) live, so this money-only list never reads as "everything is fine".
+export async function OwnerDashboard({ supabase, organizationId, organizationName, period, allAlertsHref = '/app/hoje' }: { supabase: Supa; organizationId: string; organizationName?: string; period: PeriodKey; allAlertsHref?: string }) {
   const range = periodRange(period)
   const { data, error } = await supabase.rpc('owner_dashboard', { p_org: organizationId, p_from: range.from, p_to: range.to, p_prev_from: range.prevFrom, p_prev_to: range.prevTo })
   const board = data as Board | null
@@ -129,8 +130,9 @@ export async function OwnerDashboard({ supabase, organizationId, organizationNam
       </div>
 
       <Card className="mb-4">
-        <CardHeader title={<span className="flex items-center gap-2"><AlertTriangle size={16} aria-hidden className={alerts.length ? 'text-[#B45309]' : 'text-muted'} />Precisa da sua atenção</span>} />
-        {alerts.length === 0 ? <p className="px-5 pb-5 pt-2 text-sm text-muted">Nada fora do normal agora.</p> : (
+        <CardHeader title={<span className="flex items-center gap-2"><AlertTriangle size={16} aria-hidden className={alerts.length ? 'text-[#B45309]' : 'text-muted'} />Dinheiro e contratos</span>}
+          action={<Link href={allAlertsHref} className="text-sm text-brand hover:text-brand-strong">Ver todos os alertas</Link>} />
+        {alerts.length === 0 ? <p className="px-5 pb-5 pt-2 text-sm text-muted">Nada fora do normal no dinheiro e nos contratos. Leads e tarefas ficam em “Ver todos os alertas”.</p> : (
           <ul className="mt-2">{alerts.map(a => (
             <li key={a.label}><Link href={a.href} className="flex items-center justify-between gap-3 border-t border-line px-5 py-3 hover:bg-surface-muted">
               <span className="text-sm text-ink">{a.label}</span>
