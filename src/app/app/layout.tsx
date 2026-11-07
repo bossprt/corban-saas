@@ -14,6 +14,8 @@ import { REGISTRATIONS, REGISTRATION_SECTIONS } from '@/lib/registrations'
 import { signOut } from './actions'
 import { BillingNotice } from '@/components/shell/BillingNotice'
 import { isPlatformAdmin } from '@/lib/platform.server'
+import { brandCss, logoUrl } from '@/lib/branding'
+import { publicSupabaseEnv } from '@/lib/env'
 
 // `show` only decides what the menu offers; every page, action and RPC enforces the role again (a hidden link is not authorization).
 // `module`: the item appears only while that module is on for the company (plan).
@@ -79,17 +81,29 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ...(key === 'hoje' ? { children: hoje.length ? hoje : undefined } : {}),
   }))
   const initial = (organization.name ?? 'C').trim().charAt(0).toUpperCase()
+  // The company's own colors and logo (Configurações > Aparência); only validated #rrggbb colors reach the CSS.
+  const look = organization as typeof organization & { brand_color?: string | null; accent_color?: string | null; logo_path?: string | null }
+  const css = brandCss(look.brand_color, look.accent_color)
+  const logo = logoUrl(publicSupabaseEnv().url, organization.id, look.logo_path)
 
   return (
     <div className="min-h-screen bg-canvas text-ink md:flex">
+      {css ? <style>{css}</style> : null}
       <aside className="hidden w-[232px] shrink-0 flex-col gap-1 border-r border-line bg-surface px-3.5 py-5 md:sticky md:top-0 md:flex md:h-screen">
-        <div className="mb-4 flex items-center gap-2.5 px-2">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-brand text-[15px] font-bold text-white" aria-hidden>C</div>
-          <div className="min-w-0">
-            <div className="text-[15px] font-bold tracking-tight">Corban</div>
-            <div className="truncate text-[11px] text-muted" title={organization.name}>{organization.name}</div>
+        {logo ? (
+          <div className="mb-4 px-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={logo} alt={organization.name} className="h-12 w-auto max-w-[190px] object-contain object-left" />
           </div>
-        </div>
+        ) : (
+          <div className="mb-4 flex items-center gap-2.5 px-2">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-brand text-[15px] font-bold text-white" aria-hidden>{initial}</div>
+            <div className="min-w-0">
+              <div className="truncate text-[15px] font-bold tracking-tight" title={organization.name}>{organization.name}</div>
+              <div className="text-[11px] text-muted">Corban</div>
+            </div>
+          </div>
+        )}
         <SideNav items={items} />
         <div className="mt-auto border-t border-line px-2 pt-3 text-xs text-muted">
           <div>{access?.roleName ?? ROLE_LABEL[membership.role] ?? membership.role}</div>

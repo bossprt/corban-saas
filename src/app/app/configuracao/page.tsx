@@ -35,6 +35,8 @@ export default async function ConfigurationPage() {
     ['API', '/app/configuracao/api', 'Chaves para outros sistemas (ex.: DeskcommCRM) enviarem leads.'],
     ['Papéis e permissões', '/app/configuracao/papeis', 'O que cada papel pode fazer em cada módulo e quais dados enxerga.'],
     ...(membership.role === 'admin'
+      ? [['Aparência', '/app/configuracao/aparencia', 'Cores e logo da empresa no sistema.'] as [string, string, string]] : []),
+    ...(membership.role === 'admin'
       ? [['Bevicred', '/app/configuracao/bevicred', 'Credenciais da empresa no webservice da Bevicred.'] as [string, string, string]] : []),
   ]
   return <section>
