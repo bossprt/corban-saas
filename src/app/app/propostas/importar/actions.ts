@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
-import { can } from '@/lib/access'
+import { canImportBevicred, canImportContracts } from '@/lib/access'
 import { xlsxRows } from '@/lib/commercial-xlsx'
 import { csvRows } from '@/lib/imports/csv'
 import { enrichClient } from '@/lib/imports/client-enrich'
@@ -121,7 +121,9 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
   let meta: BevicredMeta[] = []
   const notices: string[] = []
   if (layout.api) {
-    const days = [7, 15, 30].includes(Number(formData.get('days'))) ? Number(formData.get('days')) : 7
+    // The search reads the whole company's production with the company credential: checked here, before any call.
+    if (!canImportBevicred(ctx.access)) return { result: { ...empty, api: true, error: 'Seu perfil não busca contratos na Bevicred. Peça ao administrador.' }, resolved: [] }
+    const days =[7, 15, 30].includes(Number(formData.get('days'))) ? Number(formData.get('days')) : 7
     const got = await fetchBevicredProduction(organization.id, days)
     if (!got.credentials) return { result: { ...empty, api: true, error: 'Cadastre a credencial da Bevicred em Configuração > Bevicred.' }, resolved: [] }
     notices.push(...got.errors)
@@ -415,9 +417,11 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
   return { result, resolved }
 }
 
+const NO_IMPORT = 'Seu perfil não importa contratos. Peça ao administrador.'
+
 export async function previewContracts(formData: FormData): Promise<ImportResult> {
   const ctx = await requireAppContext()
-  if (!can(ctx.access, 'propostas.create')) return { error: 'Sem permissão para cadastrar contratos.', fileIssues: [], ignored: [], tooMany: false, lines: [] }
+  if (!canImportContracts(ctx.access)) return { error: NO_IMPORT, fileIssues: [], ignored: [], tooMany: false, lines: [] }
   return (await resolve(ctx, formData)).result
 }
 
@@ -434,8 +438,7 @@ const rpcMessage = (m: string | undefined) => RPC_MESSAGE.find(([re]) => re.test
 // does not stop the others; the result says what happened to each.
 export async function importContracts(formData: FormData): Promise<ImportResult> {
   const ctx = await requireAppContext()
-  if (!can(ctx.access, 'propostas.create') || !can(ctx.access, 'clientes.create'))
-    return { error: 'Sem permissão para cadastrar contratos e clientes.', fileIssues: [], ignored: [], tooMany: false, lines: [] }
+  if (!canImportContracts(ctx.access)) return { error: NO_IMPORT, fileIssues: [], ignored: [], tooMany: false, lines: [] }
   const { result, resolved } = await resolve(ctx, formData)
   if (result.error || result.fileIssues.length) return result
   // A webservice line with an error cannot be fixed in a file: it is left out and the others are imported.
@@ -511,7 +514,8 @@ export async function importContracts(formData: FormData): Promise<ImportResult>
       out.messages = moveError ? [`Cadastrado, mas a etapa não mudou (${rpcMessage(moveError.message)})`, ...tail] : ['Cadastrado', ...tail]
     }
   }
-  if (learned.length) {
+  // The links are saved with the service key for the whole company: the same check as the search, again, right here.
+  if (learned.length && canImportBevicred(ctx.access)) {
     const seen = new Set<string>()
     const rows = learned.filter(x => { const k = `${x.kind}|${x.external_key}`; if (seen.has(k)) return false; seen.add(k); return true })
       .map(x => ({ ...x, organization_id: organization.id, updated_by: ctx.user.id, updated_at: new Date().toISOString() }))

@@ -25,6 +25,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 - Alterado: "Recusar" pede confirmação; "Recusar selecionados" com "Marcar todos"; lista "Recusados nos últimos 30 dias" com nome, CPF, quem recusou e quando (os dados enviados continuam apagados na recusa).
 - Corrigido: o aviso do topo (ex.: "Cadastro recusado") não aparece mais na próxima tela; abrir "Ver e aprovar" de um pedido já decidido mostra "Este pedido já foi decidido" em vez de um "Novo vendedor" em branco.
 - Migration `20261106234117_seller_signup_hardening_v1` local; aplicar em produção antes do merge.
+### Importar contratos e validação de documentos: travas de permissão (06/11/2026)
+- Segurança: Esteira > Importar contratos exige também "Editar propostas" (Vendedor e Corretor externo não abrem a tela, a ação nem o modelo). A busca na Bevicred (produção da empresa toda) e o vínculo "código do parceiro → vendedor" ficam só para Administrador, Gerente ou papel com escopo "toda a empresa", conferidos no servidor antes de usar a chave de serviço.
+- Segurança: migration `20261106234453_document_validation_role_guard_v1` (local; aplicar em produção antes do merge): item do checklist de documentos sempre nasce "faltando" (ninguém cria já validado ou dispensado pela API); motivo e aprovador da dispensa não mudam depois; usuário sem papel de Supervisor ou acima é recusado mesmo sem vínculo ativo. Contrato `tests/security/document-validation-role-contract.sql`.
 
 ### Filtro por prazo em Cadastros > Tabelas (06/11/2026)
 - Adicionado: filtro "Prazo (meses)" na pesquisa de tabelas: mostra as tabelas que têm alguma linha cujo prazo (mínimo a máximo) inclui o número digitado; vale junto com os outros filtros, na exportação e na "Nova pesquisa". Nova coluna "Prazos" com a faixa da versão mostrada. Sem mudança no banco.
