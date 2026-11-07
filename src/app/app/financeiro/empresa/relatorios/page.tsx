@@ -1,13 +1,13 @@
 import { Card, CardHeader, PageHeader } from '@/components/ui'
 import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
-import { brl, DRE_ORDER, monthLabel } from '@/lib/finance/labels'
+import { brlCents, DRE_ORDER, monthLabel, toCents } from '@/lib/finance/labels'
 import { FinanceTabs } from '../FinanceTabs'
 
 type Flow = { month: string; realized_in: string; realized_out: string; forecast_in: string; forecast_out: string }
 type Dre = { month: string; kind: string; account_code: string; account_name: string; total: string }
-const cents = (v: string | number) => Math.round(Number(v) * 100)
-const money = (c: number) => brl(c / 100)
+const cents = (v: string | number) => toCents(v)
+const money = (c: number) => brlCents(c)
 
 // Cash flow (realized by settlement date, forecast by due date) and income statement (by competence), by branch.
 export default async function FinanceReportsPage({ searchParams }: { searchParams: Promise<{ ano?: string; filial?: string }> }) {

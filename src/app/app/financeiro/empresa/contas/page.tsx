@@ -3,7 +3,7 @@ import { Badge, Card, CardHeader, PageHeader } from '@/components/ui'
 import { SubmitButton } from '@/components/SubmitButton'
 import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
-import { brl, dayLabel, FIN_BANKS } from '@/lib/finance/labels'
+import { brl, centsToDecimal, dayLabel, FIN_BANKS, toCents } from '@/lib/finance/labels'
 import { FinanceTabs } from '../FinanceTabs'
 import { saveBankAccount } from '../actions'
 
@@ -11,7 +11,7 @@ type BankEvent = { id: string; bank_account_id: string; kind: string; detail: Re
 const EVENT_LABEL: Record<string, string> = { created: 'Conta criada', opening_changed: 'Saldo inicial alterado', activated: 'Conta ativada', deactivated: 'Conta desativada' }
 type Bank = { id: string; bank_name: string; label: string; agency: string | null; account_number: string | null; opening_balance: string; opening_on: string; is_active: boolean }
 const label = 'text-[13px] font-medium text-ink-soft'
-const moneyText = (v: string) => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const moneyText = (v: string) => brl(centsToDecimal(toCents(v))).replace(/^(-?)R\$\s/, '$1')
 
 // Company bank accounts: opening balance and the balance from the settled entries. Changing the opening balance or its
 // date asks for a reason and stays in the account history (04/11/2026).

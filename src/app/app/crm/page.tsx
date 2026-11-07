@@ -26,7 +26,7 @@ const CLOSED_WINDOW_MS = 30 * 24 * 3600 * 1000
 function closedSince() { return new Date(Date.now() - CLOSED_WINDOW_MS).toISOString() }
 function nowMs() { return Date.now() }
 
-type Sp = SimulatorSp & { campanha?: string; vendedor?: string; q?: string; lead?: string; aba?: string }
+type Sp = SimulatorSp & { campanha?: string; vendedor?: string; q?: string; lead?: string; aba?: string; novo?: string }
 
 // Vendas: the team's board. Each seller sees their own leads (RLS); supervisors see their scope and filter by seller.
 export default async function SalesBoardPage({ searchParams }: { searchParams: Promise<Sp> }) {
@@ -40,31 +40,12 @@ export default async function SalesBoardPage({ searchParams }: { searchParams: P
   const seller = supervisor ? (sp.vendedor === 'eu' ? user.id : UUID.test(sp.vendedor ?? '') ? sp.vendedor! : null) : null
   const q = searchTerm(sp.q)
 
-  let leadsQuery = supabase.from('leads')
-    .select('id,full_name,status,stage_id,phone,metadata,next_contact_at,owner_user_id,campaign_id,customer_id,created_at')
-    .or(`status.in.(${OPEN_STAGES.join(',')}),stage_changed_at.gte.${closedSince()}`)
-    .order('created_at', { ascending: true })
-    .limit(3000)
-  if (campaign) leadsQuery = leadsQuery.eq('campaign_id', campaign)
-  if (seller) leadsQuery = leadsQuery.eq('owner_user_id', seller)
-  if (q) { const d = digitsOnly(q); leadsQuery = leadsQuery.or(d.length >= 4 ? `full_name.ilike.%${q}%,phone.ilike.%${d}%` : `full_name.ilike.%${q}%`) }
-
-  const [{ data: leads }, { data: campaigns }, { data: queue }, { data: members }, { data: stageRows }] = await Promise.all([
-    leadsQuery,
+  const [{ data: campaigns }, { data: queue }, { data: members }, { data: stageRows }] = await Promise.all([
     supabase.from('sales_campaigns').select('id,name,status').order('status').order('created_at', { ascending: false }),
     supabase.rpc('lead_queue_count', { p_org: organization.id, p_campaign: campaign }),
     supervisor ? supabase.from('organization_memberships').select('user_id').eq('status', 'active') : Promise.resolve({ data: [] as { user_id: string }[] }),
     supabase.from('sales_lead_stages').select('id,name,base_status,sort_order').eq('is_active', true).order('sort_order').order('name'),
   ])
-  const rows = leads ?? []
-  // Phones on the company's "Não perturbe" list (asked in one call; only phones travel).
-  const phoneOf = (r: { phone: string | null; metadata: unknown }) => [r.phone, ((r.metadata ?? {}) as { phone2?: string }).phone2].map(normalizePhone).filter(Boolean) as string[]
-  const phones = [...new Set(rows.flatMap(phoneOf))]
-  const { data: dndRows, error: dndError } = phones.length ? await supabase.rpc('dnd_phones_in', { p_org: organization.id, p_phones: phones }) : { data: [] as string[], error: null }
-  const dnd = new Set((dndRows ?? []) as string[])
-  const campaignName = new Map((campaigns ?? []).map(c => [c.id, c.name]))
-  const emails = supervisor ? await memberEmails([...(members ?? []).map(m => m.user_id), ...rows.map(r => r.owner_user_id).filter(Boolean) as string[]]) : new Map<string, string>()
-  const now = nowMs()
 
   // Columns: the company's stages over Novo / Em contato / Negociando (a step without stages keeps its own column),
   // then Proposta, Ganho and Perdido. A lead without a company stage shows in the first column of its step.
@@ -77,29 +58,67 @@ export default async function SalesBoardPage({ searchParams }: { searchParams: P
   }
   const firstOf = new Map<string, string>()
   for (const c of layout) if (!firstOf.has(c.base)) firstOf.set(c.base, c.key)
-  const known = new Set(layout.map(c => c.key))
-  const byColumn = new Map<string, BoardCard[]>(layout.map(c => [c.key, []]))
-  for (const r of rows) {
-    if (!isLeadStage(r.status)) continue
-    const column = r.stage_id && known.has(r.stage_id) ? r.stage_id : firstOf.get(r.status)!
-    byColumn.get(column)!.push({
-      id: r.id, name: r.full_name, status: r.status, column, campaign: r.campaign_id ? campaignName.get(r.campaign_id) ?? null : null,
+  const stageIds = layout.map(c => c.key).filter(k => UUID.test(k))
+
+  // Board from the database (audit 06/11/2026): each column asks for its own most urgent / newest cards and its real
+  // count, so a big campaign no longer hides the newest leads behind a 3.000-row cap. Every filter goes in one PostgREST
+  // expression (and(...)); the search term is already stripped of the filter language's characters.
+  const baseParts = [`or(status.in.(${OPEN_STAGES.join(',')}),stage_changed_at.gte.${closedSince()})`]
+  if (q) { const d = digitsOnly(q); baseParts.push(d.length >= 4 ? `or(full_name.ilike.%${q}%,phone.ilike.%${d}%)` : `full_name.ilike.%${q}%`) }
+  const noKnownStage = stageIds.length ? `or(stage_id.is.null,stage_id.not.in.(${stageIds.join(',')}))` : null
+  const inColumn = (col: { key: string; base: LeadStage }) => {
+    const ofBase = noKnownStage ? `and(status.eq.${col.base},${noKnownStage})` : `status.eq.${col.base}`
+    if (!UUID.test(col.key)) return ofBase
+    return firstOf.get(col.base) === col.key ? `or(stage_id.eq.${col.key},${ofBase})` : `stage_id.eq.${col.key}`
+  }
+  const where = (extra: string[]) => `and(${[...baseParts, ...extra].join(',')})`
+  const nowIso = new Date(nowMs()).toISOString()
+  const headCount = (extra: string[]) => {
+    let x = supabase.from('leads').select('id', { count: 'exact', head: true }).or(where(extra))
+    if (campaign) x = x.eq('campaign_id', campaign)
+    if (seller) x = x.eq('owner_user_id', seller)
+    return x
+  }
+  const [columnResults, openRes, overdueRes, wonRes] = await Promise.all([
+    Promise.all(layout.map(col => {
+      let x = supabase.from('leads')
+        .select('id,full_name,status,stage_id,phone,metadata,next_contact_at,owner_user_id,campaign_id,customer_id,created_at', { count: 'exact' })
+        .or(where([inColumn(col)]))
+      if (campaign) x = x.eq('campaign_id', campaign)
+      if (seller) x = x.eq('owner_user_id', seller)
+      // Open steps: the most urgent return first, then the newest lead. Closed steps: the newest first.
+      return ((OPEN_STAGES as readonly string[]).includes(col.base)
+        ? x.order('next_contact_at', { ascending: true, nullsFirst: false }).order('created_at', { ascending: false })
+        : x.order('created_at', { ascending: false })).limit(PER_COLUMN)
+    })),
+    headCount([`status.in.(${OPEN_STAGES.join(',')})`]),
+    headCount([`status.in.(${OPEN_STAGES.join(',')})`, `next_contact_at.lt.${nowIso}`]),
+    headCount(['status.eq.won']),
+  ])
+  const rows = columnResults.flatMap(r => r.data ?? [])
+  const boardError = columnResults.some(r => r.error) || !!openRes.error
+  // Phones on the company's "Não perturbe" list (asked in one call; only phones travel).
+  const phoneOf = (r: { phone: string | null; metadata: unknown }) => [r.phone, ((r.metadata ?? {}) as { phone2?: string }).phone2].map(normalizePhone).filter(Boolean) as string[]
+  const phones = [...new Set(rows.flatMap(phoneOf))]
+  const { data: dndRows, error: dndError } = phones.length ? await supabase.rpc('dnd_phones_in', { p_org: organization.id, p_phones: phones }) : { data: [] as string[], error: null }
+  const dnd = new Set((dndRows ?? []) as string[])
+  const campaignName = new Map((campaigns ?? []).map(c => [c.id, c.name]))
+  const emails = supervisor ? await memberEmails([...(members ?? []).map(m => m.user_id), ...rows.map(r => r.owner_user_id).filter(Boolean) as string[]]) : new Map<string, string>()
+  const now = nowMs()
+
+  const columns: BoardColumn[] = layout.map((col, i) => {
+    const res = columnResults[i]
+    const cards: BoardCard[] = (res.data ?? []).filter(r => isLeadStage(r.status)).map(r => ({
+      id: r.id, name: r.full_name, status: r.status as LeadStage, column: col.key, campaign: r.campaign_id ? campaignName.get(r.campaign_id) ?? null : null,
       owner: r.owner_user_id ? (r.owner_user_id === user.id ? 'Você' : (emails.get(r.owner_user_id) ?? 'Vendedor').split('@')[0]) : null,
       nextContact: r.next_contact_at, overdue: !!r.next_contact_at && new Date(r.next_contact_at).getTime() < now, isClient: !!r.customer_id,
       dnd: phoneOf(r).some(p => dnd.has(p)),
-    })
-  }
-  // Open steps: the most urgent return first, then the oldest lead.
-  const urgency = (c: BoardCard) => (c.nextContact ? new Date(c.nextContact).getTime() : Number.MAX_SAFE_INTEGER)
-  const columns: BoardColumn[] = layout.map(col => {
-    const cards = byColumn.get(col.key)!
-    if ((OPEN_STAGES as readonly string[]).includes(col.base)) cards.sort((a, b) => urgency(a) - urgency(b))
-    else cards.reverse()
-    return { ...col, cards: cards.slice(0, PER_COLUMN), total: cards.length }
+    }))
+    return { ...col, cards, total: res.count ?? cards.length }
   })
-  const openCount = rows.filter(r => (OPEN_STAGES as readonly string[]).includes(r.status)).length
-  const overdue = rows.filter(r => r.next_contact_at && new Date(r.next_contact_at).getTime() < now && (OPEN_STAGES as readonly string[]).includes(r.status)).length
-  const won = rows.filter(r => r.status === 'won').length
+  const openCount = openRes.count ?? 0
+  const overdue = overdueRes.count ?? 0
+  const won = wonRes.count ?? 0
   // The board's own filters: kept when a lead opens in the side panel and when it closes.
   const boardQuery = new URLSearchParams(Object.entries({ campanha: sp.campanha, vendedor: sp.vendedor, q: sp.q }).filter(([, v]) => v) as [string, string][])
   const boardHref = (extra: Record<string, string> = {}) => {
@@ -120,6 +139,7 @@ export default async function SalesBoardPage({ searchParams }: { searchParams: P
         description="Leads das campanhas e da integração, por etapa. Arraste o cartão para mudar a etapa; Proposta e Ganho seguem a proposta do cliente."
         actions={
           <>
+            {can(access, 'leads.create') && <ButtonLink href={`${boardHref({ novo: '1' })}#novo-lead`} variant="secondary"><UserPlus size={16} aria-hidden />Novo lead</ButtonLink>}
             <ButtonLink href="/app/simulacoes" variant="secondary"><Calculator size={16} aria-hidden />Simular</ButtonLink>
             {supervisor && <ButtonLink href="/app/crm/campanhas" variant="secondary"><Megaphone size={16} aria-hidden />Campanhas</ButtonLink>}
             <form action={takeNextLead}>
@@ -147,6 +167,28 @@ export default async function SalesBoardPage({ searchParams }: { searchParams: P
         ))}
       </div>
 
+      {can(access, 'leads.create') && (
+        <details id="novo-lead" open={sp.novo === '1'} className="mb-4 rounded-[12px] border border-line bg-surface">
+          <summary className="flex items-center gap-2 px-5 py-3.5 text-sm font-semibold text-ink"><UserPlus size={16} aria-hidden />Novo lead</summary>
+          <form action={createSalesLead} className="grid gap-4 border-t border-line px-5 py-4 sm:grid-cols-2 lg:grid-cols-6">
+            <label className={`${label} lg:col-span-2`}>Nome<input required name="full_name" minLength={2} maxLength={200} className="field mt-1.5" /></label>
+            <label className={label}>Telefone<input name="phone" inputMode="tel" placeholder="(68) 99999-0000" className="field mt-1.5" /></label>
+            <label className={label}>CPF<input name="cpf" inputMode="numeric" placeholder="000.000.000-00" className="field mt-1.5" /></label>
+            <label className={`${label} lg:col-span-2`}>Campanha
+              <select name="campaign_id" defaultValue={campaign ?? ''} className="field mt-1.5">
+                <option value="">Sem campanha</option>
+                {activeCampaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </label>
+            <label className={`${label} lg:col-span-2`}>E-mail<input name="email" type="email" className="field mt-1.5" /></label>
+            <div className="flex items-end lg:col-span-4">
+              <SubmitButton pendingText="Salvando..." className="inline-flex h-10 items-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Cadastrar lead</SubmitButton>
+              <span className="ml-3 text-xs text-muted">Informe o CPF ou um telefone. Se o CPF já for cliente, o lead fica ligado à ficha dele.</span>
+            </div>
+          </form>
+        </details>
+      )}
+
       <BoardSearch className="mb-4 flex flex-wrap items-end gap-3">
         <label className={`${label} min-w-[220px] flex-1`}>Buscar lead
           <input name="q" defaultValue={q ?? ''} placeholder="Nome, telefone ou CPF" className="field mt-1.5" />
@@ -169,6 +211,7 @@ export default async function SalesBoardPage({ searchParams }: { searchParams: P
         <button className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><Search size={15} aria-hidden />Filtrar</button>
       </BoardSearch>
 
+      {boardError && <p role="alert" className="mb-3 rounded-[10px] bg-[#FDF3DC] px-4 py-2 text-sm text-[#92400E]">Não foi possível carregar todo o quadro agora. Atualize a página em instantes.</p>}
       {dndError && <p role="alert" className="mb-3 rounded-[10px] bg-[#FDF3DC] px-4 py-2 text-sm text-[#92400E]">Não foi possível conferir a lista &quot;Não perturbe&quot; agora: os cartões podem estar sem a marca.</p>}
       <Board columns={columns} showOwner={supervisor} boardQuery={boardQuery.toString()} />
 
@@ -176,7 +219,7 @@ export default async function SalesBoardPage({ searchParams }: { searchParams: P
         <div className="fixed inset-0 z-40 flex justify-end">
           <Link href={boardHref()} aria-label="Fechar o lead" className="absolute inset-0 bg-ink/30" scroll={false} />
           <aside aria-label="Lead" className="relative h-full w-full max-w-[960px] overflow-y-auto bg-canvas px-4 py-5 shadow-2xl sm:px-6">
-            <Suspense fallback={null}><FlashBanner /></Suspense>
+            <Suspense fallback={null}><FlashBanner inPanel /></Suspense>
             <LeadDetail id={openLead} tab={tab} sp={sp}
               href={(t: LeadTab) => boardHref(t === 'resumo' ? { lead: openLead } : { lead: openLead, aba: t })}
               keep={{ ...Object.fromEntries(boardQuery), lead: openLead }} close={boardHref()} />
@@ -184,27 +227,6 @@ export default async function SalesBoardPage({ searchParams }: { searchParams: P
         </div>
       )}
 
-      {can(access, 'leads.create') && (
-        <details className="mt-6 rounded-[12px] border border-line bg-surface">
-          <summary className="flex items-center gap-2 px-5 py-3.5 text-sm font-semibold text-ink"><UserPlus size={16} aria-hidden />Novo lead</summary>
-          <form action={createSalesLead} className="grid gap-4 border-t border-line px-5 py-4 sm:grid-cols-2 lg:grid-cols-6">
-            <label className={`${label} lg:col-span-2`}>Nome<input required name="full_name" minLength={2} maxLength={200} className="field mt-1.5" /></label>
-            <label className={label}>Telefone<input name="phone" inputMode="tel" placeholder="(68) 99999-0000" className="field mt-1.5" /></label>
-            <label className={label}>CPF<input name="cpf" inputMode="numeric" placeholder="000.000.000-00" className="field mt-1.5" /></label>
-            <label className={`${label} lg:col-span-2`}>Campanha
-              <select name="campaign_id" defaultValue={campaign ?? ''} className="field mt-1.5">
-                <option value="">Sem campanha</option>
-                {activeCampaigns.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </label>
-            <label className={`${label} lg:col-span-2`}>E-mail<input name="email" type="email" className="field mt-1.5" /></label>
-            <div className="flex items-end lg:col-span-4">
-              <SubmitButton pendingText="Salvando..." className="inline-flex h-10 items-center rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong">Cadastrar lead</SubmitButton>
-              <span className="ml-3 text-xs text-muted">Informe o CPF ou um telefone. Se o CPF já for cliente, o lead fica ligado à ficha dele.</span>
-            </div>
-          </form>
-        </details>
-      )}
     </section>
   )
 }

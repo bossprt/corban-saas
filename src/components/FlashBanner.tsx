@@ -7,18 +7,22 @@ import { FEEDBACK, feedbackTone, isFeedbackCode } from '@/lib/feedback'
 // Shows the outcome of the last action. The text comes from a fixed whitelist keyed by the ?f= code; the code is removed from the address bar
 // afterwards so a refresh does not repeat the message. The message belongs to the page where it arrived: moving to another page hides it
 // (audit 06/11/2026: "Cadastro recusado" showed up on the next seller opened).
-export function FlashBanner() {
-  const raw = useSearchParams().get('f')
+// `inPanel`: the banner inside the Vendas side panel. While that panel is open the page banner stays quiet, so the same
+// message is not shown (and read aloud) twice.
+export function FlashBanner({ inPanel = false }: { inPanel?: boolean }) {
+  const params = useSearchParams()
+  const raw = params.get('f')
   const pathname = usePathname()
+  const yields = !inPanel && pathname === '/app/crm' && params.has('lead')
   const [flash, setFlash] = useState<{ code: string; path: string } | null>(null)
   useEffect(() => {
-    if (!raw) return
+    if (!raw || yields) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setFlash({ code: raw, path: pathname })
     const url = new URL(window.location.href)
     url.searchParams.delete('f')
     window.history.replaceState(null, '', url.pathname + (url.search || '') + url.hash)
-  }, [raw, pathname])
+  }, [raw, pathname, yields])
   // Forget it once the page changes, so coming back later does not bring it back either.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setFlash(f => (f && f.path !== pathname ? null : f)) }, [pathname])

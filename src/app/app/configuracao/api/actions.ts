@@ -2,7 +2,6 @@
 
 import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
-import { isUuid } from '@/lib/team'
 
 // One use per key: leads (CRM, site) or contracts (a bank or partner system such as NASP).
 const SCOPES = ['leads.write', 'contracts.write']
@@ -22,12 +21,4 @@ export async function createApiKey(_prev: CreateKeyState, formData: FormData): P
   const row = (Array.isArray(data) ? data[0] : data) as { api_key?: string } | null
   revalidatePath('/app/configuracao/api')
   return row?.api_key ? { key: row.api_key } : { error: 'Não foi possível criar a chave.' }
-}
-
-export async function revokeApiKey(formData: FormData) {
-  const { supabase, membership } = await requireAppContext()
-  const id = String(formData.get('key_id') ?? '')
-  if (membership.role !== 'admin' || !isUuid(id)) return
-  await supabase.rpc('revoke_api_key', { p_key_id: id })
-  revalidatePath('/app/configuracao/api')
 }

@@ -33,6 +33,14 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 - Adicionado: Central de atenção (supervisor ou acima) e Operação (módulo Esteira) dentro de Hoje; Mensalidade (administrador) e Plataforma (administrador da plataforma) no rodapé do menu.
 - Corrigido: Visão geral não contradiz mais a tela Hoje: o quadro passa a se chamar "Dinheiro e contratos" e tem link "Ver todos os alertas".
 - Corrigido: página de erro legível no tema claro e sem prometer que nada foi alterado; página 404 e de erro geral em português, também fora de /app; /organizacao com uma empresa só vai direto para /app; Operação pede confirmação antes de "Rejeitado" e "Cancelar". Sem mudança no banco.
+### Auditoria: Financeiro, Vendas e Vendedores (06/11/2026)
+- Corrigido: Conciliação por contrato filtra o período no banco, tem páginas e linha de totais (antes buscava os 5.000 últimos recebimentos e filtrava na memória).
+- Adicionado: Financeiro > "A receber dos bancos": todos os contratos pagos sem recebimento à vista, com o valor esperado e filtro por banco; marcar vários e registrar numa confirmação só (se um falhar, nenhum é gravado). Os números da home do Financeiro abrem a lista completa.
+- Corrigido: novo lançamento do financeiro da empresa mantém o que foi digitado quando dá erro; valor zero tem mensagem própria. Período com "Até" antes de "De" no relatório de comissões por vendedor é avisado no formulário. Somas de dinheiro em centavos (financeiro da empresa, DRE, extrato, contas, Metas). Tabelas do Financeiro e de Metas rolam no celular.
+- Corrigido: quadro de Vendas busca cada coluna no banco (mais urgentes e mais novos primeiro) com contagens reais; lead manual com CPF já aberto abre o lead existente; aviso "Lead registrado" não aparece mais duas vezes; "Novo lead" no topo.
+- Adicionado: busca (nome, código ou CPF/CNPJ, sem CPF na URL) e páginas na lista de vendedores; e-mails da equipe buscados numa chamada só.
+- Alterado: confirmação antes de Revogar chave de API (agora com mensagem de sucesso ou erro), Trocar link, Desativar acesso, Inativar vendedor e Recusar cadastro.
+- Migration `20261107001308_finance_crm_queues_v1` (local; aplicar em produção antes do merge).
 
 ### Filtro por prazo em Cadastros > Tabelas (06/11/2026)
 - Adicionado: filtro "Prazo (meses)" na pesquisa de tabelas: mostra as tabelas que têm alguma linha cujo prazo (mínimo a máximo) inclui o número digitado; vale junto com os outros filtros, na exportação e na "Nova pesquisa". Nova coluna "Prazos" com a faixa da versão mostrada. Sem mudança no banco.

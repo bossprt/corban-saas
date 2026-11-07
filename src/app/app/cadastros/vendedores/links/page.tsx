@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ConfirmSubmit } from '@/components/ConfirmSubmit'
 import { headers } from 'next/headers'
 import { ArrowLeft } from 'lucide-react'
 import { Badge, Card, CardHeader, PageHeader } from '@/components/ui'
@@ -48,7 +49,7 @@ export default async function SignupLinksPage() {
                     <form action={setSignupLinkActive}><input type="hidden" name="link_id" value={l.id} /><input type="hidden" name="active" value={String(!l.is_active)} />
                       <SubmitButton className={btn} pendingText="...">{l.is_active ? 'Desligar' : 'Ligar'}</SubmitButton></form>
                     <form action={newSignupLink}><input type="hidden" name="group_id" value={g.id} />
-                      <SubmitButton className={btn} pendingText="...">Trocar link</SubmitButton></form>
+                      <ConfirmSubmit confirm={`Trocar o link do grupo ${g.name}? O link atual para de funcionar na hora: quem já recebeu não conseguirá mais enviar o cadastro.`} className={btn} pendingText="...">Trocar link</ConfirmSubmit></form>
                   </>
                 )}
               </li>

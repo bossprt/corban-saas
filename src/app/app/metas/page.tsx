@@ -1,10 +1,10 @@
 import { Card, CardHeader, PageHeader } from '@/components/ui'
 import { requireAppContext } from '@/lib/appContext'
+import { brl, toCents } from '@/lib/finance/labels'
 import { atLeast, canManageTeam } from '@/lib/rbac'
 import { memberEmails } from '@/lib/team.server'
 import { saveDistribution, saveGoal } from './actions'
 
-const brl = (v: number | string) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 const MODE_LABEL: Record<string, string> = { round_robin: 'Rodízio entre quem recebe leads', queue: 'Fila aberta (quem pegar primeiro)', manual: 'Manual (supervisor distribui)' }
 const thisMonth = () => new Date().toISOString().slice(0, 7)
 
@@ -34,24 +34,26 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
       </form>
 
       <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className="bg-surface-muted text-xs font-semibold text-muted"><tr><th className="px-4 py-2.5">Pessoa</th><th className="px-4 py-2.5 text-right">Pago no mês</th><th className="px-4 py-2.5 text-right">Contratos</th><th className="px-4 py-2.5">Progresso</th>{canSetGoals && <th className="px-4 py-2.5">Meta</th>}</tr></thead>
           <tbody>
             {visibleMembers.map(m => {
               const r = byUser.get(m.user_id)
-              const target = Number(r?.target_amount ?? 0)
-              const paid = Number(r?.paid_amount ?? 0)
-              const pct = target > 0 ? Math.min(100, Math.round((paid / target) * 100)) : 0
+              // Integer cents (no float money); the percentage is only for the bar.
+              const target = toCents(r?.target_amount ?? '0')
+              const paid = toCents(r?.paid_amount ?? '0')
+              const pct = target > 0 ? Math.min(100, Math.floor((paid * 100) / target)) : 0
               return (
                 <tr key={m.id} className="border-t border-line">
                   <td className="px-4 py-2.5 text-ink">{emails.get(m.user_id) ?? 'Usuário'}</td>
-                  <td className="num px-4 py-2.5 text-right text-ink">{brl(r?.paid_amount ?? 0)}</td>
+                  <td className="num px-4 py-2.5 text-right text-ink">{brl(String(r?.paid_amount ?? '0'))}</td>
                   <td className="num px-4 py-2.5 text-right text-ink-soft">{r?.paid_count ?? 0}</td>
                   <td className="px-4 py-2.5">
                     {target > 0 ? (
                       <div className="flex items-center gap-2">
                         <div className="h-2 w-40 overflow-hidden rounded-full bg-[#F3F1EC]"><div className="h-2 rounded-full bg-brand" style={{ width: `${pct}%` }} /></div>
-                        <span className="num text-xs text-muted">{pct}% de {brl(target)}</span>
+                        <span className="num text-xs text-muted">{pct}% de {brl(String(r?.target_amount ?? '0'))}</span>
                       </div>
                     ) : <span className="text-xs text-muted">Sem meta</span>}
                   </td>
@@ -71,6 +73,7 @@ export default async function GoalsPage({ searchParams }: { searchParams: Promis
             {visibleMembers.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-muted">Nenhuma meta para mostrar.</td></tr>}
           </tbody>
         </table>
+        </div>
       </Card>
 
       {canManageTeam(membership.role) && (
