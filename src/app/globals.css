@@ -6,25 +6,38 @@
  * --brand is pluggable: each company's accent color is set on the app shell at runtime.
  */
 :root {
-  --brand: #0e5e5a;
-  --brand-strong: #0a4744;
-  --brand-soft: #e8f0ef;
+  /*
+   * Visual "cores da empresa" (owner, 07/11/2026): each company sees its own primary (--brand) and accent (--accent) colors;
+   * the shell overrides both at runtime. These defaults are Corban's own (blue + orange).
+   * Soft and strong shades are derived, so a company only has to choose two colors.
+   */
+  --brand: #0b5fa8;
+  --accent: #f57c00;
+  --brand-strong: color-mix(in srgb, var(--brand) 80%, black);
+  --brand-soft: color-mix(in srgb, var(--brand) 9%, white);
+  --accent-soft: color-mix(in srgb, var(--accent) 12%, white);
 
-  /* Cool neutral grays (Visão geral redesign 07/11/2026, direction "Demonstrativo"): the warm cream read as a template. */
-  --canvas: #f4f5f7;
+  --canvas: #f3f5f9;
   --surface: #ffffff;
-  --surface-muted: #f8f9fa;
-  --line: #e2e5e9;
-  --line-strong: #cfd4da;
-  --ink: #15191e;
-  --ink-soft: #3a414a;
-  --muted: #646b75;
+  --surface-muted: #f7f8fb;
+  --line: #e1e5ee;
+  --line-strong: #c8cfdc;
+  --ink: #111a2e;
+  --ink-soft: #46506a;
+  --muted: #5d667d;
 
-  /* Money and pipeline states: differ in lightness as well as hue. */
+  /* Charts: categorical series derived from the company colors (one hue per bank / pipeline stage). */
+  --chart-1: var(--brand);
+  --chart-2: var(--accent);
+  --chart-3: color-mix(in srgb, var(--brand) 45%, white);
+  --chart-4: color-mix(in srgb, var(--brand) 55%, black);
+  --chart-5: #2e9d6b;
+
+  /* Money and pipeline states: differ in lightness as well as hue. Red only for late, amber for attention. */
   --expected: #5b6b7f;
-  --received: #0e7a5f;
-  --diverged: #b45309;
-  --reversed: #b42318;
+  --received: #1a7f4b;
+  --diverged: #9a5800;
+  --reversed: #c4231c;
   --paid-out: #1d4ed8;
   --pending: #6d28d9;
 }
@@ -42,12 +55,19 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --color-brand: var(--brand);
   --color-brand-strong: var(--brand-strong);
   --color-brand-soft: var(--brand-soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
   --color-canvas: var(--canvas);
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
@@ -74,7 +94,7 @@
   --color-slate-300: var(--ink-soft);
   --color-slate-400: var(--muted);
   --color-slate-500: #6b7075;
-  --color-slate-600: #b9b5aa;
+  --color-slate-600: #c8cfdc;
   --color-slate-700: var(--line-strong);
   --color-slate-800: var(--line);
   --color-slate-900: var(--surface);
@@ -110,7 +130,7 @@ html {
 
 body {
   font-family: var(--font-sans);
-  font-feature-settings: "tnum" 0;
+  font-feature-settings: "tnum" 1, "lnum" 1;
 }
 
 .num {

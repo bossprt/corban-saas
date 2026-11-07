@@ -15,6 +15,24 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Visual "cores da empresa" e Visão geral com gráficos (07/11/2026)
+- **Origem:** o dono não gostou do visual em cinza e verde-petróleo (cara de IA) nem do teste em preto e amarelo (PR #211 fechado). Entre 3 maquetes coloridas, escolheu a de azul e laranja, nas cores da Smart.
+- **Cores:** a cor principal (`--brand`) e a de destaque (`--accent`) passam a ser variáveis. As versões clara, forte e as dos gráficos (`--chart-1..5`) são derivadas delas. O padrão é azul #0b5fa8 com laranja #f57c00. O fundo virou cinza frio #f3f5f9. O vermelho fica só para atraso e o âmbar para atenção.
+- **Fonte:** Manrope no lugar da IBM Plex.
+- **Menu:** o menu lateral ficou só com texto, e o item atual aparece com fundo claro e uma barra à esquerda. A barra de baixo do celular mantém os ícones.
+- **Visão geral:**
+  - 4 pendências com botão de ação no topo.
+  - Produção do período em linha acumulada, com uma barra por dia.
+  - Rosca da comissão por banco.
+  - Meio círculo do recebimento, dividido por banco.
+  - Resultado em degraus, da comissão prevista até "Fica na empresa".
+  - Esteira em barra colorida por etapa, com os atrasados.
+  - Parados há mais tempo.
+  - Vendedores com barra de participação.
+  - Bancos com a cor de cada um.
+- **Gráficos:** em SVG desenhado no servidor (`src/app/app/dashboard-charts.tsx`), sem biblioteca. O número decimal serve só para o desenho; todo valor em texto vem da aritmética exata.
+- **Sem migration:** cada empresa ainda não escolhe a própria cor e o próprio logo; isso fica para o próximo PR, que precisa de migration.
+
 ### Visão geral redesenhada, direção "Demonstrativo" (07/11/2026)
 - Alterado: a Visão geral do dono deixa de ser 4 caixas iguais. Pendências no topo como frases com valor e ação (Cobrar, Pagar, Conferir); "Resultado do período" como conta que fecha (produção paga, comissão prevista, impostos e comissões de supervisão/gerência, repasse, fica na empresa) com a comparação do período anterior; "Esteira agora" com quantidade, valor e atrasados por etapa; recebimento dos bancos com quanto falta; "Parados há mais tempo" (os 6 contratos além do prazo mais antigos); produção por dia; vendedores e bancos em tabela. Empresa sem dados vê o passo a passo (importar planilha, cadastrar vendedor).
 - Alterado: paleta clara do sistema em cinzas frios (fundo #f4f5f7, linhas #e2e5e9, texto #15191e) no lugar do creme; a cor de cada empresa continua igual.

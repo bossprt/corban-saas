@@ -38,7 +38,6 @@ export function SideNav({ items }: { items: NavItem[] }) {
   return (
     <nav aria-label="Principal" className="flex flex-col gap-0.5">
       {items.map(({ key, href, label, children, sections }) => {
-        const Icon = ICONS[key]
         const inSection = isActive(pathname, href) || (sections ?? []).some(s => isActive(pathname, s))
         const childActive = (children ?? []).some(c => isActive(pathname, c.href))
         const active = inSection && !childActive
@@ -49,15 +48,15 @@ export function SideNav({ items }: { items: NavItem[] }) {
               aria-current={active ? 'page' : undefined}
               aria-expanded={children ? inSection : undefined}
               className={cn(
-                'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors',
-                active ? 'bg-brand-soft font-semibold text-brand' : inSection ? 'font-semibold text-brand' : 'text-ink-soft hover:bg-surface-muted hover:text-ink',
+                'relative flex items-center justify-between rounded-md px-2.5 py-[7px] text-sm transition-colors',
+                active ? 'bg-brand-soft font-bold text-brand-strong before:absolute before:-left-3.5 before:inset-y-1.5 before:w-[3px] before:rounded-r before:bg-brand' : inSection ? 'font-bold text-brand-strong' : 'font-medium text-ink-soft hover:bg-surface-muted hover:text-ink',
               )}
             >
-              <Icon size={17} aria-hidden />
               {label}
+              {children && !inSection ? <span aria-hidden className="text-xs text-line-strong">›</span> : null}
             </Link>
             {children && inSection && (
-              <ul className="mb-1 ml-[21px] mt-0.5 flex flex-col gap-0.5 border-l border-line pl-2">
+              <ul className="mb-1 ml-3 mt-0.5 flex flex-col gap-0.5 border-l border-line pl-2">
                 {children.map(c => {
                   // Only the most specific child is marked (/app/financeiro vs /app/financeiro/empresa).
                   const on = isActive(pathname, c.href) && !children.some(o => o.href.length > c.href.length && isActive(pathname, o.href))
@@ -102,15 +101,14 @@ export function BottomNav({ items, footer }: { items: NavItem[]; footer?: ReactN
           <div className="flex-1 overflow-y-auto px-3 py-3">
             <nav aria-label="Menu completo" className="flex flex-col gap-0.5">
               {items.map(({ key, href, label, children }) => {
-                const Icon = ICONS[key]
                 return (
                   <div key={key}>
                     <Link href={href} onClick={() => setOpen(false)} aria-current={isActive(pathname, href) ? 'page' : undefined}
                       className={cn('flex min-h-12 items-center gap-3 rounded-lg px-3 text-[15px]', isActive(pathname, href) ? 'bg-brand-soft font-semibold text-brand' : 'text-ink')}>
-                      <Icon size={20} aria-hidden />{label}
+                      {label}
                     </Link>
                     {children && (
-                      <ul className="mb-1 ml-[22px] flex flex-col border-l border-line pl-3">
+                      <ul className="mb-1 ml-3 flex flex-col border-l border-line pl-3">
                         {children.map(c => (
                           <li key={c.href}><Link href={c.href} onClick={() => setOpen(false)} className="flex min-h-11 items-center text-sm text-ink-soft">{c.label}</Link></li>
                         ))}
