@@ -5,8 +5,9 @@ import { dateBr, PAYOUT_STATUS_LABEL, PAYOUT_STATUS_TONE } from '@/lib/payout/fo
 import { BankAccountSelect } from '@/components/BankAccountSelect'
 import type { BankOption } from '@/lib/finBankAccounts'
 import { decidePayout, markPaid, reversePayout } from './actions'
+import { todaySP } from '@/lib/dates'
 
-const todayIso = () => new Date().toISOString().slice(0, 10)
+const todayIso = () => todaySP()
 
 export type PayoutRow = { id: string; account_id: string; kind: string; period_start: string | null; period_end: string | null; carry_in: string | null; period_net: string | null; debt_deduction: string | null; amount: string; carry_out: string | null; status: string; requested_at: string; paid_on: string | null; payment_reference: string | null; note: string | null; reversal_reason?: string | null }
 

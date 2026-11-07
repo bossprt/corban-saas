@@ -1,6 +1,7 @@
 import 'server-only'
 import { BEVICRED_URL, classifyTokenResponse, PROBE_TEXT, type BevicredProbe } from '@/lib/bevicred'
 import { createAdminClient } from '@/lib/supabaseAdmin'
+import { addDaysISO, todaySP } from '@/lib/dates'
 
 export type BevicredCredential = {
   id: string; label: string; partner_hint: string
@@ -62,7 +63,7 @@ async function inBatches<T, R>(items: T[], size: number, fn: (t: T) => Promise<R
   return out
 }
 
-const dayBr = (back: number) => new Date(Date.now() - 3 * 3_600_000 - back * 86_400_000).toISOString().slice(0, 10)
+const dayBr = (back: number) => addDaysISO(todaySP(), -back)
 
 // The company's contracts in Bevicred's "produção sintética" for the last `days` import days (today included), from
 // every credential of the company. Read only. A credential that fails is reported by name and the others still count.

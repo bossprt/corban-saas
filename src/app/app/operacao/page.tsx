@@ -4,6 +4,7 @@ import { requireAppContext } from '@/lib/appContext'
 import { transitionOperationalCase } from './actions'
 import { atLeast } from '@/lib/rbac'
 import { OPERATIONAL_MESSAGES, caseStateLabel, isOperationalErrorCode, jobStatusLabel } from '@/lib/operational'
+import { formatDateTimeSP } from '@/lib/dates'
 
 export default async function OperationsPage({ searchParams }: { searchParams: Promise<{ erro?: string; ok?: string }> }) {
   const { supabase, membership } = await requireAppContext()
@@ -47,7 +48,7 @@ export default async function OperationsPage({ searchParams }: { searchParams: P
               <div><div className="text-xs text-muted"><Link href={`/app/propostas/${c.proposal_id}`} className="hover:text-brand">Proposta {c.proposal_id.slice(0, 8)}</Link></div><div className="mt-1 font-medium text-ink">{caseStateLabel(c.canonical_state).label}</div><div className="mt-1 text-xs text-ink-soft">{caseStateLabel(c.canonical_state).next}</div></div>
               <div className="text-sm text-ink-soft">{c.external_status_raw ?? 'Sem status externo'}</div>
             </div>
-            {c.due_at && <div className="mt-3 text-xs text-muted">SLA: {new Date(c.due_at).toLocaleString('pt-BR')}</div>}
+            {c.due_at && <div className="mt-3 text-xs text-muted">SLA: {formatDateTimeSP(c.due_at)}</div>}
             {!['approved','paid','rejected','cancelled'].includes(c.canonical_state) && <form action={transitionOperationalCase} className="mt-4 flex flex-wrap gap-2">
               <input type="hidden" name="case_id" value={c.id}/>
               {c.canonical_state === 'digitization_queue' && <button name="to_state" value="digitizing" className="inline-flex h-9 items-center rounded-[10px] bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-strong">Iniciar digitação</button>}

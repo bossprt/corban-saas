@@ -3,9 +3,10 @@ import { formatPhone } from '@/lib/cpf'
 import { ACCOUNT_TYPE_LABEL, ageOn, dateBr, GENDER_LABEL, MARITAL_LABEL, type ProfileFields } from '@/lib/clients/profile'
 import { brlText } from '@/lib/receipts/format'
 import { RevealPassword } from './RevealPassword'
+import { todaySP } from '@/lib/dates'
 
 // Read-only blocks of the client page, for roles without clientes.edit. Editors see the locked registration form instead.
-const todayIso = () => new Date().toISOString().slice(0, 10)
+const todayIso = () => todaySP()
 
 export type BankAccount = { id: string; bank_code: string; bank_name: string; branch: string; account_number: string; account_digit: string | null; account_type: string; is_primary: boolean }
 export type Registration = { id: string; agreement_id: string; agency_name: string | null; registration_number: string; status: string; margin_amount: string | null; margin_as_of: string | null;

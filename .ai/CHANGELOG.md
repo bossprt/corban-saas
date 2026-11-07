@@ -15,6 +15,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Datas e horas no horário de Brasília (06/11/2026)
+- Corrigido: "hoje", "este mês" e "este ano" das telas vêm do horário de Brasília (`src/lib/dates.ts`), não do relógio do servidor (UTC na Vercel). Depois das 21h, "Fechar período até" e "Marcar pago" não abrem mais em amanhã (o banco recusava), Metas não abre no mês seguinte e o fluxo de caixa não abre no ano seguinte.
+- Corrigido: horários da ficha do contrato, Esteira, Hoje, Operação, Atenção, Equipe, Validação, Portal e outras telas saem no horário de Brasília (antes: fuso do servidor, 3 horas adiantado em produção).
+- Sem migration (as funções do banco já usam o fuso de São Paulo; contrato `sao-paulo-today` confere).
+
 ### Contratos de cada pagamento de vendedor (06/11/2026)
 - Adicionado: "Ver contratos" em cada linha de Repasses (conta da pessoa e tela do repasse), também para "Pagar agora" e "Marcar pago" fora de lote: página com os contratos (ADE, cliente, banco · convênio · produto, liberado, pago ao cliente, comissão, link) e a composição: Soma dos contratos + outros lançamentos (vale, bônus, desconto, saldo anterior, desconto do negativo, negativo que passa para o próximo) = Total pago. Diferença aparece em vermelho, nunca escondida.
 - Adicionado: "ver contratos" em cada linha de "Pagar vendedores" e no botão "Pagar" da conta da pessoa, antes de pagar (mesmo valor que será gravado).

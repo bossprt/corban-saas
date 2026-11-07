@@ -19,6 +19,7 @@ import { ContractForm } from './ContractForm'
 import { loadProposalCatalog } from '@/lib/proposals/catalog'
 import { HistoryCard } from './HistoryCard'
 import { PhysicalCard } from './PhysicalCard'
+import { formatDateTimeSP } from '@/lib/dates'
 
 // "10000.00" -> "10.000,00" (typed back the same way; parsed without floating point).
 const decimalInput = (v: string | number | null) => (v === null || v === undefined ? '' : decimalBr(Number.isInteger(v) ? `${v}.00` : String(v), true))
@@ -67,7 +68,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
         <div>
           <div className="text-sm text-brand">Contrato {proposal.external_proposal_id ? `nº ${proposal.external_proposal_id}` : proposal.id.slice(0, 8)}</div>
           <h1 className="mt-1 text-2xl font-semibold text-ink"><Link href={`/app/clientes/${proposal.customer_id}`} className="hover:text-brand">{String(customer.full_name ?? 'Cliente')}</Link></h1>
-          <p className="mt-1 text-sm text-muted">Criado em {new Date(proposal.created_at).toLocaleString('pt-BR')}{proposal.paid_to_client_on ? ` · pago ao cliente em ${new Date(`${proposal.paid_to_client_on}T12:00:00Z`).toLocaleDateString('pt-BR')}` : ''}</p>
+          <p className="mt-1 text-sm text-muted">Criado em {formatDateTimeSP(proposal.created_at)}{proposal.paid_to_client_on ? ` · pago ao cliente em ${new Date(`${proposal.paid_to_client_on}T12:00:00Z`).toLocaleDateString('pt-BR')}` : ''}</p>
         </div>
         <div className="text-right"><Badge tone={paid ? 'received' : closed ? 'neutral' : 'pending'}>{status.label}</Badge><p className="mt-2 max-w-xs text-xs text-muted">{status.next}</p></div>
       </div>

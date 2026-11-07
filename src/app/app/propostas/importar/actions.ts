@@ -17,6 +17,7 @@ import {
   CONTRACT_LAYOUTS, MAX_CONTRACT_LINES, matchTable, matchTableByCode, normalize, parseContractSheet,
   type ContractLine, type HeaderIssue, type LineIssue,
 } from '@/lib/imports/contract-layout'
+import { todaySP } from '@/lib/dates'
 
 type Ctx = Awaited<ReturnType<typeof requireAppContext>>
 
@@ -66,7 +67,7 @@ const clientParts = (l: ContractLine) => [
   l.client.account ? 'conta bancária' : '', l.client.registration ? 'matrícula' : '',
 ].filter(Boolean)
 
-const todayBr = () => new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10)
+const todayBr = () => todaySP()
 
 type Resolved = {
   line: ContractLine

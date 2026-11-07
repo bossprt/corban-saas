@@ -6,6 +6,7 @@ import { SubmitButton } from '@/components/SubmitButton'
 import { isSeverity, SEVERITY_LABEL, SEVERITY_ORDER, type Severity } from '@/lib/attention-rules'
 import { loadAttention, type AttentionRow } from '@/lib/attention.server'
 import { decideAttention } from './actions'
+import { formatDateSP, formatDateTimeSP } from '@/lib/dates'
 
 const field = 'rounded-[8px] border border-line-strong bg-surface px-2 py-1.5 text-xs text-ink outline-none focus:border-brand'
 const TONE: Record<Severity, { border: string; text: string }> = {
@@ -42,10 +43,10 @@ export default async function AttentionPage() {
         <div className="mt-2 space-y-3">{list.map(i => <Card key={i.id} className="p-5" style={{ borderColor: TONE[sev].border }}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div><h3 className="font-medium text-ink">{i.title}</h3><p className="mt-1 text-sm text-muted">{i.reason}</p></div>
-            <span className="rounded-md border border-line px-2 py-0.5 text-xs text-ink-soft">{STATUS[i.status] ?? i.status}{i.status === 'snoozed' && i.snoozed_until ? ` até ${new Date(i.snoozed_until).toLocaleDateString('pt-BR')}` : ''}</span>
+            <span className="rounded-md border border-line px-2 py-0.5 text-xs text-ink-soft">{STATUS[i.status] ?? i.status}{i.status === 'snoozed' && i.snoozed_until ? ` até ${formatDateSP(i.snoozed_until)}` : ''}</span>
           </div>
           <dl className="mt-3 grid gap-2 text-xs text-muted md:grid-cols-3">
-            <div><dt className="text-ink-soft">Evidência</dt><dd>{i.evidence?.count ?? '—'} item(ns){i.evidence?.oldest_at ? `; o mais antigo desde ${new Date(i.evidence.oldest_at).toLocaleString('pt-BR')}` : ''}</dd></div>
+            <div><dt className="text-ink-soft">Evidência</dt><dd>{i.evidence?.count ?? '—'} item(ns){i.evidence?.oldest_at ? `; o mais antigo desde ${formatDateTimeSP(i.evidence.oldest_at)}` : ''}</dd></div>
             <div><dt className="text-ink-soft">Impacto</dt><dd>{i.impact}</dd></div>
             <div><dt className="text-ink-soft">Próxima ação sugerida</dt><dd>{i.recommendation}</dd></div>
           </dl>
@@ -53,7 +54,7 @@ export default async function AttentionPage() {
             <Link href={i.href} className="inline-flex h-8 items-center rounded-[10px] bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-strong">Abrir</Link>
             {persistent && <ItemActions item={i} />}
           </div>
-          {persistent && <details className="mt-3 text-xs text-muted"><summary className="cursor-pointer">Histórico</summary><ul className="mt-2 space-y-1">{events.filter(e => e.item_id === i.id).map((e, n) => <li key={n}>{new Date(e.created_at).toLocaleString('pt-BR')} · {EVENT[e.event] ?? e.event}{e.note ? ` — ${e.note}` : ''}</li>)}</ul></details>}
+          {persistent && <details className="mt-3 text-xs text-muted"><summary className="cursor-pointer">Histórico</summary><ul className="mt-2 space-y-1">{events.filter(e => e.item_id === i.id).map((e, n) => <li key={n}>{formatDateTimeSP(e.created_at)} · {EVENT[e.event] ?? e.event}{e.note ? ` — ${e.note}` : ''}</li>)}</ul></details>}
         </Card>)}</div>
       </div>
     })}

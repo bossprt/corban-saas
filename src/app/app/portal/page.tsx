@@ -7,6 +7,7 @@ import { fromDecimalString, toDecimalString } from '@/lib/commission/money'
 import { proposalStatusLabel } from '@/lib/operational'
 import { isPortalUser, SUBMISSION_LABEL } from '@/lib/portal'
 import { brlText } from '@/lib/receipts/format'
+import { formatDateSP } from '@/lib/dates'
 
 type Num = string | number
 type Submission = { proposal_id: string; status: string; decision_reason: string | null; created_at: string }
@@ -110,7 +111,7 @@ export default async function PortalHomePage() {
                     <Badge tone={TONE[s.status] ?? 'neutral'}>{SUBMISSION_LABEL[s.status]}</Badge>
                   </div>
                   <div className="mt-0.5 text-xs text-muted">
-                    {p?.commercial_snapshot?.bank} · {p?.commercial_snapshot?.table} · <span className="num">{brlText(p?.released_amount ?? p?.requested_amount)}</span>{p?.term ? ` em ${p.term}x` : ''} · {new Date(s.created_at).toLocaleDateString('pt-BR')}
+                    {p?.commercial_snapshot?.bank} · {p?.commercial_snapshot?.table} · <span className="num">{brlText(p?.released_amount ?? p?.requested_amount)}</span>{p?.term ? ` em ${p.term}x` : ''} · {formatDateSP(s.created_at)}
                   </div>
                   {s.status === 'rejected' && s.decision_reason && <div className="mt-1 text-xs text-[#991B1B]">Motivo: {s.decision_reason}</div>}
                 </Link>

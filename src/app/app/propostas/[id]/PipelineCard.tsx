@@ -1,6 +1,7 @@
 import { Badge, Card, CardHeader } from '@/components/ui'
 import { can, type Access } from '@/lib/access'
 import { StageSelect } from '../StageMove'
+import { formatDateSP, formatDateTimeSP } from '@/lib/dates'
 
 type Supa = Awaited<ReturnType<typeof import('@/lib/appContext').requireAppContext>>['supabase']
 
@@ -18,9 +19,9 @@ export async function PipelineCard({ supabase, access, proposalId }: { supabase:
     <Card className="mt-4">
       <CardHeader title={<span className="flex items-center gap-2">Esteira <Badge tone="paid-out">{stage?.name ?? c.canonical_state}</Badge></span>} />
       <div className="space-y-4 p-5 pt-3 text-sm">
-        <p className="text-muted">Nesta etapa desde {new Date(c.entered_stage_at).toLocaleString('pt-BR')}{c.due_at ? ` · prazo ${new Date(c.due_at).toLocaleString('pt-BR')}` : ''}</p>
+        <p className="text-muted">Nesta etapa desde {formatDateTimeSP(c.entered_stage_at)}{c.due_at ? ` · prazo ${formatDateTimeSP(c.due_at)}` : ''}</p>
         {c.pendency_reason && (
-          <p className="rounded-lg bg-[#FEF3C7] px-3 py-2 text-[#92400E]"><strong>Pendência:</strong> {c.pendency_reason}{c.pendency_due_at ? ` · resolver até ${new Date(c.pendency_due_at).toLocaleDateString('pt-BR')}` : ''}</p>
+          <p className="rounded-lg bg-[#FEF3C7] px-3 py-2 text-[#92400E]"><strong>Pendência:</strong> {c.pendency_reason}{c.pendency_due_at ? ` · resolver até ${formatDateSP(c.pendency_due_at)}` : ''}</p>
         )}
         {can(access, 'esteira.edit') && (
           <div className="max-w-md">

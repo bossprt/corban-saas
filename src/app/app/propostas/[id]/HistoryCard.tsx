@@ -5,6 +5,7 @@ import { decimalBr } from '@/lib/commission/tableValues'
 import { memberEmails } from '@/lib/team.server'
 import { addContractNote } from './contract-actions'
 import { CALC_FAILURE } from './CommissionCard'
+import { formatDateTimeSP } from '@/lib/dates'
 
 type Supa = Awaited<ReturnType<typeof import('@/lib/appContext').requireAppContext>>['supabase']
 type ContractEvent = { id: string; kind: string; detail: Record<string, unknown>; reason: string | null; actor_user_id: string | null; created_at: string }
@@ -42,7 +43,7 @@ function describe(e: ContractEvent): string {
     return `Comissão recebida (${name}) lançada à mão: ${how}`
   }
   if (e.kind === 'recalculated') return 'Comissão recalculada'
-  if (e.kind === 'physical') return `${({ received: 'Físico recebido pela empresa', sent: 'Físico enviado ao banco', bank: 'Físico recepcionado pelo banco' } as Record<string, string>)[String(d.step)] ?? 'Físico'} em ${new Date(String(d.at)).toLocaleString('pt-BR')}`
+  if (e.kind === 'physical') return `${({ received: 'Físico recebido pela empresa', sent: 'Físico enviado ao banco', bank: 'Físico recepcionado pelo banco' } as Record<string, string>)[String(d.step)] ?? 'Físico'} em ${formatDateTimeSP(String(d.at))}`
   if (e.kind === 'external_payout') return `Repasse pago fora do Corban: ${money(d.amount)} em ${new Date(`${String(d.paid_on)}T12:00:00Z`).toLocaleDateString('pt-BR')}`
   if (e.kind === 'calc_failed') return `Comissão não calculada: ${CALC_FAILURE[String(d.code)] ?? String(d.code ?? '')}`
   return e.kind
@@ -75,7 +76,7 @@ export async function HistoryCard({ supabase, proposalId }: { supabase: Supa; pr
           <li key={i.id} className="border-t border-line px-5 py-3 text-sm">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <span className="font-medium text-ink">{i.title}</span>
-              <span className="text-xs text-muted">{new Date(i.at).toLocaleString('pt-BR')}{i.actor ? ` · ${who.get(i.actor) ?? 'usuário'}` : ''}</span>
+              <span className="text-xs text-muted">{formatDateTimeSP(i.at)}{i.actor ? ` · ${who.get(i.actor) ?? 'usuário'}` : ''}</span>
             </div>
             <p className="mt-0.5 whitespace-pre-line text-ink-soft">{i.text}</p>
             {i.reason && <p className="mt-0.5 text-xs text-muted">Motivo: {i.reason}</p>}

@@ -15,10 +15,11 @@ import { PayBatch } from './PayBatch'
 import { bankAccountChoice } from '@/lib/finBankAccounts'
 import { payBatch } from './actions'
 import { loadPayList } from '@/lib/payout/pay-list'
+import { todaySP } from '@/lib/dates'
 
 type Summary = { account_id: string; holder_name: string; holder_kind: string; model: string; balance: string; available: string; pending_entries: number; open_payouts: number }
 type Pending = { id: string; account_id: string; kind: string; amount: string; effective_on: string; description: string | null; entry_group: string | null; created_at: string }
-const todayIso = () => new Date().toISOString().slice(0, 10)
+const todayIso = () => todaySP()
 
 // Payout home. Finance sees every account, the approvals and the period closing; a person goes to their own account.
 export default async function PayoutPage() {
