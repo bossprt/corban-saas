@@ -15,6 +15,13 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Cor e logo de cada empresa (07/11/2026)
+- **O que muda:** em Configurações > Aparência, o administrador da empresa escolhe a cor principal, a cor de destaque e o logo. Toda a equipe da empresa vê essas cores no sistema, e o logo aparece no topo do menu. "Voltar às cores do Corban" desfaz as cores.
+- **Banco de dados:** migration `20261107200000_org_branding_v1`. Ela acrescenta `organizations.brand_color`, `accent_color` e `logo_path`, com checagem de formato (#rrggbb, e o logo só dentro da pasta da própria empresa). Cria o bucket público `org-branding`: só PNG, JPG ou WebP, até 1 MB.
+- **Permissões:** só o administrador ativo da empresa envia o logo, e só para a pasta dela. Não há como alterar ou apagar um arquivo enviado. A RPC `set_org_branding` é SECURITY DEFINER, com search_path vazio, e só aceita o administrador ativo da empresa.
+- **Segurança:** o tipo do logo é decidido pelos bytes do arquivo, então SVG não passa. Só cores válidas chegam ao CSS, o que impede injetar código.
+- **Testes:** contrato `tests/security/org-branding-contract.sql` 14/14; unitários 311/311.
+
 ### Visual "cores da empresa" e Visão geral com gráficos (07/11/2026)
 - **Origem:** o dono não gostou do visual em cinza e verde-petróleo (cara de IA) nem do teste em preto e amarelo (PR #211 fechado). Entre 3 maquetes coloridas, escolheu a de azul e laranja, nas cores da Smart.
 - **Cores:** a cor principal (`--brand`) e a de destaque (`--accent`) passam a ser variáveis. As versões clara, forte e as dos gráficos (`--chart-1..5`) são derivadas delas. O padrão é azul #0b5fa8 com laranja #f57c00. O fundo virou cinza frio #f3f5f9. O vermelho fica só para atraso e o âmbar para atenção.

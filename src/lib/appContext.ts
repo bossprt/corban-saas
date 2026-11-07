@@ -52,7 +52,7 @@ const loadAppContext = cache(async (allowPendingTerms: boolean, allowBillingBloc
   const org = membership.organization_id
   // The company, the terms, the caller's access and the company's modules do not depend on each other: asked together.
   const [{ data: organization, error: organizationError }, termsResult, { data: accessRows }, { data: moduleRows }, { data: billingRow }] = await Promise.all([
-    rawClient.from('organizations').select('id, name').eq('id', org).single(),
+    rawClient.from('organizations').select('id, name, brand_color, accent_color, logo_path').eq('id', org).single(),
     allowPendingTerms ? Promise.resolve({ data: false }) : rawClient.rpc('terms_pending', { p_org: org }),
     rawClient.rpc('my_access', { p_org: org }),
     rawClient.rpc('my_modules', { p_org: org }),
