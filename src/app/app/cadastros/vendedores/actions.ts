@@ -8,6 +8,8 @@ import { classifyDbFeedback, FEEDBACK, feedbackUrl, type FeedbackCode } from '@/
 import { createMemberLogin } from '@/lib/team.server'
 import { PASSWORD_MAX, PASSWORD_MIN } from '@/lib/team'
 import { sellerData } from './sellerData'
+import { formatTaxId } from '@/lib/sellers'
+import { searchTerm } from '@/lib/search'
 
 const PATH='/app/cadastros/vendedores'
 const text=(f:FormData,k:string)=>String(f.get(k)??'').trim()
@@ -136,12 +138,33 @@ export async function setSignupLinkActive(f:FormData){
   return go(error?classifyDbFeedback(error):active?'ok:cadastro_link_ligado':'ok:cadastro_link_desligado',LINKS)
 }
 
-// Refusing a request erases what was sent; only name and document stay as a record.
+// Refusing one or several requests (after a confirmation on the screen) erases what was sent; name, document, who
+// refused and when stay as a record, listed under "Recusados". Requests already decided are skipped by the database.
 export async function rejectSignup(f:FormData){
   const ctx=await manager(); if(!ctx)return go('erro:sem_permissao')
-  const id=text(f,'signup_id')
-  if(!uuid(id))return go('erro:requisicao_invalida')
-  const {error}=await ctx.supabase.rpc('seller_signup_reject',{p_request:id})
-  if(error)return go(/signup_already_decided/.test(error.message??'')?'erro:cadastro_link_decidido':classifyDbFeedback(error))
-  return go('ok:cadastro_link_recusado')
+  const ids=[...new Set(f.getAll('signup_id').map(v=>String(v).trim()).filter(Boolean))]
+  if(!ids.length)return go('erro:cadastro_link_nenhum')
+  if(ids.length>200||!ids.every(uuid))return go('erro:requisicao_invalida')
+  const {data,error}=await ctx.supabase.rpc('seller_signup_reject_many',{p_requests:ids})
+  if(error)return go(classifyDbFeedback(error))
+  if(!data)return go('erro:cadastro_link_decidido')
+  return go(ids.length>1?'ok:cadastro_link_recusados':'ok:cadastro_link_recusado')
+}
+
+// Seller search (audit 06/11/2026). A CPF/CNPJ never goes in the address bar (RULES 2.7): it is looked up here and the
+// seller page opens directly. Names and codes become the list filter (?q=).
+export async function searchSellers(f:FormData){
+  const ctx=await requireAppContext()
+  if(!atLeast(ctx.membership.role,'supervisor'))return go('erro:sem_permissao')
+  const term=text(f,'q').slice(0,80)
+  const status=['ativos','inativos'].includes(text(f,'situacao'))?text(f,'situacao'):''
+  const digits=term.replace(/\D/g,'')
+  if((digits.length===11||digits.length===14)&&!/[a-z]/i.test(term)){
+    const { data }=await ctx.supabase.from('commercial_sellers').select('id').in('tax_id',[digits,formatTaxId(digits)]).limit(1)
+    const id=(data??[])[0]?.id
+    return id?redirect(`${PATH}/${id}`):redirect(feedbackUrl(PATH,'erro:vendedor_cpf_nao_encontrado'))
+  }
+  const q=searchTerm(term)
+  const qs=new URLSearchParams(Object.entries({q:q??'',situacao:status}).filter(([,v])=>v)).toString()
+  return redirect(`${PATH}${qs?`?${qs}`:''}`)
 }

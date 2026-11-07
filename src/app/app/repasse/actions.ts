@@ -4,8 +4,10 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { requireAppContext } from '@/lib/appContext'
 import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedback'
-import { assignBankAccount, bankAccountOf } from '@/lib/finBankAccounts'
+import { bankAccountOf } from '@/lib/finBankAccounts'
+import { expectedAmount, sumAmounts } from '@/lib/payout/pay-safety'
 import { isUuid } from '@/lib/team'
+import type { Breakdown } from '@/lib/payout/batches'
 import { parseMoneyInput } from '@/lib/money-input'
 import { parsePercentInput } from '@/lib/percent-input'
 
@@ -21,6 +23,8 @@ const payoutError = (m: string): FeedbackCode | null =>
   : /reference_required|invalid_paid_on/.test(m) ? 'erro:repasse_referencia'
   : /account_model_required/.test(m) ? 'erro:repasse_modelo'
   : /note_required/.test(m) ? 'erro:receita_motivo'
+  : /amount_changed/.test(m) ? 'erro:repasse_valor_mudou'
+  : /fin_bank_account_invalid/.test(m) ? 'erro:fin_conta_bancaria'
   : null
 const fail = (path: string, error: { message?: string; code?: string }): never => go(path, payoutError(error.message ?? '') ?? classifyDbFeedback(error))
 const back = (formData: FormData) => {
@@ -135,15 +139,17 @@ export async function reversePayout(formData: FormData) {
   return go(path, 'ok:repasse_desfeito')
 }
 
+// The payment and the company bank account it left from in one transaction (audit 06/11/2026): both or neither.
 export async function markPaid(formData: FormData) {
-  const { supabase, organization } = await requireAppContext()
+  const { supabase } = await requireAppContext()
   const path = back(formData)
   const payout = String(formData.get('payout_id') ?? '')
   if (!isUuid(payout)) return go(path, 'erro:requisicao_invalida')
-  const { error } = await supabase.rpc('mark_payout_paid', { p_payout: payout, p_paid_on: String(formData.get('paid_on') ?? '') || null, p_reference: String(formData.get('reference') ?? '') })
+  const { error } = await supabase.rpc('mark_payout_paid_with_bank', {
+    p_payout: payout, p_paid_on: String(formData.get('paid_on') ?? '') || null, p_reference: String(formData.get('reference') ?? ''), p_bank_account: bankAccountOf(formData),
+  })
   if (error) return fail(path, error)
-  await assignBankAccount(supabase, organization.id, 'payout', [payout], bankAccountOf(formData))
-  revalidatePath(path)
+  revalidatePath(path); revalidatePath('/app/financeiro/empresa')
   return go(path, 'ok:repasse_pago')
 }
 
@@ -159,35 +165,37 @@ export async function setAccountModel(formData: FormData) {
   return go(path, 'ok:modelo_alterado')
 }
 
-// Pay the account in one action (owner decision 29/09/2026, ADR-0048): the database computes the amount exactly as a
-// period closing (or the available balance), records who paid, when and the proof, and moves the money as before.
+// Pay the account in one action (owner decision 29/09/2026, ADR-0048). Audit 06/11/2026: the screen shows the exact
+// amount the database pays (payout_pay_now_amount) and sends it back; the database refuses when it is no longer that
+// amount (amount_changed) and records the company bank account in the same transaction.
 export async function payNow(formData: FormData) {
-  const { supabase, organization } = await requireAppContext()
+  const { supabase } = await requireAppContext()
   const account = String(formData.get('account_id') ?? '')
   const path = `/app/repasse/${account}`
   if (!isUuid(account)) return go('/app/repasse', 'erro:requisicao_invalida')
   const paidOn = String(formData.get('paid_on') ?? '')
   const reference = String(formData.get('reference') ?? '').trim()
+  const expected = expectedAmount(formData.get('expected'))
+  if (!expected) return go(path, 'erro:repasse_valor_mudou')
   // Proof is optional (owner, 29/09/2026): blank is recorded as "Sem comprovante informado" by the database.
   if (!/^\d{4}-\d{2}-\d{2}$/.test(paidOn) || reference.length > 120) return go(path, 'erro:repasse_referencia')
-  const { data: payout, error } = await supabase.rpc('pay_account_now', { p_account: account, p_paid_on: paidOn, p_reference: reference })
+  const { error } = await supabase.rpc('pay_account_confirmed', { p_account: account, p_paid_on: paidOn, p_reference: reference, p_expected: expected, p_bank_account: bankAccountOf(formData) })
   if (error) return fail(path, error)
-  // The company account the money left from (07/10/2026).
-  await assignBankAccount(supabase, organization.id, 'payout', isUuid(String(payout ?? '')) ? [String(payout)] : [], bankAccountOf(formData))
   revalidatePath(path); revalidatePath('/app/repasse'); revalidatePath('/app/financeiro/empresa')
   return go(path, 'ok:repasse_pago_agora')
 }
 
 export type PayBatchResult = { error?: string; ok: number; total: string; failed: { account: string; name: string; reason: string }[]; batchId?: string }
 const PAY_REASON: [RegExp, string][] = [
-  [/amount_changed/, 'o valor mudou desde que a lista foi aberta: atualize a página e confira antes de confirmar'],
+  [/amount_changed/, 'o valor mudou desde que a lista foi aberta: atualize a página e confira'],
   [/nothing_to_pay/, 'não há nada a pagar'],
   [/cannot_pay_yourself/, 'ninguém registra o pagamento da própria conta'],
   [/not_authorized/, 'sem permissão para pagar'],
 ]
 
-// Confirms the payments made in the bank, several accounts at once (owner request 06/10/2026). Each account is paid
-// exactly like "Pagar agora", and only when its amount is still the one on screen (the one paid by PIX or TED).
+// Confirms the payments made in the bank, several accounts at once (owner request 06/10/2026). Audit 06/11/2026: one
+// database call, all or nothing (pay_payout_batch): every amount must still be the one on screen, all are paid in one
+// batch with the company bank account, or nothing is recorded and the screen says who blocked it.
 export async function payBatch(formData: FormData): Promise<PayBatchResult> {
   const { supabase, organization } = await requireAppContext()
   const paidOn = String(formData.get('paid_on') ?? '')
@@ -198,28 +206,35 @@ export async function payBatch(formData: FormData): Promise<PayBatchResult> {
   const chosen = [...new Set(formData.getAll('account').map(String))].filter(isUuid)
   if (!chosen.length) return { ...empty, error: 'Marque pelo menos um vendedor.' }
   if (chosen.length > 300) return { ...empty, error: 'Marque no máximo 300 por vez.' }
-  const result: PayBatchResult = { ok: 0, total: '0.00', failed: [] }
-  // One confirmation is one batch (owner, 13/10/2026): its list, detail and "Desfazer lote" in Repasse > Lotes.
-  const batch = crypto.randomUUID()
-  let cents = BigInt(0)
-  const paid: string[] = []
-  for (const account of chosen) {
-    const expected = String(formData.get(`amount_${account}`) ?? '')
-    const name = String(formData.get(`name_${account}`) ?? 'Conta')
-    if (!/^\d{1,12}\.\d{2}$/.test(expected)) { result.failed.push({ account, name, reason: 'valor inválido' }); continue }
-    const { data: payout, error } = await supabase.rpc('pay_account_in_batch', { p_account: account, p_paid_on: paidOn, p_reference: reference, p_expected: expected, p_batch: batch })
-    if (!error && isUuid(String(payout ?? ''))) paid.push(String(payout))
-    if (error) { result.failed.push({ account, name, reason: PAY_REASON.find(([re]) => re.test(error.message ?? ''))?.[1] ?? 'não foi possível registrar' }); continue }
-    result.ok++
-    cents += BigInt(expected.replace('.', ''))
+  const nameOf = (account: string) => String(formData.get(`name_${account}`) ?? '') || undefined
+  const lines = chosen.map(account => ({ account, expected: expectedAmount(formData.get(`amount_${account}`)) }))
+  const invalid = lines.filter(l => !l.expected)
+  if (invalid.length) return { ...empty, error: 'Nada foi registrado: valor inválido na lista.', failed: invalid.map(l => ({ account: l.account, name: nameOf(l.account) ?? 'Conta', reason: 'valor inválido' })) }
+  const { data, error } = await supabase.rpc('pay_payout_batch', { p_org: organization.id, p_paid_on: paidOn, p_reference: reference, p_bank_account: bankAccountOf(formData), p_lines: lines })
+  if (error) {
+    const m = error.message ?? ''
+    const reason = PAY_REASON.find(([re]) => re.test(m))?.[1]
+    const named = String(error.details ?? '').split(',').map(s => s.trim()).filter(isUuid)
+    const failed = reason ? named.map(account => ({ account, name: nameOf(account) ?? 'Conta', reason })) : []
+    const text = /fin_bank_account_invalid/.test(m) ? ': a conta que pagou é inválida ou está desativada.'
+      : /invalid_paid_on/.test(m) ? ': a data do pagamento deve ser hoje ou antes.'
+      : failed.length ? '. Confira:'
+      : reason ? `: ${reason}.` : '. Tente de novo.'
+    return { ...empty, failed, error: `Nada foi registrado${text}` }
   }
-  result.total = `${cents / BigInt(100)}.${String(cents % BigInt(100)).padStart(2, '0')}`
-  if (result.ok) result.batchId = batch
-  // The company account the money left from (07/10/2026).
-  if (!(await assignBankAccount(supabase, organization.id, 'payout', paid, bankAccountOf(formData))))
-    result.error = 'Pagamentos registrados, mas a conta bancária não foi gravada: informe-a em Financeiro.'
+  const r = (data ?? {}) as { batch_id?: string; paid?: number; total?: string }
   revalidatePath('/app/repasse'); revalidatePath('/app/repasse/lotes'); revalidatePath('/app/financeiro/empresa')
-  return result
+  return { ok: Number(r.paid ?? 0), total: sumAmounts([r.total]), failed: [], batchId: r.batch_id }
+}
+
+// "ver contratos" in "Pagar vendedores" (owner, 06/11/2026): what paying this account now would pay, before paying.
+// Read only; the database checks who may see it (repasse.approve, never the own account).
+export async function loadPayPreview(account: string): Promise<{ data?: Breakdown & { total: string }; error?: string }> {
+  if (!isUuid(account)) return { error: 'Conta inválida.' }
+  const { supabase } = await requireAppContext()
+  const { data, error } = await supabase.rpc('payout_pay_preview', { p_account: account })
+  if (error || !data) return { error: 'Não foi possível carregar os contratos.' }
+  return { data: data as Breakdown & { total: string } }
 }
 
 // "Desfazer lote": every payment of the batch still paid, at once (administrators; the database checks).

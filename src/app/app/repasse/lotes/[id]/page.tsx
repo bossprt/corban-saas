@@ -6,11 +6,13 @@ import { requireAppContext } from '@/lib/appContext'
 import { isUuid } from '@/lib/team'
 import { brlText } from '@/lib/receipts/format'
 import { dateBr, PAYOUT_STATUS_LABEL, PAYOUT_STATUS_TONE } from '@/lib/payout/format'
-import { batchItemLabel, batchStatus, type BatchDetail } from '@/lib/payout/batches'
+import { batchStatus, type BatchDetail } from '@/lib/payout/batches'
+import { batchTotals } from '@/lib/payout/pay-safety'
 import { Printer } from 'lucide-react'
 import { formatTaxId } from '@/lib/sellers'
 import { payTo } from '@/app/imprimir/sheets'
 import { reverseBatch } from '../../actions'
+import { PayoutBreakdown } from '../../PayoutBreakdown'
 
 const box = 'rounded-[14px] border border-line bg-surface px-4 py-3'
 const btn = 'inline-flex h-9 items-center rounded-[10px] border border-line-strong bg-surface px-3 text-sm hover:bg-surface-muted print:hidden'
@@ -25,8 +27,9 @@ export default async function PayoutBatchPage({ params }: { params: Promise<{ id
   const { data, error } = await supabase.rpc('payout_batch_detail', { p_batch: id })
   if (error || !data) notFound()
   const b = data as BatchDetail
-  const undone = b.lines.filter(l => l.status === 'reversed').length
-  const st = batchStatus({ payouts: b.lines.length, undone })
+  // Same rule as the print and the Excel (06/11/2026): only effective payments count; the undone ones apart.
+  const totals = batchTotals(b.lines)
+  const st = batchStatus({ payouts: b.lines.length, undone: totals.undoneCount })
   const stillPaid = b.lines.some(l => l.status === 'paid')
 
   return (
@@ -40,8 +43,8 @@ export default async function PayoutBatchPage({ params }: { params: Promise<{ id
 
       <div className="mb-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <div className={box}><div className="text-xs text-muted">Pagamento dia</div><div className="num mt-1 font-semibold text-ink">{dateBr(b.paid_on)}</div></div>
-        <div className={box}><div className="text-xs text-muted">Pessoas pagas</div><div className="num mt-1 font-semibold text-ink">{b.lines.length}</div></div>
-        <div className={box}><div className="text-xs text-muted">Valor total</div><div className="num mt-1 font-semibold text-ink">{brlText(b.total)}</div></div>
+        <div className={box}><div className="text-xs text-muted">Pessoas pagas</div><div className="num mt-1 font-semibold text-ink">{totals.paidCount}</div>{totals.undoneCount > 0 && <div className="text-xs text-muted">{totals.undoneCount} desfeito(s)</div>}</div>
+        <div className={box}><div className="text-xs text-muted">Valor pago</div><div className="num mt-1 font-semibold text-ink">{brlText(totals.paidTotal)}</div>{totals.undoneCount > 0 && <div className="text-xs text-muted">desfeito {brlText(totals.undoneTotal)}</div>}</div>
         <div className={box}><div className="text-xs text-muted">Conta que pagou</div><div className="mt-1 font-semibold text-ink">{b.bank_accounts ?? '—'}</div></div>
         <div className={box}><div className="text-xs text-muted">Comprovante · pago por</div><div className="mt-1 text-sm text-ink">{b.payment_reference ?? '—'} · {b.paid_by ?? '—'}</div></div>
         <div className={box}><div className="text-xs text-muted">Situação</div><div className="mt-1"><Badge tone={st.tone}>{st.label}</Badge></div></div>
@@ -64,27 +67,8 @@ export default async function PayoutBatchPage({ params }: { params: Promise<{ id
               </div>
             </div>
             {l.reversal_reason && <p className="px-4 pt-2 text-xs text-muted">Motivo: {l.reversal_reason}</p>}
-            {l.contracts.length ? (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[720px] text-left text-[13px]">
-                  <thead className="bg-surface-muted text-xs font-semibold text-muted">
-                    <tr><th className="px-4 py-2">Contrato</th><th className="px-4 py-2">Cliente</th><th className="px-4 py-2">Banco · convênio · produto</th><th className="px-4 py-2 text-right">Liberado</th><th className="px-4 py-2">Pago ao cliente</th><th className="px-4 py-2 text-right">Comissão</th></tr>
-                  </thead>
-                  <tbody>
-                    {l.contracts.map((c, k) => (
-                      <tr key={`${c.proposal_id ?? c.kind}-${k}`} className="border-t border-line">
-                        <td className="px-4 py-2">{c.proposal_id ? <Link href={`/app/propostas/${c.proposal_id}`} className="hover:underline">{batchItemLabel(c)}</Link> : batchItemLabel(c)}</td>
-                        <td className="px-4 py-2 text-ink-soft">{c.client ?? ''}</td>
-                        <td className="px-4 py-2 text-ink-soft">{[c.bank, c.agreement, c.product].filter(Boolean).join(' · ')}</td>
-                        <td className="num px-4 py-2 text-right text-ink-soft">{c.released ? brlText(c.released) : '—'}</td>
-                        <td className="px-4 py-2 text-ink-soft">{c.paid_to_client_on ? dateBr(c.paid_to_client_on) : '—'}</td>
-                        <td className="num px-4 py-2 text-right font-medium text-ink">{brlText(c.amount)}{c.partial && <span className="ml-1 text-xs text-[#92400E]">(em parte)</span>}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : <p className="px-4 py-3 text-sm text-muted">{l.kind === 'withdrawal' ? 'Saque do saldo' : l.status === 'reversed' ? 'Contratos voltaram para o próximo pagamento' : 'Sem contratos'}</p>}
+            {l.status === 'reversed' ? <p className="px-4 py-3 text-sm text-muted">Contratos voltaram para o próximo pagamento</p>
+              : <PayoutBreakdown b={l} total={l.amount} empty={l.kind === 'withdrawal' ? 'Saque do saldo sem contratos' : 'Sem contratos'} />}
           </Card>
         ))}
       </div>

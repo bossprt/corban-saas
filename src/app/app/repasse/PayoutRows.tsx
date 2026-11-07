@@ -2,16 +2,20 @@ import Link from 'next/link'
 import { Badge } from '@/components/ui'
 import { brlText } from '@/lib/receipts/format'
 import { dateBr, PAYOUT_STATUS_LABEL, PAYOUT_STATUS_TONE } from '@/lib/payout/format'
+import { BankAccountSelect } from '@/components/BankAccountSelect'
+import type { BankOption } from '@/lib/finBankAccounts'
 import { decidePayout, markPaid, reversePayout } from './actions'
+import { todaySP } from '@/lib/dates'
 
-const todayIso = () => new Date().toISOString().slice(0, 10)
+const todayIso = () => todaySP()
 
 export type PayoutRow = { id: string; account_id: string; kind: string; period_start: string | null; period_end: string | null; carry_in: string | null; period_net: string | null; debt_deduction: string | null; amount: string; carry_out: string | null; status: string; requested_at: string; paid_on: string | null; payment_reference: string | null; note: string | null; reversal_reason?: string | null }
 
 // Statements and withdrawals with their approval and payment actions (the database enforces who may do what).
 // payTo: the seller's primary payment account per payout account, shown next to "Marcar pago" (only when the viewer may see bank data).
 // canReverse: administrators may undo a payment registered but not made in the bank (the database allows only the last one).
-export function PayoutRows({ rows, names, back, canApprove, canPay, payTo, canReverse }: { rows: PayoutRow[]; names?: Map<string, string>; back: string; canApprove: boolean; canPay: boolean; payTo?: Map<string, string>; canReverse?: boolean }) {
+// banks: the company accounts for "Marcar pago" (the payment and the account are recorded together).
+export function PayoutRows({ rows, names, back, canApprove, canPay, payTo, canReverse, banks }: { rows: PayoutRow[]; names?: Map<string, string>; back: string; canApprove: boolean; canPay: boolean; payTo?: Map<string, string>; canReverse?: boolean; banks?: { banks: BankOption[]; suggested: string } }) {
   const today = todayIso()
   return (
     <div className="overflow-x-auto">
@@ -24,7 +28,9 @@ export function PayoutRows({ rows, names, back, canApprove, canPay, payTo, canRe
           {rows.map(p => (
             <tr key={p.id} className="border-t border-line align-top">
               {names && <td className="px-3 py-2"><Link href={`/app/repasse/${p.account_id}`} className="text-ink hover:underline">{names.get(p.account_id) ?? 'Conta'}</Link></td>}
-              <td className="px-3 py-2">{p.kind === 'closing' ? `Fechamento até ${dateBr(p.period_end)}` : 'Saque'}{p.note && <div className="text-xs text-muted">{p.note}</div>}</td>
+              <td className="px-3 py-2">{p.kind === 'closing' ? `Fechamento até ${dateBr(p.period_end)}` : 'Saque'}{p.note && <div className="text-xs text-muted">{p.note}</div>}
+                {/* Contracts of this payment and how its amount is made (owner, 06/11/2026). */}
+                <div><Link href={`/app/repasse/pagamento/${p.id}`} className="text-xs font-medium text-brand hover:underline">Ver contratos</Link></div></td>
               <td className="num px-3 py-2 text-right">{brlText(p.carry_in)}</td>
               <td className="num px-3 py-2 text-right">{brlText(p.period_net)}</td>
               <td className="num px-3 py-2 text-right">{brlText(p.debt_deduction)}</td>
@@ -58,7 +64,12 @@ export function PayoutRows({ rows, names, back, canApprove, canPay, payTo, canRe
                   <form action={markPaid} className="flex flex-wrap gap-1"><input type="hidden" name="payout_id" value={p.id} /><input type="hidden" name="back" value={back} />
                     <input type="date" name="paid_on" defaultValue={today} max={today} className="field h-8 w-36 text-xs" aria-label="Data do pagamento" />
                     <input name="reference" required minLength={3} placeholder="Comprovante (PIX, TED)" className="field h-8 w-40 text-xs" />
-                    <button className="h-8 rounded-md border border-line px-2 text-xs hover:bg-surface-muted">Marcar pago</button></form>
+                    {banks && <BankAccountSelect banks={banks.banks} suggested={banks.suggested} label="Conta que pagou" labelClass="flex items-center gap-1 text-xs text-muted" selectClass="field h-8 w-40 text-xs" />}
+                    <details className="group">
+                      <summary className="inline-flex h-8 cursor-pointer list-none items-center rounded-md border border-line px-2 text-xs hover:bg-surface-muted group-open:hidden">Marcar pago</summary>
+                      <span className="inline-flex items-center gap-1 text-xs text-ink">Registrar {brlText(p.amount)} como pago?
+                        <button className="h-8 rounded-md bg-brand px-2 text-xs font-semibold text-white hover:bg-brand-strong">Sim, registrar</button></span>
+                    </details></form>
                 )}
               </td>
             </tr>

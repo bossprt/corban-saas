@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ConfirmSubmit } from '@/components/ConfirmSubmit'
 import { Card, PageHeader } from '@/components/ui'
 import { requireAppContext } from '@/lib/appContext'
 import { canManageMemberRole, canManageTeam, rolesAssignableBy } from '@/lib/rbac'
@@ -8,6 +9,7 @@ import { changeMemberHierarchy, changeMemberRole, changeMemberStatus, createMemb
 import { PasswordPair } from '@/components/PasswordPair'
 import { SubmitButton } from '@/components/SubmitButton'
 import { SCOPE_LABEL, SCOPES } from '@/lib/access'
+import { formatDateSP, formatDateTimeSP } from '@/lib/dates'
 
 const btn = 'inline-flex h-8 items-center rounded-[10px] border border-line bg-surface px-2.5 text-xs text-ink hover:bg-surface-muted'
 const selectSm = 'rounded-[8px] border border-line-strong bg-surface px-2 py-1 text-xs text-ink outline-none focus:border-brand'
@@ -85,7 +87,7 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
           </details>
           <form action={changeMemberStatus}><input type="hidden" name="membership_id" value={m.id} />
             {m.status === 'active'
-              ? <><input type="hidden" name="status" value="inactive" /><button className={btn} title="Bloqueia o acesso imediatamente; pode ser reativado">Desativar acesso</button></>
+              ? <><input type="hidden" name="status" value="inactive" /><ConfirmSubmit confirm={`Desativar o acesso de ${emails.get(m.user_id) ?? 'esta pessoa'}? Ela perde o acesso na hora; dá para reativar depois.`} className={btn} pendingText="..." title="Bloqueia o acesso imediatamente; pode ser reativado">Desativar acesso</ConfirmSubmit></>
               : <><input type="hidden" name="status" value="active" /><button className={btn}>Reativar acesso</button></>}</form>
         </div>}
       </Card>
@@ -96,7 +98,7 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
     <div className="mt-3 space-y-2">{pending.map(i => {
       const manageable = canManageMemberRole(membership.role, null, i.role)
       return <Card key={i.id} className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm">
-        <div><strong className="text-ink">{i.email}</strong><div className="mt-1 text-xs text-muted">{ROLE_LABEL[i.role] ?? i.role} · vence em {new Date(i.expires_at).toLocaleDateString('pt-BR')}</div></div>
+        <div><strong className="text-ink">{i.email}</strong><div className="mt-1 text-xs text-muted">{ROLE_LABEL[i.role] ?? i.role} · vence em {formatDateSP(i.expires_at)}</div></div>
         {manageable && <div className="flex gap-2">
           <form action={revokeInvitation}><input type="hidden" name="invitation_id" value={i.id} /><button className={btn}>Cancelar</button></form>
         </div>}
@@ -105,6 +107,6 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
     {past.length > 0 && <p className="mt-3 text-xs text-muted">Anteriores: {past.map(i => `${i.email} (${INVITE_STATUS_LABEL[i.status] ?? i.status})`).join(' · ')}</p>}
 
     <h2 className="mt-8 text-xl font-semibold text-ink">Últimas alterações</h2>
-    {!events.data?.length ? <Card className="mt-3 p-5"><p className="text-sm text-muted">Nenhuma alteração registrada.</p></Card> : <ul className="mt-3 space-y-1 text-xs text-muted">{events.data.map(e => <li key={e.id}>{new Date(e.occurred_at).toLocaleString('pt-BR')} · {e.event_type === 'invite_created' && (e.details as { with_password?: boolean } | null)?.with_password ? 'Acesso criado com senha' : AUDIT_LABEL[e.event_type] ?? 'Alteração de configuração'}{e.target_email ? ` · ${e.target_email}` : ''}</li>)}</ul>}
+    {!events.data?.length ? <Card className="mt-3 p-5"><p className="text-sm text-muted">Nenhuma alteração registrada.</p></Card> : <ul className="mt-3 space-y-1 text-xs text-muted">{events.data.map(e => <li key={e.id}>{formatDateTimeSP(e.occurred_at)} · {e.event_type === 'invite_created' && (e.details as { with_password?: boolean } | null)?.with_password ? 'Acesso criado com senha' : AUDIT_LABEL[e.event_type] ?? 'Alteração de configuração'}{e.target_email ? ` · ${e.target_email}` : ''}</li>)}</ul>}
   </section>
 }

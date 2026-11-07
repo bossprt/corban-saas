@@ -1,9 +1,11 @@
 import { Badge, Card, CardBody, CardHeader, PageHeader } from '@/components/ui'
+import { ConfirmSubmit } from '@/components/ConfirmSubmit'
 import { requireAppContext } from '@/lib/appContext'
-import { revokeApiKey } from './actions'
+import { revokeApiKey } from './revoke-action'
 import { CreateKeyForm } from './CreateKeyForm'
+import { formatDateTimeSP } from '@/lib/dates'
 
-const when = (iso: string | null) => (iso ? new Date(iso).toLocaleString('pt-BR') : '—')
+const when = (iso: string | null) => (iso ? formatDateTimeSP(iso) : '—')
 const code = 'font-mono text-[13px]'
 const SCOPE_LABEL: Record<string, string> = { 'leads.write': 'Leads', 'contracts.write': 'Contratos' }
 
@@ -54,7 +56,7 @@ export default async function ApiSettingsPage() {
                   {!k.revoked_at && (
                     <form action={revokeApiKey}>
                       <input type="hidden" name="key_id" value={k.id} />
-                      <button className="text-sm text-[#991B1B] hover:underline">Revogar</button>
+                      <ConfirmSubmit confirm={`Revogar a chave "${k.name}"? O sistema que usa esta chave passa a ser recusado na hora, e isso não pode ser desfeito.`} pendingText="Revogando..." className="text-sm text-[#991B1B] hover:underline">Revogar</ConfirmSubmit>
                     </form>
                   )}
                 </td>

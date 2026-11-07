@@ -2,8 +2,10 @@ import Link from 'next/link'
 import { Card, PageHeader } from '@/components/ui'
 import { requireAppContext } from '@/lib/appContext'
 import { transitionOperationalCase } from './actions'
+import { ConfirmStateButton } from './ConfirmStateButton'
 import { atLeast } from '@/lib/rbac'
 import { OPERATIONAL_MESSAGES, caseStateLabel, isOperationalErrorCode, jobStatusLabel } from '@/lib/operational'
+import { formatDateTimeSP } from '@/lib/dates'
 
 export default async function OperationsPage({ searchParams }: { searchParams: Promise<{ erro?: string; ok?: string }> }) {
   const { supabase, membership } = await requireAppContext()
@@ -19,7 +21,7 @@ export default async function OperationsPage({ searchParams }: { searchParams: P
   ])
 
   return <section>
-    <PageHeader title="Operação" description="Fila de digitação e esteira técnica separadas da apresentação comercial." />
+    <PageHeader title="Operação" description="Fila de digitação e andamento de cada proposta no banco." />
     {isOperationalErrorCode(sp.erro) && <p role="alert" className="mb-4 rounded-[10px] border border-[#F3D9A4] bg-[#FDF3DC] px-4 py-3 text-sm text-[#92400E]">{OPERATIONAL_MESSAGES[sp.erro]}</p>}
     {sp.ok && <p role="status" className="mb-4 rounded-[10px] border border-[#BBE5C8] bg-[#E3F5E9] px-4 py-3 text-sm text-[#15803D]">Transição registrada.</p>}
     {(casesResult.error || jobsResult.error) && <p role="alert" className="mb-4 rounded-[10px] border border-[#F5C2C0] bg-[#FDE2E1] px-4 py-3 text-sm text-[#991B1B]">Não foi possível carregar toda a esteira agora. Os dados abaixo podem estar incompletos.</p>}
@@ -47,7 +49,7 @@ export default async function OperationsPage({ searchParams }: { searchParams: P
               <div><div className="text-xs text-muted"><Link href={`/app/propostas/${c.proposal_id}`} className="hover:text-brand">Proposta {c.proposal_id.slice(0, 8)}</Link></div><div className="mt-1 font-medium text-ink">{caseStateLabel(c.canonical_state).label}</div><div className="mt-1 text-xs text-ink-soft">{caseStateLabel(c.canonical_state).next}</div></div>
               <div className="text-sm text-ink-soft">{c.external_status_raw ?? 'Sem status externo'}</div>
             </div>
-            {c.due_at && <div className="mt-3 text-xs text-muted">SLA: {new Date(c.due_at).toLocaleString('pt-BR')}</div>}
+            {c.due_at && <div className="mt-3 text-xs text-muted">SLA: {formatDateTimeSP(c.due_at)}</div>}
             {!['approved','paid','rejected','cancelled'].includes(c.canonical_state) && <form action={transitionOperationalCase} className="mt-4 flex flex-wrap gap-2">
               <input type="hidden" name="case_id" value={c.id}/>
               {c.canonical_state === 'digitization_queue' && <button name="to_state" value="digitizing" className="inline-flex h-9 items-center rounded-[10px] bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-strong">Iniciar digitação</button>}
@@ -55,9 +57,9 @@ export default async function OperationsPage({ searchParams }: { searchParams: P
               {c.canonical_state === 'submitted' && <button name="to_state" value="pending_external" className="inline-flex h-9 items-center rounded-[10px] border border-line bg-surface px-3 text-xs font-semibold text-ink hover:bg-surface-muted">Aguardando banco</button>}
               {['submitted','pending_external'].includes(c.canonical_state) && atLeast(membership.role,'supervisor') && <>
                 <button name="to_state" value="approved" className="inline-flex h-9 items-center rounded-[10px] bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-strong">Aprovado</button>
-                <button name="to_state" value="rejected" className="inline-flex h-9 items-center rounded-[10px] bg-[#FDE2E1] px-3 text-xs font-semibold text-[#991B1B]">Rejeitado</button>
+                <ConfirmStateButton value="rejected" question="Marcar este caso como rejeitado pelo banco? Não dá para desfazer." className="inline-flex h-9 items-center rounded-[10px] bg-[#FDE2E1] px-3 text-xs font-semibold text-[#991B1B]">Rejeitado</ConfirmStateButton>
               </>}
-              {atLeast(membership.role,'supervisor') && <button name="to_state" value="cancelled" className="inline-flex h-9 items-center rounded-[10px] border border-line bg-surface px-3 text-xs text-ink-soft hover:bg-surface-muted">Cancelar</button>}
+              {atLeast(membership.role,'supervisor') && <ConfirmStateButton value="cancelled" question="Cancelar este caso? Não dá para desfazer." className="inline-flex h-9 items-center rounded-[10px] border border-line bg-surface px-3 text-xs text-ink-soft hover:bg-surface-muted">Cancelar</ConfirmStateButton>}
             </form>}
           </Card>)}
           {!casesResult.data?.length && <Card className="p-8 text-center text-sm text-muted">Nenhum caso operacional.</Card>}

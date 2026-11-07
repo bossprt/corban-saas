@@ -15,10 +15,11 @@ import { PayBatch } from './PayBatch'
 import { bankAccountChoice } from '@/lib/finBankAccounts'
 import { payBatch } from './actions'
 import { loadPayList } from '@/lib/payout/pay-list'
+import { todaySP } from '@/lib/dates'
 
 type Summary = { account_id: string; holder_name: string; holder_kind: string; model: string; balance: string; available: string; pending_entries: number; open_payouts: number }
 type Pending = { id: string; account_id: string; kind: string; amount: string; effective_on: string; description: string | null; entry_group: string | null; created_at: string }
-const todayIso = () => new Date().toISOString().slice(0, 10)
+const todayIso = () => todaySP()
 
 // Payout home. Finance sees every account, the approvals and the period closing; a person goes to their own account.
 export default async function PayoutPage() {
@@ -53,7 +54,7 @@ export default async function PayoutPage() {
   const emails = await memberEmails((members ?? []).map(m => m.user_id))
   // Paying several sellers at once (06/10/2026): who may approve a payment pays in the bank and confirms here.
   const payLines = canApprove ? await loadPayList(supabase, organization.id) : []
-  const payBanks = canApprove ? await bankAccountChoice(supabase, 'payout') : { banks: [], suggested: '' }
+  const payBanks = canApprove || canCreate ? await bankAccountChoice(supabase, 'payout') : { banks: [], suggested: '' }
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
   // One row per manual entry group (installments of the same advance are approved together).
   const groups = new Map<string, Pending & { count: number; total: Rational }>()
@@ -143,7 +144,7 @@ export default async function PayoutPage() {
 
       <Card className="overflow-hidden">
         <CardHeader title="Repasses em aberto" />
-        <PayoutRows rows={(payoutRows ?? []) as PayoutRow[]} names={names} back="/app/repasse" canApprove={canApprove} canPay={canCreate || canApprove} payTo={payTo} />
+        <PayoutRows rows={(payoutRows ?? []) as PayoutRow[]} names={names} back="/app/repasse" canApprove={canApprove} canPay={canCreate || canApprove} payTo={payTo} banks={payBanks} />
       </Card>
     </section>
   )

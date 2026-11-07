@@ -8,6 +8,7 @@ import { isUuid } from '@/lib/team'
 import type { HierarchyBasis, ReferenceKind } from '@/lib/commission/groupRule'
 import { saveSellerGroup } from '../actions'
 import { GroupForm, type GroupRuleValues } from '../GroupForm'
+import { formatDateSP } from '@/lib/dates'
 
 // One seller group: its payout rule in the same form used to create it ("novo" creates a new group).
 export default async function SellerGroupPage({ params }: { params: Promise<{ id: string }> }) {
@@ -56,7 +57,7 @@ export default async function SellerGroupPage({ params }: { params: Promise<{ id
           <span className="flex flex-wrap items-center gap-2">
             {!mine ? <Badge tone="pending">Regra pendente</Badge> : mine.own_production ? <Badge tone="brand">Produção própria</Badge> : <Badge tone="received">Regra configurada</Badge>}
             {!group!.is_active && <Badge tone="neutral">Inativo</Badge>}
-            {mine && <span>Versão {mine.version} de {versions} · desde {new Date(mine.created_at).toLocaleDateString('pt-BR')}</span>}
+            {mine && <span>Versão {mine.version} de {versions} · desde {formatDateSP(mine.created_at)}</span>}
           </span>
         )}
       />

@@ -8,6 +8,7 @@ import { decimalBr } from '@/lib/commission/tableValues'
 import { brlText } from '@/lib/receipts/format'
 import { calculateCommission } from './commission-actions'
 import { registerExternalPayout, registerManualReceipt, setPayoutOverride } from './contract-actions'
+import { formatDateTimeSP } from '@/lib/dates'
 
 type Supa = Awaited<ReturnType<typeof import('@/lib/appContext').requireAppContext>>['supabase']
 type Line = { component_key: string; part: string; multiplier: number; line_kind: string; amount: string }
@@ -126,7 +127,7 @@ export async function CommissionCard({ supabase, access, proposalId, closed, can
           ) : <p className="text-muted">Os valores desta comissão são visíveis para o vendedor do contrato e para o financeiro.</p>
         ) : (
           <>
-            <p className="mb-3 text-xs text-muted">Calculada em {new Date(calc.calculated_at).toLocaleString('pt-BR')} · imposto {calc.tax_exempt ? 'não paga' : `${pctBr(calc.tax_rate_pct)}%`}{calc.ir_withheld_pct && Number(calc.ir_withheld_pct) ? ` · IR retido ${pctBr(calc.ir_withheld_pct)}%` : ''}{calc.installments ? ` · diferido em ${calc.installments} parcelas` : ''}</p>
+            <p className="mb-3 text-xs text-muted">Calculada em {formatDateTimeSP(calc.calculated_at)} · imposto {calc.tax_exempt ? 'não paga' : `${pctBr(calc.tax_rate_pct)}%`}{calc.ir_withheld_pct && Number(calc.ir_withheld_pct) ? ` · IR retido ${pctBr(calc.ir_withheld_pct)}%` : ''}{calc.installments ? ` · diferido em ${calc.installments} parcelas` : ''}</p>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[760px] text-left text-[13px]">
                 <thead className="text-xs text-muted">

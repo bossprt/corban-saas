@@ -13,22 +13,24 @@ import { isPortalUser } from '@/lib/portal'
 import { REGISTRATIONS, REGISTRATION_SECTIONS } from '@/lib/registrations'
 import { signOut } from './actions'
 import { BillingNotice } from '@/components/shell/BillingNotice'
+import { isPlatformAdmin } from '@/lib/platform.server'
 
 // `show` only decides what the menu offers; every page, action and RPC enforces the role again (a hidden link is not authorization).
 // `module`: the item appears only while that module is on for the company (plan).
 const NAV: (NavItem & { show?: (role: string) => boolean; module?: string; perm?: Permission })[] = [
-  { key: 'hoje', href: '/app/hoje', label: 'Hoje' },
-  { key: 'dashboard', href: '/app', label: 'Dashboard' },
+  { key: 'hoje', href: '/app/hoje', label: 'Hoje', sections: ['/app/atencao', '/app/operacao'] },
+  { key: 'dashboard', href: '/app', label: 'Visão geral' },
   { key: 'clientes', href: '/app/clientes', label: 'Clientes', module: 'clientes' },
   // Sales CRM (V2): campaigns, queue and the team's board.
   { key: 'vendas', href: '/app/crm', label: 'Vendas', module: 'leads', perm: 'leads.view' },
   { key: 'esteira', href: '/app/propostas', label: 'Esteira', module: 'esteira' },
   // Contract search with the commission of each one (part C1).
   { key: 'contratos', href: '/app/contratos', label: 'Contratos', module: 'esteira' },
-  { key: 'metas', href: '/app/metas', label: 'Metas' },
   { key: 'financeiro', href: '/app/financeiro', label: 'Financeiro', module: 'financeiro', perm: 'financeiro.view' },
   // Everyone may have a payout account (their own statement); finance sees all accounts on the same screen.
   { key: 'repasse', href: '/app/repasse', label: 'Repasse', module: 'repasse' },
+  // Order follows the money (owner, 06/11/2026): sale → pipeline → contract → commission received → payout, then goals.
+  { key: 'metas', href: '/app/metas', label: 'Metas' },
   // Everything the company registers (banks, tables, seller groups, sellers, team...) under one item; clients stay separate.
   { key: 'comercial', href: '/app/cadastros', label: 'Cadastros', show: r => atLeast(r, 'supervisor'), module: 'comercial', sections: REGISTRATION_SECTIONS },
   { key: 'relatorios', href: '/app/relatorios', label: 'Relatórios', module: 'relatorios' },
@@ -58,13 +60,23 @@ const PORTAL_NAV: NavItem[] = [
 ]
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const { organization, membership, membershipCount, modules, access, billing } = await requireAppContext()
+  const { organization, membership, membershipCount, modules, access, billing, user } = await requireAppContext()
   const portal = isPortalUser(access?.roleKey, modules)
+  // Under Hoje: the alert center (supervisor and above, as the page itself requires) and the digitization queue.
+  const todayPages = [
+    ...(atLeast(membership.role, 'supervisor') ? [{ href: '/app/atencao', label: 'Central de atenção' }] : []),
+    ...(modules.has('esteira') ? [{ href: '/app/operacao', label: 'Operação' }] : []),
+  ]
+  const hoje = todayPages.length ? [{ href: '/app/hoje', label: 'Hoje' }, ...todayPages] : []
+  // Platform link only for an active platform administrator (a failure hides the link).
+  const platformAdmin = !portal && await isPlatformAdmin(user.id)
+  const isAdmin = membership.role === 'admin'
   const items: NavItem[] = portal ? PORTAL_NAV : NAV.filter(n => (!n.show || n.show(membership.role)) && (!n.module || modules.has(n.module)) && (!n.perm || can(access, n.perm))).map(({ key, href, label, sections }) => ({
     key, href, label, sections,
     ...(key === 'comercial' ? { children: REGISTRATIONS.filter(r => !r.teamOnly || canManageTeam(membership.role)).map(r => ({ href: r.href, label: r.label })) } : {}),
     ...(key === 'financeiro' ? { children: FINANCE_PAGES } : {}),
     ...(key === 'vendas' ? { children: SALES_PAGES } : {}),
+    ...(key === 'hoje' ? { children: hoje.length ? hoje : undefined } : {}),
   }))
   const initial = (organization.name ?? 'C').trim().charAt(0).toUpperCase()
 
@@ -82,6 +94,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="mt-auto border-t border-line px-2 pt-3 text-xs text-muted">
           <div>{access?.roleName ?? ROLE_LABEL[membership.role] ?? membership.role}</div>
           {membershipCount > 1 && <Link href="/organizacao" className="underline hover:text-ink">Trocar empresa</Link>}
+          {isAdmin && <div><Link href="/mensalidade" className="underline hover:text-ink">Mensalidade</Link></div>}
+          {platformAdmin && <div><Link href="/platform" className="underline hover:text-ink">Plataforma</Link></div>}
           {!portal && <div className="mt-2"><ImprovementLink /></div>}
           <form action={signOut}>
             <button type="submit" className="flex items-center gap-2 rounded-lg py-1.5 text-sm text-ink-soft hover:text-ink">
@@ -107,6 +121,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="text-sm text-muted">
           <div>{access?.roleName ?? ROLE_LABEL[membership.role] ?? membership.role} · {organization.name}</div>
           {membershipCount > 1 && <Link href="/organizacao" className="mt-2 inline-block underline">Trocar empresa</Link>}
+          {isAdmin && <div><Link href="/mensalidade" className="flex min-h-11 items-center text-[15px] text-ink">Mensalidade</Link></div>}
+          {platformAdmin && <div><Link href="/platform" className="flex min-h-11 items-center text-[15px] text-ink">Plataforma</Link></div>}
           {!portal && <div className="mt-3"><ImprovementLink className="flex min-h-11 items-center gap-2 text-[15px] text-ink" /></div>}
           <form action={signOut}>
             <button type="submit" className="flex min-h-11 items-center gap-2 text-[15px] text-ink"><LogOut size={18} aria-hidden />Sair</button>

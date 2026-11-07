@@ -78,11 +78,12 @@ test('login page links to recovery', () => {
 })
 
 // ---- operation UX and language
-test('esteira labels: every canonical state has a label and a next step; no screen offers a manual PAID', () => {
+test('esteira labels: every canonical state has a label and a next step; the operation screen offers no PAID', () => {
   for (const s of ['digitization_queue', 'digitizing', 'submitted', 'pending_external', 'approved', 'rejected', 'cancelled', 'paid']) assert.ok(caseStateLabel(s).label && caseStateLabel(s).next, s)
   assert.equal(caseStateLabel('zzz').label, 'Situação desconhecida')
   assert.equal(jobStatusLabel('zzz'), 'Situação desconhecida')
-  assert.match(caseStateLabel('approved').next, /evidência/)
+  // Paga can be set by hand since 01/10/2026 (with the date): the next step says so, it no longer claims evidence-only.
+  assert.match(caseStateLabel('approved').next, /Paga/)
   const op = read('src/app/app/operacao/page.tsx')
   assert.doesNotMatch(op, /value="paid"/)
   for (const f of ['src/app/app/propostas/[id]/page.tsx', 'src/app/app/propostas/page.tsx', 'src/app/app/clientes/page.tsx']) assert.doesNotMatch(read(f), /Marcar como pago|value="paid"/i, f)

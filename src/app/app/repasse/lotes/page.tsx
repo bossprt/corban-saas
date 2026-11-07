@@ -23,7 +23,7 @@ export default async function PayoutBatchesPage() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-sm">
             <thead className="bg-surface-muted text-xs font-semibold text-muted">
-              <tr><th className="px-4 py-2.5">Data</th><th className="px-4 py-2.5 text-right">Qtd</th><th className="px-4 py-2.5 text-right">Valor total</th><th className="px-4 py-2.5">Conta que pagou</th><th className="px-4 py-2.5">Comprovante</th><th className="px-4 py-2.5">Pago por</th><th className="px-4 py-2.5">Situação</th></tr>
+              <tr><th className="px-4 py-2.5">Data</th><th className="px-4 py-2.5 text-right">Pagos</th><th className="px-4 py-2.5 text-right">Valor pago</th><th className="px-4 py-2.5">Conta que pagou</th><th className="px-4 py-2.5">Comprovante</th><th className="px-4 py-2.5">Pago por</th><th className="px-4 py-2.5">Situação</th></tr>
             </thead>
             <tbody>
               {rows.map(b => {
@@ -31,8 +31,11 @@ export default async function PayoutBatchesPage() {
                 return (
                   <tr key={b.id} className="border-t border-line">
                     <td className="num px-4 py-2.5"><Link href={`/app/repasse/lotes/${b.id}`} className="font-medium text-brand hover:underline">{dateBr(b.paid_on)}</Link></td>
-                    <td className="num px-4 py-2.5 text-right">{b.payouts}</td>
-                    <td className="num px-4 py-2.5 text-right font-semibold text-ink">{brlText(b.total)}</td>
+                    <td className="num px-4 py-2.5 text-right">{b.payouts - b.undone}</td>
+                    <td className="num px-4 py-2.5 text-right">
+                      <span className="font-semibold text-ink">{brlText(b.total)}</span>
+                      {b.undone > 0 && <div className="text-xs text-muted">desfeito {b.undone} · {brlText(b.undone_total ?? '0')}</div>}
+                    </td>
                     <td className="px-4 py-2.5 text-ink-soft">{b.bank_accounts ?? '—'}</td>
                     <td className="px-4 py-2.5 text-ink-soft">{b.payment_reference ?? '—'}</td>
                     <td className="px-4 py-2.5 text-ink-soft">{b.paid_by ?? '—'}</td>

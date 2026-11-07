@@ -7,6 +7,7 @@ import { readLegacyFileInBrowser, type LegacySheet } from '@/lib/legacy/browser-
 import { readReceiptPdf } from '@/lib/receipts/pdf'
 import { mergeReportFiles } from '@/lib/receipts/parse'
 import { checkReceiptFile, importReceiptFile, inspectReceiptFile, type FileCheck } from '../actions'
+import { currentMonthSP } from '@/lib/dates'
 
 type Source = { value: string; label: string }
 const FIELDS: { key: 'ade' | 'amount' | 'installment' | 'paid_on' | 'bank'; label: string; required?: boolean; hint?: string }[] = [
@@ -24,7 +25,7 @@ const CHECK_TEXT: Record<Exclude<FileCheck['result'], 'ready'>, string> = {
   not_found: 'Contrato não encontrado neste banco ou promotora.',
   ambiguous: 'Mais de um contrato com este número.',
 }
-const thisMonth = () => new Date().toISOString().slice(0, 7)
+const thisMonth = () => currentMonthSP()
 const hex = (buf: ArrayBuffer) => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('')
 
 // PDF (text layer) or spreadsheet. A PDF is recognised by its first bytes, never by the name alone.

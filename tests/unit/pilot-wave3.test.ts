@@ -46,9 +46,37 @@ test('pilot actions redirect with codes instead of throwing raw errors', () => {
 })
 test('the app shell shows the banner and the error boundary never prints the raw message', () => {
   assert.match(read('src/app/app/layout.tsx'), /<FlashBanner \/>/)
-  const e = read('src/app/app/error.tsx')
-  assert.doesNotMatch(e, /error\.message/)
-  assert.match(e, /Referência/)
+  // Every boundary (inside /app, outside it and the global one) renders the shared notice, which never prints the raw message.
+  for (const f of ['src/app/app/error.tsx', 'src/app/error.tsx', 'src/app/global-error.tsx']) {
+    const e = read(f)
+    assert.doesNotMatch(e, /error\.message/)
+    assert.match(e, /<ErrorNotice digest=\{error\.digest\}/)
+  }
+  const notice = read('src/components/shell/ErrorNotice.tsx')
+  assert.doesNotMatch(notice, /message/)
+  assert.match(notice, /Referência/)
+  // Light theme: system tokens only, no dark-theme colours.
+  assert.doesNotMatch(notice, /slate-|amber-/)
+  assert.match(read('src/app/not-found.tsx'), /Página não encontrada/)
+})
+test('menu: money order on desktop, Hoje · Esteira · Contratos · Repasse on the phone, hidden screens reachable', () => {
+  const l = read('src/app/app/layout.tsx')
+  const keys = [...l.split('const SALES_PAGES')[0].matchAll(/\{ key: '(\w+)', href: '\/app[^']*', label/g)].map(m => m[1])
+  const order = ['hoje', 'dashboard', 'clientes', 'vendas', 'esteira', 'contratos', 'financeiro', 'repasse', 'metas', 'comercial', 'relatorios', 'configuracoes']
+  assert.deepEqual(keys.filter(k => order.includes(k)), order)
+  assert.match(l, /label: 'Visão geral'/)
+  assert.doesNotMatch(l, /label: 'Dashboard'/)
+  assert.match(l, /atLeast\(membership\.role, 'supervisor'\) \? \[\{ href: '\/app\/atencao'/)
+  assert.match(l, /modules\.has\('esteira'\) \? \[\{ href: '\/app\/operacao'/)
+  assert.match(l, /isAdmin && <div><Link href="\/mensalidade"/)
+  assert.match(l, /platformAdmin && <div><Link href="\/platform"/)
+  assert.match(read('src/components/shell/NavLinks.tsx'), /PHONE_MAIN: NavKey\[\] = \['portal', 'portal_nova', 'hoje', 'esteira', 'contratos', 'repasse', 'vendas', 'clientes'\]/)
+})
+test('operation: rejected and cancelled ask before sending', () => {
+  const p = read('src/app/app/operacao/page.tsx')
+  assert.match(p, /<ConfirmStateButton value="rejected"/)
+  assert.match(p, /<ConfirmStateButton value="cancelled"/)
+  assert.doesNotMatch(p, /<button name="to_state" value="(rejected|cancelled)"/)
 })
 test('FlashBanner renders text only from the whitelist', () => {
   const b = read('src/components/FlashBanner.tsx')
@@ -117,10 +145,12 @@ test('no page or action puts a CPF in a URL', () => {
 })
 
 // ---- labels, nulls, navigation
-test('proposal statuses have labels and a next step; paid is evidence-only', () => {
+test('proposal statuses have labels and a next step; paid says evidence only when it is', () => {
   for (const s of ['draft', 'documents_pending', 'ready_for_digitization', 'digitization', 'submitted', 'approved', 'rejected', 'cancelled', 'paid']) assert.ok(proposalStatusLabel(s).label && proposalStatusLabel(s).next, s)
   assert.equal(proposalStatusLabel('zzz').label, 'Situação desconhecida')
-  assert.match(proposalStatusLabel('paid').label, /evidência/)
+  assert.equal(proposalStatusLabel('paid').label, 'Paga')
+  assert.equal(proposalStatusLabel('paid', null, 'manual').label, 'Paga')
+  assert.match(proposalStatusLabel('paid', null, 'import').label, /confirmada por evidência/)
 })
 test('unknown money is "Não calculado", never R$ 0,00', () => {
   assert.match(read('src/app/app/simulacoes/SavedSimulations.tsx'), /installment_amount === null \? 'Não calculada'/)

@@ -8,6 +8,7 @@ import { sellerData } from '@/app/app/cadastros/vendedores/sellerData'
 const ERRORS: [RegExp, FeedbackCode][] = [
   [/signup_link_closed/, 'erro:cadastro_link_fechado'],
   [/signup_rate_limited/, 'erro:cadastro_link_limite'],
+  [/signup_already_pending/, 'erro:cadastro_link_pendente'],
   [/signup_invalid/, 'erro:requisicao_invalida'],
   [/seller_name_required/, 'erro:vendedor_nome'],
   [/seller_tax_id_invalid/, 'erro:vendedor_documento'],

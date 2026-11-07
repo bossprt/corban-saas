@@ -1,3 +1,4 @@
+import { PIPELINE_SITUATIONS, SITUATION_LABEL, SITUATION_NEXT, contractSituation, situationLabel } from './contractStatus'
 // Maps the stable error tokens raised by transition_operational_case to operator-facing outcomes. The RPC message is never shown raw and
 // never swallowed into a generic failure: the operator can tell "not allowed" from "invalid transition" from "someone else moved it".
 export type OperationalErrorCode='invalid_transition'|'forbidden'|'case_unavailable'|'paid_requires_source'|'stage_not_configured'|'unexpected'
@@ -23,31 +24,15 @@ export const OPERATIONAL_MESSAGES:Record<OperationalErrorCode,string>={
 
 export const isOperationalErrorCode=(v:unknown):v is OperationalErrorCode=>typeof v==='string'&&Object.prototype.hasOwnProperty.call(OPERATIONAL_MESSAGES,v)
 
-// Operator-facing names for esteira states and the next step for each. `paid` is deliberately described as evidence-backed: no screen offers to set it.
-export const CASE_STATE_LABEL:Record<string,{label:string;next:string}>={
- digitization_queue:{label:'Na fila de digitação',next:'Alguém precisa iniciar a digitação.'},
- digitizing:{label:'Em digitação',next:'Quando terminar, marque como enviado.'},
- submitted:{label:'Enviada ao banco',next:'Aguarde o retorno; um supervisor pode aprovar ou recusar.'},
- pending_external:{label:'Aguardando retorno do banco',next:'Um supervisor registra a decisão quando ela chegar.'},
- approved:{label:'Aprovada',next:'Sem ação na operação. O pagamento só é confirmado por evidência (importação), nunca manualmente.'},
- rejected:{label:'Recusada',next:'Encerrada.'},
- cancelled:{label:'Cancelada',next:'Encerrada.'},
- paid:{label:'Paga (confirmada por evidência)',next:'Encerrada.'}
-}
+// Operator-facing names for esteira states and the next step for each: the shared names (src/lib/contractStatus.ts).
+export const CASE_STATE_LABEL:Record<string,{label:string;next:string}>=Object.fromEntries(PIPELINE_SITUATIONS.map(s=>[s,{label:SITUATION_LABEL[s],next:SITUATION_NEXT[s]}]))
 export const caseStateLabel=(s:string)=>CASE_STATE_LABEL[s]??{label:'Situação desconhecida',next:''}
 export const JOB_STATUS_LABEL:Record<string,string>={queued:'Na fila',assigned:'Atribuída',in_progress:'Em andamento',blocked:'Bloqueada',submitted:'Enviada',completed:'Concluída',cancelled:'Cancelada'}
 export const jobStatusLabel=(s:string)=>JOB_STATUS_LABEL[s]??'Situação desconhecida'
 
-// Operator-facing proposal status and the next step. No status here is ever set by a person as "paid": that one only appears through the evidence path.
-export const PROPOSAL_STATUS_LABEL:Record<string,{label:string;next:string}>={
- draft:{label:'Rascunho',next:'Prepare o checklist de documentos.'},
- documents_pending:{label:'Documentos pendentes',next:'Anexe os documentos exigidos; um supervisor valida.'},
- ready_for_digitization:{label:'Pronta para a operação',next:'Envie para a operação.'},
- digitization:{label:'Na operação (digitação)',next:'Acompanhe em Operação.'},
- submitted:{label:'Enviada ao banco',next:'Aguarde o retorno do banco.'},
- approved:{label:'Aprovada',next:'Sem ação. O pagamento só é confirmado por evidência de importação.'},
- rejected:{label:'Recusada',next:'Encerrada.'},
- cancelled:{label:'Cancelada',next:'Encerrada.'},
- paid:{label:'Paga (confirmada por evidência)',next:'Encerrada.'}
+// Operator-facing proposal status and the next step, from the shared names. Pass the pipeline case state when known:
+// the proposal status alone cannot tell "Aguardando digitação" from "Em digitação".
+export function proposalStatusLabel(status:string,caseState?:string|null,paidSource?:string|null):{label:string;next:string}{
+ const s=contractSituation(status,caseState)
+ return {label:situationLabel(s,{paidSource}),next:s?SITUATION_NEXT[s]:''}
 }
-export const proposalStatusLabel=(s:string)=>PROPOSAL_STATUS_LABEL[s]??{label:'Situação desconhecida',next:''}

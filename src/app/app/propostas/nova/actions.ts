@@ -7,9 +7,16 @@ import { classifyDbFeedback, feedbackUrl, type FeedbackCode } from '@/lib/feedba
 import { parseMoneyInput } from '@/lib/money-input'
 import { originDetails } from '@/lib/proposals/origin'
 import { isUuid } from '@/lib/team'
+import { acceptsTerm, termsLabel, type TermRange } from '@/lib/commission/tableTerms'
 
-const back = (code: FeedbackCode, cliente?: string): never =>
-  redirect(feedbackUrl(cliente && isUuid(cliente) ? `/app/propostas/nova?cliente=${cliente}` : '/app/propostas/nova', code))
+// prazos: the terms the chosen table accepts, shown next to the term field when the typed one is outside them.
+const back = (code: FeedbackCode, cliente?: string, prazos?: string): never => {
+  const q = new URLSearchParams()
+  if (cliente && isUuid(cliente)) q.set('cliente', cliente)
+  if (prazos) q.set('prazos', prazos)
+  const qs = q.toString()
+  redirect(feedbackUrl(`/app/propostas/nova${qs ? `?${qs}` : ''}`, code))
+}
 
 // Direct proposal: before digitization (queue) or already digitized with the ADE. Same bank + ADE opens the existing one.
 export async function createDirectProposal(formData: FormData) {
@@ -33,6 +40,18 @@ export async function createDirectProposal(formData: FormData) {
   const term = termText ? Number.parseInt(termText, 10) : null
   if (termText && (!Number.isInteger(term) || term! < 1 || term! > 420)) return back('erro:prazo_invalido', client)
   if (stage === 'submitted' && !ade) return back('erro:ade_obrigatorio', client)
+  // The term must fit a line of the chosen table (audit 06/11/2026, E2: a 200-month contract on a 12-120 table was saved
+  // and its commission was born uncalculated). Lines of the chosen contract type count; a table without lines of that
+  // type is checked against all its lines; a table without terms is not checked.
+  if (term !== null) {
+    const { data: lines } = await supabase.from('commercial_conditions').select('contract_type_id,term,term_min,term_max').eq('product_table_version_id', table)
+    const rangesOf = (rows: { term: number | null; term_min: number | null; term_max: number | null }[]) => rows
+      .map(l => ({ min: l.term_min ?? l.term, max: l.term_max ?? l.term }))
+      .filter((r): r is TermRange => r.min !== null && r.max !== null)
+    const ofType = rangesOf((lines ?? []).filter(l => l.contract_type_id === contractType))
+    const ranges = ofType.length ? ofType : rangesOf(lines ?? [])
+    if (ranges.length && !acceptsTerm(ranges, term)) return back('erro:prazo_fora_da_tabela', client, termsLabel(ranges))
+  }
 
   const { data, error } = await supabase.rpc('create_direct_proposal', {
     p_org: organization.id, p_customer_id: client, p_table_version_id: table, p_seller_id: seller || null,

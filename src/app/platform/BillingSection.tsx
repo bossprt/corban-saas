@@ -1,7 +1,8 @@
 import { Badge, Card } from '@/components/ui'
 import { SubmitButton } from '@/components/SubmitButton'
 import { brl, CHARGE_STATE, dayLabel, monthLabel } from '@/lib/billing'
-import { markChargePaid, reverseCharge, saveBillingSettings, saveSubscription } from './actions'
+import { markChargePaid, reverseCharge, saveBillingSettings } from './actions'
+import { SubscriptionForm } from './SubscriptionForm'
 
 type Settings = { pix_key: string; pix_key_type: string; merchant_name: string; merchant_city: string } | null
 type Sub = { organization_id: string; amount: string; due_day: number; grace_days: number; starts_on: string; is_active: boolean }
@@ -30,18 +31,10 @@ export function BillingSection({ settings, subs, charges, orgs, today }: { setti
     </Card>
 
     <h3 className="mt-6 text-lg font-semibold text-ink">Assinaturas</h3>
-    <div className="mt-3 space-y-3">{orgs.map(o => { const s = sub.get(o.id); return <Card key={o.id} className="p-4">
-      <form action={saveSubscription} className="grid gap-3 sm:grid-cols-[1fr_120px_90px_90px_140px_auto_auto] sm:items-end">
-        <input type="hidden" name="organization_id" value={o.id} />
-        <div className="text-sm font-semibold text-ink">{o.name}<div className="text-xs font-normal text-muted">{s ? (s.is_active ? 'Cobrança ligada' : 'Cobrança desligada') : 'Sem assinatura'}</div></div>
-        <label className="text-xs text-muted">Valor (R$)<input name="amount" required inputMode="decimal" defaultValue={s ? s.amount.replace('.', ',') : ''} placeholder="399,90" className="field mt-1 block" /></label>
-        <label className="text-xs text-muted">Dia<input name="due_day" required type="number" min={1} max={28} defaultValue={s?.due_day ?? 3} className="field mt-1 block" /></label>
-        <label className="text-xs text-muted">Carência<input name="grace_days" required type="number" min={0} max={30} defaultValue={s?.grace_days ?? 5} className="field mt-1 block" /></label>
-        <label className="text-xs text-muted">Primeiro mês<input name="starts_on" required type="month" defaultValue={s ? s.starts_on.slice(0, 7) : today.slice(0, 7)} className="field mt-1 block" /></label>
-        <label className="flex items-center gap-1.5 text-xs text-muted sm:pb-3"><input type="checkbox" name="is_active" defaultChecked={s?.is_active ?? true} className="accent-[var(--brand)]" />Ligada</label>
-        <SubmitButton pendingText="Salvando..." className={button}>Salvar</SubmitButton>
-      </form>
-    </Card> })}</div>
+    <p className="mt-1 text-sm text-muted">O primeiro mês começa no mês atual ou depois. Um mês passado criaria mensalidades já vencidas e bloquearia a empresa na hora, por isso não é aceito.</p>
+    <div className="mt-3 space-y-3">{orgs.map(o => <Card key={o.id} className="p-4">
+      <SubscriptionForm orgId={o.id} orgName={o.name} sub={sub.get(o.id)} today={today} />
+    </Card>)}</div>
 
     <h3 className="mt-6 text-lg font-semibold text-ink">Mensalidades</h3>
     <div className="mt-3 space-y-2">{charges.map(c => { const [label, tone] = CHARGE_STATE[c.state] ?? [c.state, 'neutral' as const]; return <Card key={c.id} className="p-4">

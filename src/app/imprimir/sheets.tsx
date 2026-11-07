@@ -1,7 +1,8 @@
 import { brlText } from '@/lib/receipts/format'
 import { moneyInWords } from '@/lib/money-words'
 import { add, fromDecimalString, toDecimalString } from '@/lib/commission/money'
-import { batchItemLabel, type BatchContract, type Company } from '@/lib/payout/batches'
+import { batchItemLabel, breakdownItemLabel, type BatchContract, type Breakdown, type Company } from '@/lib/payout/batches'
+import { breakdownView, type BatchFooter } from '@/lib/payout/breakdown'
 import { formatTaxId, payToText, type PayTarget } from '@/lib/sellers'
 
 // Printed payout documents (owner, 21/10/2026): A4 landscape sheets, black on white, one per page. Shared by the batch print and
@@ -72,9 +73,14 @@ export function TotalInWords({ label, amount }: { label: string; amount: string 
 
 export const payTo = (t: PayTarget | null | undefined) => (t ? payToText(t) : 'Sem conta cadastrada')
 
-// The contracts a payment paid, as a table with its total line.
-export function ContractTable({ contracts, total }: { contracts: BatchContract[]; total: string }) {
+// The contracts a payment paid, as a table; the footer splits the amount (owner, 06/11/2026): Soma dos contratos, each
+// other entry (vale, bônus, desconto, saldo anterior, desconto do negativo) and Total pago. A difference is printed, never hidden.
+export function ContractTable({ b, total }: { b: Pick<Breakdown, 'contracts' | 'others'>; total: string }) {
+  const contracts = b.contracts ?? []
+  const others = b.others ?? []
   const released = sumOf(contracts.map(c => c.released ?? null))
+  const v = breakdownView(b, total)
+  const foot = { borderBottom: 0, paddingTop: 2, paddingBottom: 2 }
   return (
     <table style={{ tableLayout: 'fixed' }}>
       <thead>
@@ -84,7 +90,7 @@ export function ContractTable({ contracts, total }: { contracts: BatchContract[]
         </tr>
       </thead>
       <tbody>
-        {contracts.length === 0 && <tr><td colSpan={6} className="muted">Pagamento sem contratos (saque do saldo ou ajuste).</td></tr>}
+        {contracts.length === 0 && <tr><td colSpan={6} className="muted">Pagamento sem contratos.</td></tr>}
         {contracts.map((c, i) => (
           <tr key={`${c.proposal_id ?? c.kind}-${i}`}>
             <td>{batchItemLabel(c)}</td>
@@ -98,11 +104,42 @@ export function ContractTable({ contracts, total }: { contracts: BatchContract[]
       </tbody>
       <tfoot>
         <tr>
-          <td colSpan={3} style={{ fontWeight: 700, borderBottom: 0 }}>{contracts.filter(c => c.proposal_id).length} contrato(s)</td>
-          <td className="r" style={{ fontWeight: 700, borderBottom: 0 }}>{money(released)}</td><td style={{ borderBottom: 0 }} />
-          <td className="r" style={{ fontWeight: 700, fontSize: 12, borderBottom: 0 }}>R$ {money(total)}</td>
+          <td colSpan={3} style={{ ...foot, fontWeight: 700, paddingTop: 5 }}>Soma dos contratos ({v.contractCount})</td>
+          <td className="r" style={{ ...foot, fontWeight: 700, paddingTop: 5 }}>{money(released)}</td><td style={foot} />
+          <td className="r" style={{ ...foot, fontWeight: 700, paddingTop: 5 }}>{money(v.contractsTotal)}</td>
+        </tr>
+        {others.map((o, i) => (
+          <tr key={`${o.kind}-${i}`}>
+            <td colSpan={5} style={foot}>{i === 0 ? 'Outros lançamentos: ' : ''}{breakdownItemLabel(o)}{o.description ? ` · ${o.description}` : ''}{o.effective_on ? ` · ${day(o.effective_on)}` : ''}</td>
+            <td className="r" style={foot}>{money(o.amount)}</td>
+          </tr>
+        ))}
+        {v.hasDifference && (
+          <tr><td colSpan={5} style={{ ...foot, fontWeight: 700 }}>Diferença não explicada</td><td className="r" style={{ ...foot, fontWeight: 700 }}>{money(v.difference)}</td></tr>
+        )}
+        <tr>
+          <td colSpan={5} style={{ fontWeight: 700, borderBottom: 0, borderTop: '1px solid #999' }}>Total pago</td>
+          <td className="r" style={{ fontWeight: 700, fontSize: 12, borderBottom: 0, borderTop: '1px solid #999' }}>R$ {money(total)}</td>
         </tr>
       </tfoot>
+    </table>
+  )
+}
+
+// Footer of several payments (batch summary, period): Soma dos contratos, Outros lançamentos listed, Total pago.
+export function FooterSplit({ f, withHolder }: { f: BatchFooter; withHolder?: boolean }) {
+  return (
+    <table style={{ marginTop: 8, width: '60%', marginLeft: 'auto' }}>
+      <tbody>
+        <tr><td style={{ fontWeight: 700 }}>Soma dos contratos</td><td className="r" style={{ fontWeight: 700 }}>{money(f.contractsTotal)}</td></tr>
+        {f.others.length > 0 && <tr><td colSpan={2} className="muted" style={{ borderBottom: 0, paddingBottom: 0 }}>Outros lançamentos</td></tr>}
+        {f.others.map((o, i) => (
+          <tr key={i}><td>{withHolder ? `${o.holder} · ` : ''}{o.label}{o.description ? ` · ${o.description}` : ''}</td><td className="r">{money(o.amount)}</td></tr>
+        ))}
+        {f.others.length > 0 && <tr><td className="muted">Total de outros lançamentos</td><td className="r">{money(f.othersTotal)}</td></tr>}
+        {f.hasDifference && <tr><td style={{ fontWeight: 700 }}>Diferença não explicada</td><td className="r" style={{ fontWeight: 700 }}>{money(f.difference)}</td></tr>}
+        <tr><td style={{ fontWeight: 700, borderBottom: 0 }}>Total pago</td><td className="r" style={{ fontWeight: 700, fontSize: 12, borderBottom: 0 }}>R$ {money(f.paidTotal)}</td></tr>
+      </tbody>
     </table>
   )
 }

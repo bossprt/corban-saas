@@ -3,7 +3,7 @@ import { Badge, Card, CardHeader, PageHeader } from '@/components/ui'
 import { SubmitButton } from '@/components/SubmitButton'
 import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
-import { brl, dayLabel, FIN_KIND_LABEL } from '@/lib/finance/labels'
+import { brl, dayLabel, FIN_KIND_LABEL, toCents } from '@/lib/finance/labels'
 import { FinanceTabs } from '../FinanceTabs'
 import { entryFromLine, ignoreLine, matchLine, restoreLine, unmatchLine } from '../actions'
 import { StatementImportClient } from './StatementImportClient'
@@ -45,7 +45,7 @@ export default async function StatementPage({ searchParams }: { searchParams: Pr
   const pool = (candidates ?? []) as Entry[]
   // Suggestions: same direction and amount, closest date first.
   const suggest = (l: Line) => pool
-    .filter(e => (Number(l.amount) > 0) === (e.direction === 'in') && Math.round(Math.abs(Number(l.amount)) * 100) === Math.round(Number(e.amount) * 100))
+    .filter(e => (toCents(l.amount) > 0) === (e.direction === 'in') && Math.abs(toCents(l.amount)) === toCents(e.amount))
     .sort((a, b) => days(a.settled_on ?? a.due_on, l.posted_on) - days(b.settled_on ?? b.due_on, l.posted_on)).slice(0, 3)
 
   return (

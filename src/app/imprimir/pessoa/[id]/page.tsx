@@ -5,10 +5,11 @@ import type { AccountReport } from '@/lib/payout/batches'
 import { PrintBar } from '../../PrintBar'
 import { PRINT_CSS } from '../../sheets'
 import { PersonSheet } from '../../PersonSheet'
+import { monthStartSP, todaySP } from '@/lib/dates'
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/
-const monthStart = () => { const d = new Date(Date.now() - 3 * 3600_000).toISOString(); return `${d.slice(0, 8)}01` }
-const today = () => new Date(Date.now() - 3 * 3600_000).toISOString().slice(0, 10)
+const monthStart = () => monthStartSP()
+const today = () => todaySP()
 
 // Report per person over a period (owner, 21/10/2026): every payment made to them, contract by contract, with the total.
 // Finance, or the person themself (their own report).

@@ -1,19 +1,18 @@
 import { Card, CardHeader } from '@/components/ui'
 import { SubmitButton } from '@/components/SubmitButton'
 import { brlText } from '@/lib/receipts/format'
+import { SITUATION_LABEL } from '@/lib/contractStatus'
 import { decimalBr } from '@/lib/commission/tableValues'
 import { memberEmails } from '@/lib/team.server'
 import { addContractNote } from './contract-actions'
 import { CALC_FAILURE } from './CommissionCard'
+import { formatDateTimeSP } from '@/lib/dates'
 
 type Supa = Awaited<ReturnType<typeof import('@/lib/appContext').requireAppContext>>['supabase']
 type ContractEvent = { id: string; kind: string; detail: Record<string, unknown>; reason: string | null; actor_user_id: string | null; created_at: string }
 type StageEvent = { id: string; from_state: string | null; to_state: string | null; actor_user_id: string | null; metadata: Record<string, unknown> | null; occurred_at: string }
 
-const STATE: Record<string, string> = {
-  digitization_queue: 'Aguardando digitação', digitizing: 'Em digitação', submitted: 'Em análise', pending_external: 'Pendência',
-  approved: 'Aprovado', paid: 'Pago ao cliente', rejected: 'Recusado', cancelled: 'Cancelado',
-}
+const STATE: Record<string, string> = SITUATION_LABEL
 const FIELD: Record<string, string> = { external_proposal_id: 'ADE', table_version_id: 'Tabela', seller_id: 'Vendedor', requested_amount: 'Valor bruto', released_amount: 'Valor líquido', installment_amount: 'Parcela', term: 'Prazo', formalization: 'Formalização', paid_to_client_on: 'Pago ao cliente em' }
 const COMPONENT: Record<string, string> = { upfront: 'à vista', deferred: 'diferido', bonus_1: 'bônus 1', bonus_2: 'bônus 2', bonus_3: 'bônus 3', plastic: 'plástico', insurance_fixed: 'seguro', gratification: 'gratificação' }
 const money = (v: unknown) => (v === null || v === undefined || v === '' ? '—' : brlText(String(v)))
@@ -42,7 +41,7 @@ function describe(e: ContractEvent): string {
     return `Comissão recebida (${name}) lançada à mão: ${how}`
   }
   if (e.kind === 'recalculated') return 'Comissão recalculada'
-  if (e.kind === 'physical') return `${({ received: 'Físico recebido pela empresa', sent: 'Físico enviado ao banco', bank: 'Físico recepcionado pelo banco' } as Record<string, string>)[String(d.step)] ?? 'Físico'} em ${new Date(String(d.at)).toLocaleString('pt-BR')}`
+  if (e.kind === 'physical') return `${({ received: 'Físico recebido pela empresa', sent: 'Físico enviado ao banco', bank: 'Físico recepcionado pelo banco' } as Record<string, string>)[String(d.step)] ?? 'Físico'} em ${formatDateTimeSP(String(d.at))}`
   if (e.kind === 'external_payout') return `Repasse pago fora do Corban: ${money(d.amount)} em ${new Date(`${String(d.paid_on)}T12:00:00Z`).toLocaleDateString('pt-BR')}`
   if (e.kind === 'calc_failed') return `Comissão não calculada: ${CALC_FAILURE[String(d.code)] ?? String(d.code ?? '')}`
   return e.kind
@@ -75,7 +74,7 @@ export async function HistoryCard({ supabase, proposalId }: { supabase: Supa; pr
           <li key={i.id} className="border-t border-line px-5 py-3 text-sm">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <span className="font-medium text-ink">{i.title}</span>
-              <span className="text-xs text-muted">{new Date(i.at).toLocaleString('pt-BR')}{i.actor ? ` · ${who.get(i.actor) ?? 'usuário'}` : ''}</span>
+              <span className="text-xs text-muted">{formatDateTimeSP(i.at)}{i.actor ? ` · ${who.get(i.actor) ?? 'usuário'}` : ''}</span>
             </div>
             <p className="mt-0.5 whitespace-pre-line text-ink-soft">{i.text}</p>
             {i.reason && <p className="mt-0.5 text-xs text-muted">Motivo: {i.reason}</p>}

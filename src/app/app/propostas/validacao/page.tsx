@@ -7,6 +7,7 @@ import { requireAppContext } from '@/lib/appContext'
 import { formatCpf } from '@/lib/cpf'
 import { brlText } from '@/lib/receipts/format'
 import { decidePortalProposal } from './actions'
+import { formatDateTimeSP } from '@/lib/dates'
 
 type Row = { proposal_id: string; created_at: string; seller_name: string; client_name: string; client_cpf: string; bank: string; table_name: string;
   requested_amount: string | null; released_amount: string | null; term: number | null; ade: string | null; client_preexisted: boolean; client_owner_name: string | null; documents: number }
@@ -35,7 +36,7 @@ export default async function ValidationQueuePage() {
               <div>
                 <div className="font-semibold text-ink">{r.client_name} <span className="font-mono text-sm font-normal text-muted">{formatCpf(r.client_cpf)}</span></div>
                 <div className="mt-0.5 text-sm text-ink-soft">{r.bank} · {r.table_name} · <span className="num">{brlText(r.released_amount ?? r.requested_amount)}</span>{r.term ? ` em ${r.term}x` : ''}{r.ade ? <> · ADE <span className="font-mono">{r.ade}</span></> : ''}</div>
-                <div className="mt-0.5 text-xs text-muted">Enviada por {r.seller_name} em {new Date(r.created_at).toLocaleString('pt-BR')}</div>
+                <div className="mt-0.5 text-xs text-muted">Enviada por {r.seller_name} em {formatDateTimeSP(r.created_at)}</div>
                 {r.client_preexisted && <div className="mt-2"><Badge tone="diverged">Cliente já existe · carteira de {r.client_owner_name}</Badge></div>}
                 <div className="mt-2 flex flex-wrap gap-2 text-xs">
                   {(docs ?? []).filter(d => d.proposal_id === r.proposal_id).map(d => link.get(d.storage_path)

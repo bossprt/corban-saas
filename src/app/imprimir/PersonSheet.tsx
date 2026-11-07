@@ -1,7 +1,8 @@
 import { formatTaxId } from '@/lib/sellers'
 import { brlText } from '@/lib/receipts/format'
 import type { AccountReport } from '@/lib/payout/batches'
-import { ContractTable, PartialNote, SheetFooter, SheetHeader, Signatures, TotalInWords, payTo } from './sheets'
+import { batchFooter } from '@/lib/payout/breakdown'
+import { ContractTable, FooterSplit, PartialNote, SheetFooter, SheetHeader, Signatures, TotalInWords, payTo } from './sheets'
 
 const day = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/')
 
@@ -32,10 +33,11 @@ export function PersonSheet({ r, page }: { r: AccountReport; page?: string }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, margin: '4px 0' }}>
             <span>Pagamento de {day(p.paid_on)}{p.reference ? ` · ${p.reference}` : ''}</span><span>{brlText(p.amount)}</span>
           </div>
-          <ContractTable contracts={p.contracts} total={p.amount} />
+          <ContractTable b={p} total={p.amount} />
           <PartialNote contracts={p.contracts} />
         </div>
       ))}
+      {r.payments.length > 1 && <FooterSplit f={batchFooter(r.payments.map(p => ({ ...p, holder: r.holder.name, status: 'paid' })))} />}
       <TotalInWords label="Total pago no período" amount={r.total} />
       <Signatures left={r.company?.name ?? 'Empresa'} right={`${r.holder.name} · beneficiário`} />
       <SheetFooter right={page} />

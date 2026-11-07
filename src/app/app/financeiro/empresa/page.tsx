@@ -4,13 +4,15 @@ import { Badge, Card, PageHeader } from '@/components/ui'
 import { SubmitButton } from '@/components/SubmitButton'
 import { can } from '@/lib/access'
 import { requireAppContext } from '@/lib/appContext'
-import { brl, dayLabel, FIN_KIND_LABEL, FIN_SOURCE_LABEL, FIN_STATUS_LABEL } from '@/lib/finance/labels'
+import { brl, brlCents, centsToDecimal, dayLabel, toCents, FIN_KIND_LABEL, FIN_SOURCE_LABEL, FIN_STATUS_LABEL } from '@/lib/finance/labels'
 import { entrySearchFilter } from '@/lib/finance/search'
 import { isUuid } from '@/lib/team'
 import { FinanceTabs } from './FinanceTabs'
+import { NewEntryForm } from './NewEntryForm'
 import { SelectedTotal } from './SelectedTotal'
-import { addReceipt, cancelEntry, createEntry, settleEntry, settleMany, undoSettlement, updateEntry } from './actions'
+import { addReceipt, cancelEntry, settleEntry, settleMany, undoSettlement, updateEntry } from './actions'
 import { SettleForm } from './SettleForm'
+import { addDaysISO, todaySP } from '@/lib/dates'
 
 type Entry = { id: string; direction: string; status: string; description: string; account_id: string; branch_id: string | null; counterpart: string | null; document: string | null; amount: string; due_on: string; competence_on: string; settled_on: string | null; bank_account_id: string | null; source: string; interest: string; discount: string; original_amount: string | null }
 type Account = { id: string; code: string; name: string; kind: string; is_group: boolean; is_active: boolean }
@@ -21,12 +23,12 @@ const EVENT_LABEL: Record<string, string> = { created: 'Lançado', edited: 'Alte
 const FIELD_LABEL: Record<string, string> = { description: 'Descrição', account: 'Conta do plano', branch: 'Filial', amount: 'Valor', due_on: 'Vencimento', competence_on: 'Competência' }
 const label = 'text-[13px] font-medium text-ink-soft'
 const BULK = 'pagar-varios'
-const today = () => new Date(Date.now() - 3 * 3_600_000).toISOString().slice(0, 10)
-const addDays = (iso: string, n: number) => new Date(Date.parse(`${iso}T12:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10)
+const today = () => todaySP()
+const addDays = addDaysISO
 // numeric(15,2) comes as text: cents without going through a float.
-const cents = (v: string) => { const s = String(v).trim(); const neg = s.startsWith('-'); const [i, f = ''] = s.replace(/^[-+]/, '').split('.'); const c = Number(i || 0) * 100 + Number(f.padEnd(2, '0').slice(0, 2)); return neg ? -c : c }
+const cents = toCents
 const sumCents = (xs: { amount: string }[]) => xs.reduce((s, x) => s + cents(x.amount), 0)
-const moneyField = (v: string) => (cents(v) / 100).toFixed(2).replace('.', ',')
+const moneyField = (v: string) => centsToDecimal(cents(v)).replace('.', ',')
 
 // F6.5: payables and receivables of the company, with the branch as cost center. Layout reviewed 04/11/2026: what is
 // late or due first, one "Pagar" per line, the rest of the actions under "⋯", edit and history inline.
@@ -115,56 +117,17 @@ export default async function CompanyFinancePage({ searchParams }: { searchParam
       <FinanceTabs current="/app/financeiro/empresa" />
 
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {kpi('Vencidos a pagar', brl(sumCents(late) / 100), late.length ? `${late.length} conta(s) · ver` : null, late.length ? 'late' : 'plain', late.length ? `/app/financeiro/empresa?ver=pagar&ate=${addDays(t, -1)}` : undefined)}
-        {kpi('Vence hoje e em 7 dias', brl(sumCents(soon) / 100), soon.length ? `${soon.length} conta(s) · ver` : null, soon.length ? 'soon' : 'plain', soon.length ? `/app/financeiro/empresa?ver=pagar&de=${t}&ate=${week}` : undefined)}
-        {kpi('A receber em aberto', brl(sumCents(openRows.filter(r => r.direction === 'in')) / 100), null, 'plain')}
-        {kpi('Saldo nas contas', brl(((balances ?? []) as { balance: string }[]).reduce((s, b) => s + cents(String(b.balance)), 0) / 100), null, 'plain')}
+        {kpi('Vencidos a pagar', brlCents(sumCents(late)), late.length ? `${late.length} conta(s) · ver` : null, late.length ? 'late' : 'plain', late.length ? `/app/financeiro/empresa?ver=pagar&ate=${addDays(t, -1)}` : undefined)}
+        {kpi('Vence hoje e em 7 dias', brlCents(sumCents(soon)), soon.length ? `${soon.length} conta(s) · ver` : null, soon.length ? 'soon' : 'plain', soon.length ? `/app/financeiro/empresa?ver=pagar&de=${t}&ate=${week}` : undefined)}
+        {kpi('A receber em aberto', brlCents(sumCents(openRows.filter(r => r.direction === 'in'))), null, 'plain')}
+        {kpi('Saldo nas contas', brlCents(((balances ?? []) as { balance: string }[]).reduce((s, b) => s + cents(String(b.balance)), 0)), null, 'plain')}
       </div>
 
       {edit && (
         <Card className="mb-4">
           <details id="novo" open={sp.novo === '1'}>
             <summary className="cursor-pointer px-5 py-4 text-sm font-semibold text-ink">+ Novo lançamento</summary>
-            <form action={createEntry} className="grid gap-4 px-5 pb-5 sm:grid-cols-3">
-              <input type="hidden" name="return_to" value={back} />
-              <label className={label}>Tipo<select name="direction" className="field mt-1.5"><option value="out">A pagar (saída)</option><option value="in">A receber (entrada)</option></select></label>
-              <label className={label}>Valor (R$)<input name="amount" required inputMode="decimal" placeholder="1.234,56" className="field mt-1.5" /></label>
-              <label className={label}>Vencimento<input type="date" name="due_on" required defaultValue={t} className="field mt-1.5" /></label>
-              <label className={label}>Descrição<input name="description" required minLength={3} maxLength={200} className="field mt-1.5" /></label>
-              <label className={label}>Fornecedor ou cliente<input name="counterpart" maxLength={120} className="field mt-1.5" /></label>
-              <label className={label}>Conta do plano
-                <select name="account_id" required defaultValue="" className="field mt-1.5"><option value="" disabled>Escolha</option>{accountOptions}</select>
-              </label>
-              <label className="flex items-center gap-2 text-sm text-ink-soft sm:col-span-2"><input type="checkbox" name="settled" className="size-4 accent-[var(--brand)]" />Já foi pago ou recebido (baixa na data do vencimento)</label>
-              <label className={label}>Conta bancária <span className="font-normal text-muted">(se já pago)</span><select name="bank_account_id" defaultValue={defaultBank} className="field mt-1.5"><option value="">—</option>{bankOptions}</select></label>
-              <details className="sm:col-span-3">
-                <summary className="cursor-pointer text-sm text-muted underline">Mais opções: repetir ou parcelar, filial, competência, documento</summary>
-                <div className="mt-3 grid gap-4 sm:grid-cols-3">
-                  <label className={label}>Como lançar
-                    <select name="plan" defaultValue="once" className="field mt-1.5">
-                      <option value="once">Uma vez</option>
-                      <option value="repeat">Repetir todo mês (mesmo valor)</option>
-                      <option value="split">Parcelar (dividir o valor)</option>
-                    </select>
-                  </label>
-                  <label className={label}>Quantas vezes <span className="font-normal text-muted">(repetir ou parcelar)</span><input type="number" name="installments" min={1} max={60} defaultValue={1} className="field mt-1.5" /></label>
-                  <label className={label}>Intervalo
-                    <select name="interval" defaultValue="month" className="field mt-1.5">
-                      <option value="month">Todo mês</option>
-                      <option value="15">A cada 15 dias</option>
-                      <option value="7">A cada 7 dias</option>
-                      <option value="days">A cada X dias</option>
-                    </select>
-                  </label>
-                  <label className={label}>X dias <span className="font-normal text-muted">(só em “a cada X dias”)</span><input type="number" name="interval_days" min={1} max={365} placeholder="10" className="field mt-1.5" /></label>
-                  <p className="text-xs text-ink-soft sm:col-span-2">Repetir: o mesmo valor em cada data, por exemplo salário ou aluguel (R$ 1.000, 3 vezes = 3 × R$ 1.000). Parcelar: o valor é dividido (R$ 1.000 em 3 vezes = 3 × R$ 333,33). O intervalo define as datas a partir do vencimento: todo mês, a cada 15 dias (2 no mesmo mês), a cada 10 dias (3 no mesmo mês) e assim por diante.</p>
-                  <label className={label}>Filial (centro de custo)<select name="branch_id" className="field mt-1.5"><option value="">Empresa toda</option>{(branches ?? []).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
-                  <label className={label}>Competência <span className="font-normal text-muted">(DRE; vazio = vencimento)</span><input type="date" name="competence_on" className="field mt-1.5" /></label>
-                  <label className={label}>Documento<input name="document" maxLength={60} className="field mt-1.5" /></label>
-                </div>
-              </details>
-              <div className="flex justify-end sm:col-span-3"><SubmitButton className="h-10 rounded-[10px] bg-brand px-5 text-sm font-semibold text-white hover:bg-brand-strong" pendingText="Salvando...">Registrar</SubmitButton></div>
-            </form>
+            <NewEntryForm back={back} today={t} defaultBank={defaultBank} accountOptions={accountOptions} bankOptions={bankOptions} branches={branches ?? []} />
           </details>
         </Card>
       )}
@@ -230,7 +193,7 @@ export default async function CompanyFinancePage({ searchParams }: { searchParam
                       </td>
                       <td className="px-3 py-2.5 text-ink">{e.description}{e.counterpart ? <span className="block text-xs text-muted">{e.counterpart}</span> : null}{e.source !== 'manual' ? <span className="block text-xs text-muted">{FIN_SOURCE_LABEL[e.source]}</span> : null}
                         {(receiptsOf.get(e.id) ?? []).map((r, i) => <a key={i} href={r.url} target="_blank" rel="noopener noreferrer" className="mt-0.5 inline-flex items-center gap-1 text-xs text-brand underline"><Paperclip size={12} aria-hidden />{r.name}</a>)}</td>
-                      <td className={`num whitespace-nowrap px-3 py-2.5 text-right ${e.direction === 'in' ? 'text-[#15803D]' : 'text-ink'}`}>{e.direction === 'in' ? '+' : '−'} {brl((cents(e.amount) + cents(e.interest) - cents(e.discount)) / 100)}
+                      <td className={`num whitespace-nowrap px-3 py-2.5 text-right ${e.direction === 'in' ? 'text-[#15803D]' : 'text-ink'}`}>{e.direction === 'in' ? '+' : '−'} {brlCents(cents(e.amount) + cents(e.interest) - cents(e.discount))}
                         {(cents(e.interest) > 0 || cents(e.discount) > 0) && <span className="block text-xs text-muted">{brl(e.amount)}{cents(e.interest) > 0 ? ` + juros ${brl(e.interest)}` : ''}{cents(e.discount) > 0 ? ` − desc. ${brl(e.discount)}` : ''}</span>}
                         {e.original_amount && <span className="block text-xs text-muted">parcial de {brl(e.original_amount)}</span>}</td>
                       <td className="px-3 py-2.5 text-ink-soft">{a ? `${a.code} ${a.name}` : '—'}<span className="block text-xs text-muted">{e.branch_id ? branchName.get(e.branch_id) ?? '—' : 'Empresa toda'}{e.bank_account_id ? ` · ${bankName.get(e.bank_account_id) ?? ''}` : ''}</span></td>

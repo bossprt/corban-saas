@@ -81,8 +81,19 @@ export async function createProposalFromSimulation(formData: FormData) {
   const { supabase } = await requireAppContext()
   const simulationId = String(formData.get('simulation_id') ?? '')
   if (!simulationId) return go('erro:requisicao_invalida')
-  const { data: proposalId, error } = await supabase.rpc('create_proposal_from_simulation', { p_simulation_id: simulationId })
+  // From a lead ("Venda fechada"): the proposal remembers the lead and takes a seller (the lead's, the closing user's, or
+  // the one chosen in the form when neither exists), so the commission is calculated (audit 06/11/2026).
+  const leadId = String(formData.get('lead_id') ?? '')
+  const sellerId = String(formData.get('seller_id') ?? '')
+  if ((leadId && !isUuid(leadId)) || (sellerId && !isUuid(sellerId))) return go('erro:requisicao_invalida')
+  const { data: proposalId, error } = leadId
+    ? await supabase.rpc('close_lead_sale', { p_lead: leadId, p_simulation: simulationId, p_seller: sellerId || null })
+    : await supabase.rpc('create_proposal_from_simulation', { p_simulation_id: simulationId })
   if (error) {
+    if (/seller_required/.test(error.message ?? '')) return go('erro:venda_sem_vendedor')
+    if (/seller_not_found/.test(error.message ?? '')) return go('erro:venda_vendedor_invalido')
+    if (/lead_not_found/.test(error.message ?? '')) return go('erro:venda_lead_indisponivel')
+    if (/simulation_not_of_lead_client/.test(error.message ?? '')) return go('erro:simulacao_indisponivel')
     // The RPC locks the simulation and flips it to "selected" atomically: a double submit reaches one of these two refusals.
     if (error.code === '23505' || /simulation_not_available_for_proposal/.test(error.message ?? '')) return go('erro:proposta_duplicada')
     if (/simulation_not_found_or_forbidden|published_table_version_not_available|customer_not_available/.test(error.message ?? '')) return go('erro:simulacao_indisponivel')

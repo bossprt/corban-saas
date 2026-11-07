@@ -59,10 +59,21 @@ export async function acceptInvitationsFor(user:{id:string;email?:string|null;em
 }
 
 // Display only: e-mail addresses of users whose membership rows the caller can already read (RLS decided that).
+// One database call for everyone (public.member_emails_service, service role only; 06/11/2026). If it is not available
+// the old path (one Auth call per person, up to 200) still answers.
 export async function memberEmails(userIds:string[]):Promise<Map<string,string>>{
  const out=new Map<string,string>()
+ const ids=[...new Set(userIds.filter(Boolean))]
+ if(!ids.length)return out
  const admin=createAdminClient()
- await Promise.all([...new Set(userIds)].slice(0,200).map(async id=>{
+ try{
+  const { data,error }=await admin.rpc('member_emails_service',{p_ids:ids.slice(0,1000)})
+  if(!error&&Array.isArray(data)){
+   for(const r of data as {user_id:string;email:string|null}[])if(r.email)out.set(r.user_id,r.email)
+   return out
+  }
+ }catch{/* fall back below */}
+ await Promise.all(ids.slice(0,200).map(async id=>{
   try{const { data }=await admin.auth.admin.getUserById(id);if(data.user?.email)out.set(id,data.user.email)}catch{/* leave unresolved */}
  }))
  return out
