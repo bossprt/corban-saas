@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Clientes abre só com a busca (08/11/2026)
+
+- Alterado: a aba Clientes não lista mais os clientes ao abrir (pedido do dono 08/11, imagem aprovada, sem filtros). Mostra só "Novo cliente" e a busca por nome, CPF ou telefone; os clientes aparecem só depois de procurar, em ordem alfabética, e o CPF completo abre a ficha direto. Sem migration.
+
 ### Cor e logo de cada empresa (07/11/2026)
 - **O que muda:** em Configurações > Aparência, o administrador da empresa escolhe a cor principal, a cor de destaque e o logo. Toda a equipe da empresa vê essas cores no sistema, e o logo aparece no topo do menu. "Voltar às cores do Corban" desfaz as cores.
 - **Banco de dados:** migration `20261107203756_org_branding_v1`. Ela acrescenta `organizations.brand_color`, `accent_color` e `logo_path`, com checagem de formato (#rrggbb, e o logo só dentro da pasta da própria empresa). Cria o bucket público `org-branding`: só PNG, JPG ou WebP, até 1 MB.

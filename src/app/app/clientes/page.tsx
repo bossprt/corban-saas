@@ -19,14 +19,18 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
   const sp = await searchParams
   // Name and phone filter through the URL; a CPF typed in the same box is looked up by POST (CpfSearchForm) and opens the client.
   const q = searchTerm(sp.q)
-  let query = supabase.from('clients').select('id,full_name,cpf,phone,original_source,created_at').is('deleted_at', null).order('created_at', { ascending: false }).limit(100)
+  // Owner (08/11/2026): the tab opens with no list, only "Novo cliente" and the search; clients appear only for a search.
+  let customers: { id: string; full_name: string; cpf: string | null; phone: string | null; original_source: string | null; created_at: string }[] | null = null
+  let error: unknown = null
   if (q) {
     const d = digitsOnly(q)
     // The name is matched without accents or case against clients.search_name, folded by the database ("joao" finds "João").
     const name = `search_name.like.%${foldText(q)}%`
-    query = query.or(d.length >= 4 ? `${name},phone.ilike.%${d}%` : name)
+    const res = await supabase.from('clients').select('id,full_name,cpf,phone,original_source,created_at').is('deleted_at', null)
+      .or(d.length >= 4 ? `${name},phone.ilike.%${d}%` : name).order('full_name').limit(100)
+    customers = res.data
+    error = res.error
   }
-  const { data: customers, error } = await query
   const canCreate = can(access, 'clientes.create')
   // The profile blocks need clientes.edit (the database checks it again); agreements feed the first registration.
   const canEdit = can(access, 'clientes.edit')
@@ -38,7 +42,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
     <section>
       <PageHeader
         title="Clientes"
-        description="Um cliente por CPF. Cadastrar um CPF que já existe completa o cadastro em vez de duplicar."
+        description="Procure um cliente para abrir a ficha completa. Um cliente por CPF: cadastrar um CPF que já existe completa o cadastro."
         actions={canCreate ? <Link href={sp.novo ? '/app/clientes' : '/app/clientes?novo=1'} className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-brand px-4 text-sm font-medium text-white hover:bg-brand-strong"><UserRoundPlus size={16} aria-hidden />{sp.novo ? 'Fechar cadastro' : 'Novo cliente'}</Link> : null}
       />
 
@@ -54,10 +58,16 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
           <Search size={16} className="text-muted" aria-hidden />
           <input name="q" defaultValue={q ?? ''} placeholder="Nome, CPF ou telefone" className="h-full flex-1 bg-transparent text-sm outline-none placeholder:text-muted" aria-label="Filtrar clientes" />
         </label>
-        <button className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><Search size={15} aria-hidden />Filtrar</button>
+        <button className="inline-flex h-10 items-center gap-1.5 rounded-[10px] bg-brand px-4 text-sm font-semibold text-white hover:bg-brand-strong"><Search size={15} aria-hidden />Procurar</button>
       </CpfSearchForm>
 
-      {error ? (
+      {!q ? (
+        <div className="px-4 py-12 text-center text-sm text-muted">
+          <p className="mb-1 text-base font-semibold text-ink">Nenhuma lista aberta</p>
+          <p>Digite o nome, CPF ou telefone.</p>
+          <p>Com o CPF completo, a ficha do cliente abre direto.</p>
+        </div>
+      ) : error ? (
         <Card className="p-5 text-sm text-[#991B1B]">Não foi possível carregar os clientes agora.</Card>
       ) : (
         <Card className="overflow-hidden">
@@ -78,13 +88,14 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
                 ))}
                 {!customers?.length && (
                   <tr><td colSpan={5} className="px-4 py-10 text-center text-sm text-muted">
-                    {q ? 'Nenhum cliente encontrado com esse filtro.' : 'Nenhum cliente seu ainda. Converta um lead ou cadastre um cliente.'}
+                    Nenhum cliente encontrado com essa busca.
                     {canCreate && <Link href="/app/clientes?novo=1" className="ml-3 inline-flex h-9 items-center rounded-[10px] bg-brand px-3 text-sm font-medium text-white hover:bg-brand-strong">Cadastrar novo cliente</Link>}
                   </td></tr>
                 )}
               </tbody>
             </table>
           </div>
+          {!!customers?.length && <p className="border-t border-line px-4 py-2 text-xs text-muted">{customers.length === 100 ? 'Mostrando os 100 primeiros. Digite mais do nome para achar o cliente.' : `${customers.length} ${customers.length === 1 ? 'cliente encontrado' : 'clientes encontrados'}. Clique para abrir a ficha.`}</p>}
         </Card>
       )}
     </section>

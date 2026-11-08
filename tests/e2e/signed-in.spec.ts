@@ -137,7 +137,7 @@ test('registering an existing CPF recognizes the client instead of duplicating',
   const masked = `${cpf.slice(0, 3)}.${cpf.slice(3, 6)}.${cpf.slice(6, 9)}-${cpf.slice(9)}`
   await page.goto('/app/clientes')
   await page.getByLabel('Filtrar clientes').fill(masked)
-  await page.getByRole('button', { name: 'Filtrar' }).click()
+  await page.getByRole('button', { name: 'Procurar' }).click()
   await expect(page.getByRole('heading', { name: 'Cliente E2E Identidade' })).toBeVisible()
   expect(page.url()).not.toContain(cpf.slice(0, 9))
   await page.goto('/app/contratos')
