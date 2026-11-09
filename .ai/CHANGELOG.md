@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Contratos: filtro Banco voltou a carregar (09/11/2026)
+
+- Corrigido: filtrar Contratos por banco (ex.: PROSESP) dava "Não foi possível carregar os contratos agora" (tempo limite do banco de dados). A função `contract_list` passa a calcular uma vez só os totais de repasse e as linhas de comissão (CTEs MATERIALIZED), sem mudar o resultado. Migration `20261109210000_contract_list_materialized_v1` (aplicar em produção antes do merge, com OK do dono). Conferido em produção numa cópia temporária desfeita: PROSESP 73 contratos em ~2 s. Contrato `contract-pipeline-lists-contract.sql` 22/22.
+
 ### Clientes abre só com a busca (08/11/2026)
 
 - Alterado: a aba Clientes não lista mais os clientes ao abrir (pedido do dono 08/11, imagem aprovada, sem filtros). Mostra só "Novo cliente" e a busca por nome, CPF ou telefone; os clientes aparecem só depois de procurar, em ordem alfabética, e o CPF completo abre a ficha direto. Sem migration.
