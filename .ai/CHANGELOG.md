@@ -17,7 +17,7 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ### Contratos: filtro Banco voltou a carregar (09/11/2026)
 
-- Corrigido: filtrar Contratos por banco (ex.: PROSESP) dava "Não foi possível carregar os contratos agora" (tempo limite do banco de dados). A função `contract_list` passa a calcular uma vez só os totais de repasse e as linhas de comissão (CTEs MATERIALIZED), sem mudar o resultado. Migration `20261109210000_contract_list_materialized_v1` (aplicar em produção antes do merge, com OK do dono). Conferido em produção numa cópia temporária desfeita: PROSESP 73 contratos em ~2 s. Contrato `contract-pipeline-lists-contract.sql` 22/22.
+- Corrigido: filtrar Contratos por banco (ex.: PROSESP) dava "Não foi possível carregar os contratos agora" (tempo limite do banco de dados). A função `contract_list` passa a calcular uma vez só os totais de repasse e as linhas de comissão (CTEs MATERIALIZED), sem mudar o resultado. Migration `20261109203411_contract_list_materialized_v1` (aplicada em produção 09/11 com OK do dono). Conferido em produção numa cópia temporária desfeita: PROSESP 73 contratos em ~2 s. Contrato `contract-pipeline-lists-contract.sql` 22/22.
 
 ### Clientes abre só com a busca (08/11/2026)
 
