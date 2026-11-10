@@ -15,6 +15,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Contratos: comissão zerada conta como calculada (10/11/2026)
+- Corrigido: depois de zerar a comissão do contrato 2756344, a lista mostrava "Comissão não calculada". O cálculo rodava, mas um componente com R$ 0 não gravava linhas, e a lista lê "calculada" pelas linhas. Agora um componente zerado à mão grava suas linhas com R$ 0,00.
+- Migration `20261110194928_manual_commission_zero_lines_v1` (só `private.contract_commission_core`; aplicada em produção 10/11 com OK do dono; md5 igual ao arquivo). Teste `tests/security/manual-commission-zero-contract.sql` 13/13.
+- O contrato 2756344 precisa ser recalculado uma vez (lançar o 0 de novo ou "Tentar de novo").
+
 ### Contratos: zerar a comissão recebida (10/11/2026)
 
 - Corrigido: em "Comissão recebida lançada à mão", digitar 0 era recusado, e o 0 guardado significava "remover, voltar à tabela", então não havia como zerar o que a empresa recebe num contrato (pedido do dono, contrato 2756344). Nova marca `zeroed` em `proposal_manual_components` (linhas antigas não mudam de sentido); 0 em R$ ou % grava R$ 0 marcado e o cálculo dá R$ 0 recebido; "Remover" continua voltando à tabela. Se a parte do vendedor ficar maior que o recebido, nada é gravado. Histórico: "Comissão recebida (...) zerada à mão". Migration `20261110170907_manual_commission_zero_v1` (aplicada em produção 10/11 com OK do dono). Contrato novo `manual-commission-zero-contract.sql` 12/12; `manual-received-commission-contract.sql` 16/16; unitários 311/311.
