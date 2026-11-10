@@ -85,6 +85,20 @@ insert into results select 'the zeroed rows are R$ 0 with the marker; the remova
 insert into results select 'the history says "zero"',
   (select count(*) = 3 from public.contract_events where proposal_id = (select id from made where label = 'p') and kind = 'manual_commission' and detail->>'kind' = 'zero');
 -- Past the RPC gate on purpose, to reach the table rule itself.
+-- 20261110230000: once paid, a contract whose company receives R$ 0 does not wait for the bank; one that receives does.
+select pg_temp.act_as((select admin_user from ids));
+set local role authenticated;
+insert into results select 'the contract can be zeroed again (upfront and deferred)', pg_temp.set('upfront', 'brl', '0', 'Banco não paga este contrato') = 'ok' and pg_temp.set('deferred', 'brl', '0', 'Banco não paga este contrato') = 'ok' and pg_temp.received('upfront') = 0 and pg_temp.received('deferred') = 0;
+reset role;
+set local session_replication_role = replica; -- test-only setup: mark both contracts paid to the client
+update public.proposals_v2 set status = 'paid', physical_received_at = coalesce(physical_received_at, now())
+where id in (select id from made where label in ('p', 'p_seller'));
+set local session_replication_role = origin;
+insert into results select 'a paid contract receiving R$ 0 does not wait for the bank (concluded, no payout)',
+  (select waiting from private.contract_credit_state((select id from made where label = 'p'))) = 'no_payout';
+insert into results select 'a paid contract that receives something still waits for the bank',
+  (select waiting from private.contract_credit_state((select id from made where label = 'p_seller'))) = 'bank';
+
 select set_config('corban.manual_commission_rpc', 'on', true);
 insert into results select 'a zeroed row must be R$ 0',
   pg_temp.err(format('insert into public.proposal_manual_components (organization_id, proposal_id, component_type_id, value_kind, base, value, zeroed, reason) select %L, %L, id, %L, null, 5, true, %L from public.commission_component_types where tech_key = %L',
