@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Contratos: comissão zerada não espera o banco (10/11/2026)
+- Corrigido: o contrato 2756344, zerado (empresa recebe R$ 0), ficava em "aguardando comissão do banco" para sempre. Agora, quando o cálculo não recebe nada, o passo do banco é pulado e o contrato fica "concluído · sem repasse". Contrato que recebe algo continua esperando o banco.
+- Migration `20261110205134_zero_commission_skips_bank_v1` (só `private.contract_credit_state`; aplicada em produção 10/11 com OK do dono; md5 igual ao arquivo). Em produção só o 2756344 mudou. Teste `tests/security/manual-commission-zero-contract.sql` 16/16.
+
 ### Contratos: comissão zerada conta como calculada (10/11/2026)
 - Corrigido: depois de zerar a comissão do contrato 2756344, a lista mostrava "Comissão não calculada". O cálculo rodava, mas um componente com R$ 0 não gravava linhas, e a lista lê "calculada" pelas linhas. Agora um componente zerado à mão grava suas linhas com R$ 0,00.
 - Migration `20261110194928_manual_commission_zero_lines_v1` (só `private.contract_commission_core`; aplicada em produção 10/11 com OK do dono; md5 igual ao arquivo). Teste `tests/security/manual-commission-zero-contract.sql` 13/13.
