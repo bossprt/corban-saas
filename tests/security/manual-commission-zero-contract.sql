@@ -31,6 +31,12 @@ create function pg_temp.received(p_component text) returns numeric language sql 
   where c.proposal_id = (select id from made where label = 'p') and c.status = 'active' and l.component_key = p_component and l.line_kind = 'received'
 $$;
 grant execute on function pg_temp.received(text) to authenticated;
+-- Contratos reads "calculated" from the active calculation's lines: a zeroed component must still write them (at R$ 0).
+create function pg_temp.lines(p_component text) returns bigint language sql as $$
+  select count(*) from public.proposal_commission_lines l join public.proposal_commission_calcs c on c.id = l.calc_id
+  where c.proposal_id = (select id from made where label = 'p') and c.status = 'active' and l.component_key = p_component and l.line_kind = 'received'
+$$;
+grant execute on function pg_temp.lines(text) to authenticated;
 
 -- A calculated contract: gross 10.000,00, net 9.500,00.
 select pg_temp.act_as((select admin_user from ids));
@@ -65,9 +71,10 @@ update made set label = 'p' where label = 'p0';
 create temp table before0 as select pg_temp.received('upfront') upfront;
 insert into results select 'the contract with the seller at R$ 0 is calculated too', (select upfront > 0 from before0);
 insert into results select 'R$ 0 zeroes a component the table pays', pg_temp.set('upfront', 'brl', '0', 'Banco não paga este contrato') = 'ok' and pg_temp.received('upfront') = 0;
+insert into results select 'the zeroed contract still counts as calculated (its lines are written at R$ 0)', pg_temp.lines('upfront') > 0;
 insert into results select '0% also zeroes it', pg_temp.set('upfront', 'pct_liquido', '0', 'Zerar de novo') = 'ok' and pg_temp.received('upfront') = 0;
 insert into results select 'remove goes back to the table', pg_temp.set('upfront', 'remove', null, 'Banco voltou a pagar') = 'ok' and pg_temp.received('upfront') = (select upfront from before0);
-insert into results select 'a component outside the table can be zeroed (line at R$ 0)', pg_temp.set('gratification', 'brl', '0', 'Sem gratificação') = 'ok' and pg_temp.received('gratification') = 0;
+insert into results select 'a component outside the table can be zeroed (line at R$ 0)', pg_temp.set('gratification', 'brl', '0', 'Sem gratificação') = 'ok' and pg_temp.received('gratification') = 0 and pg_temp.lines('gratification') > 0;
 insert into results select 'a negative value is refused', pg_temp.set('upfront', 'brl', '-1', 'erro') like '%invalid_amount%';
 reset role;
 
