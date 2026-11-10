@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Contratos: zerar a comissão recebida (10/11/2026)
+
+- Corrigido: em "Comissão recebida lançada à mão", digitar 0 era recusado, e o 0 guardado significava "remover, voltar à tabela", então não havia como zerar o que a empresa recebe num contrato (pedido do dono, contrato 2756344). Nova marca `zeroed` em `proposal_manual_components` (linhas antigas não mudam de sentido); 0 em R$ ou % grava R$ 0 marcado e o cálculo dá R$ 0 recebido; "Remover" continua voltando à tabela. Se a parte do vendedor ficar maior que o recebido, nada é gravado. Histórico: "Comissão recebida (...) zerada à mão". Migration `20261110170907_manual_commission_zero_v1` (aplicada em produção 10/11 com OK do dono). Contrato novo `manual-commission-zero-contract.sql` 12/12; `manual-received-commission-contract.sql` 16/16; unitários 311/311.
+
 ### Contratos: filtro Banco voltou a carregar (09/11/2026)
 
 - Corrigido: filtrar Contratos por banco (ex.: PROSESP) dava "Não foi possível carregar os contratos agora" (tempo limite do banco de dados). A função `contract_list` passa a calcular uma vez só os totais de repasse e as linhas de comissão (CTEs MATERIALIZED), sem mudar o resultado. Migration `20261109203411_contract_list_materialized_v1` (aplicada em produção 09/11 com OK do dono). Conferido em produção numa cópia temporária desfeita: PROSESP 73 contratos em ~2 s. Contrato `contract-pipeline-lists-contract.sql` 22/22.
