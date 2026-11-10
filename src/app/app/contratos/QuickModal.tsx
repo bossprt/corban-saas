@@ -124,18 +124,19 @@ export async function QuickModal({ id, acao, back, canEdit, finance, owner, canM
       const [{ data: lineRows }, { data: payoutRows }, { data: manualRows }, { data: componentRows }] = await Promise.all([
         supabase.from('proposal_commission_lines').select('line_kind,amount,multiplier').eq('calc_id', calc.id),
         supabase.rpc('contract_payout', { p_proposal: id }),
-        owner ? supabase.from('proposal_manual_components').select('component_type_id,value_kind,base,value,reason,created_at').eq('proposal_id', id).order('created_at', { ascending: false }) : Promise.resolve({ data: [] }),
+        owner ? supabase.from('proposal_manual_components').select('component_type_id,value_kind,base,value,zeroed,reason,created_at').eq('proposal_id', id).order('created_at', { ascending: false }) : Promise.resolve({ data: [] }),
         owner ? supabase.from('commission_component_types').select('id,tech_key,name').eq('is_active', true).order('sort_order') : Promise.resolve({ data: [] }),
       ])
-      // Commission received typed for this contract: the latest entry of each component, when it is not a removal.
+      // Commission received typed for this contract: the latest entry of each component, when it is not a removal
+      // (value 0 without the zeroed marker; zeroed = R$ 0 typed on purpose, migration 20261110170907).
       const components = (componentRows ?? []) as { id: string; tech_key: string; name: string }[]
       const seen = new Set<string>()
-      const manual = ((manualRows ?? []) as { component_type_id: string; value_kind: string; base: string | null; value: string; reason: string }[])
+      const manual = ((manualRows ?? []) as { component_type_id: string; value_kind: string; base: string | null; value: string; zeroed: boolean; reason: string }[])
         .filter(m => !seen.has(m.component_type_id) && seen.add(m.component_type_id))
-        .filter(m => Number(m.value) > 0)
+        .filter(m => m.zeroed || Number(m.value) > 0)
         .map(m => ({ ...m, component: components.find(c => c.id === m.component_type_id) }))
-      const manualText = (m: { value_kind: string; base: string | null; value: string }) =>
-        m.value_kind === 'fixed_brl' ? money(m.value) : `${decimalBr(String(m.value))}% sobre o ${m.base === 'BRUTO' ? 'bruto' : 'líquido'}`
+      const manualText = (m: { value_kind: string; base: string | null; value: string; zeroed: boolean }) =>
+        m.zeroed ? `${money('0')} (zerada)` : m.value_kind === 'fixed_brl' ? money(m.value) : `${decimalBr(String(m.value))}% sobre o ${m.base === 'BRUTO' ? 'bruto' : 'líquido'}`
       // Sum of one kind over the parts (à vista, diferido...), exact decimals.
       const lineSum = (kind: string) => toDecimalString((lineRows ?? []).filter(l => l.line_kind === kind)
         .reduce((a, l) => add(a, mul(fromDecimalString(String(l.amount)), fromDecimalString(String(l.multiplier ?? 1)))), fromDecimalString('0')), 2)
@@ -179,7 +180,7 @@ export async function QuickModal({ id, acao, back, canEdit, finance, owner, canM
                 <label className={lbl}>Valor<input name="value" required inputMode="decimal" placeholder="2 ou 150,00" className="field mt-1.5" /></label>
               </div>
               <label className={lbl}>Motivo<input name="reason" required minLength={3} maxLength={500} placeholder="Obrigatório (ex.: gratificação informada pelo banco)" className="field mt-1.5" /></label>
-              <p className="text-xs text-muted">Substitui o que a tabela diz para essa comissão neste contrato. A parte do vendedor continua a da tabela.</p>
+              <p className="text-xs text-muted">Substitui o que a tabela diz para essa comissão neste contrato. A parte do vendedor continua a da tabela. Digite 0 para zerar o que a empresa recebe neste contrato.</p>
               {buttons('Lançar e recalcular')}
             </form>
           </details>

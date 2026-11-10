@@ -37,6 +37,7 @@ function describe(e: ContractEvent): string {
   if (e.kind === 'manual_commission') {
     const name = COMPONENT[String(d.component)] ?? String(d.component)
     if (d.kind === 'remove') return `Comissão recebida (${name}) lançada à mão removida: volta a da tabela`
+    if (d.kind === 'zero') return `Comissão recebida (${name}) zerada à mão: ${money('0')}`
     const how = d.kind === 'fixed_brl' ? money(d.value) : `${decimalBr(String(d.value ?? ''))}% sobre o ${d.base === 'BRUTO' ? 'bruto' : 'líquido'}`
     return `Comissão recebida (${name}) lançada à mão: ${how}`
   }
