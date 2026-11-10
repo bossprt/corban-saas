@@ -240,6 +240,7 @@ export const FEEDBACK = {
   'erro:comissao_ambigua': 'Há mais de uma condição possível para esta proposta. Escolha a condição.',
   'erro:comissao_congelada': 'A proposta já foi paga: a comissão está congelada.',
   'erro:comissao_excede': 'A regra do grupo paga mais do que a empresa recebe nesta linha. Revise o grupo ou a tabela.',
+  'erro:comissao_recebida_menor_que_repasse': 'O vendedor recebe mais do que a empresa passaria a receber. Primeiro altere o repasse do vendedor (logo abaixo) e depois zere ou altere a comissão recebida.',
   'erro:comissao_sem_vendedor': 'O contrato não tem vendedor: informe o vendedor antes de calcular.',
   'erro:comissao_vendedor_sem_grupo': 'O vendedor não tem grupo: escolha o grupo no cadastro do vendedor.',
   'erro:comissao_grupo_sem_regra': 'O grupo do vendedor não tem regra de repasse: configure em Cadastros > Grupos de vendedores.',

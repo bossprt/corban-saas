@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { Badge, Card, CardHeader } from '@/components/ui'
 import { SubmitButton } from '@/components/SubmitButton'
 import { BankAccountSelect } from '@/components/BankAccountSelect'
@@ -103,10 +104,14 @@ export async function CommissionCard({ supabase, access, proposalId, closed, can
       <CardHeader
         title={<span className="flex flex-wrap items-center gap-2">Comissão {calc?.mode && <Badge tone="brand">{MODE_LABEL[calc.mode] ?? calc.mode}</Badge>}{finance && calc?.tax_exempt && <Badge tone="received">Sem imposto</Badge>}{owner && anyOverride && <Badge tone="pending">Repasse alterado</Badge>}</span>}
         action={canCalc ? (
-          <form action={calculateCommission}>
-            <input type="hidden" name="proposal_id" value={proposalId} />
-            <button className="h-9 rounded-[10px] border border-line bg-surface px-3 text-sm hover:bg-surface-muted">{calc ? 'Recalcular' : failureCode ? 'Tentar de novo' : 'Calcular comissão'}</button>
-          </form>
+          <div className="flex flex-wrap gap-2">
+            {/* Owner, 10/11/2026: changing or zeroing what the company receives opens the Contratos commission window. */}
+            {owner && finance && calc && <Link href={`/app/contratos?contrato=${proposalId}&acao=comissao`} className="inline-flex h-9 items-center rounded-[10px] border border-line bg-surface px-3 text-sm hover:bg-surface-muted">Alterar comissão recebida</Link>}
+            <form action={calculateCommission}>
+              <input type="hidden" name="proposal_id" value={proposalId} />
+              <button className="h-9 rounded-[10px] border border-line bg-surface px-3 text-sm hover:bg-surface-muted">{calc ? 'Recalcular' : failureCode ? 'Tentar de novo' : 'Calcular comissão'}</button>
+            </form>
+          </div>
         ) : undefined}
       />
       <div className="p-5 pt-3 text-sm">

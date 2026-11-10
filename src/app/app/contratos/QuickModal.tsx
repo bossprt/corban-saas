@@ -77,7 +77,7 @@ export async function QuickModal({ id, acao, back, canEdit, finance, owner, canM
         {buttons('Salvar ADE')}
       </form>) : <p className="text-sm text-muted">Sem permissão para alterar a ADE.</p>
   } else if (p && (acao === 'comissao' || acao === 'calcular')) {
-    const { data: calc } = finance ? await supabase.from('proposal_commission_calcs').select('id').eq('proposal_id', id).eq('status', 'active').maybeSingle() : { data: null }
+    const { data: calc } = finance ? await supabase.from('proposal_commission_calcs').select('id,condition_id').eq('proposal_id', id).eq('status', 'active').maybeSingle() : { data: null }
     if (!finance) body = <p className="text-sm text-muted">A comissão aparece para o financeiro.</p>
     else if (!calc) {
       // Not calculated: the reason of the last try and the one field (or screen) that fixes it.
@@ -121,11 +121,12 @@ export async function QuickModal({ id, acao, back, canEdit, finance, owner, canM
         {fix}
       </div>
     } else {
-      const [{ data: lineRows }, { data: payoutRows }, { data: manualRows }, { data: componentRows }] = await Promise.all([
-        supabase.from('proposal_commission_lines').select('line_kind,amount,multiplier').eq('calc_id', calc.id),
+      const [{ data: lineRows }, { data: payoutRows }, { data: manualRows }, { data: componentRows }, { data: tableRows }] = await Promise.all([
+        supabase.from('proposal_commission_lines').select('component_key,line_kind,amount,multiplier').eq('calc_id', calc.id),
         supabase.rpc('contract_payout', { p_proposal: id }),
         owner ? supabase.from('proposal_manual_components').select('component_type_id,value_kind,base,value,zeroed,reason,created_at').eq('proposal_id', id).order('created_at', { ascending: false }) : Promise.resolve({ data: [] }),
         owner ? supabase.from('commission_component_types').select('id,tech_key,name').eq('is_active', true).order('sort_order') : Promise.resolve({ data: [] }),
+        owner && calc.condition_id ? supabase.from('commercial_condition_components').select('component_type_id,value_kind,received_value,calculation_base').eq('condition_id', calc.condition_id) : Promise.resolve({ data: [] }),
       ])
       // Commission received typed for this contract: the latest entry of each component, when it is not a removal
       // (value 0 without the zeroed marker; zeroed = R$ 0 typed on purpose, migration 20261110170907).
@@ -138,8 +139,20 @@ export async function QuickModal({ id, acao, back, canEdit, finance, owner, canM
       const manualText = (m: { value_kind: string; base: string | null; value: string; zeroed: boolean }) =>
         m.zeroed ? `${money('0')} (zerada)` : m.value_kind === 'fixed_brl' ? money(m.value) : `${decimalBr(String(m.value))}% sobre o ${m.base === 'BRUTO' ? 'bruto' : 'líquido'}`
       // Sum of one kind over the parts (à vista, diferido...), exact decimals.
-      const lineSum = (kind: string) => toDecimalString((lineRows ?? []).filter(l => l.line_kind === kind)
+      const lineSum = (kind: string, component?: string) => toDecimalString((lineRows ?? []).filter(l => l.line_kind === kind && (!component || l.component_key === component))
         .reduce((a, l) => add(a, mul(fromDecimalString(String(l.amount)), fromDecimalString(String(l.multiplier ?? 1)))), fromDecimalString('0')), 2)
+      // What the company receives, one row per component of this calculation (owner, 10/11/2026: "não vi uma tela de
+      // altera a comissão recebida"): the value, where it comes from, and Alterar / Zerar / Voltar à tabela.
+      const tableOf = new Map(((tableRows ?? []) as { component_type_id: string; value_kind: string; received_value: string | null; calculation_base: string | null }[]).map(t => [t.component_type_id, t]))
+      const tableText = (t?: { value_kind: string; received_value: string | null; calculation_base: string | null }) =>
+        !t || t.received_value === null ? 'da tabela' : t.value_kind === 'fixed_brl' ? `da tabela (${money(t.received_value)})`
+          : `da tabela (${decimalBr(String(t.received_value))}% sobre o ${String(t.calculation_base ?? '').toUpperCase().startsWith('B') ? 'bruto' : 'líquido'})`
+      const inCalc = new Set((lineRows ?? []).filter(l => l.line_kind === 'received').map(l => String(l.component_key)))
+      const receivedRows = components.filter(c => inCalc.has(c.tech_key) || manual.some(m => m.component_type_id === c.id))
+        .map(c => ({ ...c, value: lineSum('received', c.tech_key), manual: manual.find(m => m.component_type_id === c.id), table: tableOf.get(c.id) }))
+      const others = components.filter(c => !receivedRows.some(r => r.id === c.id))
+      const smallBase = 'inline-flex h-8 cursor-pointer list-none items-center rounded-[8px] border bg-surface px-3 text-xs font-medium hover:bg-surface-muted [&::-webkit-details-marker]:hidden'
+      const small = `${smallBase} border-line text-ink`
       const payouts = (payoutRows ?? []) as { component_key: string; received: string; rule_amount: string; value_kind: string | null; value: string | null; payable: string; overridden: boolean; locked: boolean }[]
       body = <div className="grid gap-3">
         <dl className="grid grid-cols-2 gap-2 text-sm">
@@ -148,6 +161,71 @@ export async function QuickModal({ id, acao, back, canEdit, finance, owner, canM
           {payouts.map(x => <div key={x.component_key} className="col-span-2 flex flex-wrap items-center gap-2 border-t border-line pt-2"><span className="text-xs text-muted">Vendedor recebe ({COMPONENT_LABEL[x.component_key] ?? x.component_key})</span>
             <span className="num font-semibold text-ink">{money(x.payable)}</span>{x.overridden && owner && <Badge tone="pending">Alterado · regra {money(x.rule_amount)}</Badge>}{x.locked && <Badge tone="received">Já pago ao vendedor</Badge>}</div>)}
         </dl>
+        {owner && (
+          <section className="grid gap-2">
+            <h3 className="text-sm font-semibold text-ink">O que a empresa recebe do banco neste contrato</h3>
+            {receivedRows.map(r => (
+              <div key={r.id} className="rounded-[10px] border border-line p-3">
+                <div className="text-sm"><strong className="text-ink">{r.name}</strong>
+                  <span className="num block text-ink">{money(r.value)}</span>
+                  <span className="block text-xs text-muted">{r.manual ? `${r.manual.zeroed ? 'zerada à mão' : `lançada à mão (${manualText(r.manual)})`} · motivo: ${r.manual.reason}` : tableText(r.table)}</span></div>
+                <div className="mt-2 flex flex-wrap items-start gap-2">
+                  <details className="w-full sm:w-auto [&[open]]:w-full">
+                    <summary className={small}>Alterar</summary>
+                    <form action={quickManualCommission} className="mt-2 grid gap-2 border-t border-dashed border-line pt-2">{hidden}
+                      <input type="hidden" name="component" value={r.tech_key} />
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <label className={lbl}>Como<select name="kind" defaultValue="brl" className="field mt-1.5"><option value="brl">Valor (R$)</option><option value="pct_liquido">% sobre o líquido</option><option value="pct_bruto">% sobre o bruto</option></select></label>
+                        <label className={lbl}>Novo valor<input name="value" required inputMode="decimal" placeholder="120,00 ou 8" className="field mt-1.5" /></label>
+                      </div>
+                      <label className={lbl}>Motivo<input name="reason" required minLength={3} maxLength={500} placeholder="Obrigatório (ex.: banco pagou menos)" className="field mt-1.5" /></label>
+                      <div><SubmitButton className={primary} pendingText="Salvando...">Salvar e recalcular</SubmitButton></div>
+                    </form>
+                  </details>
+                  {!r.manual?.zeroed && (
+                    <details className="w-full sm:w-auto [&[open]]:w-full">
+                      <summary className={`${smallBase} border-[#F0B4B4] text-[#B42318]`}>Zerar</summary>
+                      <form action={quickManualCommission} className="mt-2 grid gap-2 border-t border-dashed border-line pt-2">{hidden}
+                        <input type="hidden" name="component" value={r.tech_key} /><input type="hidden" name="kind" value="brl" /><input type="hidden" name="value" value="0" />
+                        <p className="text-sm text-ink">A empresa passa a receber <strong>{money('0')}</strong> de {r.name} neste contrato.</p>
+                        <label className={lbl}>Motivo<input name="reason" required minLength={3} maxLength={500} placeholder="Ex.: banco não paga este contrato" className="field mt-1.5" /></label>
+                        <div><SubmitButton className="inline-flex h-10 items-center rounded-[10px] bg-[#B42318] px-4 text-sm font-semibold text-white hover:bg-[#912018]" pendingText="Zerando...">Zerar comissão</SubmitButton></div>
+                      </form>
+                    </details>
+                  )}
+                  {r.manual && (
+                    <details className="w-full sm:w-auto [&[open]]:w-full">
+                      <summary className={small}>Voltar à tabela</summary>
+                      <form action={quickManualCommission} className="mt-2 grid gap-2 border-t border-dashed border-line pt-2">{hidden}
+                        <input type="hidden" name="component" value={r.tech_key} /><input type="hidden" name="kind" value="remove" />
+                        <p className="text-sm text-ink">{r.name} volta a seguir a tabela do contrato{r.table?.received_value ? ` ${tableText(r.table).replace('da tabela ', '')}` : ''}.</p>
+                        <label className={lbl}>Motivo<input name="reason" required minLength={3} maxLength={500} placeholder="Ex.: banco voltou a pagar" className="field mt-1.5" /></label>
+                        <div><SubmitButton className={primary} pendingText="Salvando...">Voltar à tabela e recalcular</SubmitButton></div>
+                      </form>
+                    </details>
+                  )}
+                </div>
+              </div>
+            ))}
+            {!receivedRows.length && <p className="text-sm text-muted">Nenhuma comissão recebida neste contrato.</p>}
+            {others.length > 0 && (
+              <details className="rounded-[10px] border border-dashed border-line p-3">
+                <summary className="cursor-pointer text-sm font-semibold text-brand">+ Lançar outra comissão (ex.: Gratificação)</summary>
+                <form action={quickManualCommission} className="mt-3 grid gap-3">{hidden}
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <label className={lbl}>Comissão<select name="component" defaultValue={others.some(c => c.tech_key === 'gratification') ? 'gratification' : others[0].tech_key} className="field mt-1.5">{others.map(c => <option key={c.tech_key} value={c.tech_key}>{c.name}</option>)}</select></label>
+                    <label className={lbl}>Como<select name="kind" defaultValue="pct_liquido" className="field mt-1.5"><option value="pct_liquido">% sobre o líquido</option><option value="pct_bruto">% sobre o bruto</option><option value="brl">Valor (R$)</option></select></label>
+                    <label className={lbl}>Valor<input name="value" required inputMode="decimal" placeholder="2 ou 150,00" className="field mt-1.5" /></label>
+                  </div>
+                  <label className={lbl}>Motivo<input name="reason" required minLength={3} maxLength={500} placeholder="Obrigatório (ex.: gratificação informada pelo banco)" className="field mt-1.5" /></label>
+                  <div><SubmitButton className={primary} pendingText="Salvando...">Lançar e recalcular</SubmitButton></div>
+                </form>
+              </details>
+            )}
+            <p className="text-xs text-muted">Alterar ou zerar muda só este contrato: a tabela não muda e a parte do vendedor continua a da regra. Tudo fica no histórico com o motivo.</p>
+            <h3 className="mt-2 text-sm font-semibold text-ink">Repasse do vendedor</h3>
+          </section>
+        )}
         {owner && payouts.filter(x => !x.locked).map(x => (
           <details key={x.component_key} open={payouts.filter(y => !y.locked).length === 1} className="rounded-[10px] border border-line p-3">
           <summary className="cursor-pointer text-sm font-medium text-ink">Alterar repasse do vendedor — {COMPONENT_LABEL[x.component_key] ?? x.component_key}</summary>
@@ -162,29 +240,6 @@ export async function QuickModal({ id, acao, back, canEdit, finance, owner, canM
           </details>
         ))}
         {!owner && <p className="text-xs text-muted">Só o Administrador altera o repasse do vendedor.</p>}
-        {owner && (
-          <details open={manual.length > 0} className="rounded-[10px] border border-line p-3">
-            <summary className="cursor-pointer text-sm font-medium text-ink">Comissão recebida lançada à mão (ex.: Gratificação)</summary>
-            {manual.map(m => (
-              <form key={m.component_type_id} action={quickManualCommission} className="mt-3 flex flex-wrap items-end gap-2 border-b border-line pb-3">{hidden}
-                <input type="hidden" name="component" value={m.component?.tech_key ?? ''} /><input type="hidden" name="kind" value="remove" />
-                <span className="text-sm text-ink"><strong>{m.component?.name ?? 'Comissão'}</strong>: {manualText(m)}<span className="block text-xs text-muted">Motivo: {m.reason}</span></span>
-                <input name="reason" required minLength={3} maxLength={500} placeholder="Motivo para remover" className="field h-9 w-48 text-xs" />
-                <SubmitButton className={ghost} pendingText="Removendo...">Remover</SubmitButton>
-              </form>
-            ))}
-            <form action={quickManualCommission} className="mt-3 grid gap-3">{hidden}
-              <div className="grid gap-3 sm:grid-cols-3">
-                <label className={lbl}>Comissão<select name="component" defaultValue="gratification" className="field mt-1.5">{components.map(c => <option key={c.tech_key} value={c.tech_key}>{c.name}</option>)}</select></label>
-                <label className={lbl}>Como<select name="kind" defaultValue="pct_liquido" className="field mt-1.5"><option value="pct_liquido">% sobre o líquido</option><option value="pct_bruto">% sobre o bruto</option><option value="brl">Valor (R$)</option></select></label>
-                <label className={lbl}>Valor<input name="value" required inputMode="decimal" placeholder="2 ou 150,00" className="field mt-1.5" /></label>
-              </div>
-              <label className={lbl}>Motivo<input name="reason" required minLength={3} maxLength={500} placeholder="Obrigatório (ex.: gratificação informada pelo banco)" className="field mt-1.5" /></label>
-              <p className="text-xs text-muted">Substitui o que a tabela diz para essa comissão neste contrato. A parte do vendedor continua a da tabela. Digite 0 para zerar o que a empresa recebe neste contrato.</p>
-              {buttons('Lançar e recalcular')}
-            </form>
-          </details>
-        )}
         <form action={quickCalc}>{hidden}<SubmitButton className={ghost} pendingText="Recalculando...">Recalcular pela tabela</SubmitButton></form>
       </div>
     }

@@ -15,6 +15,12 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Contratos: tela para alterar e zerar a comissão recebida (10/11/2026)
+- Adicionado (pedido do dono: "não vi uma tela de altera a comissão recebida"): na janela Comissão do contrato, o quadro "O que a empresa recebe do banco neste contrato" lista cada comissão (À vista, Diferido, Gratificação...) com o valor, de onde vem (tabela ou lançada à mão, com o motivo) e os botões Alterar, Zerar e Voltar à tabela; "+ Lançar outra comissão" para o que a tabela não tem. Substitui o item escondido "Comissão recebida lançada à mão".
+- Página do contrato: botão "Alterar comissão recebida" no quadro Comissão (Administrador), abre a mesma janela.
+- Quando o vendedor recebe mais do que a empresa passaria a receber, a mensagem diz para alterar primeiro o repasse do vendedor.
+- Só tela; sem mudança no banco. Testado no ambiente local (zerar recusado com a mensagem nova, alterar para R$ 800,00, botão da página do contrato); dados de teste apagados.
+
 ### Contratos: comissão zerada não espera o banco (10/11/2026)
 - Corrigido: o contrato 2756344, zerado (empresa recebe R$ 0), ficava em "aguardando comissão do banco" para sempre. Agora, quando o cálculo não recebe nada, o passo do banco é pulado e o contrato fica "concluído · sem repasse". Contrato que recebe algo continua esperando o banco.
 - Migration `20261110205134_zero_commission_skips_bank_v1` (só `private.contract_credit_state`; aplicada em produção 10/11 com OK do dono; md5 igual ao arquivo). Em produção só o 2756344 mudou. Teste `tests/security/manual-commission-zero-contract.sql` 16/16.
