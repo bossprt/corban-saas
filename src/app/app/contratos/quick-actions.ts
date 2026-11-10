@@ -118,6 +118,8 @@ export async function quickManualCommission(f: FormData) {
   }
   const { supabase } = await requireAppContext()
   const { error } = await supabase.rpc('set_contract_manual_commission', { p_proposal: id, p_component: component, p_kind: kind, p_value: value, p_reason: reason })
+  // The seller's share above the new receipt: say what to do first (owner, 10/11/2026), not "revise o grupo".
+  if (error && /(payout|override)_exceeds_received/.test(error.message ?? '')) return go(f, 'erro:comissao_recebida_menor_que_repasse', { id, acao: 'comissao' })
   if (error) return go(f, dbCode(error.message ?? '', classifyDbFeedback(error)), { id, acao: 'comissao' })
   return go(f, kind === 'remove' ? 'ok:comissao_manual_removida' : 'ok:comissao_manual', { id, acao: 'comissao' })
 }
