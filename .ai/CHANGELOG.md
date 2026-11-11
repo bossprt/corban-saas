@@ -15,6 +15,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Contratos: lista mais rápida (10/11/2026)
+- Alterado (dono: "pode fazer a melhoria de velocidade"): os totais de repasse da lista de Contratos (`contract_payout_totals`) calculavam a situação do repasse chamando `private.contract_credit_state` contrato por contrato, e cada chamada era planejada de novo (~1,3 ms por contrato). Agora as mesmas expressões rodam numa única consulta. Medido em produção (cópia temporária, transação desfeita): 0,30 s → 0,07 s, resultado idêntico para os 169 contratos.
+- `private.contract_credit_state` não muda. Os testes `manual-commission-zero-contract.sql` e `gratification-receipt-apart-contract.sql` ganharam uma conferência: totais e `contract_credit_state` precisam dizer o mesmo para todo contrato.
+- Migration `20261111000810_payout_totals_set_based_v1` aplicada em produção com OK do dono.
+
 ### Contratos: tela para alterar e zerar a comissão recebida (10/11/2026)
 - Adicionado (pedido do dono: "não vi uma tela de altera a comissão recebida"): na janela Comissão do contrato, o quadro "O que a empresa recebe do banco neste contrato" lista cada comissão (À vista, Diferido, Gratificação...) com o valor, de onde vem (tabela ou lançada à mão, com o motivo) e os botões Alterar, Zerar e Voltar à tabela; "+ Lançar outra comissão" para o que a tabela não tem. Substitui o item escondido "Comissão recebida lançada à mão".
 - Página do contrato: botão "Alterar comissão recebida" no quadro Comissão (Administrador), abre a mesma janela.

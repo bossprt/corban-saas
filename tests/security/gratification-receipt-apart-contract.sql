@@ -172,6 +172,15 @@ insert into results select 'pending: users cannot call the private function', pg
 insert into results select 'the legacy list is not readable by users', pg_temp.err('select count(*) from private.gratification_credit_legacy') like '%permission denied%';
 reset role;
 
+-- 20261111000000: contract_payout_totals computes the state inline and must agree with contract_credit_state.
+select pg_temp.act_as((select admin_user from ids));
+set local role authenticated;
+create temp table pt_check as select t.proposal_id, t.waiting, t.credited, t.paid_on from public.contract_payout_totals((select org from ids)) t;
+reset role;
+insert into results select 'payout totals: same state as contract_credit_state for every contract',
+  (select count(*) > 0 from pt_check) and not exists (select 1 from pt_check t cross join lateral private.contract_credit_state(t.proposal_id) s
+    where row(t.waiting, t.credited, t.paid_on) is distinct from row(s.waiting, s.credited, s.paid_on));
+
 select check_name, ok from results order by ok, check_name;
 do $$ begin
   if exists (select 1 from results where not ok or ok is null) then raise exception 'gratification receipt apart contract failed'; end if;
