@@ -41,6 +41,7 @@ export function SmartImportClient({providers,banks}:{providers:Provider[];banks:
  const [publish,setPublish]=useState(true)
  const [publishFrom,setPublishFrom]=useState('')
  const [agreementMap,setAgreementMap]=useState<Record<string,string[]>>({})
+ const [taxPct,setTaxPct]=useState('')
 
  const optionalQuestions=useMemo(()=>preview?[
   preview.summary.hasDeferred&&['deferred','Diferido'],
@@ -55,7 +56,7 @@ export function SmartImportClient({providers,banks}:{providers:Provider[];banks:
   if(!file)return
   setBusy(true);setMessage('')
   try{
-   const fd=new FormData();fd.set('file',file);fd.set('repass_map',map);fd.set('calculation_base',chosenBase);fd.set('bank_id',chosenBank);fd.set('agreement_map',JSON.stringify(chosenAgreements))
+   const fd=new FormData();fd.set('file',file);fd.set('repass_map',map);fd.set('calculation_base',chosenBase);fd.set('bank_id',chosenBank);fd.set('agreement_map',JSON.stringify(chosenAgreements));fd.set('tax_pct',taxPct)
    const res=await fetch('/api/comercial/importacao-inteligente/preview',{method:'POST',body:fd})
    const body=await res.json()
    if(!res.ok){setMessage(body.error??'Não foi possível analisar.');setPreview(null);return}
@@ -72,7 +73,7 @@ export function SmartImportClient({providers,banks}:{providers:Provider[];banks:
   setBusy(true);setMessage('')
   try{
    const fd=new FormData()
-   fd.set('file',file);fd.set('production_origin',preview.summary.hasOriginColumn?'own':origin);fd.set('provider_id',!preview.summary.hasOriginColumn&&origin==='third_party'?provider:'');fd.set('repass_map',repassMap());fd.set('calculation_base',base);fd.set('bank_id',bankId);fd.set('agreement_map',JSON.stringify(agreementMap));fd.set('publish_from',publish?publishFrom:'')
+   fd.set('file',file);fd.set('production_origin',preview.summary.hasOriginColumn?'own':origin);fd.set('provider_id',!preview.summary.hasOriginColumn&&origin==='third_party'?provider:'');fd.set('repass_map',repassMap());fd.set('calculation_base',base);fd.set('bank_id',bankId);fd.set('agreement_map',JSON.stringify(agreementMap));fd.set('tax_pct',taxPct);fd.set('publish_from',publish?publishFrom:'')
    const res=await fetch('/api/comercial/importacao-inteligente/apply',{method:'POST',body:fd})
    const body=await res.json()
    if(!res.ok){setMessage(body.error??'Importação recusada.');return}
@@ -84,7 +85,7 @@ export function SmartImportClient({providers,banks}:{providers:Provider[];banks:
   }finally{setBusy(false)}
  }
 
- const PENDING=['generic_repass_requires_mapping','calculation_base_required','bank_choice_required','agreement_choice_required']
+ const PENDING=['generic_repass_requires_mapping','calculation_base_required','bank_choice_required','agreement_choice_required','tax_choice_required']
  const blocking=preview?.issues.filter(x=>!PENDING.includes(x.code))??[]
  const needsBase=!!base||!!preview?.issues.some(x=>x.code==='calculation_base_required')
  const needsBank=!!bankId||!!preview?.issues.some(x=>x.code==='bank_choice_required')
@@ -94,8 +95,8 @@ export function SmartImportClient({providers,banks}:{providers:Provider[];banks:
    <div className="px-5 pb-5 pt-2">
     <p className="text-[13px] text-ink-soft">CSV, XLSX ou XLS. No modelo do Corban, no da 2tech (Empresa + Repasse 1…5), a tabela de comissão da Bevicred do jeito que vem do portal ou o PDF “Prazos e Comissões” da Valor.</p>
     <div className="mt-3 flex flex-wrap items-center gap-2">
-     <div className="min-w-64 flex-1"><FileDrop accept=".csv,.xlsx,.xls,.pdf,text/csv" ariaLabel="Planilha" hint="CSV, XLSX, XLS ou PDF da Valor" onChange={fs=>{setFile(fs[0]??null);setPreview(null);setSlots({});setBase('');setBankId('');setAgreementMap({});setMessage('')}} /></div>
-     <button disabled={!file||busy} onClick={()=>{setSlots({});setBase('');setBankId('');setAgreementMap({});void runPreview('{}','','',{})}} className={primary}><Upload size={15} className="mr-1.5 inline" aria-hidden />{busy?'Lendo...':'Ler planilha'}</button>
+     <div className="min-w-64 flex-1"><FileDrop accept=".csv,.xlsx,.xls,.pdf,text/csv" ariaLabel="Planilha" hint="CSV, XLSX, XLS ou PDF da Valor" onChange={fs=>{setFile(fs[0]??null);setPreview(null);setSlots({});setBase('');setBankId('');setAgreementMap({});setTaxPct('');setMessage('')}} /></div>
+     <button disabled={!file||busy} onClick={()=>{setSlots({});setBase('');setBankId('');setAgreementMap({});setTaxPct('');void runPreview('{}','','',{})}} className={primary}><Upload size={15} className="mr-1.5 inline" aria-hidden />{busy?'Lendo...':'Ler planilha'}</button>
     </div>
    </div>
   </Card>
@@ -123,7 +124,7 @@ export function SmartImportClient({providers,banks}:{providers:Provider[];banks:
     <button disabled={!allMapped||busy} onClick={()=>void runPreview()} className={`${ghost} mt-3`}>Aplicar e ver a prévia de novo</button>
    </div>}
 
-   {preview.valor&&<ValorReviewCard review={preview.valor} map={agreementMap} setMap={setAgreementMap} busy={busy} onApply={()=>void runPreview()} />}
+   {preview.valor&&<ValorReviewCard review={preview.valor} map={agreementMap} setMap={setAgreementMap} tax={taxPct} setTax={setTaxPct} busy={busy} onApply={()=>void runPreview()} />}
 
    {needsBank&&<div className="mx-5 mt-4 rounded-[12px] border border-[#FDE68A] bg-[#FFFBEB] p-4">
     <strong className="text-sm text-[#92400E]">O arquivo não diz qual banco cadastrado é. De qual banco são estas tabelas?</strong>
@@ -185,7 +186,7 @@ function AgreementChecks({agreements,value,onChange,label}:{agreements:{id:strin
  const toggle=(id:string,on:boolean)=>onChange(on?[...value,id]:value.filter(x=>x!==id))
  return <div role="group" aria-label={label} className="grid max-h-64 gap-1 overflow-y-auto p-2 sm:grid-cols-2">{agreements.map(a=><label key={a.id} className="flex items-center gap-2 rounded-md px-2 py-1 text-[13px] text-ink hover:bg-surface-muted"><input type="checkbox" checked={value.includes(a.id)} onChange={e=>toggle(a.id,e.target.checked)} className="accent-[var(--brand)]" />{a.name}</label>)}</div>
 }
-function ValorReviewCard({review,map,setMap,busy,onApply}:{review:ValorReview;map:Record<string,string[]>;setMap:(m:Record<string,string[]>)=>void;busy:boolean;onApply:()=>void}){
+function ValorReviewCard({review,map,setMap,tax,setTax,busy,onApply}:{review:ValorReview;map:Record<string,string[]>;setMap:(m:Record<string,string[]>)=>void;tax:string;setTax:(v:string)=>void;busy:boolean;onApply:()=>void}){
  const value=(p:ValorReview['products'][number])=>map[p.key]??p.agreementIds
  const generic=review.products.filter(p=>!p.hint)
  const genericIds=generic.length&&generic.every(p=>JSON.stringify([...value(p)].sort())===JSON.stringify([...value(generic[0])].sort()))?value(generic[0]):[]
@@ -197,6 +198,10 @@ function ValorReviewCard({review,map,setMap,busy,onApply}:{review:ValorReview;ma
   <div className="border-b border-line px-4 py-3">
    <strong className="text-sm text-ink">Tabela da Valor: {review.products.length} produtos</strong>
    <p className="text-xs text-muted">À vista = até 6% · Bônus = o que passar de 6%. Serão {tables} tabela(s): uma por convênio marcado.{missing?` ${missing} produto(s) sem convênio.`:''}</p>
+   <label className={`mt-3 flex w-fit flex-wrap items-center gap-2 rounded-[10px] border px-3 py-2 text-[13px] font-medium text-ink ${tax.trim()?'border-line':'border-[#F0A020] bg-[#FFF9EE]'}`}>Imposto (%) sobre a comissão da Valor
+    <input aria-label="Imposto (%)" inputMode="decimal" value={tax} onChange={e=>setTax(e.target.value)} placeholder="ex.: 6" className="field w-24" />
+    <span className="font-normal text-muted">vale para todas as tabelas desta importação (0 se não paga)</span>
+   </label>
    {!!generic.length&&<div className={`mt-3 rounded-[10px] border ${genericIds.length?'border-line':'border-[#F0A020] bg-[#FFF9EE]'}`}>
     <p className="px-3 pt-2 text-[13px] font-medium text-ink">Convênios dos {generic.length} produtos sem convênio no PDF <span className="font-normal text-muted">— marque só onde a Valor libera a venda</span></p>
     <AgreementChecks agreements={review.agreements} value={genericIds} onChange={setGeneric} label="Convênios dos produtos sem convênio no PDF" />
@@ -218,7 +223,7 @@ function ValorReviewCard({review,map,setMap,busy,onApply}:{review:ValorReview;ma
   </table></div>
   <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3">
    <p className="text-xs text-muted">Tipo de contrato: Novo. Tabela que já existe ganha versão nova; a anterior fica no histórico.</p>
-   <button disabled={busy||missing>0} onClick={onApply} className="h-10 rounded-[10px] border border-line bg-surface px-4 text-sm text-ink hover:bg-surface-muted disabled:opacity-50">Aplicar e ver a prévia de novo</button>
+   <button disabled={busy||missing>0||!tax.trim()} onClick={onApply} className="h-10 rounded-[10px] border border-line bg-surface px-4 text-sm text-ink hover:bg-surface-muted disabled:opacity-50">Aplicar e ver a prévia de novo</button>
   </div>
  </div>
 }
