@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Tabelas: desativar e reativar (13/11/2026)
+- Adicionado (dono: "não vi a opção de desativar"; aprovou a imagem): na lista de Tabelas, caixas para marcar várias e "Desativar N tabela(s)" (ou "Reativar", no filtro Inativas), com "Marcar todas desta página"; na página da tabela, botão "Desativar tabela" / "Reativar tabela". Tabela inativa não aparece para novas propostas e simulações (`proposal_catalog` e simulador já filtram ativas); versões, linhas, propostas e contratos ficam iguais. Sem migration (RLS de update já existente).
+- Produção, com OK do dono (13/11): M.S. CONSULTORIA — 64 tabelas antigas da Valor arquivadas (sem proposta ligada); regra do grupo Venda Loja v2 = coluna do próprio grupo 100% em À vista e Bônus (a v1 pagava 10% do à vista da empresa e mostrava 0,6% em vez de 0,5%).
+
 ### Tabelas: imposto na importação do PDF da Valor (13/11/2026)
 - Corrigido (dono: "não descontando imposto"; M.S. paga 6%): o PDF da Valor não traz imposto e as tabelas entravam com 0%. A importação do PDF ganhou o campo obrigatório "Imposto (%)" (0 a 100, até 2 casas; 0 se não paga), gravado em todas as linhas das tabelas daquela importação. Tabelas já importadas sem imposto: importar o PDF de novo com o imposto (versão nova; a anterior fica no histórico). Sem migration.
 
