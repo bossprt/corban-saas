@@ -59,6 +59,13 @@ export function suggestAgreementId(hint: AgreementHint | null, agreements: reado
   return hits.length === 1 ? hits[0].id : null
 }
 
+// Card or loan, from the product line of the report ("CONSIG. CARTAO BENEFICIO ...", "CONSIG. EMPRESTIMO ...") and from
+// the name of a table ("Cartão Benefício ...", "Flex Cartão ...", "Consig. Pub I — Empréstimo", "Flex Goiás"). A product
+// whose line says neither offers every table; a table without "cartão" in its name is a loan table.
+export type ProductKind = 'card' | 'loan'
+export const productKind = (label: string): ProductKind | null => { const t = plain(label); return /\bcartao\b/.test(t) ? 'card' : /\bemprestimo\b/.test(t) ? 'loan' : null }
+export const tableKind = (name: string): ProductKind => (/\bcartao\b/.test(plain(name)) ? 'card' : 'loan')
+
 // The product blocks of every page: the items between one product line and the next. Items above the first product
 // line of a page continue the last product of the previous page. Page numbers ("Pag.: 1") are left out, so they never
 // stick to a cell of the last contract of the page.

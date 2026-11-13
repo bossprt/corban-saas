@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Esteira: produto de cartão só oferece tabela de cartão (13/11/2026)
+- Corrigido (dono, tela da M.S.: contrato do "CARTAO BENEFICIO SAQUE GOV. SP" de 11x escolhido sozinho para "Consig. Pub I — Empréstimo", a única tabela do convênio que cobria o prazo): na importação de contratos pelo PDF da Valor, um produto de cartão só oferece tabelas com "Cartão" no nome e um produto de empréstimo só as outras. Produto sem uma das duas palavras continua oferecendo todas. Sem migration.
+
 ### Financeiro: baixa do Bônus separada do à vista (13/11/2026)
 - Adicionado (dono aprovou a imagem; parte do vendedor no Bônus: "A, só quando o bônus for recebido"; ADR-0073): tipo de relatório "Bônus" na importação de recebimento e no lançamento manual. O à vista passa a ser conferido sem o Bônus (Valor paga até 6% à vista); o relatório de bônus é conferido com a soma de Bônus 1/2/3. Importar os dois PDFs juntos como à vista continua aceito (valor com o Bônus). A parte do vendedor, supervisor e gerente no Bônus é creditada quando o Bônus é recebido e conciliado; contratos já creditados ficam como estão.
 - Migration `20261113203302_bonus_receipt_apart_v1` (funções partem das versões em produção, md5 conferido). Teste de contrato `tests/security/bonus-receipt-apart-contract.sql` (30 verificações).

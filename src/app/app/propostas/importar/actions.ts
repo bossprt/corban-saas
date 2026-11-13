@@ -10,7 +10,7 @@ import { enrichClient } from '@/lib/imports/client-enrich'
 import { parseMoneyInput } from '@/lib/money-input'
 import { reportMove } from '@/lib/imports/report-move'
 import { extractPdfItems } from '@/lib/imports/smart-pdf'
-import { PDF_ERRORS, suggestAgreementId, valorPdfSheet, type ValorProduct } from '@/lib/imports/valor-pdf'
+import { PDF_ERRORS, productKind, suggestAgreementId, tableKind, valorPdfSheet, type ValorProduct } from '@/lib/imports/valor-pdf'
 import { bevicredSheet, sameBank, type BevicredMeta, type BevicredRow } from '@/lib/imports/bevicred-production'
 import { fetchBevicredProduction } from '@/lib/bevicred.server'
 import { createAdminClient } from '@/lib/supabaseAdmin'
@@ -345,7 +345,11 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
         const typeId = line.typeKey ? typeByKey.get(line.typeKey) : undefined
         if (!agreementId) { messages.push('Escolha o convênio do produto'); mustChoose = true }
         else {
+          // A card product only offers card tables and a loan product only loan tables (owner, 13/11/2026: a card
+          // contract of 11x was picked alone for the only loan table that fit the term).
+          const kind = productKind(valor.products[k]?.label ?? '')
           const options = tableList.filter(t => agreementOfVersion.get(t.versionId) === agreementId
+            && (!kind || tableKind(t.name) === kind)
             && (!line.typeKey || (!!typeId && t.types.includes(typeId)))
             && (!line.term || !typeId || termFits(t.versionId, typeId, line.term)))
             .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
