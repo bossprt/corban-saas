@@ -15,6 +15,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Esteira: contratos pelo PDF da Valor com vários produtos (13/11/2026)
+- Alterado (relatórios reais da M.S. CONSULTORIA e da Credimps; dono aprovou a imagem): o relatório de comissão da Valor pode ter vários produtos (um bloco por produto: linha do produto, títulos, contratos, "TOTAL PRODUTO"; o bloco pode continuar na página seguinte). Cada contrato fica no produto do seu bloco. O produto só sugere o convênio (quando exatamente um convênio da empresa bate: Roraima, Goiás, Duque de Caxias, Gov. SP, Rio Branco, Manaus, ...); a pessoa confirma ou troca, e escolhe a tabela de cada contrato entre as do convênio que servem (tipo e prazo), com "Aplicar a todas" por produto. Antes só "CONSIG. EMPRESTIMO RIO BRANCO I", um produto por PDF.
+- Corrigido: o número da página ("Pag.: 1") grudava na última célula da página, no PDF de contratos e no de recebimento.
+- Sem migration.
+
 ### Tabelas: desativar e reativar (13/11/2026)
 - Adicionado (dono: "não vi a opção de desativar"; aprovou a imagem): na lista de Tabelas, caixas para marcar várias e "Desativar N tabela(s)" (ou "Reativar", no filtro Inativas), com "Marcar todas desta página"; na página da tabela, botão "Desativar tabela" / "Reativar tabela". Tabela inativa não aparece para novas propostas e simulações (`proposal_catalog` e simulador já filtram ativas); versões, linhas, propostas e contratos ficam iguais. Sem migration (RLS de update já existente).
 - Produção, com OK do dono (13/11): M.S. CONSULTORIA — 64 tabelas antigas da Valor arquivadas (sem proposta ligada); regra do grupo Venda Loja v2 = coluna do próprio grupo 100% em À vista e Bônus (a v1 pagava 10% do à vista da empresa e mostrava 0,6% em vez de 0,5%).

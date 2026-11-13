@@ -2,8 +2,12 @@ import { normalizeHeader } from '../commercial'
 import { pdfItemsToRows, type PdfItem, type PdfTableRules } from './smart-pdf'
 
 // Banco Valor contracts from its commission report in PDF (owner request 03/11/2026: the bank sends no other file).
-// The same column geometry as the receipt import. The report has no table column; its product line ("CONSIG.
-// EMPRESTIMO RIO BRANCO I") tells the agreement and the kind of table, and the owner picks the table on each line.
+// The same column geometry as the receipt import. The report has no table column. Since 13/11/2026 (M.S. CONSULTORIA
+// and Credimps reports) one report may carry several products: each one is a block with its product line ("CONSIG.
+// EMPRESTIMO RORAIMA II"), the column titles, the contracts and "TOTAL PRODUTO"; a block may continue on the next page,
+// where the product line and the titles are repeated. Every contract keeps the product of its block. The product only
+// suggests the agreement (the owner confirms it on screen) and the table of each contract is picked by the owner,
+// because the report does not say whether the client is "Comissionado" or "Efetivo".
 export const VALOR_PDF_RULES: PdfTableRules = {
   isHeader: cells => {
     const h = cells.map(normalizeHeader)
@@ -13,11 +17,8 @@ export const VALOR_PDF_RULES: PdfTableRules = {
   align: 'order',
 }
 
-// Product lines known so far, after normalize. Another product refuses the file instead of guessing its agreement.
-export type ValorProduct = { label: string; agreement: string; tablePrefix: string }
-const PRODUCTS: [RegExp, Omit<ValorProduct, 'label'>][] = [
-  [/^consig\.? emprestimo rio branco\b/, { agreement: 'Prefeitura de Rio Branco', tablePrefix: 'emprestimo' }],
-]
+export type ValorProduct = { label: string; hint: AgreementHint | null }
+export type AgreementHint = { words: RegExp[]; not?: RegExp }
 
 export const PDF_ERRORS: Record<string, string> = {
   pdf_no_text: 'O PDF é uma imagem (sem texto). Baixe o relatório de novo no portal do banco.',
@@ -30,33 +31,78 @@ export const PDF_ERRORS: Record<string, string> = {
 }
 
 const plain = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
+const isProduct = (s: string) => /^consig\b/.test(plain(s))
+const isPageNumber = (s: string) => /^pag\.?:?\s*\d+$/.test(plain(s))
 
-// Text lines of a page, top to bottom, cells joined by a space.
-function textLines(items: readonly PdfItem[]): string[] {
-  const sorted = items.filter(i => i.str.trim()).sort((a, b) => b.y - a.y || a.x - b.x)
-  const lines: PdfItem[][] = []
-  for (const it of sorted) {
-    const last = lines[lines.length - 1]
-    if (last && Math.abs(last[0].y - it.y) <= 2.5) last.push(it); else lines.push([it])
-  }
-  return lines.map(l => l.sort((a, b) => a.x - b.x).map(i => i.str.trim()).join(' ').replace(/\s+/g, ' '))
+// Words of the product line -> words of the company's agreement name. Only a suggestion: exactly one active agreement
+// of the company must match, otherwise nothing is suggested and the owner chooses.
+const HINTS: [RegExp, AgreementHint][] = [
+  [/\brio branco\b/, { words: [/rio branco/] }],
+  [/\bduque de caxias\b|\bpref\.? dq\b/, { words: [/caxias/] }],
+  [/\bgov\.? sp\b|\bgoverno de sao paulo\b/, { words: [/sao paulo/, /\bgov/], not: /prefeitura/ }],
+  [/\bmanaus/, { words: [/manaus/] }],
+  [/\bsao luis\b/, { words: [/sao luis/] }],
+  [/\broraima\b/, { words: [/roraima/] }],
+  [/\bgoias\b/, { words: [/goias/], not: /prefeitura|goiania/ }],
+  [/\bamazonas\b/, { words: [/amazonas/] }],
+  [/\bacre\b/, { words: [/\bacre\b/] }],
+  [/\bamapa\b/, { words: [/amapa/] }],
+  [/\bmaranhao\b/, { words: [/maranhao/] }],
+  [/\bpiaui\b/, { words: [/piaui/] }],
+  [/\bsiape\b/, { words: [/siape/] }],
+]
+export const productHint = (label: string): AgreementHint | null => HINTS.find(([re]) => re.test(plain(label)))?.[1] ?? null
+
+export function suggestAgreementId(hint: AgreementHint | null, agreements: readonly { id: string; name: string }[]): string | null {
+  if (!hint) return null
+  const hits = agreements.filter(a => { const n = plain(a.name); return hint.words.every(w => w.test(n)) && !(hint.not?.test(n)) })
+  return hits.length === 1 ? hits[0].id : null
 }
 
-export type ValorSheet = { rows: string[][]; product: ValorProduct } | { error: string }
-
-// The report as the rows of a contract sheet: "-" (no net amount) becomes empty and every line is "Paga" (the report
-// lists contracts credited to the client).
-export function valorPdfSheet(pages: readonly (readonly PdfItem[])[]): ValorSheet {
-  const products = [...new Set(pages.flatMap(p => textLines(p)).filter(l => /^consig\b/.test(plain(l))))]
-  if (products.length === 0) return { error: 'Não encontrei o produto do relatório (ex.: "CONSIG. EMPRESTIMO RIO BRANCO I").' }
-  if (products.length > 1) return { error: `O PDF tem mais de um produto (${products.join(', ')}). Gere um relatório por produto.` }
-  const known = PRODUCTS.find(([re]) => re.test(plain(products[0])))
-  if (!known) return { error: `O produto "${products[0]}" ainda não tem layout no Corban. Envie o PDF para ser cadastrado.` }
-  const grid = pdfItemsToRows(pages, VALOR_PDF_RULES)
-  if (grid.issues.length) return { error: `${PDF_ERRORS[grid.issues[0].code] ?? PDF_ERRORS.pdf_unreadable}${grid.issues[0].detail ? ` ${grid.issues[0].detail}` : ''}` }
-  const [header, ...body] = grid.rows
-  return {
-    rows: [[...header, 'Etapa'], ...body.map(r => [...r.map(c => (c.trim() === '-' ? '' : c)), 'Paga'])],
-    product: { label: products[0], ...known[1] },
+// The product blocks of every page: the items between one product line and the next. Items above the first product
+// line of a page continue the last product of the previous page. Page numbers ("Pag.: 1") are left out, so they never
+// stick to a cell of the last contract of the page.
+function blocks(pages: readonly (readonly PdfItem[])[]): { label: string; items: PdfItem[] }[] {
+  const out: { label: string; items: PdfItem[] }[] = []
+  for (const page of pages) {
+    const items = page.filter(i => i.str.trim() && !isPageNumber(i.str))
+    const starts = items.filter(i => isProduct(i.str)).sort((a, b) => b.y - a.y)
+    const at = (y: number) => { let k = -1; for (let j = 0; j < starts.length; j++) if (y <= starts[j].y + 2.5) k = j; return k }
+    const pageBlocks = starts.map(s => ({ label: s.str.trim(), items: [] as PdfItem[] }))
+    const before: PdfItem[] = []
+    for (const it of items) { if (isProduct(it.str)) continue; const k = at(it.y); (k < 0 ? before : pageBlocks[k].items).push(it) }
+    if (before.length && out.length) out[out.length - 1].items.push(...before)
+    out.push(...pageBlocks)
   }
+  return out
+}
+
+export type ValorSheet = { rows: string[][]; products: ValorProduct[]; productOfRow: number[] } | { error: string }
+
+// The report as the rows of a contract sheet (one header row, then the contracts): "-" (no net amount) becomes empty
+// and every line is "Paga" (the report lists contracts credited to the client). productOfRow[i] is the product of
+// rows[i + 1].
+export function valorPdfSheet(pages: readonly (readonly PdfItem[])[]): ValorSheet {
+  if (!pages.some(p => p.some(i => i.str.trim()))) return { error: PDF_ERRORS.pdf_no_text }
+  const bs = blocks(pages)
+  if (!bs.length) return { error: 'Não encontrei o produto do relatório (ex.: "CONSIG. EMPRESTIMO RIO BRANCO I").' }
+  let header: string[] | null = null
+  const body: string[][] = [], productOfRow: number[] = [], products: ValorProduct[] = []
+  for (const b of bs) {
+    const grid = pdfItemsToRows([b.items], VALOR_PDF_RULES)
+    if (grid.issues.length) {
+      // A block that ends at the bottom of a page has only its titles there: its contracts are on the next page.
+      if (grid.issues[0].code === 'pdf_no_table' && !b.items.some(i => /^\d{11}$/.test(i.str.trim()))) continue
+      const detail = grid.issues[0].detail ? ` ${grid.issues[0].detail}` : ''
+      return { error: `${PDF_ERRORS[grid.issues[0].code] ?? PDF_ERRORS.pdf_unreadable}${detail} (produto ${b.label})` }
+    }
+    const [h, ...rows] = grid.rows
+    if (header && h.map(normalizeHeader).join('|') !== header.map(normalizeHeader).join('|')) return { error: `${PDF_ERRORS.pdf_ambiguous_layout} As colunas mudam no produto ${b.label}.` }
+    header ??= h
+    let k = products.findIndex(p => p.label === b.label)
+    if (k < 0) { products.push({ label: b.label, hint: productHint(b.label) }); k = products.length - 1 }
+    for (const r of rows) { body.push([...r.map(c => (c.trim() === '-' ? '' : c)), 'Paga']); productOfRow.push(k) }
+  }
+  if (!header || !body.length) return { error: PDF_ERRORS.pdf_no_table }
+  return { rows: [[...header, 'Etapa'], ...body], products, productOfRow }
 }

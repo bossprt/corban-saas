@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import type { PdfItem } from '../../src/lib/imports/smart-pdf'
-import { valorPdfSheet } from '../../src/lib/imports/valor-pdf'
+import { suggestAgreementId, valorPdfSheet } from '../../src/lib/imports/valor-pdf'
 import { CONTRACT_LAYOUTS, parseContractSheet } from '../../src/lib/imports/contract-layout'
 
 // Banco Valor commission report as contracts (owner request 03/11/2026): the geometry of the bank's PDF, product line
@@ -26,8 +26,8 @@ const valor = CONTRACT_LAYOUTS.find(l => l.key === 'valor')!
 test('Valor PDF: each line becomes a paid contract with ADE, term, gross amount, type and credit date; no table needed', () => {
   const sheet = valorPdfSheet([page(['CONSIG. EMPRESTIMO RIO BRANCO I'], [['520571', '6', '1.534,22'], ['520997', '24', '9.085,85']])])
   assert.ok(!('error' in sheet))
-  assert.equal(sheet.product.agreement, 'Prefeitura de Rio Branco')
-  assert.equal(sheet.product.tablePrefix, 'emprestimo')
+  assert.deepEqual(sheet.products.map(p => p.label), ['CONSIG. EMPRESTIMO RIO BRANCO I'])
+  assert.deepEqual(sheet.productOfRow, [0, 0])
   const parsed = parseContractSheet(sheet.rows, '2026-11-03', valor)
   assert.deepEqual(parsed.map.issues, [])
   assert.deepEqual(parsed.map.ignored, ['% Com.', 'Comissao', 'Contrato', 'Aceite'])
@@ -38,14 +38,45 @@ test('Valor PDF: each line becomes a paid contract with ADE, term, gross amount,
   assert.equal(parsed.lines[0].name, 'CLIENTE FICTICIO DE TESTE')
 })
 
-test('Valor PDF: a product without layout, a missing product or two products refuse the file instead of guessing', () => {
-  const rows: [string, string, string][] = [['520571', '6', '1.534,22']]
-  const unknown = valorPdfSheet([page(['CONSIG. EMPRESTIMO GOVERNO DO ACRE'], rows)])
-  assert.ok('error' in unknown && /ainda não tem layout/.test(unknown.error))
-  const none = valorPdfSheet([page([], rows)])
+// Several product blocks on a page (13/11/2026 reports): product line, titles, contracts, TOTAL; a block that starts at
+// the bottom of a page continues on the next one, and the page number never sticks to a cell.
+const blockPage = (blocks: [string, [string, string, string][]][], pageNo: number): PdfItem[] => {
+  const out: PdfItem[] = [it('Relatorio de Comissionamento por Correspondente', 32, 260, 556)]
+  let y = 500
+  for (const [product, rows] of blocks) {
+    out.push(it(product, 32, 200, y), ...H.map(([s, x, x1]) => it(s, x, x1, y - 14)))
+    rows.forEach(([ade, term, amount], i) => out.push(...line(y - 27 - 12 * i, ade, term, amount)))
+    if (rows.length) out.push(it('TOTAL PRODUTO', 245, 300, y - 27 - 12 * rows.length))
+    y -= 60 + 12 * rows.length
+  }
+  out.push(it(`Pag.: ${pageNo}`, 560, 590, 11))
+  return out
+}
+
+test('Valor PDF: several products in one report, each contract keeps its block; a block continues on the next page', () => {
+  const sheet = valorPdfSheet([
+    blockPage([['CONSIG. EMPRESTIMO RORAIMA II', [['100001', '96', '1.000,00'], ['100002', '24', '2.000,00']]], ['CONSIG. CARTAO BENEFICIO SAQUE GOV. SP', []]], 1),
+    blockPage([['CONSIG. CARTAO BENEFICIO SAQUE GOV. SP', [['100003', '96', '3.000,00']]]], 2),
+  ])
+  assert.ok(!('error' in sheet), JSON.stringify(sheet))
+  assert.deepEqual(sheet.products.map(p => p.label), ['CONSIG. EMPRESTIMO RORAIMA II', 'CONSIG. CARTAO BENEFICIO SAQUE GOV. SP'])
+  assert.deepEqual(sheet.productOfRow, [0, 0, 1])
+  const tp = sheet.rows[0].indexOf('Tp Contrato')
+  assert.deepEqual(sheet.rows.slice(1).map(r => r[tp]), ['NOVO', 'NOVO', 'NOVO'])
+})
+
+test('Valor PDF: the product only suggests an agreement, and only when exactly one matches', () => {
+  const ag = [{ id: 'r', name: 'Governo de Roraima' }, { id: 'sp', name: 'Governo de São Paulo' }, { id: 'psp', name: 'Prefeitura de São Paulo' }, { id: 'dc', name: 'Pref D Caxias' }]
+  const sheet = valorPdfSheet([blockPage([['CONSIG. EMPRESTIMO RORAIMA II', [['1', '6', '1,00']]], ['CONSIG. CARTAO BENEFICIO SAQUE GOV. SP', [['2', '6', '1,00']]],
+    ['CONSIG. CARTAO BENEFICIO SAQUE FLEX PREF. DQ.', [['3', '6', '1,00']]], ['CONSIG CARTÃO MANAUSPREV - COM PREV', [['4', '6', '1,00']]]], 1)])
+  assert.ok(!('error' in sheet), JSON.stringify(sheet))
+  assert.deepEqual(sheet.products.map(p => suggestAgreementId(p.hint, ag)), ['r', 'sp', 'dc', null])
+  assert.equal(suggestAgreementId(sheet.products[0].hint, [...ag, { id: 'r2', name: 'Gov Roraima' }]), null)
+})
+
+test('Valor PDF: no product line refuses the file instead of guessing', () => {
+  const none = valorPdfSheet([page([], [['520571', '6', '1.534,22']])])
   assert.ok('error' in none && /Não encontrei o produto/.test(none.error))
-  const two = valorPdfSheet([page(['CONSIG. EMPRESTIMO RIO BRANCO I'], rows), page(['CONSIG. CARTAO RIO BRANCO'], rows)])
-  assert.ok('error' in two && /mais de um produto/.test(two.error))
 })
 
 test('Valor PDF: the spreadsheet layouts still require the Tabela column', () => {

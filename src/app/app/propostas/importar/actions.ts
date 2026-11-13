@@ -10,7 +10,7 @@ import { enrichClient } from '@/lib/imports/client-enrich'
 import { parseMoneyInput } from '@/lib/money-input'
 import { reportMove } from '@/lib/imports/report-move'
 import { extractPdfItems } from '@/lib/imports/smart-pdf'
-import { PDF_ERRORS, valorPdfSheet, type ValorProduct } from '@/lib/imports/valor-pdf'
+import { PDF_ERRORS, suggestAgreementId, valorPdfSheet, type ValorProduct } from '@/lib/imports/valor-pdf'
 import { bevicredSheet, sameBank, type BevicredMeta, type BevicredRow } from '@/lib/imports/bevicred-production'
 import { fetchBevicredProduction } from '@/lib/bevicred.server'
 import { createAdminClient } from '@/lib/supabaseAdmin'
@@ -29,6 +29,8 @@ export type PreviewLine = {
   status: 'ok' | 'exists' | 'error' | 'choose' | 'skip'; messages: string[]
   // PDF and webservice layouts: the tables that fit the line (agreement, product, type, term) and what was picked.
   tableOptions?: { id: string; name: string }[]; tableId?: string; sellerId?: string
+  // PDF layouts: index of the line's product in ImportResult.products.
+  product?: number
   // Webservice layout: the credential the line came from, the partner's table and the partner's seller.
   origin?: string; hint?: string; partner?: string
 }
@@ -37,7 +39,10 @@ export type ImportResult = {
   fileIssues: string[]; ignored: string[]; tooMany: boolean
   lines: PreviewLine[]
   // PDF layouts: the report's product line and the team, for the seller of each line.
-  product?: string; sellers?: { id: string; name: string }[]
+  sellers?: { id: string; name: string }[]
+  // PDF layouts: the report's products (one block each), the agreement chosen or suggested for each, and the agreements
+  // that have tables of the bank (the choices).
+  products?: { label: string; agreementId: string | null; suggested: boolean }[]; agreements?: { id: string; name: string }[]
   // Webservice layout: what the search said besides the lines (a credential that failed, the period).
   api?: boolean; notices?: string[]
   done?: { created: number; existed: number; failed: number; updated?: number }
@@ -72,6 +77,7 @@ type Resolved = {
   versionId?: string; tableName?: string; typeId?: string; sellerId?: string | null; stageId?: string; clientId?: string; agreementId?: string | null
   status: PreviewLine['status']; messages: string[]
   tableOptions?: { id: string; name: string }[]
+  product?: number
   meta?: BevicredMeta
   // Webservice layout: the table or seller the owner picked (remembered at import) and the line left out on purpose.
   learnTable?: string; learnSeller?: string; skip?: boolean
@@ -116,7 +122,7 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
   if (!layout.api && (!(file instanceof File) || file.size === 0)) return { result: { ...empty, error: layout.pdf ? 'Escolha o relatório em PDF.' : 'Escolha a planilha (.xlsx ou .csv).' }, resolved: [] }
 
   let rows: string[][]
-  let product: ValorProduct | null = null
+  let valor: { products: ValorProduct[]; productOfRow: number[] } | null = null
   let meta: BevicredMeta[] = []
   const notices: string[] = []
   if (layout.api) {
@@ -137,7 +143,7 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
     if ('error' in items) return { result: { ...empty, error: PDF_ERRORS[items.error] ?? PDF_ERRORS.pdf_unreadable }, resolved: [] }
     const sheet = valorPdfSheet(items.pages)
     if ('error' in sheet) return { result: { ...empty, error: sheet.error }, resolved: [] }
-    rows = sheet.rows; product = sheet.product
+    rows = sheet.rows; valor = { products: sheet.products, productOfRow: sheet.productOfRow }
   } else {
     const isCsv = /\.csv$/i.test(file.name)
     if (!isCsv && !/\.xlsx$/i.test(file.name)) return { result: { ...empty, error: 'A planilha precisa ser .xlsx (Excel) ou .csv.' }, resolved: [] }
@@ -198,6 +204,14 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
     ? await supabase.from('organization_agreements').select('id,name').in('id', agreementIds)
     : { data: [] }
   const agreementName = new Map(((agreementRows ?? []) as { id: string; name: string }[]).map(a => [a.id, a.name]))
+  // Agreement of each product of a PDF report: the one chosen on screen, or the only agreement its name suggests.
+  const agreementChoices = ((agreementRows ?? []) as { id: string; name: string }[]).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+  const productAgreement = (valor?.products ?? []).map((p, k) => {
+    const chosen = String(formData.get(`agreement:${k}`) ?? '')
+    if (chosen && agreementName.has(chosen)) return { id: chosen, suggested: false }
+    const hint = suggestAgreementId(p.hint, agreementChoices)
+    return { id: hint, suggested: !!hint }
+  })
   // Term ranges of each line of those tables, when this user can read them; otherwise the bank's own check applies.
   const { data: conds } = tableList.length
     ? await supabase.from('commercial_conditions').select('product_table_version_id,contract_type_id,term_min,term_max').in('product_table_version_id', tableList.map(t => t.versionId))
@@ -321,25 +335,31 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
         else { r.sellerId = seller; if (m.partnerCode && seller !== linkedSeller) r.learnSeller = seller }
       } else if (linkedSeller && sellerList.some(s => s.id === linkedSeller)) r.sellerId = linkedSeller
       if (r.skip) { r.status = 'skip'; return r }
-    } else if (layout.pdf && product) {
-      // A contract already in Corban (same ADE) needs no table; the others list the tables that fit and wait for the pick.
+    } else if (layout.pdf && valor) {
+      // The product block of the line gives the agreement; the owner picks the table among that agreement's tables
+      // that fit (type and term). A contract already in Corban (same ADE) needs no table.
+      const k = valor.productOfRow[line.line - 2] ?? -1
+      r.product = k
       if (!(line.ade && knownAde.has(line.ade))) {
+        const agreementId = productAgreement[k]?.id ?? null
         const typeId = line.typeKey ? typeByKey.get(line.typeKey) : undefined
-        const options = tableList.filter(t => agreementName.get(agreementOfVersion.get(t.versionId) ?? '') === product!.agreement
-          && normalize(t.name).startsWith(product!.tablePrefix)
-          && (!line.typeKey || (!!typeId && t.types.includes(typeId)))
-          && (!line.term || !typeId || termFits(t.versionId, typeId, line.term)))
-          .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
-        r.tableOptions = options.map(t => ({ id: t.versionId, name: t.name }))
-        const picked = String(formData.get(`table:${line.line}`) ?? '') || (options.length === 1 ? options[0].versionId : '')
-        const t = options.find(o => o.versionId === picked)
-        if (!options.length) messages.push(`Nenhuma tabela de ${product.agreement} serve para este contrato (tipo e prazo ${line.term ?? '—'})`)
-        else if (!t) mustChoose = true
+        if (!agreementId) { messages.push('Escolha o convênio do produto'); mustChoose = true }
         else {
-          r.versionId = t.versionId; r.tableName = t.name; r.agreementId = agreementOfVersion.get(t.versionId) ?? null
-          if (typeId) r.typeId = typeId
-          else if (t.types.length === 1) r.typeId = t.types[0]
-          else messages.push('Informe o Tipo (a tabela tem mais de um tipo de contrato)')
+          const options = tableList.filter(t => agreementOfVersion.get(t.versionId) === agreementId
+            && (!line.typeKey || (!!typeId && t.types.includes(typeId)))
+            && (!line.term || !typeId || termFits(t.versionId, typeId, line.term)))
+            .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+          r.tableOptions = options.map(t => ({ id: t.versionId, name: t.name }))
+          const picked = String(formData.get(`table:${line.line}`) ?? '') || (options.length === 1 ? options[0].versionId : '')
+          const t = options.find(o => o.versionId === picked)
+          if (!options.length) messages.push(`Nenhuma tabela de ${agreementName.get(agreementId)} serve para este contrato (tipo e prazo ${line.term ?? '—'})`)
+          else if (!t) mustChoose = true
+          else {
+            r.versionId = t.versionId; r.tableName = t.name; r.agreementId = agreementId
+            if (typeId) r.typeId = typeId
+            else if (t.types.length === 1) r.typeId = t.types[0]
+            else messages.push('Informe o Tipo (a tabela tem mais de um tipo de contrato)')
+          }
         }
       }
       const seller = String(formData.get(`seller:${line.line}`) ?? '')
@@ -404,14 +424,18 @@ async function resolve(ctx: Ctx, formData: FormData): Promise<{ result: ImportRe
     return r
   })
   await planMoves(ctx, resolved, stageByState)
-  if (layout.pdf && product) { result.product = product.label; result.sellers = sellerList }
+  if (layout.pdf && valor) {
+    result.sellers = sellerList; result.agreements = agreementChoices
+    result.products = valor.products.map((p, k) => ({ label: p.label, agreementId: productAgreement[k].id, suggested: productAgreement[k].suggested }))
+  }
   if (layout.api) { result.api = true; result.sellers = sellerList; result.notices = notices }
-  result.lines = resolved.map(({ line: l, tableName, status, messages, tableOptions, versionId, sellerId, meta: m }) => ({
+  result.lines = resolved.map(({ line: l, tableName, status, messages, tableOptions, versionId, sellerId, meta: m, product }) => ({
     line: l.line, cpf: l.cpf, name: l.name, table: tableName ?? l.table, term: l.term, amount: l.released ?? l.requested,
     // An unknown stage shows the sheet's own text (it used to read "Automática", the label for no stage at all).
     ade: l.ade, stage: l.stage ? STAGE_LABEL[l.stage] ?? l.stage : l.stageRaw || null, seller: l.seller, status, messages,
     ...(tableOptions ? { tableOptions, tableId: versionId } : {}), ...(layout.pdf || layout.api ? { sellerId: sellerId ?? undefined } : {}),
     ...(m ? { origin: m.credential, hint: m.operation || m.tableName, partner: m.partnerName || m.partnerCode } : {}),
+    ...(product === undefined ? {} : { product }),
   }))
   return { result, resolved }
 }
