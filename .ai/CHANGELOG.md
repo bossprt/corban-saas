@@ -15,6 +15,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Tabelas: importar o PDF "Prazos e Comissões" da Valor (13/11/2026)
+- Adicionado (pedido da M.S. CONSULTORIA; dono aprovou a imagem): a Importação inteligente lê o PDF "Prazos e Comissões" da Valor Financiamentos (um quadro "Parcelas × Comissão" por produto). Leitor determinístico (`lib/imports/valor-prazos.ts`): qualquer linha fora do formato recusa o arquivo inteiro.
+- Regra do dono para a Valor: À vista = até 6%, Bônus = o que passar de 6% (aritmética em centésimos inteiros). Tipo de contrato Novo; níveis Efetivo I–IV de Goiás viram tabelas separadas.
+- Convênio de cada produto escolhido entre os convênios ativos da empresa; Goiás, Governo de SP, Duque de Caxias e SIAPE vêm sugeridos (só quando há exatamente um convênio que bate). Banco: o único banco "Valor" da empresa, ou escolhido. Grava pelo mesmo caminho da importação (rascunho/versão nova), sem migration.
+
 ### Plataforma: página organizada em abas (13/11/2026)
 - Alterado (dono: "que layout mais bagunçado"; aprovou a imagem): `/platform` ganhou as abas Empresas (abre primeiro), Cobrança, Melhorias (com o número de pedidos abertos) e Documentos e termos. Mesmas funções, uma por aba.
 - Empresas: tabela com CNPJ formatado, situação, mensalidade (valor, dia e última mensalidade) e módulos ligados. "Abrir" mostra a mensalidade e os módulos daquela empresa. O formulário de nova empresa só aparece pelo botão "+ Nova empresa", com Cancelar.
