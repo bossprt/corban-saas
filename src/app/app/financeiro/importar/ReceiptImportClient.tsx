@@ -132,6 +132,7 @@ export function ReceiptImportClient({ sources, bankAccounts, suggestedBank }: { 
         <label className={label}>Tipo do relatório
           <select value={kind} onChange={e => { setKind(e.target.value); setInspect(null) }} className="field mt-1.5">
             <option value="upfront">À vista (contratos pagos)</option>
+            <option value="bonus">Bônus (relatório de bônus, separado do à vista)</option>
             <option value="deferred">Diferido (parcelas)</option>
             <option value="chargeback">Estorno</option>
           </select>

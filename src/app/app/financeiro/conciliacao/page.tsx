@@ -66,7 +66,7 @@ export default async function ReconciliationPage({ searchParams }: { searchParam
                   <td className="px-3 py-2">
                     {r.open_items.length === 0 ? <Badge tone="received">Nenhuma</Badge> : r.open_items.map(e => (
                       <div key={e.id} className="mb-2">
-                        <div><Badge tone="diverged">{e.entry_kind === 'chargeback' ? 'Estorno' : e.component_key === 'deferred' ? `Parcela ${e.installment_number}` : e.component_key === 'gratification' ? 'Gratificação' : 'À vista'}</Badge>
+                        <div><Badge tone="diverged">{e.entry_kind === 'chargeback' ? 'Estorno' : e.component_key === 'deferred' ? `Parcela ${e.installment_number}` : e.component_key === 'gratification' ? 'Gratificação' : e.component_key === 'bonus' ? 'Bônus' : 'À vista'}</Badge>
                           <span className="num ml-2">recebido {brlText(e.amount)} · esperado {brlText(e.expected_amount)}</span></div>
                         {canAccept && (
                           <form action={acceptDivergence} className="mt-1 flex gap-1"><input type="hidden" name="receipt_id" value={e.id} />

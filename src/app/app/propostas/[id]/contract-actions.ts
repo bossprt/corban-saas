@@ -134,7 +134,7 @@ export async function registerManualReceipt(f: FormData) {
   if (!isUuid(id)) return redirect('/app/contratos')
   const kind = text(f, 'kind'), receivedOn = text(f, 'received_on'), installment = text(f, 'installment')
   const amount = parseMoneyInput(text(f, 'amount'))
-  if (!['upfront', 'deferred', 'chargeback', 'gratification'].includes(kind)) return back(id, 'erro:requisicao_invalida', '#comissao')
+  if (!['upfront', 'bonus', 'deferred', 'chargeback', 'gratification'].includes(kind)) return back(id, 'erro:requisicao_invalida', '#comissao')
   if (amount === null || amount === 'invalid') return back(id, 'erro:recebimento_valor', '#comissao')
   if (!/^\d{4}-\d{2}-\d{2}$/.test(receivedOn)) return back(id, 'erro:recebimento_data', '#comissao')
   if (installment && (!/^\d{1,4}$/.test(installment) || kind !== 'deferred')) return back(id, 'erro:recebimento_parcela', '#comissao')
