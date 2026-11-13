@@ -7,6 +7,8 @@ import { PAGE_SIZES, pageSize } from '@/lib/commission/tableValues'
 import { readTableFilters, searchTables } from '@/lib/commission/tableSearch'
 import { termsLabel } from '@/lib/commission/tableTerms'
 import { PublishDraftsForm } from './PublishDraftsForm'
+import { TableBulkForm } from './TableBulkForm'
+import { setTablesStatus } from './actions'
 
 type SP = Record<string, string | string[] | undefined>
 const one = (v: string | string[] | undefined) => (typeof v === 'string' ? v : '')
@@ -88,15 +90,16 @@ export default async function TablesSearchPage({ searchParams }: { searchParams:
               className={`rounded-md px-2 py-1 ${n === size ? 'bg-brand-soft font-semibold text-brand' : 'hover:bg-surface-muted'}`}>{n}</Link>
           ))} por página</span>
         </div>
-        <div className="mt-3 overflow-x-auto">
+        {(() => { const list = <div className="mt-3 overflow-x-auto">
           <table className="w-full min-w-[960px] text-left text-[13px]">
             <thead className="border-y border-line bg-surface-muted text-xs text-muted">
-              <tr><th className="px-4 py-2 font-medium">Tabela</th><th className="px-3 py-2 font-medium">Banco</th><th className="px-3 py-2 font-medium">Convênio</th><th className="px-3 py-2 font-medium">Promotora</th>
+              <tr>{canEdit && <th className="w-8 py-2 pl-4"><span className="sr-only">Marcar</span></th>}<th className="px-4 py-2 font-medium">Tabela</th><th className="px-3 py-2 font-medium">Banco</th><th className="px-3 py-2 font-medium">Convênio</th><th className="px-3 py-2 font-medium">Promotora</th>
                 <th className="px-3 py-2 font-medium">Vigência</th><th className="px-3 py-2 font-medium">Prazos</th><th className="px-3 py-2 text-right font-medium">Linhas</th><th className="px-3 py-2 text-right font-medium">Ações</th></tr>
             </thead>
             <tbody>
               {shown.map(x => (
                 <tr key={x.t.id} className="border-t border-line align-top hover:bg-surface-muted/60">
+                  {canEdit && <td className="py-2.5 pl-4"><input type="checkbox" name="table_id" value={x.t.id} aria-label={`Marcar ${x.t.name}`} className="accent-[var(--brand)]" /></td>}
                   <td className="px-4 py-2.5">
                     <Link href={`/app/comercial/tabelas/${x.t.id}`} className="font-medium text-ink hover:text-brand">{x.t.name}</Link>
                     {x.t.code && !x.t.code.startsWith('t-') && <div className="font-mono text-xs text-muted">{x.t.code}</div>}
@@ -120,10 +123,11 @@ export default async function TablesSearchPage({ searchParams }: { searchParams:
                   </td>
                 </tr>
               ))}
-              {!shown.length && <tr><td colSpan={8} className="px-4 py-6 text-center text-muted">Nenhuma tabela com esses filtros.</td></tr>}
+              {!shown.length && <tr><td colSpan={canEdit ? 9 : 8} className="px-4 py-6 text-center text-muted">Nenhuma tabela com esses filtros.</td></tr>}
             </tbody>
           </table>
         </div>
+        return canEdit && shown.length ? <TableBulkForm action={setTablesStatus} back={qs({})} reactivate={f.situacao === 'inativas'}>{list}</TableBulkForm> : list })()}
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-sm text-ink-soft">
           <span>{total ? `${(page - 1) * size + 1}–${Math.min(page * size, total)} de ${total}` : '0 de 0'}</span>
           <span className="flex items-center gap-1">

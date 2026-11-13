@@ -100,6 +100,25 @@ export async function publishDrafts(f: FormData) {
   return go(list, 'ok:vigencias_publicadas')
 }
 
+// Deactivate or reactivate tables (owner request 13/11/2026). An inactive table is not offered to new proposals or
+// simulations; its versions, lines and every proposal or contract already made with it stay exactly as they are.
+export async function setTablesStatus(f: FormData) {
+  const back = text(f, 'back')
+  const list = back.startsWith(`${LIST}?`) || back === LIST || /^\/app\/comercial\/tabelas\/[0-9a-f-]{36}$/i.test(back) ? back : LIST
+  const status = text(f, 'status')
+  if (status !== 'active' && status !== 'archived') return go(list, 'erro:requisicao_invalida')
+  const ids = [...new Set(f.getAll('table_id').map(v => String(v)))]
+  if (!ids.length) return go(list, 'erro:tabelas_nenhuma_marcada')
+  if (ids.length > 500) return go(list, 'erro:tabelas_lote_grande')
+  if (!ids.every(isUuid)) return go(list, 'erro:requisicao_invalida')
+  const ctx = await manager(); if (!ctx) return go(list, 'erro:sem_permissao')
+  // RLS keeps this to the company's own tables; a table of another company is simply not updated.
+  const { data, error } = await ctx.supabase.from('product_tables').update({ status, updated_at: new Date().toISOString() }).in('id', ids).select('id')
+  if (error) return go(list, classifyDbFeedback(error))
+  if (!data?.length) return go(list, 'erro:requisicao_invalida')
+  return go(list, status === 'archived' ? 'ok:tabelas_desativadas' : 'ok:tabelas_reativadas')
+}
+
 // $ Save what the company receives and what each group gets on one draft line (one database call, all or nothing).
 export async function saveLineValues(f: FormData) {
   const id = text(f, 'table_id'), version = text(f, 'version_id'), condition = text(f, 'condition_id')

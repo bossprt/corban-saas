@@ -8,7 +8,7 @@ import { atLeast, canViewCommission } from '@/lib/rbac'
 import { isUuid } from '@/lib/team'
 import { decimalBr, groupPayout, PAGE_SIZES, pageSize, termText, valueText, VERSION_STATUS, type GroupRuleItem } from '@/lib/commission/tableValues'
 import { fetchAll } from '@/lib/fetchAll'
-import { cloneVersion, publishVersion, renameTable, setTableBankCode, setTableFormalization } from '../actions'
+import { cloneVersion, publishVersion, renameTable, setTableBankCode, setTableFormalization, setTablesStatus } from '../actions'
 import { NewSearchLink } from '../NewSearchLink'
 
 type SP = Record<string, string | string[] | undefined>
@@ -110,7 +110,12 @@ export default async function TablePage({ params, searchParams }: { params: Prom
         <span>{bank?.name ?? 'Banco'} · {agreement?.name ?? 'Convênio'} · {provider?.name ? `por ${provider.name}` : 'produção própria'}</span>
         {table.code && !table.code.startsWith('t-') && <span className="font-mono text-xs">{table.code}</span>}
         {table.status !== 'active' && <Badge tone="neutral">Inativa</Badge>}
-      </span>} />
+      </span>} actions={canEdit ? <form action={setTablesStatus}>
+        <input type="hidden" name="table_id" value={id} /><input type="hidden" name="back" value={`/app/comercial/tabelas/${id}`} />
+        <input type="hidden" name="status" value={table.status === 'active' ? 'archived' : 'active'} />
+        <SubmitButton className={`inline-flex h-9 items-center rounded-[10px] border px-3 text-sm font-semibold ${table.status === 'active' ? 'border-[#F3B4B4] bg-surface text-[#B42318]' : 'border-line-strong bg-surface text-ink'}`} pendingText="Salvando...">{table.status === 'active' ? 'Desativar tabela' : 'Reativar tabela'}</SubmitButton>
+      </form> : undefined} />
+      {table.status !== 'active' && <p className="-mt-2 mb-4 text-[13px] text-muted">Tabela inativa: não aparece para novas propostas e simulações. Propostas, contratos e histórico já feitos continuam iguais.</p>}
 
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         <Card id="vigencias">
