@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import type { PdfItem } from '../../src/lib/imports/smart-pdf'
-import { isValorPrazos, pctText, suggestAgreement, valorPrazosProducts, valorPrazosRows } from '../../src/lib/imports/valor-prazos'
+import { isValorPrazos, parseTaxChoice, pctText, suggestAgreement, valorPrazosProducts, valorPrazosRows } from '../../src/lib/imports/valor-prazos'
 import { mapSmartCommercialRows } from '../../src/lib/imports/smart-commercial'
 
 // Banco Valor "Prazos e Comissões" PDF (owner request 13/11/2026), geometry of the October edition: text at x=48, the
@@ -67,7 +67,7 @@ test('Valor prazos: agreement suggested only when exactly one active agreement m
 test('Valor prazos rows feed the commercial import: Novo, one condition per term, upfront and bonus components', () => {
   const r = valorPrazosProducts([page([PUB_I], true)])
   assert.ok(!('error' in r))
-  const rows = valorPrazosRows(r.products, 'Valor Financiamento', () => ['Governo do Amazonas'])
+  const rows = valorPrazosRows(r.products, 'Valor Financiamento', () => ['Governo do Amazonas'], '6')
   const mapped = mapSmartCommercialRows(rows, {
     contractTypes: [{ id: 'novo-id', name: 'Novo', tech_key: 'novo' }], groups: [],
     components: [{ id: 'up', tech_key: 'upfront', name: 'À vista' }, { id: 'bo', tech_key: 'bonus_1', name: 'Bônus' }], defaultBase: 'BRUTO',
@@ -80,6 +80,7 @@ test('Valor prazos rows feed the commercial import: Novo, one condition per term
   assert.equal(at(30).agreement_name, 'Governo do Amazonas')
   assert.equal(at(30).contract_type_name, 'Novo')
   assert.equal(at(30).rate, null)
+  assert.equal(at(30).tax_pct, '6')
 })
 
 test('Valor prazos rows: one copy of the table per marked agreement; none marked keeps the placeholder', () => {
@@ -91,4 +92,14 @@ test('Valor prazos rows: one copy of the table per marked agreement; none marked
     ['Governo do Acre', '36', '6', '4'], ['Governo do Acre', '96', '6', '24'],
   ])
   assert.equal(valorPrazosRows(r.products, 'Valor', () => [])[1][1], '(escolha o convênio)')
+})
+
+test('Valor prazos: the tax typed on screen is required and checked (0 to 100, up to 2 decimals)', () => {
+  assert.equal(parseTaxChoice(''), undefined)
+  assert.equal(parseTaxChoice('6'), '6')
+  assert.equal(parseTaxChoice('6,5'), '6.5')
+  assert.equal(parseTaxChoice('0'), '0')
+  assert.equal(parseTaxChoice('101'), null)
+  assert.equal(parseTaxChoice('abc'), null)
+  assert.equal(parseTaxChoice('6,555'), null)
 })

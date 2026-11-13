@@ -1,4 +1,4 @@
-import { normalizeHeader } from '../commercial'
+import { normalizeHeader, parseDecimal } from '../commercial'
 import type { PdfItem } from './smart-pdf'
 
 // "Prazos e Comissões" PDF of Banco Valor (Valor Financiamentos, October 2026 edition, owner request 13/11/2026): one
@@ -128,17 +128,27 @@ export function valorPrazosProducts(pages: readonly (readonly PdfItem[])[]): Val
   return { products }
 }
 
-export const VALOR_PRAZOS_HEADER = ['Banco', 'Convênio', 'Tabela', 'Tipo de contrato', 'Prazo inicial', 'Prazo final', 'À vista', 'Bônus']
+export const VALOR_PRAZOS_HEADER = ['Banco', 'Convênio', 'Tabela', 'Tipo de contrato', 'Prazo inicial', 'Prazo final', 'À vista', 'Bônus', 'Imposto']
 export const AGREEMENT_PENDING = '(escolha o convênio)'
 
 // The products as rows of the Corban layout, one copy per agreement the product goes to (the same PDF table is valid in
 // every agreement the company marks). Contract type "Novo" (every product of this PDF is a new operation); a zero bonus
 // stays empty (the component does not apply to that band). A product with no agreement yet keeps a placeholder.
-export function valorPrazosRows(products: readonly ValorProduct[], bankName: string, agreementsOf: (key: string) => readonly string[]): string[][] {
+// tax: the company's tax % on Valor commission, typed on screen (the PDF has none); empty until typed.
+export function valorPrazosRows(products: readonly ValorProduct[], bankName: string, agreementsOf: (key: string) => readonly string[], tax = ''): string[][] {
   return [VALOR_PRAZOS_HEADER, ...products.flatMap(p => {
     const names = agreementsOf(p.key)
     return (names.length ? names : [AGREEMENT_PENDING]).flatMap(agreement => p.bands.map(b => [
-      bankName, agreement, p.table, 'Novo', String(b.min), String(b.max), b.upfront, b.bonus === '0' ? '' : b.bonus,
+      bankName, agreement, p.table, 'Novo', String(b.min), String(b.max), b.upfront, b.bonus === '0' ? '' : b.bonus, tax,
     ]))
   })]
+}
+
+// "tax_pct" form field: the tax % typed for Banco Valor's PDF, 0 to 100 with up to 2 decimals ("6" or "6,5").
+// undefined = not typed (blocks the import: a missing tax was the bug of the first version); null = invalid.
+export const parseTaxChoice = (raw: unknown): string | null | undefined => {
+ const t=String(raw??'').trim()
+ if(!t)return undefined
+ const d=parseDecimal(t,{maxInt:3,scale:2})
+ return d!==null&&Number(d)<=100?d:null
 }

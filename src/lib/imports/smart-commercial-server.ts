@@ -2,6 +2,7 @@
 import { readSmartFile, type SmartFormat } from '@/lib/imports/smart-file'
 import { effectiveContractTypes } from '@/lib/contract-types'
 import { suggestAgreement, valorPrazosRows, type ValorProduct } from '@/lib/imports/valor-prazos'
+export { parseTaxChoice } from '@/lib/imports/valor-prazos'
 import { mapSmartCommercialRows, parseCalculationBase, type CalculationBase, type RepassMap, type SmartImportResult } from '@/lib/imports/smart-commercial'
 
 // groupOptions: the groups a "Repasse N" column can be mapped to (active, not own production).
@@ -47,7 +48,7 @@ export function parseAgreementMap(raw:unknown):Record<string,string[]>{
 // "bank_id" form field: the bank chosen for a file without a bank column (Bevicred table). Only a uuid is accepted.
 export const parseBankChoice=(raw:unknown):string|undefined=>typeof raw==='string'&&/^[0-9a-f-]{36}$/i.test(raw)?raw:undefined
 
-export async function parseSmartCommercialFile(ctx:Ctx,file:File,repassMap:RepassMap={},defaultBase?:CalculationBase,bankId?:string,agreementMap:Record<string,string[]>={}):Promise<SmartParsed>{
+export async function parseSmartCommercialFile(ctx:Ctx,file:File,repassMap:RepassMap={},defaultBase?:CalculationBase,bankId?:string,agreementMap:Record<string,string[]>={},taxPct?:string|null):Promise<SmartParsed>{
  // size is checked BEFORE reading the body into memory (arrayBuffer would allocate it all)
  if(file.size===0||file.size>5_000_000)throw new Error('invalid_file')
  const read=await readSmartFile(new Uint8Array(await file.arrayBuffer()),file.name)
@@ -73,7 +74,9 @@ export async function parseSmartCommercialFile(ctx:Ctx,file:File,repassMap:Repas
   })
   valor={bankId:bank?.id??null,agreements,products}
   const nameOf=new Map(agreements.map(a=>[a.id,a.name]))
-  read.rows=valorPrazosRows(read.valor,bank?.name??'(escolha o banco)',key=>(products.find(p=>p.key===key)?.agreementIds??[]).map(id=>nameOf.get(id)!).filter(Boolean))
+  read.rows=valorPrazosRows(read.valor,bank?.name??'(escolha o banco)',key=>(products.find(p=>p.key===key)?.agreementIds??[]).map(id=>nameOf.get(id)!).filter(Boolean),taxPct??'')
+  if(taxPct===undefined)valorPending.push('tax_choice_required')
+  if(taxPct===null)valorPending.push('tax_choice_invalid')
   if(!bank)valorPending.push('bank_choice_required')
   if(products.some(p=>!p.agreementIds.length))valorPending.push('agreement_choice_required')
   if(Object.values(agreementMap).flat().some(id=>!nameOf.has(id)))valorPending.push('agreement_map_invalid')
@@ -126,6 +129,8 @@ export async function parseSmartCommercialFile(ctx:Ctx,file:File,repassMap:Repas
 export const SMART_IMPORT_ISSUES:Record<string,string>={
  file_without_rows:'O arquivo não contém linhas de dados.',
  bank_choice_required:'O arquivo não diz o banco cadastrado. Escolha o banco abaixo para continuar.',
+ tax_choice_required:'O PDF da Valor não traz o imposto. Preencha o Imposto (%) abaixo para continuar (0 se a empresa não paga).',
+ tax_choice_invalid:'Imposto inválido: use um percentual de 0 a 100, com até 2 casas (ex.: 6 ou 6,5).',
  agreement_choice_required:'Há produtos sem convênio. Escolha o convênio de cada produto abaixo para continuar.',
  agreement_map_invalid:'Um produto foi ligado a um convênio que não existe ou está inativo.',
  valor_prazos_layout:'O PDF "Prazos e Comissões" da Valor veio num formato diferente do esperado. Nada foi importado: avise o suporte.',

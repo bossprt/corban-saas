@@ -1,7 +1,7 @@
 
 import { requireAppContext } from '@/lib/appContext'
 import { atLeast } from '@/lib/rbac'
-import { parseAgreementMap, parseBankChoice, parseBaseChoice, parseRepassMap, parseSmartCommercialFile, SMART_IMPORT_ISSUES } from '@/lib/imports/smart-commercial-server'
+import { parseAgreementMap, parseBankChoice, parseTaxChoice, parseBaseChoice, parseRepassMap, parseSmartCommercialFile, SMART_IMPORT_ISSUES } from '@/lib/imports/smart-commercial-server'
 import { safeFileName } from '@/lib/imports/file-guards'
 
 export const dynamic='force-dynamic'
@@ -13,8 +13,8 @@ export async function POST(req:Request){
   const fd=await req.formData()
   const file=fd.get('file')
   if(!(file instanceof File))return Response.json({error:'Envie um arquivo.'},{status:400})
-  const parsed=await parseSmartCommercialFile(ctx,file,parseRepassMap(fd.get('repass_map')),parseBaseChoice(fd.get('calculation_base')),parseBankChoice(fd.get('bank_id')),parseAgreementMap(fd.get('agreement_map')))
-  const hard=parsed.issues.filter(x=>x.code!=='generic_repass_requires_mapping'&&x.code!=='calculation_base_required'&&x.code!=='bank_choice_required'&&x.code!=='agreement_choice_required')
+  const parsed=await parseSmartCommercialFile(ctx,file,parseRepassMap(fd.get('repass_map')),parseBaseChoice(fd.get('calculation_base')),parseBankChoice(fd.get('bank_id')),parseAgreementMap(fd.get('agreement_map')),parseTaxChoice(fd.get('tax_pct')))
+  const hard=parsed.issues.filter(x=>x.code!=='generic_repass_requires_mapping'&&x.code!=='calculation_base_required'&&x.code!=='bank_choice_required'&&x.code!=='agreement_choice_required'&&x.code!=='tax_choice_required')
   return Response.json({
    ok:hard.length===0,
    fileName:safeFileName(file.name),

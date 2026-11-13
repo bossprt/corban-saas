@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Tabelas: imposto na importação do PDF da Valor (13/11/2026)
+- Corrigido (dono: "não descontando imposto"; M.S. paga 6%): o PDF da Valor não traz imposto e as tabelas entravam com 0%. A importação do PDF ganhou o campo obrigatório "Imposto (%)" (0 a 100, até 2 casas; 0 se não paga), gravado em todas as linhas das tabelas daquela importação. Tabelas já importadas sem imposto: importar o PDF de novo com o imposto (versão nova; a anterior fica no histórico). Sem migration.
+
 ### Tabelas: PDF da Valor em vários convênios (13/11/2026)
 - Alterado (dono: "essa tabela serve para todos convênios"; aprovou marcar só onde a Valor libera a venda): na importação do PDF "Prazos e Comissões" da Valor, os produtos sem convênio no PDF ganham caixas para marcar vários convênios de uma vez; cada produto vira uma tabela em cada convênio marcado. Cada produto também pode ter os seus convênios trocados em "Alterar". Sem migration.
 
