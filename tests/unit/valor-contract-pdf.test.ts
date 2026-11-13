@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import type { PdfItem } from '../../src/lib/imports/smart-pdf'
-import { suggestAgreementId, valorPdfSheet } from '../../src/lib/imports/valor-pdf'
+import { productKind, suggestAgreementId, tableKind, valorPdfSheet } from '../../src/lib/imports/valor-pdf'
 import { CONTRACT_LAYOUTS, parseContractSheet } from '../../src/lib/imports/contract-layout'
 
 // Banco Valor commission report as contracts (owner request 03/11/2026): the geometry of the bank's PDF, product line
@@ -72,6 +72,17 @@ test('Valor PDF: the product only suggests an agreement, and only when exactly o
   assert.ok(!('error' in sheet), JSON.stringify(sheet))
   assert.deepEqual(sheet.products.map(p => suggestAgreementId(p.hint, ag)), ['r', 'sp', 'dc', null])
   assert.equal(suggestAgreementId(sheet.products[0].hint, [...ag, { id: 'r2', name: 'Gov Roraima' }]), null)
+})
+
+test('Valor PDF: a card product only fits card tables, a loan product only loan tables', () => {
+  assert.equal(productKind('CONSIG. CARTAO BENEFICIO SAQUE GOV. SP'), 'card')
+  assert.equal(productKind('CONSIG CARTÃO MANAUSPREV - COM PREV'), 'card')
+  assert.equal(productKind('CONSIG. EMPRESTIMO RORAIMA II'), 'loan')
+  assert.equal(productKind('CONSIG. OUTRO PRODUTO'), null)
+  assert.equal(tableKind('Cartão Bem. Extraquadro (Comissionados/Temporários/CLT)'), 'card')
+  assert.equal(tableKind('Flex Cartão Ben. Gov SP I (Efetivos)'), 'card')
+  assert.equal(tableKind('Consig. Pub I — Empréstimo (Comissionados/Temporários)'), 'loan')
+  assert.equal(tableKind('Flex Goiás (Comissionados/Temporários/CLT)'), 'loan')
 })
 
 test('Valor PDF: no product line refuses the file instead of guessing', () => {
