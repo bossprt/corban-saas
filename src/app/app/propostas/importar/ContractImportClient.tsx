@@ -23,6 +23,8 @@ export function ContractImportClient({ layouts, autoBevicred = false }: { layout
   const [file, setFile] = useState<File | null>(null)
   const [result, setResult] = useState<ImportResult | null>(null)
   const [picks, setPicks] = useState<Record<number, Pick>>({})
+  // PDF layouts: the agreement chosen for each product block of the report (index -> agreement id).
+  const [agreementOf, setAgreementOf] = useState<Record<number, string>>({})
   const [busy, start] = useTransition()
   const pdf = layouts.find(l => l.key === layout)?.pdf ?? false
   const api = layouts.find(l => l.key === layout)?.api ?? false
@@ -38,6 +40,7 @@ export function ContractImportClient({ layouts, autoBevicred = false }: { layout
     else if (file) fd.set('file', file)
     // The Bevicred layout sends the picks by ADE (its lines may shift between the search and the import).
     const adeOf = new Map((result?.lines ?? []).map(l => [String(l.line), l.ade]))
+    for (const [k, a] of Object.entries(agreementOf)) if (a) fd.set(`agreement:${k}`, a)
     for (const [line, p] of Object.entries(picks)) {
       const key = api ? adeOf.get(line) : line
       if (!key) continue
@@ -57,7 +60,7 @@ export function ContractImportClient({ layouts, autoBevicred = false }: { layout
     if (autoBevicred && api && !started.current) { started.current = true; send(previewContracts) }
   })
   const pick = (line: number, p: Pick) => setPicks(prev => ({ ...prev, [line]: { ...prev[line], ...p } }))
-  const reset = () => { setResult(null); setPicks({}) }
+  const reset = () => { setResult(null); setPicks({}); setAgreementOf({}) }
 
   const lines = result?.lines ?? []
   const skipped = (l: ImportResult['lines'][number]) => l.status === 'skip' || picks[l.line]?.table === 'skip'
@@ -107,7 +110,7 @@ export function ContractImportClient({ layouts, autoBevicred = false }: { layout
         </div>
       )}
       {result && result.ignored.length > 0 && <p className="text-xs text-muted">Colunas ignoradas (não são campos do Corban): {result.ignored.join(', ')}</p>}
-      {result?.product && <p className="text-ink-soft">Produto do relatório: <span className="font-semibold text-ink">{result.product}</span>. Os contratos entram como pagos, na data do crédito ao cliente; a comissão entra pela importação de recebimento.</p>}
+      {result?.products && <p className="text-ink-soft">{result.products.length} produto(s) no relatório. Cada produto vai para um convênio; escolha a tabela de cada contrato (o relatório não diz se é Comissionado ou Efetivo). Os contratos entram como pagos, na data do crédito ao cliente; a comissão entra pela importação de recebimento.</p>}
       {result?.tooMany && <p className="font-medium text-diverged">A planilha passa de 500 linhas: só as 500 primeiras foram lidas. Divida o arquivo.</p>}
 
       {done && (
@@ -136,7 +139,11 @@ export function ContractImportClient({ layouts, autoBevicred = false }: { layout
                 <tr>{['Linha', 'Cliente', 'CPF', 'Tabela', 'Prazo', 'Valor', 'ADE', 'Etapa', 'Vendedor', 'Situação'].map(h => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}</tr>
               </thead>
               <tbody>
-                {lines.map(l => (
+                {(result?.products ? result.products.map((p, k) => ({ k, p, ls: lines.filter(l => l.product === k) })) : [{ k: -1, p: null, ls: lines }]).flatMap(({ k, p, ls }) => [
+                  ...(p ? [<ProductRow key={`p${k}`} k={k} p={p} agreements={result?.agreements ?? []} value={agreementOf[k] ?? p.agreementId ?? ''} done={!!done} busy={busy}
+                    lines={ls} onAgreement={a => setAgreementOf(prev => ({ ...prev, [k]: a }))} onApply={() => send(previewContracts)}
+                    onTableAll={t => setPicks(prev => { const next = { ...prev }; for (const l of ls) if (l.tableOptions?.some(o => o.id === t)) next[l.line] = { ...next[l.line], table: t }; return next })} />] : []),
+                  ...ls.map(l => (
                   <tr key={l.line} className="border-t border-line align-top">
                     <td className="num px-3 py-2 text-muted">{l.line}</td>
                     <td className="px-3 py-2 text-ink">{l.name || '—'}{l.origin && <span className="block text-xs text-muted">{l.origin}</span>}</td>
@@ -171,7 +178,7 @@ export function ContractImportClient({ layouts, autoBevicred = false }: { layout
                       {l.messages.filter(m => m !== 'Cadastrado' && !(m === 'Escolha a tabela' && chosen(l)) && !(m.startsWith('Sem vendedor') && !done && picks[l.line]?.seller)).map(m => <span key={m} className="mt-1 block text-xs text-ink-soft">{m}</span>)}
                     </td>
                   </tr>
-                ))}
+                ))])}
               </tbody>
             </table>
           </div>
@@ -179,4 +186,35 @@ export function ContractImportClient({ layouts, autoBevicred = false }: { layout
       )}
     </div>
   )
+}
+
+type Line = ImportResult['lines'][number]
+// The header of one product block of a PDF report: its agreement (suggested from the product name, or chosen) and
+// "apply to all" for the table of its contracts. Changing the agreement needs "Conferir de novo" (the tables change).
+function ProductRow({ k, p, agreements, value, done, busy, lines, onAgreement, onApply, onTableAll }: {
+  k: number; p: NonNullable<ImportResult['products']>[number]; agreements: { id: string; name: string }[]; value: string; done: boolean; busy: boolean
+  lines: Line[]; onAgreement: (id: string) => void; onApply: () => void; onTableAll: (tableId: string) => void
+}) {
+  const changed = value !== (p.agreementId ?? '')
+  const options = [...new Map(lines.flatMap(l => l.tableOptions ?? []).map(o => [o.id, o])).values()]
+  return <tr className="border-t border-line bg-surface-muted/70">
+    <td colSpan={10} className="px-3 py-2">
+      <div className="flex flex-wrap items-center gap-3">
+        <strong className="text-ink">{p.label}</strong><span className="text-xs text-muted">{lines.length} contrato(s)</span>
+        {done ? <span className="text-ink-soft">{agreements.find(a => a.id === value)?.name ?? '—'}</span> : <>
+          <select aria-label={`Convênio do produto ${k + 1}`} value={value} onChange={e => onAgreement(e.target.value)} className={`field h-9 w-56 text-[13px] ${value ? '' : 'border-[#F0A020] bg-[#FFF9EE]'}`}>
+            <option value="" disabled>Escolha o convênio</option>
+            {agreements.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </select>
+          {p.suggested && !changed && <Badge tone="pending">sugerido</Badge>}
+          {changed && <button type="button" disabled={busy || !value} onClick={onApply} className="h-9 rounded-[10px] border border-line bg-surface px-3 text-[13px] text-ink hover:bg-surface-muted disabled:opacity-50">Conferir de novo com este convênio</button>}
+          {!changed && options.length > 1 && <label className="ml-auto text-xs text-muted">Aplicar a todas
+            <select aria-label={`Tabela de todos os contratos do produto ${k + 1}`} defaultValue="" onChange={e => { if (e.target.value) onTableAll(e.target.value) }} className="field ml-2 inline-block h-9 w-64 text-[13px]">
+              <option value="">Escolha a tabela</option>
+              {options.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </select></label>}
+        </>}
+      </div>
+    </td>
+  </tr>
 }

@@ -1,6 +1,6 @@
 import { normalizeHeader } from '../commercial'
 import { splitSheet, type LegacySheet } from '../legacy/browser-read'
-import { pdfRows, PDF_LIMITS, type PdfTableRules } from '../imports/smart-pdf'
+import { extractPdfItems, pdfItemsToRows, PDF_LIMITS, type PdfTableRules } from '../imports/smart-pdf'
 
 // Commission report in PDF (Banco Valor, 28/10/2026): the same table reader as the commercial import (text layer and
 // column geometry only, no OCR, no guessing), with the header of a receipt report: a line with the contract column and
@@ -26,7 +26,10 @@ const PDF_ERRORS: Record<string, string> = {
 
 export async function readReceiptPdf(bytes: Uint8Array, sha: string): Promise<LegacySheet | { error: string }> {
   if (bytes.length > PDF_LIMITS.bytes) return { error: PDF_ERRORS.pdf_too_large }
-  const r = await pdfRows(bytes, RECEIPT_PDF_RULES)
+  const items = await extractPdfItems(bytes)
+  if ('error' in items) return { error: PDF_ERRORS[items.error] ?? PDF_ERRORS.pdf_unreadable }
+  // The page number ("Pag.: 1") sits right under the last line of a page: left out, it never sticks to a cell.
+  const r = pdfItemsToRows(items.pages.map(p => p.filter(i => !/^pag\.?:?\s*\d+$/i.test(i.str.trim()))), RECEIPT_PDF_RULES)
   if (r.issues.length) {
     const i = r.issues[0]
     return { error: `${PDF_ERRORS[i.code] ?? PDF_ERRORS.pdf_unreadable}${i.detail ? ` ${i.detail}` : ''}` }
