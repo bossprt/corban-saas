@@ -67,7 +67,7 @@ test('Valor prazos: agreement suggested only when exactly one active agreement m
 test('Valor prazos rows feed the commercial import: Novo, one condition per term, upfront and bonus components', () => {
   const r = valorPrazosProducts([page([PUB_I], true)])
   assert.ok(!('error' in r))
-  const rows = valorPrazosRows(r.products, 'Valor Financiamento', () => 'Governo do Amazonas')
+  const rows = valorPrazosRows(r.products, 'Valor Financiamento', () => ['Governo do Amazonas'])
   const mapped = mapSmartCommercialRows(rows, {
     contractTypes: [{ id: 'novo-id', name: 'Novo', tech_key: 'novo' }], groups: [],
     components: [{ id: 'up', tech_key: 'upfront', name: 'À vista' }, { id: 'bo', tech_key: 'bonus_1', name: 'Bônus' }], defaultBase: 'BRUTO',
@@ -80,4 +80,15 @@ test('Valor prazos rows feed the commercial import: Novo, one condition per term
   assert.equal(at(30).agreement_name, 'Governo do Amazonas')
   assert.equal(at(30).contract_type_name, 'Novo')
   assert.equal(at(30).rate, null)
+})
+
+test('Valor prazos rows: one copy of the table per marked agreement; none marked keeps the placeholder', () => {
+  const r = valorPrazosProducts([page([SIAPE], true)])
+  assert.ok(!('error' in r))
+  const two = valorPrazosRows(r.products, 'Valor', () => ['Governo do Amazonas', 'Governo do Acre'])
+  assert.deepEqual(two.slice(1).map(x => [x[1], x[4], x[6], x[7]]), [
+    ['Governo do Amazonas', '36', '6', '4'], ['Governo do Amazonas', '96', '6', '24'],
+    ['Governo do Acre', '36', '6', '4'], ['Governo do Acre', '96', '6', '24'],
+  ])
+  assert.equal(valorPrazosRows(r.products, 'Valor', () => [])[1][1], '(escolha o convênio)')
 })

@@ -6,7 +6,7 @@ import { mapSmartCommercialRows, parseCalculationBase, type CalculationBase, typ
 
 // groupOptions: the groups a "Repasse N" column can be mapped to (active, not own production).
 // valor: review of Banco Valor's "Prazos e Comissões" PDF (each product with the agreement chosen or suggested).
-export type ValorReview={bankId:string|null;agreements:{id:string;name:string}[];products:(ValorProduct&{agreementId:string|null;suggested:boolean})[]}
+export type ValorReview={bankId:string|null;agreements:{id:string;name:string}[];products:(ValorProduct&{agreementIds:string[];suggested:boolean})[]}
 export type SmartParsed=SmartImportResult&{format:SmartFormat|null;groupOptions:{id:string;name:string}[];valor?:ValorReview}
 
 // "repass_map" form field: {"1":"<group uuid>","2":null}. Anything malformed is treated as "no answer".
@@ -29,12 +29,17 @@ type Ctx={supabase:{from:(table:string)=>any}}
 // "calculation_base" form field: the base chosen for a file that does not carry one (Bruto or Líquido).
 export const parseBaseChoice=(raw:unknown):CalculationBase|undefined=>typeof raw==='string'&&raw?parseCalculationBase(raw)??undefined:undefined
 
-// "agreement_map" form field: {"<product key>":"<agreement uuid>"} for Banco Valor's PDF. Malformed = no answer.
-export function parseAgreementMap(raw:unknown):Record<string,string>{
+// "agreement_map" form field: {"<product key>":["<agreement uuid>",...]} for Banco Valor's PDF (a product may go to
+// several agreements). Malformed entries = no answer; an empty list is an answer only to be refused later (none chosen).
+export function parseAgreementMap(raw:unknown):Record<string,string[]>{
  try{
   const v=JSON.parse(String(raw??'{}')) as Record<string,unknown>
-  const out:Record<string,string>={}
-  for(const [k,g] of Object.entries(v??{}))if(/^[a-z0-9_]{1,80}$/.test(k)&&typeof g==='string'&&/^[0-9a-f-]{36}$/i.test(g))out[k]=g
+  const out:Record<string,string[]>={}
+  for(const [k,g] of Object.entries(v??{})){
+   if(!/^[a-z0-9_]{1,80}$/.test(k))continue
+   const list=(Array.isArray(g)?g:[g]).filter((x):x is string=>typeof x==='string'&&/^[0-9a-f-]{36}$/i.test(x))
+   if(Array.isArray(g)||list.length)out[k]=[...new Set(list)].slice(0,100)
+  }
   return out
  }catch{return {}}
 }
@@ -42,7 +47,7 @@ export function parseAgreementMap(raw:unknown):Record<string,string>{
 // "bank_id" form field: the bank chosen for a file without a bank column (Bevicred table). Only a uuid is accepted.
 export const parseBankChoice=(raw:unknown):string|undefined=>typeof raw==='string'&&/^[0-9a-f-]{36}$/i.test(raw)?raw:undefined
 
-export async function parseSmartCommercialFile(ctx:Ctx,file:File,repassMap:RepassMap={},defaultBase?:CalculationBase,bankId?:string,agreementMap:Record<string,string>={}):Promise<SmartParsed>{
+export async function parseSmartCommercialFile(ctx:Ctx,file:File,repassMap:RepassMap={},defaultBase?:CalculationBase,bankId?:string,agreementMap:Record<string,string[]>={}):Promise<SmartParsed>{
  // size is checked BEFORE reading the body into memory (arrayBuffer would allocate it all)
  if(file.size===0||file.size>5_000_000)throw new Error('invalid_file')
  const read=await readSmartFile(new Uint8Array(await file.arrayBuffer()),file.name)
@@ -60,17 +65,18 @@ export async function parseSmartCommercialFile(ctx:Ctx,file:File,repassMap:Repas
   // a bank chosen on screen must be one of the company's; with none chosen, the only bank named "Valor" is taken
   const valorBanks=banks.filter(b=>/\bvalor\b/i.test(b.name))
   const bank=bankId?banks.find(b=>b.id===bankId)??null:valorBanks.length===1?valorBanks[0]:null
+  const known=new Set(agreements.map(a=>a.id))
   const products=read.valor.map(p=>{
-   const chosen=agreementMap[p.key]?agreements.find(a=>a.id===agreementMap[p.key])??null:null
-   const hint=chosen?null:suggestAgreement(p.hint,agreements)
-   return {...p,agreementId:(chosen??hint)?.id??null,suggested:!chosen&&!!hint}
+   const answered=Object.prototype.hasOwnProperty.call(agreementMap,p.key)
+   const hint=answered?null:suggestAgreement(p.hint,agreements)
+   return {...p,agreementIds:answered?agreementMap[p.key].filter(id=>known.has(id)):hint?[hint.id]:[],suggested:!answered&&!!hint}
   })
   valor={bankId:bank?.id??null,agreements,products}
   const nameOf=new Map(agreements.map(a=>[a.id,a.name]))
-  read.rows=valorPrazosRows(read.valor,bank?.name??'(escolha o banco)',key=>{const id=products.find(p=>p.key===key)?.agreementId;return id?nameOf.get(id)??null:null})
+  read.rows=valorPrazosRows(read.valor,bank?.name??'(escolha o banco)',key=>(products.find(p=>p.key===key)?.agreementIds??[]).map(id=>nameOf.get(id)!).filter(Boolean))
   if(!bank)valorPending.push('bank_choice_required')
-  if(products.some(p=>!p.agreementId))valorPending.push('agreement_choice_required')
-  if(Object.values(agreementMap).some(id=>!nameOf.has(id)))valorPending.push('agreement_map_invalid')
+  if(products.some(p=>!p.agreementIds.length))valorPending.push('agreement_choice_required')
+  if(Object.values(agreementMap).flat().some(id=>!nameOf.has(id)))valorPending.push('agreement_map_invalid')
  }
  if(read.issues.length||read.rows.length===0){
   // a file the reader could not turn into a table never reaches the commercial parser and never reaches the database

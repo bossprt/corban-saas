@@ -7,7 +7,7 @@ import { Badge, Card, CardHeader } from '@/components/ui'
 type Provider={id:string;name:string;provider_type:string}
 type Bank={id:string;name:string}
 type ValorBand={label:string;min:number;max:number;total:string;upfront:string;bonus:string}
-type ValorReview={bankId:string|null;agreements:{id:string;name:string}[];products:{key:string;table:string;audience:string;note:string|null;agreementId:string|null;suggested:boolean;bands:ValorBand[]}[]}
+type ValorReview={bankId:string|null;agreements:{id:string;name:string}[];products:{key:string;table:string;audience:string;note:string|null;hint:string|null;agreementIds:string[];suggested:boolean;bands:ValorBand[]}[]}
 type Preview={
  ok:boolean
  fileName:string
@@ -40,8 +40,7 @@ export function SmartImportClient({providers,banks}:{providers:Provider[];banks:
  const [answers,setAnswers]=useState({deferred:false,plastic:false,bonus:false})
  const [publish,setPublish]=useState(true)
  const [publishFrom,setPublishFrom]=useState('')
- const [agreementMap,setAgreementMap]=useState<Record<string,string>>({})
- const [allAgreement,setAllAgreement]=useState('')
+ const [agreementMap,setAgreementMap]=useState<Record<string,string[]>>({})
 
  const optionalQuestions=useMemo(()=>preview?[
   preview.summary.hasDeferred&&['deferred','Diferido'],
@@ -95,8 +94,8 @@ export function SmartImportClient({providers,banks}:{providers:Provider[];banks:
    <div className="px-5 pb-5 pt-2">
     <p className="text-[13px] text-ink-soft">CSV, XLSX ou XLS. No modelo do Corban, no da 2tech (Empresa + Repasse 1…5), a tabela de comissão da Bevicred do jeito que vem do portal ou o PDF “Prazos e Comissões” da Valor.</p>
     <div className="mt-3 flex flex-wrap items-center gap-2">
-     <div className="min-w-64 flex-1"><FileDrop accept=".csv,.xlsx,.xls,.pdf,text/csv" ariaLabel="Planilha" hint="CSV, XLSX, XLS ou PDF da Valor" onChange={fs=>{setFile(fs[0]??null);setPreview(null);setSlots({});setBase('');setBankId('');setAgreementMap({});setAllAgreement('');setMessage('')}} /></div>
-     <button disabled={!file||busy} onClick={()=>{setSlots({});setBase('');setBankId('');setAgreementMap({});setAllAgreement('');void runPreview('{}','','',{})}} className={primary}><Upload size={15} className="mr-1.5 inline" aria-hidden />{busy?'Lendo...':'Ler planilha'}</button>
+     <div className="min-w-64 flex-1"><FileDrop accept=".csv,.xlsx,.xls,.pdf,text/csv" ariaLabel="Planilha" hint="CSV, XLSX, XLS ou PDF da Valor" onChange={fs=>{setFile(fs[0]??null);setPreview(null);setSlots({});setBase('');setBankId('');setAgreementMap({});setMessage('')}} /></div>
+     <button disabled={!file||busy} onClick={()=>{setSlots({});setBase('');setBankId('');setAgreementMap({});void runPreview('{}','','',{})}} className={primary}><Upload size={15} className="mr-1.5 inline" aria-hidden />{busy?'Lendo...':'Ler planilha'}</button>
     </div>
    </div>
   </Card>
@@ -124,7 +123,7 @@ export function SmartImportClient({providers,banks}:{providers:Provider[];banks:
     <button disabled={!allMapped||busy} onClick={()=>void runPreview()} className={`${ghost} mt-3`}>Aplicar e ver a prévia de novo</button>
    </div>}
 
-   {preview.valor&&<ValorReviewCard review={preview.valor} map={agreementMap} setMap={setAgreementMap} all={allAgreement} setAll={setAllAgreement} busy={busy} onApply={()=>void runPreview()} />}
+   {preview.valor&&<ValorReviewCard review={preview.valor} map={agreementMap} setMap={setAgreementMap} busy={busy} onApply={()=>void runPreview()} />}
 
    {needsBank&&<div className="mx-5 mt-4 rounded-[12px] border border-[#FDE68A] bg-[#FFFBEB] p-4">
     <strong className="text-sm text-[#92400E]">O arquivo não diz qual banco cadastrado é. De qual banco são estas tabelas?</strong>
@@ -179,23 +178,38 @@ export function SmartImportClient({providers,banks}:{providers:Provider[];banks:
  </div>
 }
 
-// Banco Valor's "Prazos e Comissões" PDF: each product with its bands (total = upfront 6% + bonus) and the agreement it
-// goes to. A product whose PDF names the agreement comes suggested; the others are chosen here (or all at once).
-function ValorReviewCard({review,map,setMap,all,setAll,busy,onApply}:{review:ValorReview;map:Record<string,string>;setMap:(m:Record<string,string>)=>void;all:string;setAll:(v:string)=>void;busy:boolean;onApply:()=>void}){
- const value=(p:ValorReview['products'][number])=>map[p.key]??p.agreementId??''
- const missing=review.products.filter(p=>!value(p)).length
- const applyAll=(id:string)=>{setAll(id);if(!id)return;const next={...map};for(const p of review.products)if(!p.agreementId&&!map[p.key])next[p.key]=id;setMap(next)}
- const opts=review.agreements.map(a=><option key={a.id} value={a.id}>{a.name}</option>)
+// Banco Valor's "Prazos e Comissões" PDF: each product with its bands (total = upfront 6% + bonus) and the agreements it
+// goes to (one table per marked agreement). A product whose PDF names the agreement comes suggested; the generic ones
+// get the agreements marked at the top (only where the bank lets the company sell), or each its own.
+function AgreementChecks({agreements,value,onChange,label}:{agreements:{id:string;name:string}[];value:string[];onChange:(ids:string[])=>void;label:string}){
+ const toggle=(id:string,on:boolean)=>onChange(on?[...value,id]:value.filter(x=>x!==id))
+ return <div role="group" aria-label={label} className="grid max-h-64 gap-1 overflow-y-auto p-2 sm:grid-cols-2">{agreements.map(a=><label key={a.id} className="flex items-center gap-2 rounded-md px-2 py-1 text-[13px] text-ink hover:bg-surface-muted"><input type="checkbox" checked={value.includes(a.id)} onChange={e=>toggle(a.id,e.target.checked)} className="accent-[var(--brand)]" />{a.name}</label>)}</div>
+}
+function ValorReviewCard({review,map,setMap,busy,onApply}:{review:ValorReview;map:Record<string,string[]>;setMap:(m:Record<string,string[]>)=>void;busy:boolean;onApply:()=>void}){
+ const value=(p:ValorReview['products'][number])=>map[p.key]??p.agreementIds
+ const generic=review.products.filter(p=>!p.hint)
+ const genericIds=generic.length&&generic.every(p=>JSON.stringify([...value(p)].sort())===JSON.stringify([...value(generic[0])].sort()))?value(generic[0]):[]
+ const setGeneric=(ids:string[])=>{const next={...map};for(const p of generic)next[p.key]=ids;setMap(next)}
+ const missing=review.products.filter(p=>!value(p).length).length
+ const tables=review.products.reduce((n,p)=>n+value(p).length,0)
+ const nameOf=new Map(review.agreements.map(a=>[a.id,a.name]))
  return <div className="mx-5 mt-4 rounded-[12px] border border-line">
-  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
-   <div><strong className="text-sm text-ink">Tabela da Valor: {review.products.length} produtos</strong><p className="text-xs text-muted">À vista = até 6% · Bônus = o que passar de 6%.{missing?` ${missing} produto(s) sem convênio.`:''}</p></div>
-   <label className="text-xs text-muted">Aplicar a todos sem convênio <select aria-label="Convênio para todos sem convênio" value={all} onChange={e=>applyAll(e.target.value)} className="field ml-1 inline-block w-auto"><option value="">Escolha</option>{opts}</select></label>
+  <div className="border-b border-line px-4 py-3">
+   <strong className="text-sm text-ink">Tabela da Valor: {review.products.length} produtos</strong>
+   <p className="text-xs text-muted">À vista = até 6% · Bônus = o que passar de 6%. Serão {tables} tabela(s): uma por convênio marcado.{missing?` ${missing} produto(s) sem convênio.`:''}</p>
+   {!!generic.length&&<div className={`mt-3 rounded-[10px] border ${genericIds.length?'border-line':'border-[#F0A020] bg-[#FFF9EE]'}`}>
+    <p className="px-3 pt-2 text-[13px] font-medium text-ink">Convênios dos {generic.length} produtos sem convênio no PDF <span className="font-normal text-muted">— marque só onde a Valor libera a venda</span></p>
+    <AgreementChecks agreements={review.agreements} value={genericIds} onChange={setGeneric} label="Convênios dos produtos sem convênio no PDF" />
+   </div>}
   </div>
   <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-[13px]">
-   <thead className="bg-surface-muted text-xs text-muted"><tr><th className="px-4 py-2 font-medium">Produto no PDF</th><th className="px-4 py-2 font-medium">Convênio</th><th className="px-4 py-2 font-medium">Parcelas</th><th className="px-4 py-2 text-right font-medium">Total</th><th className="px-4 py-2 text-right font-medium">À vista</th><th className="px-4 py-2 text-right font-medium">Bônus</th></tr></thead>
+   <thead className="bg-surface-muted text-xs text-muted"><tr><th className="px-4 py-2 font-medium">Produto no PDF</th><th className="px-4 py-2 font-medium">Convênios</th><th className="px-4 py-2 font-medium">Parcelas</th><th className="px-4 py-2 text-right font-medium">Total</th><th className="px-4 py-2 text-right font-medium">À vista</th><th className="px-4 py-2 text-right font-medium">Bônus</th></tr></thead>
    <tbody>{review.products.map(p=>{const v=value(p);return <tr key={p.key} className="border-t border-line align-top">
     <td className="px-4 py-2.5"><b className="text-ink">{p.table}</b><div className="text-xs text-muted">{p.audience}{p.note?` · ${p.note}`:''}</div></td>
-    <td className="px-4 py-2.5"><select aria-label={`Convênio de ${p.table}`} value={v} onChange={e=>setMap({...map,[p.key]:e.target.value})} className={`field w-auto ${v?'':'border-[#F0A020] bg-[#FFF9EE]'}`}><option value="" disabled>Escolha</option>{opts}</select>{p.suggested&&!map[p.key]&&<span className="ml-2"><Badge tone="pending">sugerido</Badge></span>}</td>
+    <td className="max-w-[300px] px-4 py-2.5">
+     <div className="flex flex-wrap gap-1">{v.length?v.map(id=><span key={id} className="rounded-full bg-surface-muted px-2 py-0.5 text-xs text-ink">{nameOf.get(id)}</span>):<span className="rounded-full bg-[#FFF9EE] px-2 py-0.5 text-xs text-[#9A5B00]">sem convênio</span>}{p.suggested&&!map[p.key]&&<Badge tone="pending">sugerido</Badge>}</div>
+     <details className="mt-1"><summary className="cursor-pointer text-xs text-brand underline">Alterar</summary><div className="mt-1 rounded-[10px] border border-line bg-surface"><AgreementChecks agreements={review.agreements} value={v} onChange={ids=>setMap({...map,[p.key]:ids})} label={`Convênios de ${p.table}`} /></div></details>
+    </td>
     <td className="num whitespace-nowrap px-4 py-2.5">{p.bands.map(b=><div key={b.label}>{b.label}</div>)}</td>
     <td className="num px-4 py-2.5 text-right">{p.bands.map(b=><div key={b.label}>{b.total}%</div>)}</td>
     <td className="num px-4 py-2.5 text-right">{p.bands.map(b=><div key={b.label}>{b.upfront}%</div>)}</td>
