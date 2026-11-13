@@ -1,10 +1,13 @@
 
 import { readSmartFile, type SmartFormat } from '@/lib/imports/smart-file'
 import { effectiveContractTypes } from '@/lib/contract-types'
+import { suggestAgreement, valorPrazosRows, type ValorProduct } from '@/lib/imports/valor-prazos'
 import { mapSmartCommercialRows, parseCalculationBase, type CalculationBase, type RepassMap, type SmartImportResult } from '@/lib/imports/smart-commercial'
 
 // groupOptions: the groups a "Repasse N" column can be mapped to (active, not own production).
-export type SmartParsed=SmartImportResult&{format:SmartFormat|null;groupOptions:{id:string;name:string}[]}
+// valor: review of Banco Valor's "Prazos e Comissões" PDF (each product with the agreement chosen or suggested).
+export type ValorReview={bankId:string|null;agreements:{id:string;name:string}[];products:(ValorProduct&{agreementId:string|null;suggested:boolean})[]}
+export type SmartParsed=SmartImportResult&{format:SmartFormat|null;groupOptions:{id:string;name:string}[];valor?:ValorReview}
 
 // "repass_map" form field: {"1":"<group uuid>","2":null}. Anything malformed is treated as "no answer".
 export function parseRepassMap(raw:unknown):RepassMap{
@@ -26,13 +29,49 @@ type Ctx={supabase:{from:(table:string)=>any}}
 // "calculation_base" form field: the base chosen for a file that does not carry one (Bruto or Líquido).
 export const parseBaseChoice=(raw:unknown):CalculationBase|undefined=>typeof raw==='string'&&raw?parseCalculationBase(raw)??undefined:undefined
 
+// "agreement_map" form field: {"<product key>":"<agreement uuid>"} for Banco Valor's PDF. Malformed = no answer.
+export function parseAgreementMap(raw:unknown):Record<string,string>{
+ try{
+  const v=JSON.parse(String(raw??'{}')) as Record<string,unknown>
+  const out:Record<string,string>={}
+  for(const [k,g] of Object.entries(v??{}))if(/^[a-z0-9_]{1,80}$/.test(k)&&typeof g==='string'&&/^[0-9a-f-]{36}$/i.test(g))out[k]=g
+  return out
+ }catch{return {}}
+}
+
 // "bank_id" form field: the bank chosen for a file without a bank column (Bevicred table). Only a uuid is accepted.
 export const parseBankChoice=(raw:unknown):string|undefined=>typeof raw==='string'&&/^[0-9a-f-]{36}$/i.test(raw)?raw:undefined
 
-export async function parseSmartCommercialFile(ctx:Ctx,file:File,repassMap:RepassMap={},defaultBase?:CalculationBase,bankId?:string):Promise<SmartParsed>{
+export async function parseSmartCommercialFile(ctx:Ctx,file:File,repassMap:RepassMap={},defaultBase?:CalculationBase,bankId?:string,agreementMap:Record<string,string>={}):Promise<SmartParsed>{
  // size is checked BEFORE reading the body into memory (arrayBuffer would allocate it all)
  if(file.size===0||file.size>5_000_000)throw new Error('invalid_file')
  const read=await readSmartFile(new Uint8Array(await file.arrayBuffer()),file.name)
+ // Banco Valor's PDF: the bank and every product's agreement are the company's own active records, chosen on screen
+ // (a product whose PDF names the agreement comes suggested). Until all are chosen the import stays blocked.
+ let valor:ValorReview|undefined
+ const valorPending:string[]=[]
+ if(read.format==='valor_prazos'&&read.valor&&!read.issues.length){
+  const [banksRes,agreementsRes]=await Promise.all([
+   ctx.supabase.from('organization_banks').select('id,name').eq('is_active',true).order('name'),
+   ctx.supabase.from('organization_agreements').select('id,name').eq('is_active',true).order('name'),
+  ])
+  const banks=(banksRes.data??[]) as {id:string;name:string}[]
+  const agreements=(agreementsRes.data??[]) as {id:string;name:string}[]
+  // a bank chosen on screen must be one of the company's; with none chosen, the only bank named "Valor" is taken
+  const valorBanks=banks.filter(b=>/\bvalor\b/i.test(b.name))
+  const bank=bankId?banks.find(b=>b.id===bankId)??null:valorBanks.length===1?valorBanks[0]:null
+  const products=read.valor.map(p=>{
+   const chosen=agreementMap[p.key]?agreements.find(a=>a.id===agreementMap[p.key])??null:null
+   const hint=chosen?null:suggestAgreement(p.hint,agreements)
+   return {...p,agreementId:(chosen??hint)?.id??null,suggested:!chosen&&!!hint}
+  })
+  valor={bankId:bank?.id??null,agreements,products}
+  const nameOf=new Map(agreements.map(a=>[a.id,a.name]))
+  read.rows=valorPrazosRows(read.valor,bank?.name??'(escolha o banco)',key=>{const id=products.find(p=>p.key===key)?.agreementId;return id?nameOf.get(id)??null:null})
+  if(!bank)valorPending.push('bank_choice_required')
+  if(products.some(p=>!p.agreementId))valorPending.push('agreement_choice_required')
+  if(Object.values(agreementMap).some(id=>!nameOf.has(id)))valorPending.push('agreement_map_invalid')
+ }
  if(read.issues.length||read.rows.length===0){
   // a file the reader could not turn into a table never reaches the commercial parser and never reaches the database
   const issues=read.issues.length?read.issues:[{line:1,code:'file_without_rows'}]
@@ -74,12 +113,16 @@ export async function parseSmartCommercialFile(ctx:Ctx,file:File,repassMap:Repas
   providers:(providers.data??[]) as {id:string;name:string}[],
  })
  if(bankPending)mapped.issues.unshift({line:1,code:'bank_choice_required'})
- return {format:read.format,groupOptions:payable,...mapped}
+ for(const code of valorPending.reverse())mapped.issues.unshift({line:1,code})
+ return {format:read.format,groupOptions:payable,...mapped,...(valor?{valor}:{})}
 }
 
 export const SMART_IMPORT_ISSUES:Record<string,string>={
  file_without_rows:'O arquivo não contém linhas de dados.',
- bank_choice_required:'A tabela da Bevicred não diz o banco. Escolha o banco abaixo para continuar.',
+ bank_choice_required:'O arquivo não diz o banco cadastrado. Escolha o banco abaixo para continuar.',
+ agreement_choice_required:'Há produtos sem convênio. Escolha o convênio de cada produto abaixo para continuar.',
+ agreement_map_invalid:'Um produto foi ligado a um convênio que não existe ou está inativo.',
+ valor_prazos_layout:'O PDF "Prazos e Comissões" da Valor veio num formato diferente do esperado. Nada foi importado: avise o suporte.',
  bevicred_layout_changed:'A tabela da Bevicred mudou de formato (colunas diferentes do esperado). Nada foi importado: avise o suporte.',
  bevicred_unknown_contract_type:'Tabela da Bevicred sem tipo de contrato reconhecível no nome (Novo, Refin, Portabilidade ou Refin da Portabilidade).',
  bevicred_unknown_agreement:'Tabela da Bevicred sem convênio reconhecível no nome (INSS ou Gov. Acre).',

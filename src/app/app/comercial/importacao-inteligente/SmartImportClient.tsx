@@ -6,6 +6,8 @@ import { Badge, Card, CardHeader } from '@/components/ui'
 
 type Provider={id:string;name:string;provider_type:string}
 type Bank={id:string;name:string}
+type ValorBand={label:string;min:number;max:number;total:string;upfront:string;bonus:string}
+type ValorReview={bankId:string|null;agreements:{id:string;name:string}[];products:{key:string;table:string;audience:string;note:string|null;agreementId:string|null;suggested:boolean;bands:ValorBand[]}[]}
 type Preview={
  ok:boolean
  fileName:string
@@ -13,6 +15,7 @@ type Preview={
  summary:{sourceRows:number;expandedRows:number;tables:string[];components:string[];hasDeferred:boolean;hasPlastic:boolean;hasBonus:boolean;hasGenericRepasseColumns:boolean;genericRepasseSlots:string[];hasUnmappedRepassValues?:boolean;groups?:string[];hasOriginColumn?:boolean}
  groupOptions:{id:string;name:string}[]
  issues:{line:number;code:string;detail?:string;message:string}[]
+ valor?:ValorReview|null
  sample:{bank:string;agreement:string;table:string;contract:string;term:number;rate:string|null;factor:string|null;components:number;values?:string;groupValues:number}[]
 }
 const lbl='text-[13px] font-medium text-ink-soft'
@@ -37,6 +40,8 @@ export function SmartImportClient({providers,banks}:{providers:Provider[];banks:
  const [answers,setAnswers]=useState({deferred:false,plastic:false,bonus:false})
  const [publish,setPublish]=useState(true)
  const [publishFrom,setPublishFrom]=useState('')
+ const [agreementMap,setAgreementMap]=useState<Record<string,string>>({})
+ const [allAgreement,setAllAgreement]=useState('')
 
  const optionalQuestions=useMemo(()=>preview?[
   preview.summary.hasDeferred&&['deferred','Diferido'],
@@ -47,11 +52,11 @@ export function SmartImportClient({providers,banks}:{providers:Provider[];banks:
  const repassMap=()=>JSON.stringify(Object.fromEntries(slotNames.map(s=>{const k=s.replace(/\D/g,'');const v=slots[k];return [k,v===IGNORE?null:v]}).filter(([,v])=>v!==undefined)))
  const allMapped=slotNames.every(s=>!!slots[s.replace(/\D/g,'')])
 
- async function runPreview(map=repassMap(),chosenBase=base,chosenBank=bankId){
+ async function runPreview(map=repassMap(),chosenBase=base,chosenBank=bankId,chosenAgreements=agreementMap){
   if(!file)return
   setBusy(true);setMessage('')
   try{
-   const fd=new FormData();fd.set('file',file);fd.set('repass_map',map);fd.set('calculation_base',chosenBase);fd.set('bank_id',chosenBank)
+   const fd=new FormData();fd.set('file',file);fd.set('repass_map',map);fd.set('calculation_base',chosenBase);fd.set('bank_id',chosenBank);fd.set('agreement_map',JSON.stringify(chosenAgreements))
    const res=await fetch('/api/comercial/importacao-inteligente/preview',{method:'POST',body:fd})
    const body=await res.json()
    if(!res.ok){setMessage(body.error??'Não foi possível analisar.');setPreview(null);return}
@@ -68,7 +73,7 @@ export function SmartImportClient({providers,banks}:{providers:Provider[];banks:
   setBusy(true);setMessage('')
   try{
    const fd=new FormData()
-   fd.set('file',file);fd.set('production_origin',preview.summary.hasOriginColumn?'own':origin);fd.set('provider_id',!preview.summary.hasOriginColumn&&origin==='third_party'?provider:'');fd.set('repass_map',repassMap());fd.set('calculation_base',base);fd.set('bank_id',bankId);fd.set('publish_from',publish?publishFrom:'')
+   fd.set('file',file);fd.set('production_origin',preview.summary.hasOriginColumn?'own':origin);fd.set('provider_id',!preview.summary.hasOriginColumn&&origin==='third_party'?provider:'');fd.set('repass_map',repassMap());fd.set('calculation_base',base);fd.set('bank_id',bankId);fd.set('agreement_map',JSON.stringify(agreementMap));fd.set('publish_from',publish?publishFrom:'')
    const res=await fetch('/api/comercial/importacao-inteligente/apply',{method:'POST',body:fd})
    const body=await res.json()
    if(!res.ok){setMessage(body.error??'Importação recusada.');return}
@@ -80,7 +85,7 @@ export function SmartImportClient({providers,banks}:{providers:Provider[];banks:
   }finally{setBusy(false)}
  }
 
- const PENDING=['generic_repass_requires_mapping','calculation_base_required','bank_choice_required']
+ const PENDING=['generic_repass_requires_mapping','calculation_base_required','bank_choice_required','agreement_choice_required']
  const blocking=preview?.issues.filter(x=>!PENDING.includes(x.code))??[]
  const needsBase=!!base||!!preview?.issues.some(x=>x.code==='calculation_base_required')
  const needsBank=!!bankId||!!preview?.issues.some(x=>x.code==='bank_choice_required')
@@ -88,10 +93,10 @@ export function SmartImportClient({providers,banks}:{providers:Provider[];banks:
   <Card>
    <CardHeader title="1. Envie a planilha" />
    <div className="px-5 pb-5 pt-2">
-    <p className="text-[13px] text-ink-soft">CSV, XLSX ou XLS. No modelo do Corban, no da 2tech (Empresa + Repasse 1…5) ou a tabela de comissão da Bevicred do jeito que vem do portal.</p>
+    <p className="text-[13px] text-ink-soft">CSV, XLSX ou XLS. No modelo do Corban, no da 2tech (Empresa + Repasse 1…5), a tabela de comissão da Bevicred do jeito que vem do portal ou o PDF “Prazos e Comissões” da Valor.</p>
     <div className="mt-3 flex flex-wrap items-center gap-2">
-     <div className="min-w-64 flex-1"><FileDrop accept=".csv,.xlsx,.xls,.pdf,text/csv" ariaLabel="Planilha" hint="CSV, XLSX ou XLS" onChange={fs=>{setFile(fs[0]??null);setPreview(null);setSlots({});setBase('');setBankId('');setMessage('')}} /></div>
-     <button disabled={!file||busy} onClick={()=>{setSlots({});setBase('');setBankId('');void runPreview('{}','','')}} className={primary}><Upload size={15} className="mr-1.5 inline" aria-hidden />{busy?'Lendo...':'Ler planilha'}</button>
+     <div className="min-w-64 flex-1"><FileDrop accept=".csv,.xlsx,.xls,.pdf,text/csv" ariaLabel="Planilha" hint="CSV, XLSX, XLS ou PDF da Valor" onChange={fs=>{setFile(fs[0]??null);setPreview(null);setSlots({});setBase('');setBankId('');setAgreementMap({});setAllAgreement('');setMessage('')}} /></div>
+     <button disabled={!file||busy} onClick={()=>{setSlots({});setBase('');setBankId('');setAgreementMap({});setAllAgreement('');void runPreview('{}','','',{})}} className={primary}><Upload size={15} className="mr-1.5 inline" aria-hidden />{busy?'Lendo...':'Ler planilha'}</button>
     </div>
    </div>
   </Card>
@@ -119,8 +124,10 @@ export function SmartImportClient({providers,banks}:{providers:Provider[];banks:
     <button disabled={!allMapped||busy} onClick={()=>void runPreview()} className={`${ghost} mt-3`}>Aplicar e ver a prévia de novo</button>
    </div>}
 
+   {preview.valor&&<ValorReviewCard review={preview.valor} map={agreementMap} setMap={setAgreementMap} all={allAgreement} setAll={setAllAgreement} busy={busy} onApply={()=>void runPreview()} />}
+
    {needsBank&&<div className="mx-5 mt-4 rounded-[12px] border border-[#FDE68A] bg-[#FFFBEB] p-4">
-    <strong className="text-sm text-[#92400E]">A tabela da Bevicred não diz o banco. De qual banco são estas tabelas?</strong>
+    <strong className="text-sm text-[#92400E]">O arquivo não diz qual banco cadastrado é. De qual banco são estas tabelas?</strong>
     <div className="mt-3 flex flex-wrap items-end gap-3">
      <label className={lbl}>Banco<select aria-label="Banco" value={bankId} onChange={e=>setBankId(e.target.value)} className="field mt-1.5"><option value="" disabled>Escolha</option>{banks.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
      <button disabled={!bankId||busy} onClick={()=>void runPreview()} className={ghost}>Aplicar e ver a prévia de novo</button>
@@ -138,7 +145,7 @@ export function SmartImportClient({providers,banks}:{providers:Provider[];banks:
 
    {!!blocking.length&&<div className="mx-5 mt-4 grid gap-2">{blocking.map((x,i)=><div key={i} role="alert" className="rounded-[10px] border border-[#FCA5A5] bg-[#FEF2F2] p-3 text-[13px] text-[#991B1B]">{x.line>1?`Linha ${x.line}: `:''}{x.message}{x.detail?` — ${x.detail}`:''}</div>)}</div>}
 
-   {!!preview.sample.length&&<div className="mt-4 overflow-x-auto px-2 pb-2"><table className="w-full min-w-[720px] text-left text-[13px]">
+   {!!preview.sample.length&&!preview.valor&&<div className="mt-4 overflow-x-auto px-2 pb-2"><table className="w-full min-w-[720px] text-left text-[13px]">
     <thead className="text-xs text-muted"><tr>{['Banco','Convênio','Tabela','Tipo','Prazo','Taxa','Fator','Valores empresa','Valores grupos'].map(h=><th key={h} className="px-3 py-2 font-medium">{h}</th>)}</tr></thead>
     <tbody>{preview.sample.map((r,i)=><tr key={i} className="border-t border-line"><td className="px-3 py-2">{r.bank}</td><td className="px-3 py-2">{r.agreement}</td><td className="px-3 py-2">{r.table}</td><td className="px-3 py-2">{r.contract}</td><td className="num px-3 py-2">{r.term}x</td><td className="num px-3 py-2">{r.rate??'—'}</td><td className="num px-3 py-2">{r.factor??'—'}</td><td className="num px-3 py-2">{r.values||r.components}</td><td className="num px-3 py-2">{r.groupValues}</td></tr>)}</tbody>
    </table></div>}
@@ -169,5 +176,35 @@ export function SmartImportClient({providers,banks}:{providers:Provider[];banks:
   </Card>}
 
   {message&&<div role="status" className="rounded-[12px] border border-line bg-surface p-4 text-sm text-ink">{message}{' '}{message.startsWith('Importação concluída')&&<Badge tone="received">ok</Badge>}</div>}
+ </div>
+}
+
+// Banco Valor's "Prazos e Comissões" PDF: each product with its bands (total = upfront 6% + bonus) and the agreement it
+// goes to. A product whose PDF names the agreement comes suggested; the others are chosen here (or all at once).
+function ValorReviewCard({review,map,setMap,all,setAll,busy,onApply}:{review:ValorReview;map:Record<string,string>;setMap:(m:Record<string,string>)=>void;all:string;setAll:(v:string)=>void;busy:boolean;onApply:()=>void}){
+ const value=(p:ValorReview['products'][number])=>map[p.key]??p.agreementId??''
+ const missing=review.products.filter(p=>!value(p)).length
+ const applyAll=(id:string)=>{setAll(id);if(!id)return;const next={...map};for(const p of review.products)if(!p.agreementId&&!map[p.key])next[p.key]=id;setMap(next)}
+ const opts=review.agreements.map(a=><option key={a.id} value={a.id}>{a.name}</option>)
+ return <div className="mx-5 mt-4 rounded-[12px] border border-line">
+  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-4 py-3">
+   <div><strong className="text-sm text-ink">Tabela da Valor: {review.products.length} produtos</strong><p className="text-xs text-muted">À vista = até 6% · Bônus = o que passar de 6%.{missing?` ${missing} produto(s) sem convênio.`:''}</p></div>
+   <label className="text-xs text-muted">Aplicar a todos sem convênio <select aria-label="Convênio para todos sem convênio" value={all} onChange={e=>applyAll(e.target.value)} className="field ml-1 inline-block w-auto"><option value="">Escolha</option>{opts}</select></label>
+  </div>
+  <div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-[13px]">
+   <thead className="bg-surface-muted text-xs text-muted"><tr><th className="px-4 py-2 font-medium">Produto no PDF</th><th className="px-4 py-2 font-medium">Convênio</th><th className="px-4 py-2 font-medium">Parcelas</th><th className="px-4 py-2 text-right font-medium">Total</th><th className="px-4 py-2 text-right font-medium">À vista</th><th className="px-4 py-2 text-right font-medium">Bônus</th></tr></thead>
+   <tbody>{review.products.map(p=>{const v=value(p);return <tr key={p.key} className="border-t border-line align-top">
+    <td className="px-4 py-2.5"><b className="text-ink">{p.table}</b><div className="text-xs text-muted">{p.audience}{p.note?` · ${p.note}`:''}</div></td>
+    <td className="px-4 py-2.5"><select aria-label={`Convênio de ${p.table}`} value={v} onChange={e=>setMap({...map,[p.key]:e.target.value})} className={`field w-auto ${v?'':'border-[#F0A020] bg-[#FFF9EE]'}`}><option value="" disabled>Escolha</option>{opts}</select>{p.suggested&&!map[p.key]&&<span className="ml-2"><Badge tone="pending">sugerido</Badge></span>}</td>
+    <td className="num whitespace-nowrap px-4 py-2.5">{p.bands.map(b=><div key={b.label}>{b.label}</div>)}</td>
+    <td className="num px-4 py-2.5 text-right">{p.bands.map(b=><div key={b.label}>{b.total}%</div>)}</td>
+    <td className="num px-4 py-2.5 text-right">{p.bands.map(b=><div key={b.label}>{b.upfront}%</div>)}</td>
+    <td className="num px-4 py-2.5 text-right">{p.bands.map(b=><div key={b.label}>{b.bonus}%</div>)}</td>
+   </tr>})}</tbody>
+  </table></div>
+  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-3">
+   <p className="text-xs text-muted">Tipo de contrato: Novo. Tabela que já existe ganha versão nova; a anterior fica no histórico.</p>
+   <button disabled={busy||missing>0} onClick={onApply} className="h-10 rounded-[10px] border border-line bg-surface px-4 text-sm text-ink hover:bg-surface-muted disabled:opacity-50">Aplicar e ver a prévia de novo</button>
+  </div>
  </div>
 }
