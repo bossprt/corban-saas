@@ -83,6 +83,7 @@ export async function CommissionCard({ supabase, access, proposalId, closed, can
   const recUpfront = sumOf(r => r.entry_kind === 'receipt' && r.component_key === 'upfront')
   const recDeferred = sumOf(r => r.entry_kind === 'receipt' && r.component_key === 'deferred')
   const recGratification = sumOf(r => r.entry_kind === 'receipt' && r.component_key === 'gratification')
+  const recBonus = sumOf(r => r.entry_kind === 'receipt' && r.component_key === 'bonus')
   const recChargeback = sumOf(r => r.entry_kind === 'chargeback')
 
   const total = (component: string, kind: string) => lines.filter(l => l.component_key === component && l.line_kind === kind).reduce((acc, l) => add(acc, mul(R(l.amount), R(l.multiplier))), ZERO)
@@ -213,7 +214,7 @@ export async function CommissionCard({ supabase, access, proposalId, closed, can
             )}
 
             <p className="mt-4 border-t border-line pt-3 text-[13px] text-ink-soft">
-              Recebido do banco: à vista {money(recUpfront)} · diferido {money(recDeferred)}{nonZero(recGratification) && <> · gratificação {money(recGratification)}</>} · estornos {money(recChargeback)} · líquido <span className="font-semibold text-ink">{money(sub(add(add(recUpfront, recDeferred), recGratification), recChargeback))}</span>
+              Recebido do banco: à vista {money(recUpfront)} · diferido {money(recDeferred)}{nonZero(recBonus) && <> · bônus {money(recBonus)}</>}{nonZero(recGratification) && <> · gratificação {money(recGratification)}</>} · estornos {money(recChargeback)} · líquido <span className="font-semibold text-ink">{money(sub(add(add(recUpfront, recDeferred), recGratification), recChargeback))}</span>
               {receipts.some(r => r.reconciliation === 'divergent') && <span className="ml-1 text-[#92400E]">(há recebimento divergente; veja a conciliação)</span>}
             </p>
             {can(access, 'financeiro.approve') && (
@@ -223,7 +224,7 @@ export async function CommissionCard({ supabase, access, proposalId, closed, can
                   <input type="hidden" name="proposal_id" value={proposalId} />
                   <label className={lbl}>Tipo
                     <select name="kind" required defaultValue="upfront" className="field mt-1.5">
-                      <option value="upfront">À vista</option><option value="deferred">Diferido</option><option value="gratification">Gratificação</option><option value="chargeback">Estorno</option>
+                      <option value="upfront">À vista</option><option value="bonus">Bônus</option><option value="deferred">Diferido</option><option value="gratification">Gratificação</option><option value="chargeback">Estorno</option>
                     </select></label>
                   <label className={lbl}>Valor (R$)<input name="amount" required inputMode="decimal" placeholder="600,00" className="field mt-1.5" /></label>
                   <label className={lbl}>Data em que caiu<input name="received_on" type="date" required defaultValue={new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())} className="field mt-1.5" /></label>

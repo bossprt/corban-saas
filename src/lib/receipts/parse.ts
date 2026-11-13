@@ -6,7 +6,7 @@ import { parseMoneyInput } from '../money-input'
 // text (cellText); every amount becomes an exact decimal string, and any value that is ambiguous or has more than two
 // decimals is refused (the owner chose zero tolerance), never rounded.
 
-export type ReceiptKind = 'upfront' | 'deferred' | 'chargeback'
+export type ReceiptKind = 'upfront' | 'bonus' | 'deferred' | 'chargeback'
 export type ReceiptMapping = { ade: string; amount: string; installment?: string; paid_on?: string; bank?: string }
 export type ReceiptRow = { row: number; ade: string; amount: string; installment?: string; paid_on?: string; bank?: string }
 export type ReceiptIssue = { row: number; code: 'amount_invalid' | 'amount_ambiguous' | 'amount_negative' | 'ade_missing' | 'installment_invalid' | 'date_invalid' }

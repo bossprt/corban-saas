@@ -15,6 +15,10 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Financeiro: baixa do Bônus separada do à vista (13/11/2026)
+- Adicionado (dono aprovou a imagem; parte do vendedor no Bônus: "A, só quando o bônus for recebido"; ADR-0073): tipo de relatório "Bônus" na importação de recebimento e no lançamento manual. O à vista passa a ser conferido sem o Bônus (Valor paga até 6% à vista); o relatório de bônus é conferido com a soma de Bônus 1/2/3. Importar os dois PDFs juntos como à vista continua aceito (valor com o Bônus). A parte do vendedor, supervisor e gerente no Bônus é creditada quando o Bônus é recebido e conciliado; contratos já creditados ficam como estão.
+- Migration `20261113203302_bonus_receipt_apart_v1` (funções partem das versões em produção, md5 conferido). Teste de contrato `tests/security/bonus-receipt-apart-contract.sql` (30 verificações).
+
 ### Esteira: contratos pelo PDF da Valor com vários produtos (13/11/2026)
 - Alterado (relatórios reais da M.S. CONSULTORIA e da Credimps; dono aprovou a imagem): o relatório de comissão da Valor pode ter vários produtos (um bloco por produto: linha do produto, títulos, contratos, "TOTAL PRODUTO"; o bloco pode continuar na página seguinte). Cada contrato fica no produto do seu bloco. O produto só sugere o convênio (quando exatamente um convênio da empresa bate: Roraima, Goiás, Duque de Caxias, Gov. SP, Rio Branco, Manaus, ...); a pessoa confirma ou troca, e escolhe a tabela de cada contrato entre as do convênio que servem (tipo e prazo), com "Aplicar a todas" por produto. Antes só "CONSIG. EMPRESTIMO RIO BRANCO I", um produto por PDF.
 - Corrigido: o número da página ("Pag.: 1") grudava na última célula da página, no PDF de contratos e no de recebimento.

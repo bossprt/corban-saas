@@ -97,7 +97,7 @@ select pg_temp.act_as((select admin_user from ids));
 set local role authenticated;
 insert into results select 'the Gratificação is registered apart', pg_temp.receive('p', 'gratification', '150.00') = 'ok';
 insert into results select 'the Gratificação is received only once', pg_temp.receive('p', 'gratification', '150.00') like '%manual_receipt_duplicate%';
-insert into results select 'an invalid kind is refused', pg_temp.receive('p', 'bonus', '10.00') like '%invalid_receipt_kind%';
+insert into results select 'an invalid kind is refused', pg_temp.receive('p', 'bonus_9', '10.00') like '%invalid_receipt_kind%';
 reset role;
 
 insert into results select 'the Gratificação receipt matches the value typed',

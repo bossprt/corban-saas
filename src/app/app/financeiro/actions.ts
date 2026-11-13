@@ -10,7 +10,7 @@ import { isUuid } from '@/lib/team'
 import { parseMoneyInput } from '@/lib/money-input'
 import { buildReceiptRows, RECEIPT_ISSUE_LABEL, type ReceiptKind, type ReceiptMapping } from '@/lib/receipts/parse'
 
-const KINDS: ReceiptKind[] = ['upfront', 'deferred', 'chargeback']
+const KINDS: ReceiptKind[] = ['upfront', 'bonus', 'deferred', 'chargeback']
 const MAX_ROWS = 20_000
 
 type Source = { kind: 'bank' | 'provider'; id: string }
