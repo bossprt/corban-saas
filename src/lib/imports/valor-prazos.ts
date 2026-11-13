@@ -131,10 +131,14 @@ export function valorPrazosProducts(pages: readonly (readonly PdfItem[])[]): Val
 export const VALOR_PRAZOS_HEADER = ['Banco', 'Convênio', 'Tabela', 'Tipo de contrato', 'Prazo inicial', 'Prazo final', 'À vista', 'Bônus']
 export const AGREEMENT_PENDING = '(escolha o convênio)'
 
-// The products as rows of the Corban layout. Contract type "Novo" (every product of this PDF is a new operation);
-// a zero bonus stays empty (the component does not apply to that band).
-export function valorPrazosRows(products: readonly ValorProduct[], bankName: string, agreementOf: (key: string) => string | null): string[][] {
-  return [VALOR_PRAZOS_HEADER, ...products.flatMap(p => p.bands.map(b => [
-    bankName, agreementOf(p.key) ?? AGREEMENT_PENDING, p.table, 'Novo', String(b.min), String(b.max), b.upfront, b.bonus === '0' ? '' : b.bonus,
-  ]))]
+// The products as rows of the Corban layout, one copy per agreement the product goes to (the same PDF table is valid in
+// every agreement the company marks). Contract type "Novo" (every product of this PDF is a new operation); a zero bonus
+// stays empty (the component does not apply to that band). A product with no agreement yet keeps a placeholder.
+export function valorPrazosRows(products: readonly ValorProduct[], bankName: string, agreementsOf: (key: string) => readonly string[]): string[][] {
+  return [VALOR_PRAZOS_HEADER, ...products.flatMap(p => {
+    const names = agreementsOf(p.key)
+    return (names.length ? names : [AGREEMENT_PENDING]).flatMap(agreement => p.bands.map(b => [
+      bankName, agreement, p.table, 'Novo', String(b.min), String(b.max), b.upfront, b.bonus === '0' ? '' : b.bonus,
+    ]))
+  })]
 }

@@ -15,6 +15,9 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Tabelas: PDF da Valor em vários convênios (13/11/2026)
+- Alterado (dono: "essa tabela serve para todos convênios"; aprovou marcar só onde a Valor libera a venda): na importação do PDF "Prazos e Comissões" da Valor, os produtos sem convênio no PDF ganham caixas para marcar vários convênios de uma vez; cada produto vira uma tabela em cada convênio marcado. Cada produto também pode ter os seus convênios trocados em "Alterar". Sem migration.
+
 ### Tabelas: importar o PDF "Prazos e Comissões" da Valor (13/11/2026)
 - Adicionado (pedido da M.S. CONSULTORIA; dono aprovou a imagem): a Importação inteligente lê o PDF "Prazos e Comissões" da Valor Financiamentos (um quadro "Parcelas × Comissão" por produto). Leitor determinístico (`lib/imports/valor-prazos.ts`): qualquer linha fora do formato recusa o arquivo inteiro.
 - Regra do dono para a Valor: À vista = até 6%, Bônus = o que passar de 6% (aritmética em centésimos inteiros). Tipo de contrato Novo; níveis Efetivo I–IV de Goiás viram tabelas separadas.
