@@ -1,4 +1,4 @@
--- Contract test for 20261113202257_bonus_receipt_apart_v1: the Bônus is received apart from the à vista commission
+-- Contract test for 20261113203302_bonus_receipt_apart_v1: the Bônus is received apart from the à vista commission
 -- (Banco Valor pays at most 6% à vista and the rest in a bonus report). The à vista receipt expects the commission without
 -- the Bônus; the Bônus is received on its own (kind "bonus") and only then credits the seller's share (owner, 13/11/2026,
 -- option A); contracts already credited the old way keep it in the contract credit.
