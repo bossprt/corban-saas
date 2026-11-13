@@ -15,9 +15,8 @@ const KEY_TYPES: [string, string][] = [['cpf', 'CPF'], ['cnpj', 'CNPJ'], ['email
 export function BillingSection({ settings, subs, charges, orgs, today }: { settings: Settings; subs: Sub[]; charges: Charge[]; orgs: { id: string; name: string }[]; today: string }) {
   const sub = new Map(subs.map(s => [s.organization_id, s]))
   const orgName = new Map(orgs.map(o => [o.id, o.name]))
-  return <section className="mt-8">
-    <h2 className="text-xl font-semibold text-ink">Cobrança</h2>
-    <p className="mt-1 text-sm text-muted">A mensalidade de cada empresa aparece para o administrador dela no dia do vencimento, com o Pix. Depois da carência sem pagamento, o acesso da empresa fica bloqueado até você confirmar o recebimento.</p>
+  return <section>
+    <p className="text-sm text-muted">A mensalidade de cada empresa aparece para o administrador dela no dia do vencimento, com o Pix. Depois da carência sem pagamento, o acesso da empresa fica bloqueado até você confirmar o recebimento.</p>
 
     <Card className="mt-3 p-5">
       <h3 className="font-semibold text-ink">Recebedor do Pix</h3>
