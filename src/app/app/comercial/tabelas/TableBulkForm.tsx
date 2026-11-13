@@ -9,7 +9,7 @@ export function TableBulkForm({ action, back, reactivate, children }: { action: 
   const boxes = () => [...(ref.current?.querySelectorAll<HTMLInputElement>('input[name="table_id"]') ?? [])]
   const recount = () => setCount(boxes().filter(b => b.checked).length)
   const label = reactivate ? 'Reativar' : 'Desativar'
-  return <form ref={ref} action={action} onChange={recount}
+  return <form ref={ref} method="post" action={action} onChange={recount}
     onSubmit={e => { if (!count || (!reactivate && !window.confirm(`Desativar ${count} tabela(s)? Elas deixam de aparecer para novas propostas.`))) e.preventDefault() }}>
     <input type="hidden" name="back" value={back} />
     <input type="hidden" name="status" value={reactivate ? 'active' : 'archived'} />
