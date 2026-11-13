@@ -11,7 +11,8 @@ const button = 'inline-flex h-10 items-center justify-center rounded-[10px] bg-b
 // One company's subscription. Shows how the typed amount was read ("399.90" and "399,90" are both R$ 399,90) and asks
 // for confirmation before saving. The first month cannot be before the current month for a new subscription (the
 // database refuses it too); an existing subscription may keep the first month it already has.
-export function SubscriptionForm({ orgId, orgName, sub, today }: { orgId: string; orgName: string; sub: Sub | undefined; today: string }) {
+// fromCompany: sent from the company panel of the Empresas tab, so saving returns there.
+export function SubscriptionForm({ orgId, orgName, sub, today, fromCompany = false }: { orgId: string; orgName: string; sub: Sub | undefined; today: string; fromCompany?: boolean }) {
   const [amountText, setAmountText] = useState(sub ? sub.amount.replace('.', ',') : '')
   const amount = parseSubscriptionAmount(amountText)
   const minMonth = minStartMonth(today, sub?.starts_on)
@@ -22,6 +23,7 @@ export function SubscriptionForm({ orgId, orgName, sub, today }: { orgId: string
       if (!amount || !window.confirm(`${orgName}: cobrar ${brl(amount)} por mês, a partir de ${starts ? monthLabel(`${starts}-01`) : 'o mês escolhido'}, vencendo todo dia ${f.get('due_day')}. Confirmar?`)) e.preventDefault()
     }}>
     <input type="hidden" name="organization_id" value={orgId} />
+    {fromCompany && <><input type="hidden" name="aba" value="empresas" /><input type="hidden" name="empresa" value={orgId} /></>}
     <div className="text-sm font-semibold text-ink">{orgName}<div className="text-xs font-normal text-muted">{sub ? (sub.is_active ? 'Cobrança ligada' : 'Cobrança desligada') : 'Sem assinatura'}</div></div>
     <label className="text-xs text-muted">Valor (R$)<input name="amount" required inputMode="decimal" value={amountText} onChange={e => setAmountText(e.target.value)} placeholder="399,90" className="field mt-1 block" aria-describedby={`valor-${orgId}`} />
       <span id={`valor-${orgId}`} className={`mt-1 block ${amountText && !amount ? 'text-[#991B1B]' : ''}`}>{amount ? `${brl(amount)} por mês` : amountText ? 'Valor inválido' : ' '}</span></label>

@@ -15,6 +15,11 @@ Todas as mudanças notáveis deste projeto são documentadas aqui.
 
 ## [Unreleased]
 
+### Plataforma: página organizada em abas (13/11/2026)
+- Alterado (dono: "que layout mais bagunçado"; aprovou a imagem): `/platform` ganhou as abas Empresas (abre primeiro), Cobrança, Melhorias (com o número de pedidos abertos) e Documentos e termos. Mesmas funções, uma por aba.
+- Empresas: tabela com CNPJ formatado, situação, mensalidade (valor, dia e última mensalidade) e módulos ligados. "Abrir" mostra a mensalidade e os módulos daquela empresa. O formulário de nova empresa só aparece pelo botão "+ Nova empresa", com Cancelar.
+- Cada ação volta para a aba (e empresa) de onde foi enviada (campos ocultos `aba`/`empresa`, validados; senão a aba própria da ação). Sem mudança de banco.
+
 ### Contratos: lista mais rápida (10/11/2026)
 - Alterado (dono: "pode fazer a melhoria de velocidade"): os totais de repasse da lista de Contratos (`contract_payout_totals`) calculavam a situação do repasse chamando `private.contract_credit_state` contrato por contrato, e cada chamada era planejada de novo (~1,3 ms por contrato). Agora as mesmas expressões rodam numa única consulta. Medido em produção (cópia temporária, transação desfeita): 0,30 s → 0,07 s, resultado idêntico para os 169 contratos.
 - `private.contract_credit_state` não muda. Os testes `manual-commission-zero-contract.sql` e `gratification-receipt-apart-contract.sql` ganharam uma conferência: totais e `contract_credit_state` precisam dizer o mesmo para todo contrato.

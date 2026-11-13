@@ -11,9 +11,17 @@ import { PASSWORD_MAX, PASSWORD_MIN, passwordRefusal, TEAM_ERROR_MESSAGES } from
 
 const clean = (v: FormDataEntryValue | null) => String(v ?? '').trim()
 const code = (v: string) => v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40)
-const go = (kind: 'ok'|'erro', msg: string): never => {
-  revalidatePath('/platform')
-  redirect(`/platform?${kind}=${encodeURIComponent(msg)}`)
+// The page is split in tabs (13/11/2026): every action returns to the tab (and company) it was sent from.
+// The form says where with hidden "aba"/"empresa"; anything else falls back to the action's own tab.
+const TABS = ['empresas', 'cobranca', 'melhorias', 'documentos']
+type Go = (kind: 'ok'|'erro', msg: string) => never
+const goTo = (f: FormData, fallback: string): Go => {
+  const asked = clean(f.get('aba')), company = clean(f.get('empresa'))
+  const q = `aba=${TABS.includes(asked) ? asked : fallback}${/^[0-9a-f-]{36}$/i.test(company) ? `&empresa=${company}` : ''}`
+  return (kind, msg) => {
+    revalidatePath('/platform')
+    redirect(`/platform?${q}&${kind}=${encodeURIComponent(msg)}`)
+  }
 }
 async function gate() {
   const g = await requirePlatformAdmin()
@@ -24,6 +32,7 @@ async function gate() {
 
 export async function addDocumentType(f: FormData) {
   await gate()
+  const go = goTo(f, 'documentos')
   const name=clean(f.get('name'))
   if(!name) go('erro','Informe o tipo de documento.')
 
@@ -48,6 +57,7 @@ export async function addDocumentType(f: FormData) {
 // Switches one module for one company (plan limits). Platform administrators only; every change is audited.
 export async function setOrganizationModule(f: FormData) {
   const g = await gate()
+  const go = goTo(f, 'empresas')
   const org = clean(f.get('organization_id'))
   const moduleKey = clean(f.get('module_key'))
   const enabled = clean(f.get('enabled')) === 'true'
@@ -67,6 +77,7 @@ export async function setOrganizationModule(f: FormData) {
 // login is removed so no orphan identity stays. An e-mail that already has a login is refused: one login, one company.
 export async function createCompanyWithAdmin(f: FormData) {
   const g = await gate()
+  const go = goTo(f, 'empresas')
   const name = clean(f.get('organization_name')).replace(/\s+/g, ' ')
   const document = digitsOnly(clean(f.get('organization_document')))
   const fullName = clean(f.get('full_name')).replace(/\s+/g, ' ')
@@ -113,6 +124,7 @@ export async function createCompanyWithAdmin(f: FormData) {
 // version. The SHA-256 of the text is stored so each acceptance proves which text was accepted.
 export async function publishTermsVersion(f: FormData) {
   const g = await gate()
+  const go = goTo(f, 'documentos')
   const version = clean(f.get('version'))
   const title = clean(f.get('title'))
   const body = String(f.get('body') ?? '').replace(/\r\n/g, '\n').trim()
@@ -132,6 +144,7 @@ export async function publishTermsVersion(f: FormData) {
 // Answer an improvement request (status and the answer the company sees); the database checks the platform administrator.
 export async function answerImprovement(f: FormData) {
   const g = await gate()
+  const go = goTo(f, 'melhorias')
   const id = clean(f.get('request_id')), status = clean(f.get('status')), response = clean(f.get('response'))
   if (!/^[0-9a-f-]{36}$/.test(id) || !['received', 'analyzing', 'approved', 'declined', 'delivered'].includes(status)) go('erro', 'Solicitação inválida.')
   if (status === 'declined' && response.length < 3) go('erro', 'Para "Não será feita", escreva o motivo na resposta.')
@@ -152,24 +165,26 @@ const BILLING_ERRORS: Record<string, string> = {
   billing_charge_not_found: 'Mensalidade não encontrada.',
   billing_starts_on_in_past: 'O primeiro mês não pode ser anterior ao mês atual: isso criaria mensalidades já vencidas e bloquearia a empresa. Nada foi salvo.',
 }
-const billingFail = (e: { message?: string }, fallback: string): never => go('erro', Object.entries(BILLING_ERRORS).find(([k]) => (e.message ?? '').includes(k))?.[1] ?? fallback)
+const billingFail = (go: Go, e: { message?: string }, fallback: string): never => go('erro', Object.entries(BILLING_ERRORS).find(([k]) => (e.message ?? '').includes(k))?.[1] ?? fallback)
 const isUuid = (v: string) => /^[0-9a-f-]{36}$/i.test(v)
 const isDay = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v)
 
 export async function saveBillingSettings(f: FormData) {
   const g = await gate()
+  const go = goTo(f, 'cobranca')
   const key = clean(f.get('pix_key')), type = clean(f.get('pix_key_type')), name = clean(f.get('merchant_name')), city = clean(f.get('merchant_city'))
   if (!key || key.length > 77 || !['cpf','cnpj','email','phone','random'].includes(type) || !name || name.length > 25 || !city || city.length > 15) go('erro', 'Confira chave, tipo, nome (até 25) e cidade (até 15).')
   const pixKey = type === 'cpf' || type === 'cnpj' ? digitsOnly(key) : key
   const admin = createAdminClient()
   const { error } = await admin.rpc('platform_set_billing_settings', { p_actor: g.userId, p_key: pixKey, p_key_type: type, p_name: name, p_city: city })
-  if (error) billingFail(error, 'Não foi possível salvar o recebedor.')
+  if (error) billingFail(go, error, 'Não foi possível salvar o recebedor.')
   await admin.from('platform_admin_audit_events').insert({ actor_user_id: g.userId, action: 'billing.settings.set', metadata: { pix_key_type: type } })
   go('ok', 'Recebedor do Pix salvo.')
 }
 
 export async function saveSubscription(f: FormData) {
   const g = await gate()
+  const go = goTo(f, 'cobranca')
   // "399,90", "399.90" and "1.234,56" are all read as money (never "399.90" → 39990).
   const org = clean(f.get('organization_id')), amount = parseSubscriptionAmount(f.get('amount'))
   const dueDay = Number(clean(f.get('due_day'))), grace = Number(clean(f.get('grace_days'))), starts = clean(f.get('starts_on'))
@@ -177,29 +192,31 @@ export async function saveSubscription(f: FormData) {
   const admin = createAdminClient()
   // amount travels as text, the database turns it into numeric(14,2)
   const { error } = await admin.rpc('platform_set_subscription', { p_actor: g.userId, p_org: org, p_amount: amount, p_due_day: dueDay, p_grace_days: grace, p_starts_on: `${starts}-01`, p_active: f.get('is_active') === 'on' })
-  if (error) billingFail(error, 'Não foi possível salvar a assinatura.')
+  if (error) billingFail(go, error, 'Não foi possível salvar a assinatura.')
   await admin.from('platform_admin_audit_events').insert({ actor_user_id: g.userId, organization_id: org, action: 'billing.subscription.set', metadata: { amount, due_day: dueDay, grace_days: grace, starts_on: starts, active: f.get('is_active') === 'on' } })
   go('ok', `Assinatura salva: ${brl(amount!)} por mês.`)
 }
 
 export async function markChargePaid(f: FormData) {
   const g = await gate()
+  const go = goTo(f, 'cobranca')
   const charge = clean(f.get('charge_id')), paidOn = clean(f.get('paid_on')), org = clean(f.get('organization_id'))
   if (!isUuid(charge) || !isDay(paidOn)) go('erro', 'Dados inválidos.')
   const admin = createAdminClient()
   const { error } = await admin.rpc('platform_mark_charge_paid', { p_actor: g.userId, p_charge: charge, p_paid_on: paidOn })
-  if (error) billingFail(error, 'Não foi possível confirmar o recebimento.')
+  if (error) billingFail(go, error, 'Não foi possível confirmar o recebimento.')
   await admin.from('platform_admin_audit_events').insert({ actor_user_id: g.userId, organization_id: isUuid(org) ? org : null, action: 'billing.charge.paid', metadata: { charge_id: charge, paid_on: paidOn } })
   go('ok', 'Recebimento confirmado. O acesso da empresa está liberado.')
 }
 
 export async function reverseCharge(f: FormData) {
   const g = await gate()
+  const go = goTo(f, 'cobranca')
   const charge = clean(f.get('charge_id')), note = clean(f.get('note')), org = clean(f.get('organization_id'))
   if (!isUuid(charge)) go('erro', 'Dados inválidos.')
   const admin = createAdminClient()
   const { error } = await admin.rpc('platform_reverse_charge', { p_actor: g.userId, p_charge: charge, p_note: note })
-  if (error) billingFail(error, 'Não foi possível estornar.')
+  if (error) billingFail(go, error, 'Não foi possível estornar.')
   await admin.from('platform_admin_audit_events').insert({ actor_user_id: g.userId, organization_id: isUuid(org) ? org : null, action: 'billing.charge.reversed', metadata: { charge_id: charge } })
   go('ok', 'Recebimento estornado.')
 }
